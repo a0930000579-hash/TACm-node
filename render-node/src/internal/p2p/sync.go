@@ -14,7 +14,14 @@ import (
 
 func (n *Network) syncLoop(ctx context.Context) {
 	defer n.wg.Done()
-	ticker := time.NewTicker(n.cfg.SyncInterval)
+	// M149：失敗退避——連不上（閘道/對端防護）時拉長重試間隔，
+	// 避免「每 2 秒固定重試」觸發雲平台/IP-Pool 動態防護（會連帶封鎖雲端節點 IP）。
+	base := n.cfg.SyncInterval
+	if base < 10*time.Second {
+		base = 10 * time.Second
+	}
+	interval := base
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	for {
 		select {
@@ -23,9 +30,12 @@ func (n *Network) syncLoop(ctx context.Context) {
 		case <-ticker.C:
 			// M122：落後較多時密集追齊（不等下一 tick），直到追平或無進展；
 			// 上限 20 輪×100ms，避免阻塞 loop。
+			progress := false
 			for i := 0; i < 20; i++ {
 				before := n.host.Height()
-				n.syncOnce()
+				if n.syncOnce() {
+					progress = true
+				}
 				if n.host.Height() >= n.bestPeerHeight() || n.host.Height() == before {
 					break
 				}
@@ -35,6 +45,16 @@ func (n *Network) syncLoop(ctx context.Context) {
 				case <-time.After(100 * time.Millisecond):
 				}
 			}
+			// 退避調節：有進展→回到基準；無進展（連不上/被防護）→ 翻倍至 60s 上限。
+			if progress {
+				interval = base
+			} else if interval < 60*time.Second {
+				interval *= 2
+				if interval > 60*time.Second {
+					interval = 60 * time.Second
+				}
+			}
+			ticker.Reset(interval)
 		}
 	}
 }
@@ -86,14 +106,16 @@ func (n *Network) bestPeers(limit int) []Peer {
 	return ps
 }
 
-func (n *Network) syncOnce() {
+// syncOnce 嘗試追齊；回傳 true 表示本輪有實際進展（任一 peer 完成拉取）。
+func (n *Network) syncOnce() bool {
 	// M122：依序嘗試 top-3 在線 peer——最佳 peer 拉取失敗（離線/瞬斷）時
 	// 自動 fallback 次佳，不再整輪空轉等下一 tick。
 	for _, p := range n.bestPeers(3) {
 		if n.syncFrom(p) {
-			return
+			return true
 		}
 	}
+	return false
 }
 
 // syncFrom 從單一 peer 追齊；回傳 true 表示該 peer 可達並完成本輪嘗試
