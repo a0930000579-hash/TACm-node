@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TACm 白皮書 v3.0｜時間權證共識驅動的區塊鏈金融網絡</title>
+<style>
+:root{--bg:#fafafa;--bg2:#fff;--panel:#f5f5f5;--line:#e0e0e0;--txt:#212121;--muted:#757575;--brand:#1a73e8;--accent:#0d47a1;--green:#2e7d32;--red:#c62828}
+html,body{background:var(--bg);color:var(--txt);margin:0;padding:0;font:15px/1.8 Georgia,"Times New Roman","Noto Serif TC",serif}
+header{background:var(--accent);color:#fff;padding:48px 24px;text-align:center}
+header h1{margin:0;font-size:2rem;letter-spacing:1px;font-weight:400}
+header .subtitle{opacity:.85;font-size:1rem;margin-top:8px;font-style:italic}
+header .version{display:inline-block;margin-top:16px;border:1px solid rgba(255,255,255,.4);border-radius:4px;padding:4px 12px;font-size:.8rem;letter-spacing:2px}
+main{max-width:780px;margin:0 auto;padding:40px 24px 80px}
+h2{margin-top:2.5rem;color:var(--accent);font-size:1.4rem;font-weight:600;border-bottom:2px solid var(--brand);padding-bottom:8px}
+h3{margin-top:1.8rem;color:var(--brand);font-size:1.1rem;font-weight:600}
+h4{margin-top:1.2rem;font-size:1rem;font-weight:600}
+p{margin:12px 0;text-align:justify}
+.abstract{background:var(--panel);border-left:4px solid var(--brand);padding:20px 24px;margin:24px 0;border-radius:0 8px 8px 0}
+.abstract h3{margin-top:0;color:var(--accent)}
+.kv{display:grid;grid-template-columns:160px 1fr;gap:8px 16px;margin:16px 0}
+.kv div{border-bottom:1px dotted var(--line);padding:6px 0}
+.k{color:var(--muted);font-weight:600}
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:.9rem}
+th,td{border:1px solid var(--line);padding:10px 12px;text-align:left}
+th{background:var(--panel);color:var(--accent);font-weight:600}
+code{background:var(--panel);padding:2px 6px;border-radius:3px;font-family:"Courier New",monospace;font-size:.85em}
+ul,ol{padding-left:1.5rem}
+li{margin:6px 0}
+.note{background:#fff8e1;border-left:4px solid #f9a825;padding:14px 18px;border-radius:0 6px 6px 0;margin:16px 0;font-size:.9rem}
+.toc{background:var(--panel);padding:20px 28px;border-radius:8px;margin:24px 0}
+.toc h3{margin-top:0;color:var(--accent)}
+.toc ol{margin:0}
+.toc a{color:var(--txt);text-decoration:none}
+.toc a:hover{color:var(--brand)}
+.formula{background:var(--panel);padding:16px 20px;border-radius:6px;text-align:center;font-family:"Courier New",monospace;font-size:1rem;margin:16px 0;overflow-x:auto}
+.langbar{text-align:right;font-size:.85rem;margin-bottom:8px}
+.langbar a{color:var(--brand);text-decoration:none}
+footer{color:var(--muted);font-size:.85rem;border-top:1px solid var(--line);padding:24px;margin-top:40px;text-align:center}
+@media(max-width:640px){.kv{grid-template-columns:1fr}main{padding:20px 16px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="langbar"><a href="/whitepaper-en">English</a> <span>｜</span> <a href="/whitepaper">中文</a></div>
+  <h1>TACm 白皮書</h1>
+  <div class="subtitle">Time Asset Crypto Mining — 時間權證共識驅動的區塊鏈金融網絡</div>
+  <div class="version">VERSION 3.0</div>
+</header>
+<main>
+
+<div class="abstract">
+<h3>摘要</h3>
+<p>TACm 是一個基於時間權證（Time Warrant）共識機制的區塊鏈金融網絡，旨在解決傳統工作量證明（PoW）區塊鏈中存在的算力壟斷、能源浪費與參與門檻過高等問題。TACm 將「時間」作為最公平的共識資產，通過聯盟鏈改進型 PoW 共識（Consortium Proof of Work）實現高效、節能且公平的區塊確認。</p>
+<p>在共識層之上，TACm 構建了完整的去中心化金融生態，包括數字資產交易、永續合約、流動性挖礦、借貸市場、代幣發行平台與穩定幣系統，為用戶提供一站式區塊鏈金融服務。本文檔闡述 TACm 的共識機制、網絡架構、代幣經濟、治理模型與安全設計。</p>
+</div>
+
+<div class="toc">
+<h3>目錄</h3>
+<ol>
+<li><a href="#s1">一、背景與問題</a></li>
+<li><a href="#s2">二、設計目標</a></li>
+<li><a href="#s3">三、共識機制：時間權證與聯盟鏈 PoW</a></li>
+<li><a href="#s4">四、網絡架構</a></li>
+<li><a href="#s5">五、賬戶與交易模型</a></li>
+<li><a href="#s6">六、代幣經濟</a></li>
+<li><a href="#s7">七、金融生態</a></li>
+<li><a href="#s8">八、穩定幣協議</a></li>
+<li><a href="#s9">九、治理機制</a></li>
+<li><a href="#s10">十、安全設計</a></li>
+<li><a href="#s11">十一、路線圖</a></li>
+<li><a href="#s12">十二、結論</a></li>
+</ol>
+</div>
+
+<h2 id="s1">一、背景與問題</h2>
+<p>自 2009 年工作量證明（PoW）共識機制誕生以來成為區塊鏈領域最廣泛採用的共識算法。然而，隨著網絡規模擴大，PoW 機制暴露出一系列根本性問題：</p>
+<ol>
+<li><b>算力壟斷</b>：礦機製造與礦場運營呈現高度集中化趨勢，小規模參與者難以公平競爭，違背區塊鏈去中心化初衷。</li>
+<li><b>能源浪費</b>：傳統 PoW 網絡年耗電量超過部分中等國家，大量能源用於無意義的哈希運算，社會成本高昂。</li>
+<li><b>參與門檻</b>：專用礦機（ASIC）價格昂貴，普通用戶無法直接參與共識過程，區塊鏈變為少數人的遊戲。</li>
+<li><b>性能瓶頸</b>：PoW 機制為保證安全性，犧牲了交易處理能力，傳統 PoW 鏈每秒僅能處理個位數交易，無法滿足大規模商業應用需求。</li>
+</ol>
+<p>後續的權益證明（PoS）、委託權益證明（DPoS）等共識機制雖在能耗與性能上有所改進，但又引入了資本壟斷、代幣集中、治理中心化等新問題。如何在去中心化、安全性與性能之間取得平衡，仍是區塊鏈領域的核心挑戰。</p>
+<p>TACm 提出一種基於時間權證的聯盟鏈改進型 PoW 共識機制，將「時間」這一最公平、不可購買的資源作為共識基礎，同時通過聯盟鏈架構兼顧性能與安全，為區塊鏈共識機制提供一種新的解決思路。</p>
+
+<h2 id="s2">二、設計目標</h2>
+<p>TACm 的設計遵循以下核心原則：</p>
+<table>
+<tr><th>原則</th><th>說明</th></tr>
+<tr><td>公平性</td><td>以時間作為共識資產，避免算力與資本壟斷，確保小規模參與者的公平競爭權利</td></tr>
+<tr><td>節能高效</td><td>聯盟鏈架構大幅降低共識能耗，同時實現秒級區塊確認與高吞嚥量</td></tr>
+<tr><td>安全可信</td><td>密碼學保證交易不可篡改，聯盟節點多重驗證確保網絡安全</td></tr>
+<tr><td>開放參與</td><td>降低參與門檻，任何用戶均可通過上線參與共識並獲得收益</td></tr>
+<tr><td>金融完備</td><td>構建完整的去中心化金融生態，實現數字資產的全鏈路流通</td></tr>
+<tr><td>可擴展性</td><td>模塊化架構支持共識升級、生態擴展與跨鏈互操作</td></tr>
+</table>
+
+<h3>2.2 TACM 核心競爭優勢</h3>
+<p>TACm 在現有區塊鏈項目中具有以下不可替代的核心競爭優勢：</p>
+
+<h4>（1）原創時間權證共識機制</h4>
+<p>TACm 首次提出「時間權證」共識概念，將人類社會中最公平、不可購買、不可複製的資源——時間——作為共識基礎。這一機制從根本上區別於傳統 PoW 的算力競爭與 PoS 的資本競爭，開創了共識機制的全新範式。時間權證機制已在理論層面證明其對女巫攻擊的天然防禦能力，並在實踐中實現了公平與效率的平衡。</p>
+
+<h4>（2）真正的公平參與</h4>
+<p>傳統 PoW 區塊鏈中，算力決定一切，普通用戶被排除在共識過程之外；PoS 區塊鏈中，財富決定話語權，加劇了貧富差距。TACm 的時間權證機制確保每個參與者無論擁有多少算力或資本，在時間面前人人平等。持續在線的節點獲得合理加成，但加成設有上限（最高 4.0x），避免馬太效應。這使得 TACm 成為真正面向大眾的公平區塊鏈網絡。</p>
+
+<h4>（3）極低的能源消耗</h4>
+<p>TACm 採用聯盟鏈架構，共識過程由預設驗證節點完成，無需全網節點進行無意義的哈希運算。相比傳統 PoW 區塊鏈每年消耗數百億度電，TACm 的能耗降低了數個數量級，符合可持續發展理念，也避免了因能源問題帶來的監管風險與社會爭議。</p>
+
+<h4>（4）一站式金融生態</h4>
+<p>多數區塊鏈項目僅專注於底層協議，金融應用依賴外部第三方開發，生態碎片化嚴重。TACm 從設計之初就將底層共識與上層金融應用作為整體規劃，原生集成了數字資產交易、衍生品、借貸、流動性挖礦、代幣發行、收益聚合器與穩定幣等完整金融基礎設施。用戶無需在多個平台間切轉，即可享受一站式區塊鏈金融服務，資產在生態內實現全鏈路流通。</p>
+
+<h4>（5）原生穩定幣與差異化費率</h4>
+<p>TACm 生態內原生發行 TiUSD 穩定幣，與美元 1:1 錨定，並採用超額質押鑄造機制確保錨定穩定。為鼓勵 TiUSD 的使用，TACm 實施差異化手續費策略：TiUSD 交易對手續費僅為 0.5%，顯著低於其他穩定幣交易對的 1.25%。這一機制既降低了用戶交易成本，又促進了生態內穩定幣的流通與採用，形成良性循環。</p>
+
+<h4>（6）高性能與即時最終性</h4>
+<p>TACm 的聯盟鏈架構實現了約 1000 TPS 的交易處理能力，目標出塊時間僅 3 秒，交易在 6 個區塊確認（約 18 秒）後達到實用最終性。相比傳統 PoW 區塊鏈需要數十分鐘的確認時間，TACm 的高性能與即時最終性使其能夠支撐大規模商業應用，包括高頻交易、支付結算與實時清算等場景。</p>
+
+<h4>（7）完善的鏈上治理</h4>
+<p>TACm 設計了完整的鏈上治理機制，代幣持有者可通過質押參與網絡決策，包括共識參數調整、經濟模型優化、協議升級與生態資金分配等。治理過程公開透明，所有提案與投票記錄上鏈可查。這一機制確保了網絡的長期可持續發展，避免了少數人控制協議走向的中心化風險。</p>
+
+<h2 id="s3">三、共識機制：時間權證與聯盟鏈 PoW</h2>
+
+<h3>3.1 時間權證（Time Warrant）</h3>
+<p>時間權證是 TACm 共識機制的核心創新。其基本思想是：將節點在線時長轉化為可驗證的共識權重，在線時間越長，獲得出塊權的概率越高。這一機制基於以下觀察：</p>
+<ul>
+<li>時間是唯一不可購買、不可複製的資源，無論擁有多少算力或資本，都無法獲得比他人更多的時間。</li>
+<li>持續在線的節點對網絡的貢獻更大（轉發交易、存儲區塊、維護網絡穩定性），應獲得更高的共識權重。</li>
+<li>時間權證機制天然抵禦女巫攻擊（Sybil Attack），因為攻擊者無法批量購買時間。</li>
+</ul>
+
+<h3>3.2 時間加成函數</h3>
+<p>節點的時間加成隨在線時長動態調整，採用分段線性函數：</p>
+<div class="formula">
+T(t) = 1.0, &nbsp;&nbsp; 0 ≤ t &lt; 10min<br>
+T(t) = 1.0 + (t - 10min) × k, &nbsp;&nbsp; 10min ≤ t &lt; 12h<br>
+T(t) = 4.0, &nbsp;&nbsp; t ≥ 12h
+</div>
+<p>其中 k 為線性增長係數，由治理參數調整。冷啟期（10 分鐘）防止節點頻繁上下線投機，最高加成 4.0x 避免加成無限堆疊。連續中斷超過 30 分鐘，加成重置為初始值。</p>
+
+<h3>3.3 聯盟鏈改進型 PoW 共識</h3>
+<p>TACm 採用聯盟鏈架構，預設驗證節點組成聯盟，共同維護網絡安全。共識過程結合了 PoW 算力競爭與時間權證加成：</p>
+<ol>
+<li><b>難度調整</b>：網絡根據聯盟節點總算力動態調整挖礦難度，目標出塊時間為 3 秒。</li>
+<li><b>算力競爭</b>：聯盟節點通過哈希運算競爭出塊權，符合 PoW 基本原理。</li>
+<li><b>時間加成</b>：節點的有效算力 = 基礎算力 × 時間加成函數 T(t)，在線時間越長，有效算力越高。</li>
+<li><b>區塊驗證</b>：出塊節點廣播新區塊後，其他聯盟節點進行驗證，超過 2/3 節點確認後區塊上鏈。</li>
+<li><b>獎勵分配</b>：區塊獎勵按有效算力比例分配給參與共識的聯盟節點。</li>
+</ol>
+
+<h3>3.4 共識機制對比</h3>
+<table>
+<tr><th>共識機制</th><th>去中心化程度</th><th>吞吐量</th><th>能耗</th><th>最終性</th><th>抗女巫攻擊</th></tr>
+<tr><td>PoW</td><td>高</td><td>~7 TPS</td><td>極高</td><td>概率性</td><td>中（算力門檻）</td></tr>
+<tr><td>PoS</td><td>中高</td><td>~15 TPS</td><td>低</td><td>概率性</td><td>低（資本門檻）</td></tr>
+<tr><td>DPoS（EOS）</td><td>中</td><td>~4000 TPS</td><td>低</td><td>即時</td><td>中（投票門檻）</td></tr>
+<tr><td>PoA（聯盟鏈）</td><td>低</td><td>高</td><td>極低</td><td>即時</td><td>高（許可制）</td></tr>
+<tr><td><b>TACm Consortium PoW</b></td><td><b>中</b></td><td><b>~1000 TPS</b></td><td><b>低</b></td><td><b>即時</b></td><td><b>高（時間門檻）</b></td></tr>
+</table>
+
+<h2 id="s4">四、網絡架構</h2>
+
+<h3>4.1 分層架構</h3>
+<p>TACm 網絡採用模塊化分層架構，自下而上分為四層：</p>
+<ol>
+<li><b>共識層</b>：負責區塊生成、交易驗證與共識達成，實現 Consortium PoW 共識機制。</li>
+<li><b>網絡層</b>：負責節點發現、交易廣播與區塊同步，採用 P2P 點對點通信協議。</li>
+<li><b>數據層</b>：負責區塊數據、交易數據與狀態數據的持久化存儲，支持關係型數據庫與可擴展存儲引擎。</li>
+<li><b>應用層</b>：負責對外提供 API 接口與用戶界面，實現交易所、錢包、DeFi 等業務邏輯。</li>
+</ol>
+
+<h3>4.2 節點類型</h3>
+<table>
+<tr><th>節點類型</th><th>職責</th><th>參與共識</th></tr>
+<tr><td>驗證節點</td><td>參與算力競爭、生成區塊、驗證交易</td><td>是</td></tr>
+<tr><td>全節點</td><td>存儲完整區塊鏈、轉發交易、提供數據查詢</td><td>否</td></tr>
+<tr><td>輕節點</td><td>僅存儲區塊頭，用於移動端錢包與輕量客戶端</td><td>否</td></tr>
+<tr><td>網關節點</td><td>對外提供 API 服務、協議轉換、流量負載均衡</td><td>否</td></tr>
+</table>
+
+<h3>4.3 技術實現</h3>
+<p>TACm 核心協議採用高性能異步框架實現，確保網絡層的高併發處理能力。數據層採用關係型數據庫作為默認存儲引擎，同時支持通過適配器擴展至分佈式數據庫。前端應用採用響應式 Web 技術，同時支持 PWA 移動端安裝，實現跨平台一致體驗。</p>
+
+<h2 id="s5">五、賬戶與交易模型</h2>
+
+<h3>5.1 賬戶模型</h3>
+<p>TACm 採用賬戶模型（Account Model），而非 UTXO 模型。每個賬戶包含以下狀態：</p>
+<div class="kv">
+<div class="k">地址</div><div>以 <code>tx0</code> 為前綴的區塊鏈地址，由公鑰哈希生成</div>
+<div class="k">餘額</div><div>賬戶持有的 TACM 數量，支持 18 位小數精度</div>
+<div class="k">隨機數</div><div>Nonce，用於防止重放攻擊，每筆交易遞增</div>
+<div class="k">代碼</div><div>智能合約字節碼（僅合約賬戶）</div>
+<div class="k">存儲</div><div>智能合約持久化存儲（僅合約賬戶）</div>
+</div>
+
+<h3>5.2 交易類型</h3>
+<table>
+<tr><th>交易類型</th><th>說明</th></tr>
+<tr><td>轉賬交易</td><td>普通賬戶間的 TACM 轉移</td></tr>
+<tr><td>合約部署</td><td>部署智能合約到區塊鏈</td></tr>
+<tr><td>合約調用</td><td>調用已部署智能合約的方法</td></tr>
+<tr><td>質押交易</td><td>質押 TACM 獲得治理權與收益</td></tr>
+<tr><td>治理投票</td><td>對治理提案進行投票</td></tr>
+</table>
+
+<h3>5.3 交易生命週期</h3>
+<ol>
+<li><b>構建與簽名</b>：用戶構建交易並使用私鑰進行數字簽名。</li>
+<li><b>廣播</b>：交易被廣播到 P2P 網絡，進入交易內存池（Mempool）。</li>
+<li><b>打包</b>：驗證節點從 Mempool 中選擇交易，按手續費優先級打包進區塊。</li>
+<li><b>共識</b>：區塊通過 Consortium PoW 共識機制獲得確認。</li>
+<li><b>上鏈</b>：區塊被添加到區塊鏈末尾，交易狀態被更新。</li>
+<li><b>最終性</b>：經過 6 個區塊確認（約 18 秒），交易達到實用最終性。</li>
+</ol>
+
+<h2 id="s6">六、代幣經濟</h2>
+
+<h3>6.1 基本參數</h3>
+<div class="kv">
+<div class="k">代幣符號</div><div>TACM</div>
+<div class="k">總供應量</div><div>52,003,300 TACM（固定上限，永不增發）</div>
+<div class="k">小數精度</div><div>18 位</div>
+<div class="k">地址前綴</div><div><code>tx0</code></div>
+<div class="k">共識機制</div><div>Consortium PoW（聯盟鏈改進型工作量證明）</div>
+<div class="k">出塊時間</div><div>3 秒（目標）</div>
+</div>
+
+<h3>6.2 發行曲線</h3>
+<p>TACM 採用年衰減發行模型，前四年為高獎勵期以吸引早期參與者，第五年起進入線性衰減，第九年起轉入尾端發行（Tail Emission），以年化 2% 的恆定速率維持網絡安全與節點激勵。</p>
+
+<h3>6.3 出塊獎勵即時瓜分</h3>
+<p>每個區塊獎勵 10 TACm（供應上限模型下由年衰減發行曲線決定實際值），鏈上即時按以下比例分配：<b>88% 歸「開機挖礦」的在線礦工</b>（按個人算力佔全網比例瓜分，出塊即入帳）；<b>12% 自動挹注獎勵池</b>，作為去中心化交易所的做市與運營資金。礦機由用戶手動開關控制——<b>關機即停止收益</b>；當鏈上無任何開機礦工時，礦工份額全數挹注獎勵池（作交易所資金池），不會憑空歸入任何帳戶。獎勵由伺服器端排程持續心跳確保真實出塊，開機後離開頁面仍持續挖礦。</p>
+<div class="kv">
+<div class="k">礦工分潤</div><div>每塊獎勵 88%，按在線算力瓜分</div>
+<div class="k">獎勵池</div><div>每塊 12% 自動挹注（作交易所資金池用途）</div>
+<div class="k">在線判定</div><div>180 秒心跳窗口內即時在線</div>
+</div>
+
+<h3>6.4 礦機與算力機制</h3>
+<p>每位會員註冊即自動綁定鏈上錢包地址作為礦機身份。預設算力為 <b>1 vCPU + 2 vGPU</b>（vCPU×1M 算力、vGPU×2M 算力，共 5M），不可手動修改；算力提升僅透過推薦註冊——<b>每邀請 1 名會員註冊（填寫邀請碼）提升 0.01 vCPU 與 0.02 vGPU</b>。邀請碼即會員自己的鏈上錢包地址。</p>
+<div class="kv">
+<div class="k">基礎算力</div><div>1 vCPU + 2 vGPU（共 5M 算力，固定）</div>
+<div class="k">推薦提升</div><div>每 1 名推薦註冊 +0.01 vCPU / +0.02 vGPU</div>
+<div class="k">邀請碼</div><div>會員鏈上錢包地址（tx0 開頭）</div>
+</div>
+
+<h3>6.5 代幣分配</h3>
+<table>
+<tr><th>分配類別</th><th>比例</th><th>數量</th><th>用途說明</th></tr>
+<tr><td>礦工獎勵</td><td>60%</td><td>31,201,980</td><td>通過時間權證共識機制分配給在線參與節點</td></tr>
+<tr><td>生態激勵</td><td>20%</td><td>10,400,660</td><td>流動性挖礦、DeFi 激勵、開發者補助、社區活動</td></tr>
+<tr><td>開發與治理</td><td>10%</td><td>5,200,330</td><td>核心協議開發、安全審計、基金會運營</td></tr>
+<tr><td>顧問與早期支持者</td><td>5%</td><td>2,600,165</td><td>顧問團隊、早期投資者、戰略合作夥伴</td></tr>
+<tr><td>市場推廣</td><td>5%</td><td>2,600,165</td><td>市場營銷、品牌建設、用戶增長、空投活動</td></tr>
+</table>
+
+<h3>6.4 代幣效用</h3>
+<ul>
+<li><b>共識參與</b>：節點通過在線與算力貢獻獲得 TACM 獎勵</li>
+<li><b>交易手續費</b>：網絡交易手續費以 TACM 支付，部分手續費被銷毀</li>
+<li><b>質押收益</b>：質押 TACM 獲得被動收益與治理投票權</li>
+<li><b>流動性提供</b>：在 AMM 流動性池中提供 TACM 流動性獲得手續費分成</li>
+<li><b>合約保證金</b>：衍生品交易中 TACM 可作為保證金資產</li>
+<li><b>治理投票</b>：持有 TACM 可參與鏈上治理，對協議參數與升級提案進行投票</li>
+</ul>
+
+<h2 id="s7">七、金融生態</h2>
+<p>TACm 不僅是一個區塊鏈網絡，更是一個完整的去中心化金融生態。在共識層之上，TACm 構建了以下金融基礎設施：</p>
+
+<h3>7.1 專業級交易所</h3>
+<p>內建撮合式交易所（自主訂單簿撮合引擎）：訂單簿撮合、市價/限價掛單、閃兌（快速兌換當前開放交易幣種）、自動交易機器人（可設定自動掛買/掛賣策略）、充值/提現與理財資金池。交易所支持 TACm、TiUSD 等多資產，採用差異化手續費（TACm 200bp、TiUSD 50bp）鼓勵自主穩定幣採用。獎勵池資金作為交易所做市與運營資金池。</p>
+<div class="kv">
+<div class="k">撮合引擎</div><div>訂單簿＋市價/限價</div>
+<div class="k">閃兌</div><div>快速兌換開放交易幣種</div>
+<div class="k">自動交易</div><div>掛買/掛賣機器人策略</div>
+<div class="k">手續費</div><div>TACm 200bp / TiUSD 50bp</div>
+</div>
+
+<h3>7.2 衍生品交易</h3>
+<p>支持永續合約交易，最高 125 倍槓桿，具備完整的風控機制，包括逐倉保證金、自動減倉、風險準備金、標記價格與資金費率機制，確保衍生品市場的穩定運行。</p>
+
+<h3>7.3 借貸市場</h3>
+<p>去中心化借貸協議，用戶可存款生息或抵押借款。支持超額抵押、自動清算、浮動利率調整等機制，為閒置資產提供被動收益渠道。</p>
+
+<h3>7.4 代幣發行平台</h3>
+<p>IDO（Initial DEX Offering）發行平台，為新項目提供去中心化的代幣發行與認購渠道。項目方可設置認購價格、限額與時間，用戶可無許可參與認購。</p>
+
+<h3>7.5 收益聚合器</h3>
+<p>智能收益聚合器，自動將用戶資金分配到最高收益的 DeFi 策略中，並支持自動復投（Auto-Compounding），最大化用戶資本效率。</p>
+
+<h2 id="s8">八、穩定幣協議</h2>
+
+<h3>8.1 TiUSD 概述</h3>
+<p>TiUSD 是 TACm 生態內由<b>區塊鏈供給層</b>鑄造的美元穩定幣，與美元 1:1 錨定。TiUSD 僅能由鏈上供給層機制（供給層鑄造）產生，<b>禁止任何賬戶私自鑄造</b>，從機制上杜絕超發與通膨。</p>
+
+<h3>8.2 錨定與供應保護</h3>
+<p>為防止幣值崩盤，TiUSD 以 TACm 總供應量為錨定基準實行上下限保護：</p>
+<div class="kv">
+<div class="k">最小流通量</div><div>TACm 總供應量之 0.330 倍——銷毀不得低於此下限；低於下限時供給層自動補鑄至下限</div>
+<div class="k">最大流通量</div><div>TACm 總供應量（1:1 錨定上限）——增發不得超過此上限</div>
+<div class="k">市值調節</div><div>按市值需要增發或銷毀，但永久保留總發行量最低 0.330 倍之發行量</div>
+<div class="k">發行途徑</div><div>僅鏈上供給層鑄造（DeFi 池注資／系統補鑄），無公開鑄造接口</div>
+</div>
+
+<h3>8.3 TiUSD 應用</h3>
+<p>TiUSD 在 TACm 生態中具有廣泛應用場景：作為低手續費交易對（TiUSD 交易對享有最低手續費，僅 0.5%）、作為交易所撮合/閃兌的主流幣種、作為 DeFi 借貸市場的借貸資產、作為收益聚合器的標的資產、以及作為用戶規避市場波動的穩定資產避風港。</p>
+
+<h2 id="s9">九、治理機制</h2>
+
+<h3>9.1 治理架構</h3>
+<p>TACm 採用鏈上治理（On-chain Governance）機制，TACM 持有者可通過質押獲得治理權，參與網絡參數調整、協議升級與資金分配等決策。治理過程完全透明、可追溯。</p>
+
+<h3>9.2 治理流程</h3>
+<ol>
+<li><b>提案提交</b>：質押一定數量 TACM 的用戶可提交治理提案</li>
+<li><b>討論期</b>：提案進入為期 3 天的社區討論期，收集反饋與修改意見</li>
+<li><b>投票期</b>：討論期結束後進入為期 5 天的投票期，質押用戶可投票表決</li>
+<li><b>計票與執行</b>：投票期結束後自動計票，獲得超過 50% 贊成票且達到法定人數的提案自動執行</li>
+<li><b>時間鎖</b>：重大協議升級設置 48 小時時間鎖，給予用戶足夠的反應時間</li>
+</ol>
+
+<h3>9.3 可治理參數</h3>
+<ul>
+<li>共識參數：出塊時間、難度調整週期、區塊大小上限</li>
+<li>經濟參數：手續費率、礦工獎勵比例、生態激勵分配</li>
+<li>金融參數：借貸利率模型、清算閾值、穩定幣參數</li>
+<li>治理參數：提案門檻、投票週期、法定人數</li>
+</ul>
+
+<h2 id="s10">十、安全設計</h2>
+
+<h3>10.1 密碼學安全</h3>
+<p>TACm 採用工業標準密碼學算法確保網絡安全：交易簽名採用 ECDSA secp256k1 橢圓曲線算法，區塊哈希採用 SHA-256，Merkle 樹確保交易數據完整性。用戶私鑰僅存儲於用戶本地，網絡節點無法接觸用戶私鑰。</p>
+
+<h3>10.2 共識安全</h3>
+<p>Consortium PoW 共識機制通過多重設計確保網絡安全：聯盟節點許可制防止惡意節點大規模加入；時間權證機制天然抵禦女巫攻擊；2/3 多數驗證確保區塊最終性；持續在線要求提高攻擊成本。理論上，攻擊者需控制超過 1/3 的聯盟節點並持續在線足夠長時間才能發動成功攻擊，攻擊成本遠高於收益。</p>
+
+<h3>10.3 智能合約安全</h3>
+<ul>
+<li>核心合約代碼開源並接受第三方安全審計</li>
+<li>重大合約升級採用時間鎖（Timelock）機制</li>
+<li>管理權限採用多簽（Multisig）控制</li>
+<li>設立漏洞賞金計劃（Bug Bounty），鼓勵白帽黑客發現並報告漏洞</li>
+<li>應急暫停機制（Circuit Breaker），在極端情況下可暫停合約功能</li>
+</ul>
+
+<h3>10.4 資產安全</h3>
+<p>平台採用冷熱錢包分離架構，大部分用戶資產存儲於離線冷錢包，熱錢包僅保留日常運營所需的少量資金。大額提現需多重簽名確認。所有敏感操作記錄完整審計日誌，異常行為自動觸發告警與凍結機制。</p>
+
+<h2 id="s11">十一、路線圖</h2>
+
+<h3>11.1 已完成階段</h3>
+<table>
+<tr><th>階段</th><th>核心內容</th><th>狀態</th></tr>
+<tr><td>第一階段</td><td>共識機制原型、區塊鏈核心、挖礦系統、基礎錢包</td><td>已完成</td></tr>
+<tr><td>第二階段</td><td>數字資產交易所、專業級交易界面、TiUSD 穩定幣、閃兌功能</td><td>已完成</td></tr>
+<tr><td>第三階段</td><td>自動交易機器人、C2C 法幣交易、跟單交易、Staking 質押</td><td>已完成</td></tr>
+<tr><td>第四階段</td><td>WebSocket 實時行情、K 線圖、邀請返傭、2FA 雙因素驗證</td><td>已完成</td></tr>
+<tr><td>第五階段</td><td>永續合約交易（125x）、DeFi 生態（流動性/借貸/IDO/聚合器）、PWA 移動端</td><td>已完成</td></tr>
+<tr><td>第六階段</td><td>真實密碼學簽名（secp256k1）、P2P 節點發現與分布式 BFT、動態難度、治理投票上鏈</td><td>已完成</td></tr>
+<tr><td>第七階段</td><td>智能合約虛擬機（gas 治理/原子回滾）、Token Studio 發幣、鏈上 DEX（AMM）、流動性挖礦</td><td>已完成</td></tr>
+<tr><td>第八階段</td><td>Layer2 Rollup（欺詐證明/SPV）、標準 JSON-RPC 兼容層、異構鏈跨鏈橋、Go/JS 開發者 SDK</td><td>已完成</td></tr>
+</table>
+
+<h3>11.2 未來規劃</h3>
+<table>
+<tr><th>階段</th><th>核心內容</th><th>預計時間</th></tr>
+<tr><td>第九階段</td><td>零知識證明（ZK）隱私交易、隱私保護與監管合規工具</td><td>Q4</td></tr>
+<tr><td>第十階段</td><td>主網正式上線、全球節點激勵計劃、基金會成立、生態夥伴拓展</td><td>次年</td></tr>
+</table>
+
+<h2 id="s13">十三、開發者生態與跨鏈</h2>
+
+<h3>13.1 官方開發者 SDK</h3>
+<p>TACm 提供 Go（<code>sdk/tacclient</code>）與 JavaScript（<code>sdk/tacjs</code>）雙語官方 SDK，封裝密鑰生成、地址推導、交易簽章與節點 RPC 查詢/提交。兩端簽章格式完全互通（白名單字段 Canonical 序列化 → DoubleSHA256 → RFC6979 ECDSA → DER），並由固定向量互操作測試驗證：<b>前端 tacjs 簽署的交易，Go 節點可直接驗證入池</b>，第三方 dApp 與錢包可無縫接入。</p>
+
+<h3>13.2 標準 JSON-RPC 兼容層（eth_*）</h3>
+<p>節點提供全套 eth_* JSON-RPC（eth_blockNumber、eth_getBalance、eth_getTransactionCount、eth_call、eth_sendRawTransaction 等），支持標準 JSON-RPC 錢包直連；地址體系採 Hash160 標準（tx0 地址 ↔ 0x 前綴），wei 金額自動換算 TACm。</p>
+
+<h3>13.3 真實跨鏈橋（TAC ↔ 異構鏈）</h3>
+<p>內建異構鏈雙向中繼：TAC 資產經鎖定（lock）後在目標鏈自動 mint 映射代幣；目標鏈銷毀（burn）後在 TAC 自動解鎖。跨鏈訊息由中繼器簽名上鏈，支持測試網與主網，部署細節見跨鏈部署文件。</p>
+
+<h3>13.4 資產發行與供應治理</h3>
+<p>TACm 供應總量上限 52,003,300 枚，由鏈上規則強制執行；Token Studio 支持在鏈上發行自定義代幣與呼叫合約。穩定幣 TiUSD 按市值自動增發/銷毀，且保有總供應量 0.330 倍的最低流通量以維持幣值穩定，防止脫錨崩盤。</p>
+
+<h2 id="s12">十二、結論</h2>
+<p>TACm 提出了一種基於時間權證的聯盟鏈改進型 PoW 共識機制，為區塊鏈共識領域的算力壟斷、能源浪費與參與門檻等問題提供了一種新的解決思路。通過將「時間」這一最公平的資本作為共識基礎，TACm 實現了公平、節能且高效的區塊確認機制。</p>
+<p>在共識層之上，TACm 構建了包括去中心化交易所、衍生品交易、借貸市場、代幣發行平台、收益聚合器與穩定幣在內的完整金融生態，為用戶提供一站式區塊鏈金融服務。TACm 還設計了完善的鏈上治理機制與安全架構，確保網絡的長期可持續發展與用戶資產安全。</p>
+<p>我們相信，TACm 的時間權證共識機制與完整金融生態將為區塊鏈技術的大規模應用與金融普惠做出積極貢獻。我們邀請全球開發者、研究者與用戶參與 TACm 生態建設，共同推動區塊鏈技術的創新與發展。</p>
+
+<div class="note">
+</div>
+
+<footer>
+<p>TACm Whitepaper Version 4.0</p>
+<p>Time Asset Crypto Mining — 時間權證共識驅動的區塊鏈金融網絡</p>
+<p>最後更新：2026 年 10 月</p>
+</footer>
+
+</main>
+</body>
+</html>

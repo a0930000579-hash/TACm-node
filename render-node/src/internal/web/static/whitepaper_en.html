@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TACm Whitepaper v3.0 | A Time-Warrant Consensus-Driven Blockchain Financial Network</title>
+<style>
+:root{--bg:#fafafa;--bg2:#fff;--panel:#f5f5f5;--line:#e0e0e0;--txt:#212121;--muted:#757575;--brand:#1a73e8;--accent:#0d47a1;--green:#2e7d32;--red:#c62828}
+html,body{background:var(--bg);color:var(--txt);margin:0;padding:0;font:15px/1.8 Georgia,"Times New Roman","Noto Serif",serif}
+header{background:var(--accent);color:#fff;padding:48px 24px;text-align:center}
+header h1{margin:0;font-size:2rem;letter-spacing:1px;font-weight:400}
+header .subtitle{opacity:.85;font-size:1rem;margin-top:8px;font-style:italic}
+header .version{display:inline-block;margin-top:16px;border:1px solid rgba(255,255,255,.4);border-radius:4px;padding:4px 12px;font-size:.8rem;letter-spacing:2px}
+main{max-width:780px;margin:0 auto;padding:40px 24px 80px}
+h2{margin-top:2.5rem;color:var(--accent);font-size:1.4rem;font-weight:600;border-bottom:2px solid var(--brand);padding-bottom:8px}
+h3{margin-top:1.8rem;color:var(--brand);font-size:1.1rem;font-weight:600}
+h4{margin-top:1.2rem;font-size:1rem;font-weight:600}
+p{margin:12px 0;text-align:justify}
+.abstract{background:var(--panel);border-left:4px solid var(--brand);padding:20px 24px;margin:24px 0;border-radius:0 8px 8px 0}
+.abstract h3{margin-top:0;color:var(--accent)}
+.kv{display:grid;grid-template-columns:180px 1fr;gap:8px 16px;margin:16px 0}
+.kv div{border-bottom:1px dotted var(--line);padding:6px 0}
+.k{color:var(--muted);font-weight:600}
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:.9rem}
+th,td{border:1px solid var(--line);padding:10px 12px;text-align:left}
+th{background:var(--panel);color:var(--accent);font-weight:600}
+code{background:var(--panel);padding:2px 6px;border-radius:3px;font-family:"Courier New",monospace;font-size:.85em}
+ul,ol{padding-left:1.5rem}
+li{margin:6px 0}
+.note{background:#fff8e1;border-left:4px solid #f9a825;padding:14px 18px;border-radius:0 6px 6px 0;margin:16px 0;font-size:.9rem}
+.toc{background:var(--panel);padding:20px 28px;border-radius:8px;margin:24px 0}
+.toc h3{margin-top:0;color:var(--accent)}
+.toc ol{margin:0}
+.toc a{color:var(--txt);text-decoration:none}
+.toc a:hover{color:var(--brand)}
+.formula{background:var(--panel);padding:16px 20px;border-radius:6px;text-align:center;font-family:"Courier New",monospace;font-size:1rem;margin:16px 0;overflow-x:auto}
+.langbar{text-align:right;font-size:.85rem;margin-bottom:8px}
+.langbar a{color:var(--brand);text-decoration:none}
+footer{color:var(--muted);font-size:.85rem;border-top:1px solid var(--line);padding:24px;margin-top:40px;text-align:center}
+@media(max-width:640px){.kv{grid-template-columns:1fr}main{padding:20px 16px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="langbar"><a href="/whitepaper-en">English</a> <span>｜</span> <a href="/whitepaper">中文</a></div>
+  <h1>TACm Whitepaper</h1>
+  <div class="subtitle">Time Asset Crypto Mining — A Time-Warrant Consensus-Driven Blockchain Financial Network</div>
+  <div class="version">VERSION 3.0</div>
+</header>
+<main>
+
+<div class="abstract">
+<h3>Abstract</h3>
+<p>TACm is a blockchain financial network based on the Time Warrant consensus mechanism, designed to address the fundamental problems of traditional Proof-of-Work (PoW) blockchains, including computing power monopolization, energy waste, and high participation barriers. TACm treats "time" as the fairest consensus asset and achieves efficient, energy-saving, and fair block confirmation through a Consortium Proof of Work (Consortium PoW) consensus mechanism.</p>
+<p>Above the consensus layer, TACm builds a complete decentralized financial ecosystem, including digital asset trading, perpetual contracts, liquidity mining, lending markets, token issuance platforms, and a stablecoin system, providing users with one-stop blockchain financial services. This document describes TACm's consensus mechanism, network architecture, token economics, governance model, and security design.</p>
+</div>
+
+<div class="toc">
+<h3>Table of Contents</h3>
+<ol>
+<li><a href="#s1">1. Background and Problems</a></li>
+<li><a href="#s2">2. Design Objectives</a></li>
+<li><a href="#s3">3. Consensus Mechanism: Time Warrant and Consortium PoW</a></li>
+<li><a href="#s4">4. Network Architecture</a></li>
+<li><a href="#s5">5. Account and Transaction Model</a></li>
+<li><a href="#s6">6. Token Economics</a></li>
+<li><a href="#s7">7. Financial Ecosystem</a></li>
+<li><a href="#s8">8. Stablecoin Protocol</a></li>
+<li><a href="#s9">9. Governance Mechanism</a></li>
+<li><a href="#s10">10. Security Design</a></li>
+<li><a href="#s11">11. Roadmap</a></li>
+<li><a href="#s12">12. Conclusion</a></li>
+</ol>
+</div>
+
+<h2 id="s1">1. Background and Problems</h2>
+<p>Since the emergence of the Proof-of-Work (PoW) consensus mechanism in 2009 has become the most widely adopted consensus algorithm in the blockchain field. However, as network scale expands, the PoW mechanism has exposed a series of fundamental problems:</p>
+<ol>
+<li><b>Computing Power Monopolization</b>: Mining machine manufacturing and mining farm operations show a strong trend of centralization. Small-scale participants struggle to compete fairly, contradicting the original decentralized intention of blockchain.</li>
+<li><b>Energy Waste</b>: Traditional PoW networks consume annual electricity exceeding that of some medium-sized countries. Vast amounts of energy are used for meaningless hash computations, resulting in high social costs.</li>
+<li><b>Participation Barriers</b>: Application-Specific Integrated Circuits (ASICs) are expensive, making it impossible for ordinary users to directly participate in the consensus process. Blockchain has become a game for the few.</li>
+<li><b>Performance Bottlenecks</b>: To ensure security, the PoW mechanism sacrifices transaction processing capacity. legacy PoW chains only process single-digit transactions per second, unable to meet the demands of large-scale commercial applications.</li>
+</ol>
+<p>Subsequent consensus mechanisms such as Proof-of-Stake (PoS) and Delegated Proof-of-Stake (DPoS) have improved energy efficiency and performance, but introduced new problems such as capital monopolization, token concentration, and governance centralization. How to achieve a balance between decentralization, security, and performance remains the core challenge in the blockchain field.</p>
+<p>TACm proposes a Consortium PoW consensus mechanism based on Time Warrant, treating "time" — the fairest, non-purchasable resource — as the consensus foundation. Through a consortium chain architecture that balances performance and security, TACm provides a new solution for blockchain consensus mechanisms.</p>
+
+<h2 id="s2">2. Design Objectives</h2>
+<p>TACm's design follows these core principles:</p>
+<table>
+<tr><th>Principle</th><th>Description</th></tr>
+<tr><td>Fairness</td><td>Using time as the consensus asset to avoid computing power and capital monopolization, ensuring fair competition rights for small-scale participants</td></tr>
+<tr><td>Energy Efficiency</td><td>Consortium chain architecture significantly reduces consensus energy consumption while achieving second-level block confirmation and high throughput</td></tr>
+<tr><td>Security and Trust</td><td>Cryptography ensures transaction immutability; multi-validation by consortium nodes ensures network security</td></tr>
+<tr><td>Open Participation</td><td>Lowering participation barriers so any user can participate in consensus and earn rewards by staying online</td></tr>
+<tr><td>Financial Completeness</td><td>Building a complete decentralized financial ecosystem to achieve full-chain circulation of digital assets</td></tr>
+<tr><td>Scalability</td><td>Modular architecture supports consensus upgrades, ecosystem expansion, and cross-chain interoperability</td></tr>
+</table>
+
+<h3>2.2 TACM Core Competitive Advantages</h3>
+<p>TACm possesses the following irreplaceable core competitive advantages among existing blockchain projects:</p>
+
+<h4>(1) Original Time Warrant Consensus Mechanism</h4>
+<p>TACm is the first to propose the "Time Warrant" consensus concept, treating time — the fairest, non-purchasable, and non-replicable resource in human society — as the consensus foundation. This mechanism fundamentally differs from the computing power competition of traditional PoW and the capital competition of PoS, creating an entirely new paradigm for consensus mechanisms. The Time Warrant mechanism has theoretically proven its natural defense capability against Sybil Attacks and has achieved a balance between fairness and efficiency in practice.</p>
+
+<h4>(2) Genuine Fair Participation</h4>
+<p>In traditional PoW blockchains, computing power determines everything, and ordinary users are excluded from the consensus process. In PoS blockchains, wealth determines voting power, exacerbating the wealth gap. TACm's Time Warrant mechanism ensures that every participant is equal before time, regardless of how much computing power or capital they possess. Nodes that stay online continuously receive reasonable bonuses, but the bonus is capped (maximum 4.0x) to avoid the Matthew Effect. This makes TACm a truly fair blockchain network for the general public.</p>
+
+<h4>(3) Extremely Low Energy Consumption</h4>
+<p>TACm adopts a consortium chain architecture, where the consensus process is completed by preset validator nodes, eliminating the need for all network nodes to perform meaningless hash computations. Compared to traditional PoW blockchains that consume tens of billions of kilowatt-hours annually, TACm's energy consumption is reduced by several orders of magnitude, aligning with sustainable development principles and avoiding regulatory risks and social controversies caused by energy issues.</p>
+
+<h4>(4) One-Stop Financial Ecosystem</h4>
+<p>Most blockchain projects focus solely on the underlying protocol, with financial applications relying on external third-party development, resulting in severe ecosystem fragmentation. TACm has holistically planned the underlying consensus and upper-layer financial applications from the very beginning of its design, natively integrating complete financial infrastructure including digital asset trading, derivatives, lending, liquidity mining, token issuance, yield aggregators, and stablecoins. Users can enjoy one-stop blockchain financial services without switching between multiple platforms, with assets achieving full-chain circulation within the ecosystem.</p>
+
+<h4>(5) Native Stablecoin and Differentiated Fee Structure</h4>
+<p>TACm natively issues the TiUSD stablecoin within its ecosystem, pegged 1:1 to the US dollar, and employs an over-collateralized minting mechanism to ensure peg stability. To encourage the use of TiUSD, TACm implements a differentiated fee strategy: TiUSD trading pairs charge only 0.5% fees, significantly lower than the 1.25% charged by other stablecoin trading pairs. This mechanism both reduces user transaction costs and promotes the circulation and adoption of stablecoins within the ecosystem, creating a virtuous cycle.</p>
+
+<h4>(6) High Performance and Immediate Finality</h4>
+<p>TACm's consortium chain architecture achieves a transaction processing capacity of approximately 1000 TPS, with a target block time of just 3 seconds. Transactions reach practical finality after 6 block confirmations (approximately 18 seconds). Compared to traditional PoW blockchains that require tens of minutes for confirmation, TACm's high performance and immediate finality enable it to support large-scale commercial applications, including high-frequency trading, payment settlement, and real-time clearing scenarios.</p>
+
+<h4>(7) Comprehensive On-Chain Governance</h4>
+<p>TACm has designed a complete on-chain governance mechanism. Token holders can participate in network decision-making through staking, including consensus parameter adjustment, economic model optimization, protocol upgrades, and ecosystem fund allocation. The governance process is open and transparent, with all proposals and voting records recorded on-chain and verifiable. This mechanism ensures the long-term sustainable development of the network and avoids the centralization risk of a few individuals controlling the protocol's direction.</p>
+
+<h2 id="s3">3. Consensus Mechanism: Time Warrant and Consortium PoW</h2>
+
+<h3>3.1 Time Warrant</h3>
+<p>Time Warrant is the core innovation of TACm's consensus mechanism. Its fundamental idea is to convert a node's online duration into verifiable consensus weight — the longer the online time, the higher the probability of obtaining block production rights. This mechanism is based on the following observations:</p>
+<ul>
+<li>Time is the only non-purchasable, non-replicable resource. No matter how much computing power or capital one possesses, one cannot obtain more time than anyone else.</li>
+<li>Continuously online nodes contribute more to the network (forwarding transactions, storing blocks, maintaining network stability) and should receive higher consensus weight.</li>
+<li>The Time Warrant mechanism naturally defends against Sybil Attacks, as attackers cannot purchase time in bulk.</li>
+</ul>
+
+<h3>3.2 Time Bonus Function</h3>
+<p>A node's time bonus dynamically adjusts with online duration, using a piecewise linear function:</p>
+<div class="formula">
+T(t) = 1.0, &nbsp;&nbsp; 0 ≤ t &lt; 10min<br>
+T(t) = 1.0 + (t - 10min) × k, &nbsp;&nbsp; 10min ≤ t &lt; 12h<br>
+T(t) = 4.0, &nbsp;&nbsp; t ≥ 12h
+</div>
+<p>where k is the linear growth coefficient, adjusted by governance parameters. The cold-start period (10 minutes) prevents nodes from frequently going online and offline for speculation. The maximum bonus of 4.0x prevents unlimited bonus stacking. If continuous interruption exceeds 30 minutes, the bonus resets to its initial value.</p>
+
+<h3>3.3 Consortium Proof of Work Consensus</h3>
+<p>TACm adopts a consortium chain architecture, where preset validator nodes form a consortium to jointly maintain network security. The consensus process combines PoW computing power competition with Time Warrant bonuses:</p>
+<ol>
+<li><b>Difficulty Adjustment</b>: The network dynamically adjusts mining difficulty based on the total computing power of consortium nodes, with a target block time of 3 seconds.</li>
+<li><b>Computing Power Competition</b>: Consortium nodes compete for block production rights through hash computations, following the basic principles of PoW.</li>
+<li><b>Time Bonus</b>: A node's effective computing power = base computing power × time bonus function T(t). The longer the online time, the higher the effective computing power.</li>
+<li><b>Block Validation</b>: After the block-producing node broadcasts a new block, other consortium nodes validate it. The block is added to the chain after confirmation by more than 2/3 of the nodes.</li>
+<li><b>Reward Distribution</b>: Block rewards are distributed to consortium nodes participating in consensus in proportion to their effective computing power.</li>
+</ol>
+
+<h3>3.4 Consensus Mechanism Comparison</h3>
+<table>
+<tr><th>Consensus Mechanism</th><th>Decentralization</th><th>Throughput</th><th>Energy</th><th>Finality</th><th>Sybil Resistance</th></tr>
+<tr><td>PoW</td><td>High</td><td>~7 TPS</td><td>Extremely High</td><td>Probabilistic</td><td>Medium (computing barrier)</td></tr>
+<tr><td>PoS</td><td>Medium-High</td><td>~15 TPS</td><td>Low</td><td>Probabilistic</td><td>Low (capital barrier)</td></tr>
+<tr><td>DPoS (EOS)</td><td>Medium</td><td>~4000 TPS</td><td>Low</td><td>Immediate</td><td>Medium (voting barrier)</td></tr>
+<tr><td>PoA (Consortium)</td><td>Low</td><td>High</td><td>Extremely Low</td><td>Immediate</td><td>High (permissioned)</td></tr>
+<tr><td><b>TACm Consortium PoW</b></td><td><b>Medium</b></td><td><b>~1000 TPS</b></td><td><b>Low</b></td><td><b>Immediate</b></td><td><b>High (time barrier)</b></td></tr>
+</table>
+
+<h2 id="s4">4. Network Architecture</h2>
+
+<h3>4.1 Layered Architecture</h3>
+<p>The TACm network adopts a modular layered architecture, divided into four layers from bottom to top:</p>
+<ol>
+<li><b>Consensus Layer</b>: Responsible for block generation, transaction validation, and consensus achievement, implementing the Consortium PoW consensus mechanism.</li>
+<li><b>Network Layer</b>: Responsible for node discovery, transaction broadcasting, and block synchronization, using P2P peer-to-peer communication protocols.</li>
+<li><b>Data Layer</b>: Responsible for persistent storage of block data, transaction data, and state data, supporting relational databases and scalable storage engines.</li>
+<li><b>Application Layer</b>: Responsible for providing external API interfaces and user interfaces, implementing business logic such as exchanges, wallets, and DeFi.</li>
+</ol>
+
+<h3>4.2 Node Types</h3>
+<table>
+<tr><th>Node Type</th><th>Responsibilities</th><th>Consensus Participation</th></tr>
+<tr><td>Validator Node</td><td>Participates in computing power competition, generates blocks, validates transactions</td><td>Yes</td></tr>
+<tr><td>Full Node</td><td>Stores the complete blockchain, forwards transactions, provides data queries</td><td>No</td></tr>
+<tr><td>Light Node</td><td>Stores only block headers, used for mobile wallets and lightweight clients</td><td>No</td></tr>
+<tr><td>Gateway Node</td><td>Provides external API services, protocol conversion, traffic load balancing</td><td>No</td></tr>
+</table>
+
+<h3>4.3 Technical Implementation</h3>
+<p>The TACm core protocol is implemented using a high-performance asynchronous framework, ensuring high-concurrency processing capability at the network layer. The data layer uses a relational database as the default storage engine, while also supporting extension to distributed databases through adapters. Frontend applications use responsive web technology and support PWA mobile installation, achieving a consistent cross-platform experience.</p>
+
+<h2 id="s5">5. Account and Transaction Model</h2>
+
+<h3>5.1 Account Model</h3>
+<p>TACm adopts the Account Model, rather than the UTXO model. Each account contains the following state:</p>
+<div class="kv">
+<div class="k">Address</div><div>Blockchain address prefixed with <code>tx0</code>, generated from public key hash</div>
+<div class="k">Balance</div><div>Amount of TACM held by the account, supporting 18 decimal places</div>
+<div class="k">Nonce</div><div>Used to prevent replay attacks, incremented with each transaction</div>
+<div class="k">Code</div><div>Smart contract bytecode (contract accounts only)</div>
+<div class="k">Storage</div><div>Smart contract persistent storage (contract accounts only)</div>
+</div>
+
+<h3>5.2 Transaction Types</h3>
+<table>
+<tr><th>Transaction Type</th><th>Description</th></tr>
+<tr><td>Transfer Transaction</td><td>TACM transfer between ordinary accounts</td></tr>
+<tr><td>Contract Deployment</td><td>Deploying a smart contract to the blockchain</td></tr>
+<tr><td>Contract Call</td><td>Calling methods of a deployed smart contract</td></tr>
+<tr><td>Staking Transaction</td><td>Staking TACM to obtain governance rights and rewards</td></tr>
+<tr><td>Governance Vote</td><td>Voting on governance proposals</td></tr>
+</table>
+
+<h3>5.3 Transaction Lifecycle</h3>
+<ol>
+<li><b>Construction and Signing</b>: The user constructs a transaction and digitally signs it using their private key.</li>
+<li><b>Broadcasting</b>: The transaction is broadcast to the P2P network and enters the transaction memory pool (Mempool).</li>
+<li><b>Packaging</b>: Validator nodes select transactions from the Mempool and package them into blocks, prioritized by fee.</li>
+<li><b>Consensus</b>: The block is confirmed through the Consortium PoW consensus mechanism.</li>
+<li><b>On-Chaining</b>: The block is appended to the end of the blockchain, and transaction states are updated.</li>
+<li><b>Finality</b>: After 6 block confirmations (approximately 18 seconds), the transaction reaches practical finality.</li>
+</ol>
+
+<h2 id="s6">6. Token Economics</h2>
+
+<h3>6.1 Basic Parameters</h3>
+<div class="kv">
+<div class="k">Token Symbol</div><div>TACM</div>
+<div class="k">Total Supply</div><div>52,003,300 TACM (fixed cap, never inflated)</div>
+<div class="k">Decimal Precision</div><div>18 places</div>
+<div class="k">Address Prefix</div><div><code>tx0</code></div>
+<div class="k">Consensus Mechanism</div><div>Consortium PoW (Consortium Proof of Work)</div>
+<div class="k">Block Time</div><div>3 seconds (target)</div>
+</div>
+
+<h3>6.2 Issuance Curve</h3>
+<p>TACM adopts an annual decay issuance model. The first four years are a high-reward period to attract early participants. From the fifth year, it enters linear decay. From the ninth year, it transitions to Tail Emission, maintaining network security and node incentives at a constant annual rate of 2%.</p>
+
+<h3>6.3 On-Chain Block Reward Split</h3>
+<p>Each block rewards 10 TACm (actual value follows the annual-decay emission curve under the supply cap). Rewards are split on-chain in real time: <b>88% to active (powered-on) online miners</b> (proportional to each miner’s hashrate share, credited immediately on block production); <b>12% is auto-credited to the reward pool</b> as market-making and operating capital for the exchange. The miner is controlled by the user — <b>stopping the miner stops rewards</b>; when no miner is powered on, the miner share is fully credited to the reward pool (exchange capital) and never accrues to arbitrary accounts. Server-side scheduling with continuous heartbeat ensures real block production; mining continues in the background after leaving the page once powered on.</p>
+<div class="kv">
+<div class="k">Miner share</div><div>88% of each block, split by online hashrate</div>
+<div class="k">Reward pool</div><div>12% auto-credited per block (exchange capital pool)</div>
+<div class="k">Online window</div><div>Online within 180s heartbeat window</div>
+</div>
+
+<h3>6.4 Miner &amp; Hashrate Mechanism</h3>
+<p>Every member is bound to an on-chain wallet address as their miner identity upon registration. Default hashrate is <b>1 vCPU + 2 vGPU</b> (vCPU×1M + vGPU×2M = 5M total), fixed and not manually adjustable; hashrate growth is only via referrals — <b>each invited registered member (+referral code) grants +0.01 vCPU and +0.02 vGPU</b>. The referral code is simply the member’s own tx0 wallet address.</p>
+<div class="kv">
+<div class="k">Base hashrate</div><div>1 vCPU + 2 vGPU (5M total, fixed)</div>
+<div class="k">Referral boost</div><div>+0.01 vCPU / +0.02 vGPU per referred registration</div>
+<div class="k">Referral code</div><div>Member tx0 wallet address</div>
+</div>
+
+<h3>6.5 Token Distribution</h3>
+<table>
+<tr><th>Category</th><th>Percentage</th><th>Amount</th><th>Purpose</th></tr>
+<tr><td>Miner Rewards</td><td>60%</td><td>31,201,980</td><td>Distributed to online participating nodes through the Time Warrant consensus mechanism</td></tr>
+<tr><td>Ecosystem Incentives</td><td>20%</td><td>10,400,660</td><td>Liquidity mining, DeFi incentives, developer grants, community events</td></tr>
+<tr><td>Development and Governance</td><td>10%</td><td>5,200,330</td><td>Core protocol development, security audits, foundation operations</td></tr>
+<tr><td>Advisors and Early Supporters</td><td>5%</td><td>2,600,165</td><td>Advisor team, early investors, strategic partners</td></tr>
+<tr><td>Marketing</td><td>5%</td><td>2,600,165</td><td>Marketing, brand building, user growth, airdrop campaigns</td></tr>
+</table>
+
+<h3>6.4 Token Utility</h3>
+<ul>
+<li><b>Consensus Participation</b>: Nodes earn TACM rewards through online presence and computing power contributions</li>
+<li><b>Transaction Fees</b>: Network transaction fees are paid in TACM, with a portion of fees burned</li>
+<li><b>Staking Rewards</b>: Staking TACM earns passive income and governance voting rights</li>
+<li><b>Liquidity Provision</b>: Providing TACM liquidity in AMM liquidity pools earns fee sharing</li>
+<li><b>Contract Margin</b>: TACM can be used as margin asset in derivatives trading</li>
+<li><b>Governance Voting</b>: Holding TACM allows participation in on-chain governance, voting on protocol parameters and upgrade proposals</li>
+</ul>
+
+<h2 id="s7">7. Financial Ecosystem</h2>
+<p>TACm is not only a blockchain network, but also a complete decentralized financial ecosystem. Above the consensus layer, TACm has built the following financial infrastructure:</p>
+
+<h3>7.1 Matching-Engine Exchange</h3>
+<p>A built-in matching-engine exchange (self-owned order-book engine): order-book matching, market/limit orders, Flash Swap (instant conversion among open trading assets), automated trading bots (configurable auto buy/sell strategies), deposit/withdraw and a wealth pool. The exchange supports TACm and TiUSD with differentiated fees (TACm 200bp, TiUSD 50bp) to encourage the autonomous stablecoin. Reward pool funds serve as exchange market-making capital.</p>
+<div class="kv">
+<div class="k">Matching engine</div><div>Order book + market/limit</div>
+<div class="k">Flash swap</div><div>Instant conversion of listed assets</div>
+<div class="k">Auto trading</div><div>Buy/sell bot strategies</div>
+<div class="k">Fees</div><div>TACm 200bp / TiUSD 50bp</div>
+</div>
+
+<h3>7.2 Derivatives Trading</h3>
+<p>Supports perpetual contract trading with up to 125x leverage, featuring a complete risk control mechanism including isolated margin, auto-deleveraging, risk reserve fund, mark price, and funding rate mechanisms to ensure stable operation of the derivatives market.</p>
+
+<h3>7.3 Lending Market</h3>
+<p>A decentralized lending protocol where users can deposit to earn interest or borrow against collateral. Supports over-collateralization, automatic liquidation, floating interest rate adjustment, and other mechanisms, providing a passive income channel for idle assets.</p>
+
+<h3>7.4 Token Issuance Platform</h3>
+<p>An IDO (Initial DEX Offering) issuance platform providing decentralized token issuance and subscription channels for new projects. Project owners can set subscription prices, limits, and timelines, and users can participate in subscriptions without permission.</p>
+
+<h3>7.5 Yield Aggregator</h3>
+<p>An intelligent yield aggregator that automatically allocates user funds to the highest-yielding DeFi strategies, and supports auto-compounding to maximize user capital efficiency.</p>
+
+<h2 id="s8">8. Stablecoin Protocol</h2>
+
+<h3>8.1 TiUSD Overview</h3>
+<p>TiUSD is the US dollar stablecoin within the TACm ecosystem, pegged 1:1 to the US dollar, designed to provide low-volatility, low-fee value storage and medium of exchange for the ecosystem. TiUSD employs an over-collateralized minting mechanism, where users can mint TiUSD by staking assets such as TACM.</p>
+
+<h3>8.2 Stability Mechanisms</h3>
+<ul>
+<li><b>Over-Collateralization</b>: Every TiUSD is backed by excess crypto asset collateral</li>
+<li><b>Arbitrage Mechanism</b>: When TiUSD deviates from $1, arbitrageurs can profit through mint/redeem mechanisms, driving the price back to peg</li>
+<li><b>Liquidation Mechanism</b>: When the collateralization ratio falls below the liquidation threshold, the system automatically liquidates collateral assets to repay TiUSD</li>
+<li><b>Stability Fee</b>: TiUSD borrowing incurs a stability fee, with fee revenue used for ecosystem development</li>
+</ul>
+
+<h3>8.3 TiUSD Applications</h3>
+<p>TiUSD has a wide range of application scenarios within the TACm ecosystem: as a low-fee trading pair (TiUSD trading pairs enjoy the lowest fees at only 0.5%), as a lending asset in the DeFi lending market, as a target asset for yield aggregators, and as a stable asset safe haven for users to avoid market volatility.</p>
+
+<h2 id="s9">9. Governance Mechanism</h2>
+
+<h3>9.1 Governance Architecture</h3>
+<p>TACm adopts an On-chain Governance mechanism. TACM holders can obtain governance rights through staking and participate in decisions such as network parameter adjustment, protocol upgrades, and fund allocation. The governance process is fully transparent and traceable.</p>
+
+<h3>9.2 Governance Process</h3>
+<ol>
+<li><b>Proposal Submission</b>: Users who stake a certain amount of TACM can submit governance proposals</li>
+<li><b>Discussion Period</b>: The proposal enters a 3-day community discussion period to collect feedback and revision suggestions</li>
+<li><b>Voting Period</b>: After the discussion period, a 5-day voting period begins, during which staking users can vote</li>
+<li><b>Tally and Execution</b>: After the voting period, votes are automatically tallied. Proposals receiving more than 50% affirmative votes and reaching quorum are automatically executed</li>
+<li><b>Timelock</b>: Major protocol upgrades are subject to a 48-hour timelock, giving users sufficient reaction time</li>
+</ol>
+
+<h3>9.3 Governable Parameters</h3>
+<ul>
+<li>Consensus parameters: block time, difficulty adjustment period, block size limit</li>
+<li>Economic parameters: fee rates, miner reward ratio, ecosystem incentive distribution</li>
+<li>Financial parameters: lending interest rate models, liquidation thresholds, stablecoin parameters</li>
+<li>Governance parameters: proposal threshold, voting period, quorum</li>
+</ul>
+
+<h2 id="s10">10. Security Design</h2>
+
+<h3>10.1 Cryptographic Security</h3>
+<p>TACm employs industry-standard cryptographic algorithms to ensure network security: transaction signatures use the ECDSA secp256k1 elliptic curve algorithm, block hashing uses SHA-256, and Merkle trees ensure transaction data integrity. User private keys are stored only locally on the user's device; network nodes cannot access user private keys.</p>
+
+<h3>10.2 Consensus Security</h3>
+<p>The Consortium PoW consensus mechanism ensures network security through multiple designs: the permissioned consortium node system prevents large-scale malicious node participation; the Time Warrant mechanism naturally defends against Sybil Attacks; 2/3 majority validation ensures block finality; continuous online requirements increase attack costs. Theoretically, an attacker would need to control more than 1/3 of consortium nodes and remain online for a sufficiently long period to launch a successful attack, making the attack cost far higher than the potential gain.</p>
+
+<h3>10.3 Smart Contract Security</h3>
+<ul>
+<li>Core contract code is open-source and subject to third-party security audits</li>
+<li>Major contract upgrades employ a Timelock mechanism</li>
+<li>Administrative permissions use Multisig control</li>
+<li>A Bug Bounty program is established to encourage white-hat hackers to discover and report vulnerabilities</li>
+<li>A Circuit Breaker emergency pause mechanism can suspend contract functionality in extreme situations</li>
+</ul>
+
+<h3>10.4 Asset Security</h3>
+<p>The platform employs a cold/hot wallet separation architecture, with the majority of user assets stored in offline cold wallets, while hot wallets retain only the small amount of funds needed for daily operations. Large withdrawals require multi-signature confirmation. All sensitive operations are recorded in complete audit logs, and abnormal behavior automatically triggers alerts and freezing mechanisms.</p>
+
+<h2 id="s11">11. Roadmap</h2>
+
+<h3>11.1 Completed Phases</h3>
+<table>
+<tr><th>Phase</th><th>Core Content</th><th>Status</th></tr>
+<tr><td>Phase 1</td><td>Consensus mechanism prototype, blockchain core, mining system, basic wallet</td><td>Completed</td></tr>
+<tr><td>Phase 2</td><td>Digital asset exchange, professional trading interface, TiUSD stablecoin, instant swap functionality</td><td>Completed</td></tr>
+<tr><td>Phase 3</td><td>Automated trading bots, C2C fiat trading, copy trading, Staking</td><td>Completed</td></tr>
+<tr><td>Phase 4</td><td>WebSocket real-time market data, K-line charts, referral rebates, 2FA two-factor authentication</td><td>Completed</td></tr>
+<tr><td>Phase 5</td><td>Perpetual contract trading (125x), DeFi ecosystem (liquidity/lending/IDO/aggregator), PWA mobile</td><td>Completed</td></tr>
+<tr><td>Phase 6</td><td>Real cryptographic signatures (secp256k1), P2P node discovery & distributed BFT, dynamic difficulty, on-chain governance voting</td><td>Completed</td></tr>
+<tr><td>Phase 7</td><td>Smart contract VM (gas governance/atomic rollback), Token Studio issuance, on-chain DEX (AMM), liquidity mining</td><td>Completed</td></tr>
+<tr><td>Phase 8</td><td>Layer2 Rollup (fraud proofs/SPV), standard JSON-RPC compatibility layer, real heterogeneous-chain bridge, Go/JS developer SDKs</td><td>Completed</td></tr>
+</table>
+
+<h3>11.2 Future Plans</h3>
+<table>
+<tr><th>Phase</th><th>Core Content</th><th>Estimated Time</th></tr>
+<tr><td>Phase 9</td><td>Zero-Knowledge (ZK) privacy transactions, privacy and regulatory compliance tooling</td><td>Q4</td></tr>
+<tr><td>Phase 10</td><td>Mainnet launch, global node incentive program, foundation establishment, ecosystem partner expansion</td><td>Next Year</td></tr>
+</table>
+
+<h2 id="s13">13. Developer Ecosystem and Cross-Chain</h2>
+
+<h3>13.1 Official Developer SDKs</h3>
+<p>TACm ships official SDKs in Go (<code>sdk/tacclient</code>) and JavaScript (<code>sdk/tacjs</code>) covering key generation, address derivation, transaction signing, and node RPC query/submit. Signing formats are fully interoperable across both languages (whitelisted-field Canonical serialization &rarr; DoubleSHA256 &rarr; RFC6979 ECDSA &rarr; DER), verified by fixed-vector interop tests: <b>transactions signed by tacjs in the browser are validated directly by the Go node</b>, so third-party dApps and wallets can integrate seamlessly.</p>
+
+<h3>13.2 Standard JSON-RPC Compatibility Layer (eth_*)</h3>
+<p>Nodes expose the full eth_* JSON-RPC set (eth_blockNumber, eth_getBalance, eth_getTransactionCount, eth_call, eth_sendRawTransaction, etc.), enabling standard JSON-RPC wallets to connect directly; addresses use the Hash160 standard (tx0 &harr; 0x prefix) and wei amounts are converted to TACm automatically.</p>
+
+<h3>13.3 Real Cross-Chain Bridge (TAC &harr; Heterogeneous Chain)</h3>
+<p>A built-in heterogeneous-chain two-way relayer: TAC assets locked on TAC mint the mapped token on the target chain; burning on the target chain unlocks on TAC. Cross-chain messages are signed and submitted on-chain by the relayer, supporting testnet and mainnet; deployment details are in the cross-chain deployment guide.</p>
+
+<h3>13.4 Asset Issuance and Supply Governance</h3>
+<p>TACm has a hard supply cap of 52,003,300 tokens enforced on-chain; Token Studio supports on-chain issuance of custom tokens and contract calls. The TiUSD stablecoin mints/burns by market capitalization while keeping a minimum circulation of 0.330&times; of total supply to maintain stability and prevent de-pegging.</p>
+
+<h2 id="s12">12. Conclusion</h2>
+<p>TACm proposes a Consortium PoW consensus mechanism based on Time Warrant, providing a new solution to the problems of computing power monopolization, energy waste, and participation barriers in the blockchain consensus field. By treating "time" — the fairest resource — as the consensus foundation, TACm achieves a fair, energy-saving, and efficient block confirmation mechanism.</p>
+<p>Above the consensus layer, TACm has built a complete financial ecosystem including decentralized exchanges, derivatives trading, lending markets, token issuance platforms, yield aggregators, and stablecoins, providing users with one-stop blockchain financial services. TACm has also designed a comprehensive on-chain governance mechanism and security architecture to ensure the long-term sustainable development of the network and the security of user assets.</p>
+<p>We believe that TACm's Time Warrant consensus mechanism and complete financial ecosystem will make positive contributions to the large-scale application of blockchain technology and financial inclusion. We invite developers, researchers, and users worldwide to participate in the construction of the TACm ecosystem and jointly promote the innovation and development of blockchain technology.</p>
+
+<div class="note">
+<b>Disclaimer:</b> This whitepaper is for technical reference only and does not constitute any investment advice. Cryptocurrency trading involves high risk, and investors should bear investment risks themselves. The functions and parameters described in this whitepaper may be adjusted due to technical upgrades or governance votes; the final version shall be subject to the actual on-chain operation.
+</div>
+
+<footer>
+<p>TACm Whitepaper Version 4.0</p>
+<p>Time Asset Crypto Mining — A Time-Warrant Consensus-Driven Blockchain Financial Network</p>
+<p>Last Updated: October 2026</p>
+</footer>
+
+</main>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TAC Admin Dashboard</title>
+<link rel="manifest" href="/static/manifest.webmanifest">
+<meta name="theme-color" content="#f7f8fb">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="icon" href="/static/tacm.svg" type="image/svg+xml">
+<style>
+:root{--bn-bg:#f7f8fb;--bn-card:#ffffff;--bn-card2:#f2f4f9;--bn-line:#e2e6ee;--bn-txt:#14161a;--bn-sub:#5d6778;--bn-yellow:#68BE8D;--bn-green:#0ecb81;--bn-red:#f6465d;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bn-bg);color:var(--bn-txt);font:14px/1.6 -apple-system,"Segoe UI",Roboto,"PingFang TC","Microsoft JhengHei",sans-serif;padding:16px;max-width:1180px;margin:0 auto}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px}
+header h1{font-size:20px;font-weight:700}
+header h1 span{color:var(--bn-yellow)}
+.tag{font-size:11px;padding:2px 8px;border-radius:10px;background:var(--bn-card2);color:var(--bn-yellow)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.card{background:var(--bn-card);border:1px solid var(--bn-line);border-radius:12px;padding:16px}
+.card h3{font-size:13px;color:var(--bn-sub);margin-bottom:10px;font-weight:600}
+.card .k{display:flex;justify-content:space-between;font-size:12px;color:var(--bn-sub);padding:3px 0}
+.card .k b{color:var(--bn-txt);font-weight:600;word-break:break-all;text-align:right;max-width:60%}
+.card .big{font-size:24px;font-weight:700;margin:4px 0 8px;word-break:break-all}
+.pill{display:inline-block;font-size:11px;padding:2px 10px;border-radius:12px;background:var(--bn-card2)}
+.pill.ok{color:var(--bn-green)} .pill.warn{color:var(--bn-yellow)} .pill.err{color:var(--bn-red)}
+a{color:var(--bn-yellow);text-decoration:none;font-size:13px}
+.muted{color:var(--bn-sub);font-size:12px}
+.row{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
+.row .card{flex:1;min-width:240px}
+#err{color:var(--bn-red);margin:12px 0;font-size:13px}
+</style>
+</head>
+<body>
+<header>
+  <h1>TAC Ai 智能鏈 · <span>管理儀表板</span></h1>
+  <div><span class="tag" id="consensusTag">…</span> <a href="/">區塊瀏覽器</a> · <a href="/wallet">錢包</a> · <a href="/exchange">交易所</a></div>
+</header>
+<div id="err"></div>
+<div class="grid" id="cards"></div>
+
+<script>
+var base = new URLSearchParams(location.search).get('rpc') || (location.protocol === 'http:' ? location.origin.replace(/:([0-9]+)$/, ':8841') : 'http://127.0.0.1:8841');
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function fmt(x){return esc(x);}
+function fmtFee(v){ var n=parseFloat(v); if(isNaN(n)) return '—'; if(n===0) return '0';
+  if(Math.abs(n)>=1) return n.toLocaleString('en-US',{maximumFractionDigits:8});
+  if(Math.abs(n)>=1e-8) return n.toFixed(8).replace(/0+$/,'').replace(/\.$/,'');
+  return n.toExponential(6).replace(/(\.[0-9]*?)0+e/,'$1e').replace(/\.e/,'e'); }
+function card(title, html){return '<div class="card"><h3>'+title+'</h3>'+html+'</div>';}
+function kv(k,v){return '<div class="k"><span>'+k+'</span><b>'+v+'</b></div>';}
+fetch(base+'/api/status').then(function(r){return r.json();}).then(function(d){
+  if(!d.ok){document.getElementById('err').textContent = '聚合狀態讀取失敗'; return;}
+  var c = d.chain || {}, w = d.wallet || {}, ex = d.exchange || {}, rp = d.rewardpool || {}, td = d.tiusd || {}, l2 = d.l2 || {}, br = d.bridge || {};
+  var cards = '';
+  var pill = c.final_height === c.block_height ? 'ok' : 'warn';
+  cards += card('鏈節點', 
+    '<div class="big">#'+fmt(c.block_height)+'</div>'+
+    kv('已最終化', '#'+fmt(c.final_height))+
+    kv('共識', fmt(c.consensus))+
+    kv('難度', fmt(c.difficulty))+
+    kv('記憶體池', fmt(c.mempool_size)+' 筆')+
+    kv('Base Fee', fmtFee(c.base_fee)+' TACm/gas')+
+    kv('Gas Price', fmtFee(c.gas_price))+
+    kv('Block Gas Limit', fmt(c.block_gas_limit))+
+    kv('Burned Total', fmtFee(c.burned_total_tacm)+' TACm')+
+    kv('運行時間', fmt(c.uptime_sec)+' 秒')+
+    kv('節點', fmt(c.node_id))+
+    kv('地址', fmt(c.address))+
+    kv('節點獎勵 (M77)', '每塊 coinbase 9% 自動入節點地址 · 提取請見下方指令'));
+  cards += card('節點獎勵提取（僅本機 · M77）',
+    '<div class="big">'+fmt(c.address)+'</div>'+
+    '<div class="k"><span>方式</span><b>在伺服器上執行下方指令，節點金鑰代簽轉出</b></div>'+
+    '<div class="k"><span>curl</span><b style="max-width:100%;font-size:11px">curl -s -X POST '+location.origin+'/api/node/reward-withdraw -H "Content-Type: application/json" -d '{"to":"tx0目標地址","amount":"5"}'</b></div>'+
+    '<div class="muted">外部網路無法呼叫（僅 127.0.0.1），節點金鑰資產安全。</div>');
+  cards += card('鏈上錢包',
+    '<div class="big tacm">'+fmt(w.tacm)+' TACm</div>'+
+    kv('TiUSD', fmt(w.tiusd))+
+    kv('USDT', fmt(w.usdt))+
+    kv('地址', fmt(w.address)));
+  cards += card('獎勵池',
+    '<div class="big">'+fmt(rp.tacm)+' TACm</div>'+
+    kv('挹注比例', fmt(rp.share_bp)+' bp (15%)')+
+    kv('說明', 'coinbase 分潤 + 交易所手續費結算'));
+  cards += card('TiUSD 穩定幣',
+    '<div class="big">'+fmt(td.supply)+' TiUSD</div>'+
+    kv('累計鑄造', fmt(td.total_minted))+
+    kv('累計銷毀', fmt(td.total_burned)));
+  var fees = (ex.fee_account||[]).map(function(f){return kv(f.asset, f.avail);}).join('') || '<div class="muted">尚無手續費累積</div>';
+  cards += card('交易所手續費帳戶', fees);
+  var l2h = '';
+  if(l2 && l2.height != null){ l2h = kv('L2 高度', '#'+fmt(l2.height))+kv('狀態', fmt(l2.status)); } else { l2h = '<div class="muted">L2 Rollup 未啟用</div>'; }
+  cards += card('L2 Rollup', l2h);
+  var brh = '';
+  if(br && br.locked != null){ brh = kv('鎖定資產', fmt(br.locked))+kv('已跨鏈', fmt(br.burned)); } else { brh = '<div class="muted">跨鏈橋未啟用</div>'; }
+  cards += card('跨鏈橋', brh);
+  document.getElementById('cards').innerHTML = cards;
+  document.getElementById('consensusTag').textContent = c.consensus || 'pow';
+}).catch(function(e){document.getElementById('err').textContent = '無法連接 RPC（' + base + '）：' + e;});
+</script>
+<script>
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/static/sw.js').catch(function(){}); }
+</script>
+<script src="/static/js/i18n.js"></script>
+</body>
+</html>

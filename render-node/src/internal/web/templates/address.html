@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}Address · {{ a.Address|shortaddr }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <a class="back" href="/">← 返回</a>
+  <h1 class="mono break-all h1-addr">{{ a.Address }}</h1>
+</div>
+
+<section class="stat-cards">
+  <div class="card">
+    <div class="card-label">可用餘額</div>
+    <div class="card-value">{{ a.Balance }} <small>TACM</small></div>
+  </div>
+  <div class="card">
+    <div class="card-label">交易序號 Nonce</div>
+    <div class="card-value">{{ a.Nonce }}</div>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-head"><h2>相關交易（{{ a.Transactions|length }}）</h2></div>
+  <div class="addr-dir-tabs" style="display:flex;gap:8px;margin:0 0 10px">
+    <button class="btn ghost addr-dir-tab active" data-dir="" style="padding:5px 14px;font-size:13px">全部</button>
+    <button class="btn ghost addr-dir-tab" data-dir="in" style="padding:5px 14px;font-size:13px">收入</button>
+    <button class="btn ghost addr-dir-tab" data-dir="out" style="padding:5px 14px;font-size:13px">發出</button>
+  </div>
+  <div class="table-wrap">
+  <table class="data-table">
+    <thead><tr><th>交易哈希</th><th>方向</th><th>類型</th><th>對手方</th><th>金額</th><th>時間</th></tr></thead>
+    <tbody id="addrTxRows">
+    {% for t in a.Transactions %}
+      <tr>
+        <td class="mono"><a href="/tx/{{ t.Hash }}">{{ t.Hash|shortaddr }}</a></td>
+        <td>{% if t.From == a.Address %}<span class="tag out">發出</span>{% else %}<span class="tag in">收入</span>{% endif %}</td>
+        <td>{% if t.Memo|txkind == "mining" %}<span class="tag in"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M14.6 9.4 20 4M15 5l4 4"/><path d="M3 21l8-8"/><path d="M11 7 4 14l3 3 7-7"/></svg> 挖礦獎勵</span>{% elif t.Memo|txkind == "pool" %}<span class="tag">獎勵池</span>{% elif t.Memo|txkind == "node" %}<span class="tag">節點獎勵</span>{% elif t.Memo|txkind == "heartbeat" %}<span class="tag">心跳</span>{% elif t.Memo|txkind == "contract" %}<span class="tag">合約</span>{% elif t.Memo|txkind == "bridge" %}<span class="tag">跨鏈</span>{% else %}<span class="tag">轉帳</span>{% endif %}</td>
+        <td class="mono">{% if t.From == a.Address %}<a href="/address/{{ t.To }}">{{ t.To|shortaddr }}</a>{% else %}{% if t.From %}<a href="/address/{{ t.From }}">{{ t.From|shortaddr }}</a>{% else %}-{% endif %}{% endif %}</td>
+        <td class="amount strong">{{ t.Amount|fmtamt }}</td>
+        <td class="nowrap muted">{{ t.Ts|timefmt }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="5" class="muted center">尚無交易</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <div class="pager" style="display:flex;gap:10px;align-items:center;justify-content:center;margin-top:12px">
+    <button class="btn ghost" id="pgPrev" style="padding:6px 14px;font-size:13px">← 上一頁</button>
+    <span id="pgInfo" style="font-size:13px;color:var(--muted)">1/1</span>
+    <button class="btn ghost" id="pgNext" style="padding:6px 14px;font-size:13px">下一頁 →</button>
+  </div>
+</section>
+
+{% if transfers %}
+<section class="panel">
+  <div class="panel-head"><h2 data-i18n="addr.transfers">代幣轉移</h2></div>
+  <div class="table-wrap">
+  <table class="data-table">
+    <thead><tr><th data-i18n="tx.tContract">合約</th><th>From</th><th>To</th><th data-i18n="tx.tValue">數量 / Token ID</th><th data-i18n="tx.tBlock">區塊</th><th data-i18n="tx.hash">交易哈希</th></tr></thead>
+    <tbody>
+    {% for tr in transfers %}
+      <tr>
+        <td class="mono"><a href="/address/{{ tr.Contract }}">{{ tr.Contract|shortaddr }}</a></td>
+        <td class="mono">{% if tr.From %}<a href="/address/{{ tr.From }}">{{ tr.From|shortaddr }}</a>{% else %}<span class="muted">-</span>{% endif %}</td>
+        <td class="mono">{% if tr.To %}<a href="/address/{{ tr.To }}">{{ tr.To|shortaddr }}</a>{% else %}<span class="muted">-</span>{% endif %}</td>
+        <td class="amount strong">{{ tr.Value }}</td>
+        <td><a href="/block/{{ tr.Block }}">{{ tr.Block }}</a></td>
+        <td class="mono"><a href="/tx/{{ tr.Hash }}">{{ tr.Hash|shortaddr }}</a></td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6" class="muted center">尚無代幣轉移</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endif %}
+</section>
+<script>
+  // M123：地址交易完整分頁——接 /api/address/txs（後端 SQL 索引分頁，不限 50 筆）。
+  (function(){
+    var ADDR = '{{ a.Address }}';
+    var PER = 10;
+    var cur = 0, pages = 1, dir = '';
+    var tb = document.getElementById('addrTxRows');
+    var heading = document.querySelector('.panel-head h2');
+    function short(h){ return h ? (h.slice(0,6) + '…' + h.slice(-4)) : '-'; }
+    function timefmt(ts){
+      if (!ts) return '-';
+      var d = new Date(ts * 1000);
+      function p2(n){ return (n<10?'0':'')+n; }
+      return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())+' '+p2(d.getHours())+':'+p2(d.getMinutes());
+    }
+    function kindTag(m){
+      var m = m || '';
+      if (m.indexOf('coinbase') === 0) return '<span class="tag in">挖礦獎勵</span>';
+      if (m.indexOf('pool') === 0) return '<span class="tag">獎勵池</span>';
+      if (m.indexOf('node:') === 0 || m === 'node') return '<span class="tag">節點獎勵</span>';
+      if (m.indexOf('heartbeat') === 0) return '<span class="tag">心跳</span>';
+      if (m.indexOf('vm:') === 0) return '<span class="tag">合約</span>';
+      if (m.indexOf('bridge') === 0) return '<span class="tag">跨鏈</span>';
+      return '<span class="tag">轉帳</span>';
+    }
+    function esc(x){ return String(x).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+    function render(list){
+      tb.innerHTML = '';
+      list.forEach(function(t){
+        var tr = document.createElement('tr');
+        var dirTag = (t.from === ADDR) ? '<span class="tag out">發出</span>' : '<span class="tag in">收入</span>';
+        var opp = (t.from === ADDR)
+          ? (t.to ? '<a href="/address/' + esc(t.to) + '">' + short(t.to) + '</a>' : '-')
+          : (t.from ? '<a href="/address/' + esc(t.from) + '">' + short(t.from) + '</a>' : '-');
+        tr.innerHTML =
+          '<td class="mono"><a href="/tx/' + esc(t.hash) + '">' + short(t.hash) + '</a></td>' +
+          '<td>' + dirTag + '</td>' +
+          '<td>' + kindTag(t.memo) + '</td>' +
+          '<td class="mono">' + opp + '</td>' +
+          '<td class="amount strong">' + esc(t.amount) + '</td>' +
+          '<td class="nowrap muted">' + timefmt(t.ts) + '</td>';
+        tb.appendChild(tr);
+      });
+    }
+    function load(){
+      var url = '/api/address/txs?address=' + encodeURIComponent(ADDR) +
+        '&offset=' + (cur * PER) + '&limit=' + PER + '&dir=' + dir;
+      fetch(url).then(function(r){ return r.json(); }).then(function(d){
+        if (!d.ok) return;
+        render(d.txs || []);
+        pages = Math.max(1, Math.ceil(d.total / PER));
+        if (heading) heading.textContent = '相關交易（' + d.total + '）';
+        var info = document.getElementById('pgInfo');
+        if (info) info.textContent = (cur+1) + ' / ' + pages;
+        var pv = document.getElementById('pgPrev'), nx = document.getElementById('pgNext');
+        if (pv) pv.disabled = (cur <= 0);
+        if (nx) nx.disabled = (cur >= pages - 1);
+      }).catch(function(){});
+    }
+    var pv = document.getElementById('pgPrev'), nx = document.getElementById('pgNext');
+    if (pv) pv.addEventListener('click', function(){ if (cur > 0) { cur--; load(); } });
+    if (nx) nx.addEventListener('click', function(){ if (cur < pages-1) { cur++; load(); } });
+    var tabs = document.querySelectorAll('.addr-dir-tab');
+    if (tabs.length) tabs.forEach(function(tab){
+      tab.addEventListener('click', function(){
+        dir = tab.getAttribute('data-dir') || '';
+        cur = 0;
+        tabs.forEach(function(t){ t.classList.remove('active'); });
+        tab.classList.add('active');
+        load();
+      });
+    });
+  })();
+</script>
+{% endblock %}

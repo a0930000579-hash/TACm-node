@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Block #{{ b.Height }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <a class="back" href="/">← 返回</a>
+  <h1>Block #{{ b.Height }}</h1>
+</div>
+
+<section class="panel">
+  <dl class="detail-list">
+    <dt>區塊哈希</dt><dd class="mono break-all">{{ b.Hash }}</dd>
+    <dt>上一區塊</dt>
+    <dd class="mono">{% if b.PrevHash %}<a href="/block/{{ b.PrevHeight }}">{{ b.PrevHash|shortaddr }}</a>{% else %}-{% endif %}</dd>
+    <dt>Merkle 根</dt><dd class="mono break-all">{{ b.MerkleRoot }}</dd>
+    <dt>提議者</dt><dd class="mono"><a href="/address/{{ b.ProposerAddress }}">{{ b.ProposerAddress }}</a></dd>
+    <dt>當前難度</dt><dd class="mono">{{ b.Difficulty }}</dd>
+    <dt>Nonce</dt><dd class="mono">{{ b.Nonce }}</dd>
+    <dt>交易數</dt><dd>{{ b.TxCount }}</dd>
+    {% if b.BaseFee %}<dt>Base Fee</dt><dd class="mono">{{ b.BaseFee|fee8 }} TACm/gas</dd>{% endif %}
+    {% if b.GasUsed %}<dt>Gas Used</dt><dd class="mono">{{ b.GasUsed }} / {{ b.GasLimit }}</dd>{% endif %}
+    {% if b.Burned %}<dt>已銷毀 (Burned)</dt><dd class="mono">{{ b.Burned|fee8 }} TACm</dd>{% endif %}
+    <dt>出塊時間</dt><dd>{{ b.Ts|timefmt }}</dd>
+  </dl>
+</section>
+
+<section class="panel">
+  <div class="panel-head"><h2>區塊交易（{{ b.Transactions|length }}）</h2></div>
+  <div class="table-wrap">
+  <table class="data-table">
+    <thead><tr><th>交易哈希</th><th>發送方</th><th>接收方</th><th>金額</th><th>手續費</th></tr></thead>
+    <tbody>
+    {% for t in b.Transactions %}
+      <tr>
+        <td class="mono"><a href="/tx/{{ t.Hash }}">{{ t.Hash|shortaddr }}</a></td>
+        <td class="mono">{% if t.From %}<a href="/address/{{ t.From }}">{{ t.From|shortaddr }}</a>{% else %}-{% endif %}</td>
+        <td class="mono"><a href="/address/{{ t.To }}">{{ t.To|shortaddr }}</a></td>
+        <td class="amount strong">{{ t.Amount }}</td>
+        <td class="muted">{{ t.Fee }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="5" class="muted center">本區塊無交易</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endblock %}
