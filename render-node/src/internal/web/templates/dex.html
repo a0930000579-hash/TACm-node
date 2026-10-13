@@ -1,0 +1,417 @@
+{% extends "base.html" %}
+{% block title %}TAC DEX{% endblock %}
+{% block content %}
+<section class="pg-banner">
+  <div class="pg-txt"><h1 data-i18n="bn.dex">DEX</h1><p data-i18n="bn.dexSub">流動性與兌換</p></div>
+  <svg viewBox="0 0 40 40" class="pg-art"><circle cx="14" cy="20" r="8" fill="none" stroke="#68BE8D" stroke-width="2.2"/><circle cx="26" cy="20" r="8" fill="none" stroke="#68BE8D" stroke-width="2.2"/><path d="M14 14 l8 6 M26 26 l-8 -6 M14 26 l8 -6 M26 14 l-8 6" stroke="#68BE8D" stroke-width="1.8"/></svg>
+</section>
+<style>
+  .dx-wrap{max-width:1100px;margin:0 auto}
+  .dx-head{background:linear-gradient(135deg,#f7f8fb,#f2f4f9);border:1px solid #e2e6ee;border-radius:16px;padding:18px 20px;color:#14161a;display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+  .dx-head .logo{width:48px;height:48px;border-radius:12px;background:#68BE8D;color:#f7f8fb;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;flex:none}
+  .dx-head h2{margin:0;font-size:20px;font-weight:800;color:#68BE8D}
+  .dx-head .sub{font-size:12px;opacity:.8;margin-top:2px}
+  .dx-stats{display:flex;gap:10px;flex-wrap:wrap;margin-left:auto}
+  .dx-stats span{background:rgba(104,190,141,.12);border:1px solid rgba(104,190,141,.35);border-radius:999px;padding:6px 14px;font-size:12px;font-weight:700;color:#68BE8D}
+  .dx-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+  @media (max-width:980px){.dx-grid{grid-template-columns:1fr}}
+  .dx-card{background:#f7f8fb;border:1px solid #e2e6ee;border-radius:14px;padding:16px;margin-bottom:14px}
+  .dx-card h3{margin:0 0 12px;font-size:14px;color:#68BE8D;font-weight:800;display:flex;align-items:center;gap:8px}
+  .dx-card h3 .hint{font-size:11px;color:#5d6778;font-weight:500;margin-left:auto}
+  .dx-field{margin-bottom:10px}
+  .dx-field label{display:block;font-size:12px;color:#5d6778;margin-bottom:4px}
+  .dx-field input,.dx-field select{width:100%;box-sizing:border-box;background:#f2f4f9;border:1px solid #e2e6ee;border-radius:10px;color:#14161a;padding:10px 12px;font-size:13px;font-family:ui-monospace,monospace}
+  .dx-btn{width:100%;background:#68BE8D;color:#f7f8fb;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:800;cursor:pointer}
+  .dx-btn.ghost{background:transparent;border:1px solid #e2e6ee;color:#14161a;font-weight:700}
+  .dx-btn.sm{width:auto;padding:6px 14px;font-size:12px;border-radius:8px}
+  .dx-btn.green{background:rgba(14,203,129,.15);color:#0ecb81;border:1px solid rgba(14,203,129,.4)}
+  .dx-btn.red{background:rgba(246,70,93,.15);color:#f6465d;border:1px solid rgba(246,70,93,.4)}
+  .dx-msg{margin-top:10px;font-size:12px;color:#5d6778;min-height:16px;word-break:break-all}
+  .dx-msg.ok{color:#0ecb81}
+  .dx-msg.err{color:#f6465d}
+  .dx-pool{background:#f7f8fb;border:1px solid #e2e6ee;border-radius:14px;padding:14px 16px;margin-bottom:10px}
+  .dx-pool-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .dx-pair{display:inline-flex;align-items:center;gap:6px;font-weight:800;color:#14161a;font-size:14px}
+  .dx-pair .dot{width:8px;height:8px;border-radius:50%;background:#68BE8D;display:inline-block}
+  .dx-pool .addr{font-size:11px;color:#5d6778;word-break:break-all;margin-top:4px}
+  .dx-pool .prices{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .dx-pool .prices span{background:rgba(104,190,141,.1);border:1px solid rgba(104,190,141,.3);border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;color:#68BE8D}
+  .dx-pool .res{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .dx-pool .res span{background:#f2f4f9;border:1px solid #e2e6ee;border-radius:8px;padding:4px 10px;font-size:12px;color:#14161a;font-family:ui-monospace,monospace}
+  .dx-empty{text-align:center;color:#5e6673;padding:30px 0;font-size:13px}
+  .dx-quote{background:rgba(14,203,129,.08);border:1px solid rgba(14,203,129,.3);border-radius:10px;padding:10px 12px;font-size:12px;color:#0ecb81;margin-top:10px;word-break:break-all}
+  .dx-il{background:#fff8e6;border:1px solid #f0b90b;border-radius:10px;padding:10px 12px;font-size:12px;color:#8a6d00;margin-bottom:8px;line-height:1.6}
+  .dx-il p{margin:4px 0 0}
+  .dx-ack{display:flex;align-items:flex-start;gap:6px;font-size:12px;color:#5d6778;margin-bottom:8px;cursor:pointer}
+  .dx-ack input{margin-top:2px;accent-color:#68BE8D}
+  .dx-row{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid #e2e6ee;font-size:13px}
+  .dx-row:last-child{border-bottom:none}
+  .dx-row .k{color:#5d6778}
+  .dx-row .v{color:#14161a;font-weight:700;font-family:ui-monospace,monospace;word-break:break-all;text-align:right}
+  .dx-row .v.gold{color:#68BE8D}
+</style>
+
+<div class="dx-wrap">
+  <div class="dx-head">
+    <div class="logo">⇄</div>
+    <div>
+      <h2 data-i18n="dex.title">鏈上 DEX（AMM）</h2>
+      <div class="sub" data-i18n="dex.sub">恆定乘積做市 · 鏈上結算 · 0.3% 手續費</div>
+    </div>
+    <div class="dx-stats">
+      <span id="dxPoolCount">0 <i data-i18n="dex.pools_word">個池</i></span>
+      <span data-i18n="dex.fee">手續費 0.30%</span>
+    </div>
+  </div>
+
+  <div class="dx-grid">
+    <div>
+      <div class="dx-card">
+        <h3><span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h5M9.5 14.5h5"/></svg></span><span data-i18n="dex.pools">流動性池</span><span class="hint" data-i18n="dex.pools_hint">發行代幣後可建池交易</span></h3>
+        <div id="dxPools"><div class="dx-empty" data-i18n="dex.empty">尚無流動性池</div></div>
+      </div>
+
+      <div class="dx-card">
+        <h3><span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/></svg></span><span data-i18n="dex.create">建立流動性池</span></h3>
+        <div class="dx-field"><label data-i18n="dex.token0">代幣 0</label>
+          <select id="dxC0"></select></div>
+        <div class="dx-field"><label data-i18n="dex.token1">代幣 1</label>
+          <select id="dxC1"></select></div>
+        <button class="dx-btn" id="dxCreate" data-i18n="dex.create_btn">建立池</button>
+        <div class="dx-msg" id="dxCreateMsg"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="dx-card">
+        <h3><span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M12 3c3 5 6 8 6 11a6 6 0 0 1-12 0c0-3 3-6 6-11z"/></svg></span><span data-i18n="dex.liquidity">流動性</span></h3>
+        <div class="dx-field"><label data-i18n="dex.pool">池</label>
+          <select id="dxLpPool"></select></div>
+        <div class="dx-field"><label data-i18n="dex.amount0">數量（代幣 0）</label>
+          <input id="dxLpA0" type="number" min="1" placeholder="100000"></div>
+        <div class="dx-field"><label data-i18n="dex.amount1">數量（代幣 1）</label>
+          <input id="dxLpA1" type="number" min="1" placeholder="50000"></div>
+        <div class="dx-il" id="dxIl">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></svg> <b data-i18n="dex.il_title">無常損失風險</b>
+          <p data-i18n="dex.il_body">提供流動性後，若代幣價格大幅波動，退出時價值可能低於單純持有（IL＝價格波動損失，與手續費收益互相抵消）。高波動交易對風險更大。</p>
+        </div>
+        <label class="dx-ack"><input type="checkbox" id="dxIlAck" data-i18n="dex.il_ack"> 我已了解並接受無常損失風險</label>
+        <button class="dx-btn green" id="dxAdd" data-i18n="dex.add_btn">＋ 注入流動性</button>
+        <div class="dx-msg" id="dxAddMsg"></div>
+        <div class="dx-row" style="margin-top:8px">
+          <span class="k" data-i18n="dex.mypos">我的 LP 份額</span>
+          <span class="v gold" id="dxMyShares">0</span>
+        </div>
+        <button class="dx-btn red" id="dxRemove" style="margin-top:6px" data-i18n="dex.remove_btn">－ 退出全部流動性</button>
+        <div class="dx-msg" id="dxRemoveMsg"></div>
+      </div>
+
+      <div class="dx-card">
+        <h3><span>⇄</span><span data-i18n="dex.swap">即時兌換</span><span class="hint" data-i18n="dex.swap_hint">恆定乘積自動滑價</span></h3>
+        <div class="dx-field"><label data-i18n="dex.pool">池</label>
+          <select id="dxSwPool"></select></div>
+        <div class="dx-field"><label data-i18n="dex.token_in">輸入代幣</label>
+          <select id="dxSwIn"></select></div>
+        <div class="dx-field"><label data-i18n="dex.amount_in">輸入數量</label>
+          <input id="dxSwAmt" type="number" min="1" placeholder="1000"></div>
+        <div class="dx-field"><label data-i18n="dex.slippage">滑點容忍度</label>
+          <select id="dxSlip">
+            <option value="0.1">0.1%</option>
+            <option value="0.5" selected>0.5%</option>
+            <option value="1">1%</option>
+            <option value="2">2%</option>
+            <option value="custom">自訂…</option>
+          </select></div>
+        <div class="dx-field" id="dxSlipCustomWrap" style="display:none"><label data-i18n="dex.slippage_custom">自訂滑點（%）</label>
+          <input id="dxSlipCustom" type="number" min="0.01" max="50" step="0.01" placeholder="3"></div>
+        <div class="dx-quote" id="dxQuote"></div>
+        <button class="dx-btn" id="dxSwap" style="margin-top:10px" data-i18n="dex.swap_btn">⇄ 兌換</button>
+        <div class="dx-msg" id="dxSwapMsg"></div>
+      </div>
+    </div>
+    <div class="dx-card" style="margin-top:14px">
+      <h3><span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M12 3l7 3v6c0 5-3 7-7 9-4-2-7-4-7-9V6l7-3z"/></svg></span><span data-i18n="dex.audit">安全審計</span><span class="hint" data-i18n="dex.audit_hint">鏈上可驗證</span></h3>
+      <div class="dx-row"><span class="k" data-i18n="dex.audit1">核心鏈一致性（PoS/PoW coinbase）</span><span class="v gold">已審計 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M4 12l5 5L20 7"/></svg></span></div>
+      <div class="dx-row"><span class="k" data-i18n="dex.audit2">EVM 原子性與 gas 治理</span><span class="v gold">已審計 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M4 12l5 5L20 7"/></svg></span></div>
+      <div class="dx-row"><span class="k" data-i18n="dex.audit3">跨鏈橋多簽＋SPV</span><span class="v gold">已審計 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M4 12l5 5L20 7"/></svg></span></div>
+      <div class="dx-row"><span class="k" data-i18n="dex.audit4">全鏈帳本重放（ledger audit）</span><span class="v gold">已審計 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M4 12l5 5L20 7"/></svg></span></div>
+      <div class="dx-row"><span class="k" data-i18n="dex.audit5">第三方機構級審計</span><span class="v">CertiK / SlowMist 進行中</span></div>
+      <p style="font-size:12px;color:#5d6778;margin:10px 0 0;line-height:1.6" data-i18n="dex.audit_note">審計方法可鏈上複驗：瀏覽器交易明細、ledger audit API、跨鏈橋事件日誌皆為公開資料。</p>
+    </div>
+    <div class="dx-card" style="margin-top:14px">
+      <h3><span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M12 22V8"/><path d="M12 8c-3-1-4-4-2-6 2-1 4 0 5 3s2 3 0 3"/><path d="M12 8c3-1 4-4 2-6"/></svg></span><span data-i18n="dex.farm">流動性挖礦（Farm）</span><span class="hint" data-i18n="dex.farm_hint">質押 LP 份額賺取獎勵代幣</span></h3>
+      <div id="dxFarms"><div class="dx-empty" data-i18n="dex.farm_empty">尚無農場：先建立流動性池並注資獎勵</div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center">
+        <input id="dxFarmShares" type="number" min="1" placeholder="LP Shares"
+          style="width:150px;box-sizing:border-box;background:#f2f4f9;border:1px solid #e2e6ee;border-radius:10px;color:#14161a;padding:10px 12px;font-size:13px">
+        <button class="dx-btn sm green" id="dxFarmStake" data-i18n="dex.farm_stake">質押</button>
+        <button class="dx-btn sm red" id="dxFarmUnstake" data-i18n="dex.farm_unstake">解除質押</button>
+        <button class="dx-btn sm" id="dxFarmClaim" data-i18n="dex.farm_claim">領取獎勵</button>
+        <span style="font-size:12px;color:#5d6778" id="dxFarmCur">未選中農場</span>
+        <div class="dx-msg" id="dxFarmMsg" style="width:100%"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var api = location.origin;
+  var selPool = '';
+  var pools = [];
+
+  function guestAddr() {
+    var a = localStorage.getItem('tac_guest_addr');
+    if (a) return a;
+    return '';
+  }
+
+  function $(id) { return document.getElementById(id); }
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function msg(el, txt, ok) {
+    el.textContent = txt;
+    el.className = 'dx-msg' + (ok ? ' ok' : (txt ? ' err' : ''));
+  }
+
+  function fillSelect(sel, opts, placeholder) {
+    var h = '<option value="">' + esc(placeholder || '—') + '</option>';
+    opts.forEach(function (o) { h += '<option value="' + esc(o.v) + '">' + esc(o.t) + '</option>'; });
+    sel.innerHTML = h;
+  }
+
+  function shortAddr(a) {
+    if (!a) return '';
+    return a.length > 18 ? a.slice(0, 10) + '…' + a.slice(-6) : a;
+  }
+
+  function loadPools() {
+    fetch(api + '/dex/pools', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
+      if (!d.ok) { $('dxPools').innerHTML = '<div class="dx-empty">' + esc(d.error || '—') + '</div>'; return; }
+      pools = d.pools || [];
+      $('dxPoolCount').innerHTML = pools.length + ' <i>' + (pools.length === 1 ? '池' : '個池') + '</i>';
+      var html = '';
+      pools.forEach(function (p) {
+        var pair = shortAddr(p.token0) + ' / ' + shortAddr(p.token1);
+        html += '<div class="dx-pool" data-id="' + esc(p.id) + '">' +
+          '<div class="dx-pool-top"><span class="dx-pair"><span class="dot"></span>' + esc(pair) + '</span>' +
+          '<button class="dx-btn sm ghost" onclick="window.dxSel(\'' + esc(p.id) + '\')">' +
+          (p.id === selPool ? '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M4 12l5 5L20 7"/></svg>' : '選用') + '</button></div>' +
+          '<div class="addr">' + esc(p.pool_addr) + '</div>' +
+          '<div class="prices"><span>1/' + shortAddr(p.token0) + ' = ' + esc(p.price0 || '0') + '</span>' +
+          '<span>1/' + shortAddr(p.token1) + ' = ' + esc(p.price1 || '0') + '</span></div>' +
+          '<div class="res"><span>儲備: ' + esc(p.reserve0) + '</span><span>儲備: ' + esc(p.reserve1) + '</span>' +
+          '<span>LP: ' + esc(p.lp_total) + '</span></div></div>';
+      });
+      $('dxPools').innerHTML = html || '<div class="dx-empty">尚無流動性池</div>';
+      syncSel();
+    }).catch(function (e) { $('dxPools').innerHTML = '<div class="dx-empty">載入失敗: ' + esc(e) + '</div>'; });
+  }
+
+  function syncSel() {
+    var opts = pools.map(function (p) {
+      return { v: p.id, t: p.id + ' · ' + shortAddr(p.token0) + '/' + shortAddr(p.token1) };
+    });
+    fillSelect($('dxLpPool'), opts, '選擇池');
+    fillSelect($('dxSwPool'), opts, '選擇池');
+    if (selPool && pools.length) {
+      $('dxLpPool').value = selPool;
+      $('dxSwPool').value = selPool;
+      var p = null;
+      pools.forEach(function (x) { if (x.id === selPool) p = x; });
+      if (p) {
+        fillSelect($('dxSwIn'), [{ v: p.token0, t: shortAddr(p.token0) }, { v: p.token1, t: shortAddr(p.token1) }], '輸入代幣');
+        loadShares(p.id);
+      }
+    }
+  }
+
+  function loadShares(poolId) {
+    fetch(api + '/dex/pools', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
+      if (!d.ok) return;
+      var p = null;
+      (d.pools || []).forEach(function (x) { if (x.id === poolId) p = x; });
+      if (!p) return;
+      // 後端回傳持倉：此處由 add/remove 響應更新；輪詢僅更新池資料。
+    }).catch(function () {});
+  }
+
+  function loadTokens() {
+    fetch(api + '/contract/list', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
+      if (!d.ok || !d.contracts) return;
+      var opts = d.contracts.map(function (c) {
+        return { v: c.address, t: (c.symbol || '?') + ' · ' + shortAddr(c.address) };
+      });
+      fillSelect($('dxC0'), opts, '選擇代幣');
+      fillSelect($('dxC1'), opts, '選擇代幣');
+    }).catch(function () {});
+  }
+
+  // 建池
+  $('dxCreate').addEventListener('click', function () {
+    var t0 = $('dxC0').value, t1 = $('dxC1').value;
+    if (!t0 || !t1) { msg($('dxCreateMsg'), '請選擇兩個代幣'); return; }
+    fetch(api + '/dex/create', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token0: t0, token1: t1 }) })
+      .then(function (r) { return r.json(); }).then(function (d) {
+        if (d.ok) { msg($('dxCreateMsg'), '池 ' + d.pool.id + ' 已建立 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M4 12l5 5L20 7"/></svg>', true); loadPools(); loadTokens(); }
+        else msg($('dxCreateMsg'), d.error || '失敗');
+      }).catch(function (e) { msg($('dxCreateMsg'), e); });
+  });
+
+  // 注入流動性
+  $('dxAdd').addEventListener('click', function () {
+    var pool = $('dxLpPool').value, a0 = $('dxLpA0').value, a1 = $('dxLpA1').value;
+    if (!pool || !a0 || !a1) { msg($('dxAddMsg'), '請填寫池與數量'); return; }
+    if (!$('dxIlAck').checked) { msg($('dxAddMsg'), '請先勾選「我已了解並接受無常損失風險」'); return; }
+    msg($('dxAddMsg'), '交易上鏈中…');
+    fetch(api + '/dex/liquidity/add', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pool: pool, amount0: a0, amount1: a1 }) })
+      .then(function (r) { return r.json(); }).then(function (d) {
+        if (d.ok) {
+          msg($('dxAddMsg'), '已注入，份額 ' + d.position.shares + ' <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M4 12l5 5L20 7"/></svg>', true);
+          $('dxMyShares').textContent = d.position.shares;
+          selPool = pool; loadPools();
+        } else msg($('dxAddMsg'), d.error || '失敗');
+      }).catch(function (e) { msg($('dxAddMsg'), e); });
+  });
+
+  // 退出流動性
+  $('dxRemove').addEventListener('click', function () {
+    var pool = $('dxLpPool').value;
+    if (!pool) { msg($('dxRemoveMsg'), '請選擇池'); return; }
+    var shares = $('dxMyShares').textContent;
+    if (!shares || shares === '0') { msg($('dxRemoveMsg'), '無份額可退出'); return; }
+    msg($('dxRemoveMsg'), '交易上鏈中…');
+    fetch(api + '/dex/liquidity/remove', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pool: pool, shares: shares }) })
+      .then(function (r) { return r.json(); }).then(function (d) {
+        if (d.ok) { msg($('dxRemoveMsg'), '已退出 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M4 12l5 5L20 7"/></svg>', true); $('dxMyShares').textContent = '0'; loadPools(); }
+        else msg($('dxRemoveMsg'), d.error || '失敗');
+      }).catch(function (e) { msg($('dxRemoveMsg'), e); });
+  });
+
+  // 滑點選擇
+  $('dxSlip').addEventListener('change', function () {
+    $('dxSlipCustomWrap').style.display = (this.value === 'custom') ? 'block' : 'none';
+    quote();
+  });
+  $('dxSlipCustom').addEventListener('input', quote);
+
+  function slipPct() {
+    var v = $('dxSlip').value;
+    if (v === 'custom') {
+      var c = parseFloat($('dxSlipCustom').value);
+      return (isFinite(c) && c > 0) ? c : 0;
+    }
+    return parseFloat(v) || 0;
+  }
+
+  // 兌換（quote 即時＋最少獲得）
+  function quote() {
+    var pool = $('dxSwPool').value, token = $('dxSwIn').value, amt = $('dxSwAmt').value;
+    if (!pool || !token || !amt || amt <= 0) { $('dxQuote').textContent = ''; return; }
+    fetch(api + '/dex/quote?pool=' + encodeURIComponent(pool) + '&token=' + encodeURIComponent(token) + '&amount=' + encodeURIComponent(amt), { cache: 'no-store' })
+      .then(function (r) { return r.json(); }).then(function (d) {
+        if (!d.ok) { $('dxQuote').textContent = d.error || ''; return; }
+        var out = d.amount_out;
+        var pct = slipPct();
+        var minOut = pct > 0 ? Math.floor(parseFloat(out) * (1 - pct / 100)) : 0;
+        $('dxQuote').innerHTML = '≈ 獲得 <b>' + esc(out) + '</b> ' + esc(shortAddr(d.token_out)) +
+          '（含 0.3% 手續費）<br>' + (pct > 0 ? '最少獲得：<b>' + esc(minOut) + '</b>（滑點 ≤ ' + pct + '%）' : '滑點：自動');
+        window.__minOut = String(minOut);
+      }).catch(function () {});
+  }
+  $('dxSwAmt').addEventListener('input', quote);
+  $('dxSwIn').addEventListener('change', quote);
+  $('dxSwPool').addEventListener('change', function () { selPool = this.value; syncSel(); });
+
+  $('dxSwap').addEventListener('click', function () {
+    var pool = $('dxSwPool').value, token = $('dxSwIn').value, amt = $('dxSwAmt').value;
+    if (!pool || !token || !amt || amt <= 0) { msg($('dxSwapMsg'), '請填寫兌換資訊'); return; }
+    var body = { pool: pool, token: token, amount: amt };
+    if (window.__minOut) body.min_out = window.__minOut;
+    msg($('dxSwapMsg'), '交易上鏈中…（滑點保護已啟用）');
+    fetch(api + '/dex/swap', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body) })
+      .then(function (r) { return r.json(); }).then(function (d) {
+        if (d.ok) { msg($('dxSwapMsg'), '獲得 ' + d.amount_out + ' ', true); loadPools(); quote(); }
+        else msg($('dxSwapMsg'), d.error || '失敗');
+      }).catch(function (e) { msg($('dxSwapMsg'), e); });
+  });
+
+  // 池選用（由 render 內 onclick 呼叫）。
+  window.dxSel = function (id) { selPool = id; loadPools(); };
+
+  // ---------- 流動性挖礦（Farm） ----------
+  var farms = [], selFarm = '';
+
+  function selFarmPending() {
+    for (var i = 0; i < farms.length; i++) {
+      if (farms[i].pool_id === selFarm) return farms[i].pending || '0';
+    }
+    return '0';
+  }
+
+  function loadFarms() {
+    fetch(api + '/dex/stake/pools', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
+      if (!d.ok) { $('dxFarms').innerHTML = '<div class="dx-empty">' + esc(d.error || '—') + '</div>'; return; }
+      farms = d.pools || [];
+      var html = '';
+      farms.forEach(function (f) {
+        html += '<div class="dx-pool" data-id="' + esc(f.pool_id) + '">' +
+          '<div class="dx-pool-top"><span class="dx-pair"><span class="dot" style="background:#0ecb81"></span>' +
+          esc(f.pool_id) + ' · 獎勵 ' + shortAddr(f.reward_token) + '</span>' +
+          '<button class="dx-btn sm ghost" onclick="window.dxFarmSel(\'' + esc(f.pool_id) + '\')">' +
+          (f.pool_id === selFarm ? '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M4 12l5 5L20 7"/></svg>' : '選用') + '</button></div>' +
+          '<div class="res"><span>每塊: ' + esc(f.reward_per_block) + '</span>' +
+          '<span>已質押: ' + esc(f.total_staked) + '</span><span>金庫: ' + esc(f.funded) + '</span></div>' +
+          '<div class="res"><span>我的份額: ' + esc(f.my_shares || '0') + '</span>' +
+          '<span>待領: ' + esc(f.pending || '0') + '</span></div></div>';
+      });
+      $('dxFarms').innerHTML = html || '<div class="dx-empty">尚無農場</div>';
+      $('dxFarmCur').textContent = selFarm ? ('農場 ' + selFarm + ' · 待領 ' + selFarmPending()) : '未選中農場';
+    }).catch(function (e) { $('dxFarms').innerHTML = '<div class="dx-empty">載入失敗: ' + esc(e) + '</div>'; });
+  }
+
+  window.dxFarmSel = function (id) { selFarm = id; loadFarms(); };
+
+  function farmOp(url, label) {
+    if (!selFarm) { msg($('dxFarmMsg'), '請先選中農場'); return; }
+    var shares = $('dxFarmShares').value;
+    if (!shares || shares <= 0) { msg($('dxFarmMsg'), '請填寫份額'); return; }
+    msg($('dxFarmMsg'), label + ' 上鏈中…');
+    fetch(api + url, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pool: selFarm, shares: shares }) })
+      .then(function (r) { return r.json(); }).then(function (d) {
+        if (d.ok) { msg($('dxFarmMsg'), label + ' 完成 ', true); loadFarms(); }
+        else msg($('dxFarmMsg'), d.error || '失敗');
+      }).catch(function (e) { msg($('dxFarmMsg'), e); });
+  }
+
+  $('dxFarmStake').addEventListener('click', function () { farmOp('/dex/stake', '質押'); });
+  $('dxFarmUnstake').addEventListener('click', function () { farmOp('/dex/stake/unstake', '解除質押'); });
+  $('dxFarmClaim').addEventListener('click', function () {
+    if (!selFarm) { msg($('dxFarmMsg'), '請先選中農場'); return; }
+    msg($('dxFarmMsg'), '領取上鏈中…');
+    fetch(api + '/dex/stake/claim', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pool: selFarm }) })
+      .then(function (r) { return r.json(); }).then(function (d) {
+        if (d.ok) { msg($('dxFarmMsg'), '已領取 ' + d.amount + ' ', true); loadFarms(); }
+        else msg($('dxFarmMsg'), d.error || '失敗');
+      }).catch(function (e) { msg($('dxFarmMsg'), e); });
+  });
+
+  loadTokens();
+  loadPools();
+  loadFarms();
+  setInterval(function () { loadPools(); loadFarms(); }, 8000);
+})();
+</script>
+{% endblock %}

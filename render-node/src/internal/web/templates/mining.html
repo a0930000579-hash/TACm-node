@@ -1,0 +1,383 @@
+{% extends "base.html" %}
+{% block title %}TAC Mining · Miner{% endblock %}
+{% block content %}
+<section class="pg-banner">
+  <div class="pg-txt"><h1 data-i18n="bn.mining">開始挖礦</h1><p data-i18n="bn.miningSub">算力與獎勵</p></div>
+  <svg viewBox="0 0 40 40" class="pg-art"><path d="M14 12 L8 6 M14 12 L22 20 M14 12 L16 4 M14 12 L4 14 M22 20 L18 30 L8 34 L4 26 L8 16 L14 12 Z" fill="none" stroke="#68BE8D" stroke-width="2.2" stroke-linejoin="round"/><path d="M18 30 L8 34 L4 26 L8 16 L14 12 L22 20 Z" fill="rgba(104,190,141,.22)"/><path d="M28 10 h8 M28 10 l4 -4 M28 10 l4 4 M32 14 v6 M28 20 h8" stroke="#68BE8D" stroke-width="2.2" stroke-linecap="round"/></svg>
+</section>
+<style>
+  body { background: var(--bg, #f7f8fb) !important; }
+  .miner-wrap{display:flex;flex-direction:column;gap:14px;max-width:640px;margin:0 auto}
+  .mm-hero{background:linear-gradient(160deg,rgba(104,190,141,.14),rgba(104,190,141,.03) 60%);border:1px solid rgba(104,190,141,.4);border-radius:16px;padding:16px;position:relative}
+  .mm-hero .mm-badge{position:absolute;top:14px;right:14px;background:rgba(14,203,129,.14);color:var(--green);border:1px solid rgba(14,203,129,.4);font-size:12px;font-weight:800;border-radius:999px;padding:3px 10px}
+  .mm-hero .mm-badge.off{background:rgba(246,70,93,.14);color:var(--red);border-color:rgba(246,70,93,.4)}
+  .mm-hero h2{margin:0 0 4px;font-size:18px;display:flex;align-items:center;gap:8px}
+  .mm-hero .mm-addr{font-family:ui-monospace,monospace;font-size:13px;color:var(--muted);word-break:break-all;line-height:1.6;background:#ffffff;border:1px solid var(--border);border-radius:8px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .mm-hero .mm-addr button{background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;font-size:11px;padding:3px 8px;cursor:pointer;flex:none}
+  .mm-hash{display:flex;gap:10px;margin-top:12px;text-align:center}
+  .mm-hash>div{flex:1;background:#ffffff;border:1px solid var(--border);border-radius:12px;padding:10px 4px}
+  .mm-hash b{display:block;font-size:17px;font-weight:800;font-variant-numeric:tabular-nums}
+  .mm-hash small{color:var(--muted);font-size:11px}
+  .mm-cta{display:flex;gap:10px;margin-top:12px}
+  .mm-cta button{flex:1;padding:12px 0;border-radius:10px;font-weight:800;font-size:14px;border:none;cursor:pointer}
+  #btnStart{background:var(--accent);color:#f7f8fb}
+  #btnStop{background:rgba(246,70,93,.15);color:var(--red);border:1px solid rgba(246,70,93,.5)!important}
+  .mm-form{margin-top:12px;display:none;gap:8px;align-items:center}
+  .mm-form.open{display:flex}
+  .mm-form label{font-size:12px;color:var(--muted);flex:none}
+  .mm-form input{flex:1;min-width:0;background:#ffffff;border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 10px;font-size:14px}
+  .mm-form button{background:var(--accent);color:#f7f8fb;border:none;border-radius:8px;font-weight:800;padding:9px 14px;font-size:13px;cursor:pointer;flex:none}
+  .mm-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .mm-cell{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px}
+  .mm-cell small{color:var(--muted);font-size:11px;display:block;margin-bottom:4px}
+  .mm-cell b{font-size:15px;font-variant-numeric:tabular-nums}
+  .mm-sec{font-size:13px;font-weight:800;color:var(--text);margin:6px 2px 0;display:flex;align-items:center;gap:8px}
+  .rank-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:12px;margin-top:8px}
+  .rank-row .rk{width:26px;height:26px;border-radius:50%;background:rgba(104,190,141,.14);color:var(--accent);font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;flex:none}
+  .rank-row .rk.solo{background:rgba(104,190,141,.3)}
+  .rank-row .rkbody{flex:1;min-width:0}
+  .rank-row .rkbody .ra{font-family:ui-monospace,monospace;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rank-row .rkbody .rkbar{height:5px;background:#f2f6f3;border-radius:99px;margin-top:5px;overflow:hidden}
+  .rank-row .rkbody .rkbar i{display:block;height:100%;background:var(--accent);border-radius:99px}
+  .rank-row .rkv{flex:none;text-align:right;font-size:12px;color:var(--text);font-variant-numeric:tabular-nums}
+  .mm-note{font-size:12px;color:var(--muted);line-height:1.7;background:#ffffff;border:1px solid var(--border);border-radius:12px;padding:12px}
+  .mm-note b{color:var(--text)}
+  .err{color:var(--red);font-size:13px;margin-top:8px;text-align:center}
+  /* M33：即時礦機效率（圓環＋算力條）——對齊 Python 版 */
+  .mm-eff{display:flex;gap:14px;align-items:center;margin-top:14px;background:#ffffff;border:1px solid var(--border);border-radius:14px;padding:12px}
+  .ring-wrap{position:relative;width:96px;height:96px;flex:none}
+  .ring-wrap svg{transform:rotate(-90deg)}
+  .ring-wrap .ring-bg{fill:none;stroke:#eef4f0;stroke-width:9}
+  .ring-wrap .ring-fg{fill:none;stroke:var(--accent);stroke-width:9;stroke-linecap:round;stroke-dasharray:0 251.2;transition:stroke-dasharray .6s}
+  .ring-txt{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+  .ring-txt b{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums}
+  .ring-txt small{font-size:9px;color:var(--muted);line-height:1.2;max-width:64px}
+  .eff-bars{flex:1;min-width:0;display:flex;flex-direction:column;gap:9px}
+  .eff-row{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted)}
+  .eff-row>span{flex:none;width:30px}
+  .eff-row>i{flex:1;height:7px;background:#f2f6f3;border-radius:99px;overflow:hidden;display:block}
+  .eff-row>i b{display:block;height:100%;background:linear-gradient(90deg,#68BE8D,#fcd34d);border-radius:99px;width:0%;transition:width .6s}
+  .eff-row>em{flex:none;font-style:normal;font-weight:700;color:var(--text);font-size:11px;font-variant-numeric:tabular-nums}
+  .mm-live{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--green);font-weight:700}
+  .mm-live .pulse{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 1.6s infinite}
+  @keyframes pulse{0%{opacity:1}50%{opacity:.25}100%{opacity:1}}
+  .live{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--green);font-weight:700}
+  .live .pulse{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 1.6s infinite}
+  @keyframes pulse{0%{opacity:1}50%{opacity:.25}100%{opacity:1}}
+</style>
+
+<div class="miner-wrap">
+  <div class="mm-hero">
+    <span class="mm-badge off" id="stBadge" data-i18n="mining.offline">離線</span>
+    <h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M14.6 9.4 20 4M15 5l4 4"/><path d="M3 21l8-8"/><path d="M11 7 4 14l3 3 7-7"/></svg> 我的礦機</h2>
+    <div class="mm-addr" id="addrRow">
+      <span id="myAddr">載入中…</span>
+      <button onclick="copyAddr()">複製</button>
+    </div>
+    <div class="mm-hash">
+      <div><b id="hrCpu">—</b><small>CPU 算力</small></div>
+      <div><b id="hrGpu">—</b><small>GPU 算力</small></div>
+      <div><b id="hrTotal">—</b><small>總算力</small></div>
+    </div>
+    <div class="mm-eff">
+      <div class="ring-wrap">
+        <svg viewBox="0 0 96 96" width="96" height="96">
+          <circle cx="48" cy="48" r="40" class="ring-bg"/>
+          <circle cx="48" cy="48" r="40" class="ring-fg" id="ringFg"/>
+        </svg>
+        <div class="ring-txt"><b id="ringPct">0%</b><small>我的算力佔比</small></div>
+      </div>
+      <div class="eff-bars">
+        <div class="eff-row"><span>CPU</span><i><b id="barCpu"></b></i><em id="cpuTxt">—</em></div>
+        <div class="eff-row"><span>GPU</span><i><b id="barGpu"></b></i><em id="gpuTxt">—</em></div>
+      </div>
+    </div>
+    <div class="mm-cta">
+      <button id="btnStart" onclick="startMining()" data-i18n="mining.start"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/></svg> 開機挖礦</button>
+      <button id="btnStop" onclick="stopMining()" style="display:none" data-i18n="mining.stop">停止挖礦</button>
+    </div>
+    <div class="mm-form" id="cfgForm">
+      <div style="font-size:13px;color:var(--bn-sub);line-height:1.7">
+        <b style="color:#68BE8D">算力設定（固定不可改）</b><br>
+        ・基礎 <b>1 vCPU ＋ 2 vGPU</b>（vCPU×1M ＋ vGPU×2M）<br>
+        ・提升方式：<b>推薦註冊</b>——每邀請 1 名會員註冊，<b>+0.01 CPU／+0.02 GPU</b><br>
+        ・邀請碼＝你的錢包地址，分享給朋友於註冊時填寫即可。
+      </div>
+    </div>
+  </div>
+
+  <div class="mm-grid">
+    <div class="mm-cell"><small>鏈頂高度</small><b id="height">—</b></div>
+    <div class="mm-cell"><small>動態難度</small><b id="diff">—</b></div>
+  </div>
+
+  <div id="onchainLine" style="margin:10px 0;padding:10px 12px;border:1px solid rgba(104,190,141,.25);border-radius:12px;font-size:13px;display:none"></div>
+
+  <div class="mm-sec"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg> 全鏈總覽</div>
+  <div class="mm-grid">
+    <div class="mm-cell"><small data-i18n="chain.mined">全鏈總產出 TACm</small><b id="chainMined">—</b></div>
+    <div class="mm-cell"><small data-i18n="chain.tiusd">TiUSD 總流通</small><b id="tiusdSupply">—</b></div>
+    <div class="mm-cell"><small data-i18n="chain.pool">獎勵池</small><b id="pool">—</b></div>
+    <div class="mm-cell"><small data-i18n="chain.earned">我的累計收益</small><b id="earned">0 TACm</b></div>
+  </div>
+
+  <div class="mm-sec" style="font-size:12px;padding:10px 14px;background:rgba(104,190,141,.06);border:1px solid rgba(104,190,141,.22);border-radius:12px;margin-bottom:12px"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M7 3h10l4 6-9 12L3 9l4-6z"/><path d="M3 9h18M9 3l3 6 3-6"/></svg> 每塊獎勵分潤：節點 9%（出塊節點）／獎勵池 16%／礦工 75%（按在線算力瓜分）</div>
+  <div class="mm-sec"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg> 在線礦工排行（<span id="onlineN">0</span> 台 · 總算力 <span id="totalHr">0</span>）</div>
+  <div id="rankList"></div>
+
+  <div class="mm-sec"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg> <span data-i18n="mining.earnTitle">我的收益明細（近 7 日 · 鏈上 coinbase 瓜分）</span></div>
+  <div style="background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px 14px; margin-bottom:12px;">
+    <div style="font-size:11.5px; color:var(--muted); margin-bottom:6px;" data-i18n="mining.earnSub">每日收益（TACm，綠）／每日平均算力（藍，右軸）</div>
+    <svg id="earnChart" viewBox="0 0 340 120" style="width:100%; height:auto; display:block;"></svg>
+    <div style="overflow-x:auto; margin-top:8px;">
+      <table style="width:100%; border-collapse:collapse; font-size:12px;">
+        <tr style="color:var(--muted); text-align:left;"><th style="padding:4px 6px;" data-i18n="mining.earnDate">日期</th><th data-i18n="mining.earnAmt">收益 TACm</th><th data-i18n="mining.earnCnt">瓜分筆數</th><th data-i18n="mining.earnHash">平均算力</th></tr>
+        <tbody id="earnRows"><tr><td colspan="4" style="color:var(--muted); padding:6px;">—</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="mm-sec"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M14.6 9.4 20 4M15 5l4 4"/><path d="M3 21l8-8"/><path d="M11 7 4 14l3 3 7-7"/></svg> 出塊與獎勵機制（當前機制）</div>
+  <div class="mm-note">
+    <div data-i18n="mining.mech1"></div>
+    <div data-i18n="mining.mech2"></div>
+    <div data-i18n="mining.mech3"></div>
+    <div data-i18n="mining.mech4"></div>
+  </div>
+  <div id="err" class="err"></div>
+</div>
+
+<script>
+// M31：RPC 預設同源（同埠合併模式 RPC 即 web 埠）；仍可用 ?rpc=端口 覆蓋。
+var RPC = (new URLSearchParams(location.search)).get('rpc') || location.port;
+var base = location.protocol + '//' + location.hostname + (RPC ? ':' + RPC : '');
+function get(p){ return fetch(base + p, {cache:'no-store'}).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); }); }
+function post(p,b){ return fetch(base + p, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(b||{})}).then(function(r){ if(!r.ok) return r.json().then(function(j){throw new Error(j.error||r.status)}); return r.json(); }); }
+var myAddr = '';
+var mining = false, tickTimer = null;
+var WEI = 1000000000000000000;
+function fmtTacm(w){ var f = parseFloat(w)/WEI; return f.toLocaleString('en-US',{maximumFractionDigits:6}) + ' TACm'; }
+function fmtHr(h){ var n=parseFloat(h); if(n>=1e6) return (n/1e6).toFixed(2)+'M'; if(n>=1e3) return (n/1e3).toFixed(1)+'K'; return n.toFixed(0); }
+function shortAddr(a){ if(!a) return '—'; if(a.length<=16) return a; return a.slice(0,10)+'…'+a.slice(-6); }
+function copyAddr(){ if(!myAddr) return; var done=function(){ alert(TAC_TE('地址已複製')); }; if(navigator.clipboard){ navigator.clipboard.writeText(myAddr).then(done,function(){}) } else { done(); } }
+
+function render(ms, splits, st){
+  var me = null;
+  (ms||[]).forEach(function(m){ if(m.address===myAddr) me = m; });
+  if(me){
+    // M36：在線判定＝開機(active)且心跳窗口內——節點自身預設礦機(active=0)不算在線；
+    // 訪客/會員關機後立即轉「離線/開機挖礦」，不再顯示「在線挖礦中」。
+    var on = !!(me && me.active && me.online);
+    document.getElementById('stBadge').textContent = on ? (window.TAC_I18N&&TAC_I18N.cur()==='en'?'Mining Online':'在線挖礦中') : (window.TAC_I18N&&TAC_I18N.cur()==='en'?'Offline':'離線');
+    document.getElementById('stBadge').className = 'mm-badge' + (on?'':' off');
+    if (me && me.refs) { document.getElementById('refN').textContent = me.refs; }
+    document.getElementById('hrCpu').textContent = fmtHr(me.vcpu*1000000);
+    document.getElementById('hrGpu').textContent = fmtHr(me.vgpu*2000000);
+    document.getElementById('hrTotal').textContent = fmtHr(me.vcpu*1000000 + me.vgpu*2000000);
+    // M35：按鈕以「在線」為準（與徽章同源）——在線＝顯示「停止挖礦」，離線＝「開機挖礦」。
+    // 修正訪客/節點礦機 active=false 但 online=true 時「在線挖礦中＋開機挖礦」矛盾顯示。
+    var btnS = document.getElementById('btnStart'), btnT = document.getElementById('btnStop');
+    if (on) { if(btnS) btnS.style.display='none'; if(btnT) btnT.style.display='block'; }
+    else { if(btnS) btnS.style.display='block'; if(btnT) btnT.style.display='none'; }
+    // M33：效率圓環＋算力條（個人算力佔全鏈比例）。M58：佔比以鏈上瓜分份額為準
+    // （我的瓜分額/全網瓜分額＝算力佔比），與「在線礦工排行」同一視角。
+    var cpu = me.vcpu*1000000, gpu = me.vgpu*2000000, mine = cpu+gpu, totalHr2 = 0, myShare = 0;
+    (splits||[]).forEach(function(s){ var sv = parseFloat(s.share||0); totalHr2 += sv; if(s.address===myAddr) myShare = sv; });
+    var pct = totalHr2>0 ? Math.min(100, (myShare>0?myShare:mine)/totalHr2*100) : (mine>0 ? 100 : 0);
+    var ring = document.getElementById('ringFg');
+    var C = 2*Math.PI*40;
+    if(ring){ ring.style.strokeDasharray = (pct/100*C) + ' ' + C; }
+    var rp = document.getElementById('ringPct'); if(rp) rp.textContent = pct.toFixed(1)+'%';
+    var bc = document.getElementById('barCpu'), bg = document.getElementById('barGpu');
+    var cp = mine>0 ? cpu/mine*100 : 0, gp = mine>0 ? gpu/mine*100 : 0;
+    if(bc) bc.style.width = cp.toFixed(1)+'%';
+    if(bg) bg.style.width = gp.toFixed(1)+'%';
+    var ct = document.getElementById('cpuTxt'), gt = document.getElementById('gpuTxt');
+    if(ct) ct.textContent = fmtHr(cpu);
+    if(gt) gt.textContent = fmtHr(gpu);
+  } else {
+    // M37：訪客/會員尚未開機（無礦機記錄）——顯示固定基礎算力（1vCPU+2vGPU）與離線徽章。
+    document.getElementById('stBadge').textContent = (window.TAC_I18N&&TAC_I18N.cur()==='en'?'Offline':'離線');
+    document.getElementById('stBadge').className = 'mm-badge off';
+    document.getElementById('hrCpu').textContent = '1.00M';
+    document.getElementById('hrGpu').textContent = '4.00M';
+    document.getElementById('hrTotal').textContent = '5.00M';
+    var rp2 = document.getElementById('ringPct'); if(rp2) rp2.textContent = '0.0%';
+    var ring2 = document.getElementById('ringFg'); if(ring2) ring2.style.strokeDasharray = '0 251.3';
+    var bc2 = document.getElementById('barCpu'), bg2 = document.getElementById('barGpu');
+    if(bc2) bc2.style.width = '20%';
+    if(bg2) bg2.style.width = '80%';
+    var ct2 = document.getElementById('cpuTxt'), gt2 = document.getElementById('gpuTxt');
+    if(ct2) ct2.textContent = '1.00M';
+    if(gt2) gt2.textContent = '4.00M';
+  }
+  document.getElementById('height').textContent = st.block_height != null ? '#'+st.block_height : '—';
+  document.getElementById('diff').textContent = st.effective_difficulty != null ? st.effective_difficulty : '—';
+  var totalHr = 0; (splits||[]).forEach(function(s){ totalHr += parseFloat(s.share||0); });
+  document.getElementById('onlineN').textContent = (splits||[]).length;
+  document.getElementById('totalHr').textContent = fmtHr(totalHr);
+  var list = document.getElementById('rankList');
+  var rows = '';
+  (splits||[]).forEach(function(s,i){
+    var pct = totalHr>0 ? (parseFloat(s.share)/totalHr*100) : 0;
+    var mine = s.address===myAddr ? ' · 我' : '';
+    rows += '<div class="rank-row"><div class="rk'+(s.address===myAddr?' solo':'')+'">'+(i+1)+'</div>'+
+      '<div class="rkbody"><div class="ra">'+shortAddr(s.address)+mine+'</div>'+
+      '<div class="rkbar"><i style="width:'+pct.toFixed(1)+'%"></i></div></div>'+
+      '<div class="rkv">'+fmtHr(s.share)+'<br><small style="color:var(--muted)">'+pct.toFixed(1)+'%</small></div></div>';
+  });
+  list.innerHTML = rows || '<div class="mm-note" style="margin-top:8px">目前無在線礦工</div>';
+}
+
+// M89：收益明細——SVG 折線（收益＋算力雙軸）＋每日表。
+function renderEarnings(daily, hashDaily) {
+  var svg = document.getElementById('earnChart');
+  var tb = document.getElementById('earnRows');
+  if (!svg || !tb) return;
+  var n = (daily && daily.length) || 0;
+  var rows = '';
+  for (var i = 0; i < n; i++) {
+    var d = daily[i] || {};
+    var h = (hashDaily && hashDaily[i]) || {};
+    rows += '<tr><td style="padding:4px 6px; white-space:nowrap;">' + (d.date || '') + '</td>'
+      + '<td>' + (d.earned ? d.earned : 0) + '</td>'
+      + '<td>' + (d.count || 0) + '</td>'
+      + '<td>' + (h.hash ? h.hash : 0) + '</td></tr>';
+  }
+  tb.innerHTML = rows || '<tr><td colspan="4" style="color:var(--muted); padding:6px;">—</td></tr>';
+  if (!n) { svg.innerHTML = ''; return; }
+  var W = 340, H = 120, padL = 8, padR = 8, padT = 12, padB = 16;
+  var iw = W - padL - padR, ih = H - padT - padB;
+  var maxE = 0.0000001, maxH = 0.0000001;
+  for (var i = 0; i < n; i++) { var e = daily[i].earned || 0; var h = (hashDaily[i] || {}).hash || 0; if (e > maxE) maxE = e; if (h > maxH) maxH = h; }
+  var px = function (i) { return padL + (n === 1 ? iw / 2 : iw * i / (n - 1)); };
+  var pyE = function (v) { return padT + ih - (v / maxE) * ih; };
+  var pyH = function (v) { return padT + ih - (v / maxH) * ih; };
+  var ptsE = '', ptsH = '', labels = '';
+  for (var i = 0; i < n; i++) {
+    ptsE += (i ? ' ' : '') + px(i) + ',' + pyE(daily[i].earned || 0);
+    ptsH += (i ? ' ' : '') + px(i) + ',' + pyH((hashDaily[i] || {}).hash || 0);
+    if (i % 2 === 0) { labels += '<text x="' + px(i) + '" y="' + (H - 3) + '" font-size="8.5" fill="#8a8f98" text-anchor="middle">' + (daily[i].date || '').slice(5) + '</text>'; }
+  }
+  var grid = '';
+  for (var g = 0; g <= 3; g++) { var y = padT + ih * g / 3; grid += '<line x1="' + padL + '" y1="' + y + '" x2="' + (W - padR) + '" y2="' + y + '" stroke="#e8eaed" stroke-width="1"/>'; }
+  svg.innerHTML = grid
+    + '<polyline fill="none" stroke="#68be8d" stroke-width="2" points="' + ptsE + '"/>'
+    + '<polyline fill="none" stroke="#4a90d9" stroke-width="1.5" stroke-dasharray="4 3" points="' + ptsH + '"/>'
+    + labels;
+}
+// M31：refresh 容錯——單一 API 失敗不阻斷整體（個別降級為預設值，避免「載入中…」卡死）。
+function refresh(){
+  // M34：本頁同時同步頂部礦機膠囊（雙保險）——僅在 render 後依 myAddrOnline 設定，避免首繪誤置「待機」。
+  var empty = {miners:[], splits:[], block_height:0};
+  var pM = get('/api/miners').catch(function(){ return empty; });
+  var pS = get('/status').catch(function(){ return {block_height:0}; });
+  var pP = get('/api/rewardpool').catch(function(){ return null; });
+  var pE = get('/api/miner/earnings?address=' + encodeURIComponent(myAddr) + '&days=7').catch(function(){ return {tacm:'0'}; });
+  var pC = get('/api/chain/stats').catch(function(){ return null; });
+  return Promise.all([pM, pS, pP, pE, pC]).then(function(rs){
+    try {
+      render(rs[0].miners||[], rs[0].splits||[], rs[1]||{});
+      myAddrOnline = false;
+      var ms2 = rs[0].miners || [];
+      for (var i2 = 0; i2 < ms2.length; i2++) { if (ms2[i2].address === myAddr && ms2[i2].active && ms2[i2].online) { myAddrOnline = true; break; } }
+      var pl = document.getElementById('miner-label');
+      var pd = document.getElementById('miner-dot');
+      if (pl && pd) { pl.textContent = myAddrOnline ? '挖礦中' : '待機'; pd.style.background = myAddrOnline ? '#0ecb81' : '#6b7280'; }
+    } catch (e) {}
+    try {
+      var pool = rs[2] && rs[2].tacm ? fmtTacm(rs[2].tacm) : '—';
+      document.getElementById('pool').textContent = pool;
+    } catch (e) {}
+    try { document.getElementById('earned').textContent = (window.TAC_fmtFee ? window.TAC_fmtFee(rs[3].tacm||0) : (rs[3].tacm||'0')) + ' TACm'; } catch (e) {}
+    try { renderEarnings(rs[3].daily || [], rs[3].hash_daily || []); } catch (e) {}
+    try {
+      var c = rs[4] || {};
+      document.getElementById('chainMined').textContent = c.total_mined_tacm ? fmtTacmRaw(c.total_mined_tacm) : '—';
+      document.getElementById('tiusdSupply').textContent = (c.tiusd_supply!=null) ? (c.tiusd_supply/1000000).toLocaleString('en-US',{maximumFractionDigits:2}) + ' TiUSD' : '—';
+    } catch (e) {}
+    document.getElementById('err').textContent = '';
+  });
+}
+
+// M145：鏈上驗證行改獨立計時（不隨 3s 輪詢掃 100 塊——audit 是重掃描，手機端會卡）。
+// 頁面載入時立即跑一次，之後每 30 秒一次；不再由 refresh() 鏈尾觸發。
+
+// M69：鏈上驗證狀態行——/api/audit 與 /network 同源，任何入口一致。
+function freshAuditLine(){
+  var el = document.getElementById('onchainLine');
+  if(!el) return;
+  fetch('/api/audit?blocks=100', {cache:'no-store'}).then(function(r){ return r.json(); }).then(function(a){
+    if(a && a.ok && a.consistent){
+      el.style.display='block';
+      el.style.borderColor='rgba(14,203,129,.45)';
+      el.innerHTML = TAC_TE(' <b style="color:#0ecb81">鏈上驗證：一致</b>') + ' — ' + TAC_TE('審計 ')+a.checked_blocks+TAC_TE(' 塊 coinbase/pool/split 全過 · 總產出 ')+a.total_mined_tacm+TAC_TE(' TACm · 獎勵池挹注 ')+a.on_chain_pool_share_tacm+TAC_TE(' · 在線礦工 ')+a.online_miners+TAC_TE(' 台（與 /network 同源）');
+    } else {
+      el.style.display='block';
+      el.style.borderColor='rgba(246,70,93,.4)';
+      el.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg> 鏈上驗證：暫不可用';
+    }
+  }).catch(function(){});
+}
+
+function fmtTacmRaw(v){ var n=parseFloat(v); if(isNaN(n)) return '—'; return n.toLocaleString('en-US',{maximumFractionDigits:6}) + ' TACm'; }
+function startMining(){
+  // M60：開機＝本地啟用＋鏈上 hb:on 交易（全網一致在線）；按鈕後 1-2 秒進塊，瓜分生效。
+  post('/api/miner/start',{address:myAddr}).then(function(){
+    mining = true;
+    document.getElementById('btnStart').style.display='none';
+    document.getElementById('btnStop').style.display='block';
+    document.getElementById('stBadge').textContent = (window.TAC_I18N&&TAC_I18N.cur()==='en')?'Mining Online · On-chain':'在線挖礦中 · 已上鏈';
+    document.getElementById('stBadge').className='mm-badge';
+    document.getElementById('cfgForm').classList.add('open');
+    refresh();
+    try { window.dispatchEvent(new CustomEvent('tac-pill-sync')); } catch (e) {}
+  }).catch(function(e){ document.getElementById('err').textContent='開機失敗：'+e; });
+}
+function stopMining(){
+  post('/api/miner/stop',{address:myAddr}).then(function(){
+    mining = false;
+    document.getElementById('btnStart').style.display='block';
+    document.getElementById('btnStop').style.display='none';
+    document.getElementById('cfgForm').classList.remove('open');
+    document.getElementById('stBadge').textContent = (window.TAC_I18N&&TAC_I18N.cur()==='en')?'Offline · On-chain':'離線 · 已上鏈';
+    document.getElementById('stBadge').className='mm-badge off';
+    refresh();
+    try { window.dispatchEvent(new CustomEvent('tac-pill-sync')); } catch (e) {}
+  }).catch(function(e){ document.getElementById('err').textContent='停止失敗：'+e; });
+}
+
+
+function bindMiner(){
+  // M37：優先綁定登入會員的鏈上錢包地址（「我的礦機」＝會員自己的礦機）；
+  // 未登入時使用「訪客獨立地址」（localStorage tac_guest_addr，首次由伺服器生成）——
+  // 訪客不再共用節點地址，錢包/收益/膠囊訊號各自獨立。
+  var guest = true;
+  fetch('/api/auth/me', {credentials:'same-origin', cache:'no-store'}).then(function(r){ return r.json().catch(function(){ return null; }); }).then(function(j){
+    if (j && j.ok && j.logged_in && j.user && j.user.wallet_addr) {
+      myAddr = j.user.wallet_addr;
+      guest = false;
+    }
+  }).catch(function(){}).then(function(){
+    if (!myAddr) {
+      try { myAddr = localStorage.getItem('tac_guest_addr'); } catch (e) {}
+      if (myAddr) { return Promise.resolve(); }
+      return ensureGuestAddr().then(function(a){ myAddr = a; }).catch(function(e){
+        document.getElementById('err').textContent = '訪客地址取得失敗（'+base+'）：' + e;
+      });
+    }
+  }).then(function(){
+    if (myAddr) {
+      document.getElementById('myAddr').textContent = shortAddr(myAddr) + (guest ? '（訪客）' : '');
+      document.getElementById('myAddr').title = myAddr;
+      refresh();
+      // M33：即時刷新——全鏈總產出／TiUSD 流通／獎勵池／我的收益／鏈頂／難度／排行全隨區塊鏈機制滾動。
+      // M145：10s→3s 秒級響應（後端 hb 視窗已加快取，不再每次全掃 60 塊）；audit 行獨立 30s。
+      setInterval(refresh, 3000);
+      freshAuditLine();
+      setInterval(freshAuditLine, 30000);
+    }
+  });
+}
+bindMiner();
+</script>
+{% endblock %}
