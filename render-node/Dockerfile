@@ -9,4 +9,4 @@ FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY --from=build /tacweb /usr/local/bin/tacweb
 EXPOSE 8080
-CMD ["tacweb", "-web-port", "8080", "-rpc-port", "8080", "-block-time", "3", "-data-dir", "/var/tac/data", "-network", "mainnet", "-p2p", "-p2p-seed", "http://2.28.201.174:8080", "-serve-dapp=false", "-p2p-follower", "-bridge"]
+CMD ["tacweb", "-web-port", "8080", "-rpc-port", "8080", "-block-time", "3", "-data-dir", "/var/tac/data", "-network", "mainnet", "-p2p", "-p2p-seed", "http://2.28.201.174:8080",  "-p2p-follower", "-bridge"]
