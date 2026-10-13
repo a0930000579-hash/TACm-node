@@ -1,0 +1,113 @@
+name: Auto Unzip
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "*.zip"
+      - "**/*.zip"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: auto-unzip
+  cancel-in-progress: true
+
+jobs:
+  unzip:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Find ZIP
+        id: zip
+        run: |
+          echo "=== 找 ZIP ==="
+
+          ZIP_FILE=$(find . \
+            -type f \
+            -iname "*.zip" \
+            -not -path "./.git/*" \
+            | head -n 1)
+
+          if [ -z "$ZIP_FILE" ]; then
+            echo "❌ 找不到 ZIP"
+            exit 1
+          fi
+
+          echo "✅ ZIP: $ZIP_FILE"
+          echo "zip_file=$ZIP_FILE" >> "$GITHUB_OUTPUT"
+
+      - name: Extract ZIP
+        run: |
+          echo "=== 開始解壓 ==="
+
+          rm -rf /tmp/unzip
+          mkdir -p /tmp/unzip
+
+          unzip -o \
+            "${{ steps.zip.outputs.zip_file }}" \
+            -d /tmp/unzip
+
+          echo "✅ 解壓完成"
+
+      - name: Protect workflow
+        run: |
+          echo "=== 保護 GitHub Actions ==="
+
+          rm -rf /tmp/unzip/.github/workflows
+
+          echo "✅ .github/workflows 不會被 ZIP 覆蓋"
+
+      - name: Overwrite files
+        run: |
+          echo "=== 覆蓋檔案 ==="
+
+          cp -rf /tmp/unzip/. ./
+
+          echo "✅ 檔案覆蓋完成"
+
+      - name: Delete ZIP
+        run: |
+          echo "=== 刪除 ZIP ==="
+
+          rm -f "${{ steps.zip.outputs.zip_file }}"
+
+          echo "✅ ZIP 已刪除"
+
+      - name: Git status
+        run: |
+          echo "=== Git 狀態 ==="
+          git status --short
+
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "ℹ️ 沒有變更"
+            exit 0
+          fi
+
+          git commit -m "Auto unzip and overwrite"
+
+          echo "✅ Commit 完成"
+
+      - name: Push
+        run: |
+          echo "=== Push 回 GitHub ==="
+
+          git push origin HEAD:main
+
+          echo "✅ Push 完成"
