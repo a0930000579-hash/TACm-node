@@ -1,6 +1,6 @@
 # TACm 主網節點（Render 用）— M147c
 # 兩階段建置：先編譯 Go，再放進精簡執行環境
-FROM golang:1.22-bookworm AS build
+FROM golang:1.23-bookworm AS build
 WORKDIR /src
 COPY src/ .
 RUN go build -o /tacweb ./cmd/web
