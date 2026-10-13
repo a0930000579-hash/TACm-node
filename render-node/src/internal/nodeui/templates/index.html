@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TAC Ai Smart Chain — Node</title>
+<meta name="description" content="TAC Ai Smart Chain validator node dashboard — chain status, sync, peers, validators, blocks and rewards.">
+<meta name="color-scheme" content="light">
+<link rel="icon" href="/static/tacnode.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/node.css">
+<style>html,body{background:#f7f8fb!important;color-scheme:light}  .ocmd{display:block;background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;line-height:1.7;
+    color:#0f172a;overflow-x:auto;white-space:pre-wrap;word-break:break-all;margin:8px 0 4px}
+  .join .muted{font-size:12px;color:#64748b;margin:6px 0 2px}
+</style>
+</head>
+<body data-i18n-root>
+<div class="topbar">
+  <div class="brand">
+    <span class="brand-badge">NODE</span>
+    <div class="brand-text">
+      <strong>TAC Ai Smart Chain</strong>
+      <small data-i18n="n.brandSub">Validator Node Console</small>
+    </div>
+  </div>
+  <div class="top-actions">
+    <span id="syncPill" class="pill pill-ok" data-i18n="n.synced">Synced</span>
+    <button id="langToggle" class="btn ghost">中文</button>
+    <a id="mainnetLink" class="btn primary" href="#" target="_blank" rel="noopener" data-i18n="n.openMainnet">Open Mainnet</a>
+  </div>
+</div>
+
+<header class="hero">
+  <div class="hero-inner">
+    <div class="hero-copy">
+      <span class="hero-eyebrow" data-i18n="n.heroEyebrow">TAC Ai Smart Chain · Mainnet</span>
+      <h1 data-i18n="n.heroTitle">Validator Node<br>Console</h1>
+      <p data-i18n="n.heroDesc">Run a TAC node, secure the network, validate blocks and earn the 9% block reward — all from your own branded node dashboard.</p>
+      <div class="hero-badges">
+        <span class="chip">BFT + PoW</span>
+        <span class="chip">Chain ID 1337</span>
+        <span class="chip">TACM · 18 decimals</span>
+      </div>
+    </div>
+    <div class="hero-art" aria-hidden="true">
+      <svg viewBox="0 0 220 220" width="220" height="220">
+        <defs>
+          <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#facc15"/><stop offset="1" stop-color="#16a34a"/>
+          </linearGradient>
+        </defs>
+        <circle cx="110" cy="110" r="98" fill="#ffffff" stroke="url(#g)" stroke-width="6"/>
+        <path d="M110 34 L186 110 L110 186 L34 110 Z" fill="none" stroke="url(#g)" stroke-width="10" stroke-linejoin="round"/>
+        <path d="M110 64 L156 110 L110 156 L64 110 Z" fill="url(#g)"/>
+        <circle cx="110" cy="110" r="22" fill="#ffffff"/>
+      </svg>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="cards">
+    <div class="card">
+      <div class="card-label" data-i18n="n.cTip">Chain Tip</div>
+      <div class="card-value"><span id="tip">—</span></div>
+      <div class="card-sub" data-i18n="n.cTipSub">Latest block height</div>
+    </div>
+    <div class="card">
+      <div class="card-label" data-i18n="n.cFinal">Finalized</div>
+      <div class="card-value"><span id="final">—</span></div>
+      <div class="card-sub" data-i18n="n.cFinalSub">BFT finalized height</div>
+    </div>
+    <div class="card">
+      <div class="card-label" data-i18n="n.cDiff">Difficulty</div>
+      <div class="card-value"><span id="diff">—</span></div>
+      <div class="card-sub" data-i18n="n.cDiffSub">Dynamic PoW difficulty</div>
+    </div>
+    <div class="card">
+      <div class="card-label" data-i18n="n.cSync">Sync Progress</div>
+      <div class="card-value"><span id="behind">—</span></div>
+      <div class="card-sub" data-i18n="n.cSyncSub">Blocks behind best peer</div>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="panel">
+      <div class="panel-head">
+        <h2 data-i18n="n.pNode">Node Identity</h2>
+        <span class="pill pill-muted">localhost</span>
+      </div>
+      <div class="kv">
+        <span data-i18n="n.kAddress">Node Address</span><code id="nodeAddr">—</code>
+        <span data-i18n="n.kNodeId">Node ID</span><code id="nodeId">—</code>
+        <span data-i18n="n.kIdentity">Identity Key</span><code id="identity">—</code>
+        <span data-i18n="n.kUptime">Uptime</span><code id="uptime">—</code>
+        <span data-i18n="n.kBaseFee">Base Fee</span><code id="baseFee">—</code>
+        <span data-i18n="n.kConsensus">Consensus</span><code id="consensus">—</code>
+      </div>
+      <div class="reward-box">
+        <div class="card-label" data-i18n="n.kReward">Node Reward</div>
+        <p data-i18n="n.rewardDesc">Every block mints 10 TACM: 9% goes to the producing node, 16% to the reward pool, 75% split among online miners by hashrate.</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2 data-i18n="n.pPeers">P2P Peers</h2>
+        <span class="pill pill-muted"><span id="peerCount">0</span> online</span>
+      </div>
+      <table class="tbl" id="peerTbl">
+        <thead><tr>
+          <th data-i18n="n.tNode">Node</th>
+          <th data-i18n="n.tHeight">Height</th>
+          <th data-i18n="n.tFinal">Finalized</th>
+          <th data-i18n="n.tState">State</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2 data-i18n="n.pValidators">Validators</h2>
+        <span class="pill pill-muted"><span id="valCount">0</span></span>
+      </div>
+      <table class="tbl" id="valTbl">
+        <thead><tr>
+          <th data-i18n="n.tAddress">Address</th>
+          <th data-i18n="n.tPower">Power</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2 data-i18n="n.pBlocks">Latest Blocks</h2>
+      </div>
+      <table class="tbl" id="blockTbl">
+        <thead><tr>
+          <th>#</th>
+          <th data-i18n="n.tProposer">Proposer</th>
+          <th data-i18n="n.tTx">Txs</th>
+          <th data-i18n="n.tDiff">Diff</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel join">
+    <div class="panel-head"><h2 data-i18n="n.pJoin">Run Your Own Node</h2></div>
+    <ol class="steps">
+      <li data-i18n="n.join1">Download the node package and unpack it on your server.</li>
+      <li data-i18n="n.join2">Start with the same genesis anchor: <code>--p2p-seed http://2.28.201.174:8080</code></li>
+      <li data-i18n="n.join3">Watch this dashboard — your node will sync automatically and start validating blocks.</li>
+      <li data-i18n="n.join4">Earn the 9% node reward per block, withdrawable by the node key.</li>
+    </ol>
+    <div class="oneclick">
+      <div class="panel-head" style="margin-top:14px"><h2 data-i18n="n.oneClick">One-Click Install (all platforms)</h2></div>
+      <pre class="ocmd">curl -L -o /tmp/tacnet-node.sh 'https://aka.doubaocdn.com/s/eFr3VVzdq3' &amp;&amp; bash /tmp/tacnet-node.sh</pre>
+      <p class="muted" data-i18n="n.oneClickTip">Auto-detects systemd / nohup / Render, installs Go, builds, starts and prints your console URL.</p>
+      <div class="panel-head" style="margin-top:14px"><h2 data-i18n="n.github">Source Code Permanent (GitHub)</h2></div>
+      <pre class="ocmd">cd tacm-go
+git init -b main
+git add -A
+git commit -m "TAC Ai Smart Chain - M87"
+git remote add origin https://github.com/&lt;your-account&gt;/TACm-Ai_Cyprto.git
+git push -u origin main</pre>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div>
+    <strong>TAC Ai Smart Chain</strong> · <span data-i18n="n.footLine">Validator Node Console</span>
+  </div>
+  <a id="footMainnet" href="#" target="_blank" rel="noopener" data-i18n="n.openMainnet">Open Mainnet</a>
+</footer>
+
+<script src="/static/nodeui.js"></script>
+</body>
+</html>
