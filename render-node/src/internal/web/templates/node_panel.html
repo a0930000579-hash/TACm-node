@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}節點架設者面板 · TAC Network{% endblock %}
+{% block content %}
+<style>
+  .form-row{margin:10px 0;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .form-row input{flex:1;min-width:220px;font-size:14px;border:1px solid rgba(104,190,141,.35);border-radius:10px;padding:10px 12px;background:#fff;color:var(--text, #1a1a2e)}
+  .np-btn{display:inline-block;font-size:14px;font-weight:700;border-radius:12px;padding:11px 22px;text-decoration:none;cursor:pointer;background:#68BE8D;color:#fff;border:none}
+  .np-btn:hover{background:#4f68d8}
+</style>
+<section class="panel">
+  <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg> 節點架設者面板</h2></div>
+  <p class="muted">管理你的節點：綁定收款地址、查詢節點獎勵（coinbase:node 9%）、將獎勵提領轉入 TACm web3 錢包。操作需節點管理密碼。</p>
+</section>
+
+<!-- M148：節點狀態 -->
+<section class="panel">
+  <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg> 節點狀態</h2></div>
+  <div class="chain-grid">
+    <div class="cg"><small>節點 ID</small><b id="pNodeId">—</b></div>
+    <div class="cg"><small>節點位址</small><b class="mono" id="pNodeAddr">—</b></div>
+    <div class="cg"><small>節點獎勵餘額（鏈上）</small><b id="pBalance">—</b></div>
+    <div class="cg"><small>鏈高</small><b id="pHeight">—</b></div>
+    <div class="cg"><small>綁定收款地址</small><b class="mono" id="pPayout">—</b></div>
+    <div class="cg"><small>管理密碼</small><b id="pAdmin">—</b></div>
+  </div>
+</section>
+
+<!-- M148：首次設置管理密碼 -->
+<section class="panel" id="setupBox">
+  <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> 設置管理密碼</h2></div>
+  <p class="muted">首次使用需設置管理密碼（至少 6 字元），保護綁定與提領操作。</p>
+  <div class="form-row"><input type="password" id="adminPass" placeholder="管理密碼（至少 6 字元）" autocomplete="new-password"></div>
+  <div class="form-row"><button class="np-btn" onclick="setupAdmin()">設置管理密碼</button> <span class="muted" id="setupMsg"></span></div>
+</section>
+
+<!-- M148：綁定收款地址 -->
+<section class="panel" id="bindBox">
+  <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><circle cx="12" cy="7" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg> 綁定收款地址</h2></div>
+  <p class="muted">填寫你的 TACm web3 錢包地址（tx01…），節點獎勵提領將轉入此地址。</p>
+  <div class="form-row"><input id="payoutAddr" placeholder="tx01…（TACm web3 錢包地址）" autocomplete="off"></div>
+  <div class="form-row"><input type="password" id="bindPass" placeholder="管理密碼（操作驗證）" autocomplete="current-password"></div>
+  <div class="form-row"><button class="np-btn" onclick="bindAddr()">綁定收款地址</button> <span class="muted" id="bindMsg"></span></div>
+</section>
+
+<!-- M148：提領節點獎勵 -->
+<section class="panel" id="wdBox">
+  <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg> 提領節點獎勵</h2></div>
+  <p class="muted">以節點私鑰簽名，把節點獎勵轉入綁定錢包（上鏈、可於區塊瀏覽器查詢）。</p>
+  <div class="form-row"><input id="wdAmount" inputmode="decimal" placeholder="提領金額（TACm）" autocomplete="off"></div>
+  <div class="form-row"><input type="password" id="wdPass" placeholder="管理密碼（操作驗證）" autocomplete="current-password"></div>
+  <div class="form-row"><button class="np-btn" onclick="withdraw()">提領到綁定錢包</button> <span class="muted" id="wdMsg"></span></div>
+</section>
+
+<script>
+(function () {
+  var box = function (sel) { return document.querySelector(sel); };
+  var esc = function (s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; };
+  var show = function (sel, s) { box(sel).textContent = s; };
+  var post = function (url, body) {
+    return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, j: j }; }); });
+  };
+  window.__npAdminSet = false;
+  function refresh() {
+    fetch('/api/node/panel').then(function (r) { return r.json(); }).then(function (d) {
+      window.__npAdminSet = !!d.admin_set;
+      show('#pNodeId', esc(d.node_id));
+      show('#pNodeAddr', esc(d.node_address));
+      show('#pBalance', esc(d.balance) + ' TACm');
+      show('#pHeight', esc(d.height));
+      show('#pPayout', d.payout_address ? esc(d.payout_address) : '尚未綁定');
+      show('#pAdmin', d.admin_set ? '已設置' : '未設置');
+      box('#setupBox').style.display = d.admin_set ? 'none' : '';
+      box('#bindPass').style.display = d.admin_set ? '' : 'none';
+      box('#wdPass').style.display = d.admin_set ? '' : 'none';
+      if (d.payout_address) { box('#payoutAddr').value = d.payout_address; }
+    }).catch(function () { show('#pNodeId', '載入失敗'); });
+  }
+  window.setupAdmin = function () {
+    var pass = box('#adminPass').value;
+    post('/api/node/setup', { admin_pass: pass }).then(function (r) {
+      show('#setupMsg', r.ok ? '已設置，請牢記管理密碼' : (r.j.message || '設置失敗'));
+      if (r.ok) refresh();
+    });
+  };
+  window.bindAddr = function () {
+    if (!window.__npAdminSet) { show('#bindMsg', '請先設置管理密碼（上方設置區）'); return; }
+    var pass = box('#bindPass').value, addr = box('#payoutAddr').value.trim();
+    if (!pass) { show('#bindMsg', '請輸入管理密碼'); return; }
+    post('/api/node/bind', { admin_pass: pass, payout_address: addr }).then(function (r) {
+      show('#bindMsg', r.ok ? '綁定成功：' + addr : (r.j.message || '綁定失敗'));
+      if (r.ok) refresh();
+    });
+  };
+  window.withdraw = function () {
+    if (!window.__npAdminSet) { show('#wdMsg', '請先設置管理密碼（上方設置區）'); return; }
+    var pass = box('#wdPass').value, amt = box('#wdAmount').value.trim();
+    if (!pass) { show('#wdMsg', '請輸入管理密碼'); return; }
+    post('/api/node/withdraw', { admin_pass: pass, amount: amt }).then(function (r) {
+      show('#wdMsg', r.ok ? '已提交上鏈：' + r.j.tx_hash : (r.j.message || '提領失敗'));
+      if (r.ok) { box('#wdAmount').value = ''; refresh(); }
+    });
+  };
+  refresh();
+})();
+</script>
+{% endblock %}

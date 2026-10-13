@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}TAC Ai Smart Chain · AI-Native Mainnet{% endblock %}
+{% block content %}
+
+<!-- M81：TAC 品牌門戶 v2——Solana 風格（亮色：漸層光暈＋流線抽象插圖＋大圓角卡片） -->
+<section class="ld-hero">
+  <div class="ld-glow g1"></div>
+  <div class="ld-glow g2"></div>
+  <div class="ld-inner">
+    <div class="ld-badge"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/></svg> AI-Native EVM Blockchain · Mainnet</div>
+    <h1 class="ld-title">TAC Ai <em>Smart Chain</em></h1>
+    <p class="ld-sub" data-i18n="ld.tag">一個為智能時代打造的自治網絡：PoW＋PoS＋BFT 共識、EVM 相容、EIP-1559、L2 Rollup、BSC 跨鏈橋、鏈上 AI——你的資產、你的社群、你的未來，都在鏈上。</p>
+    <div class="ld-cta">
+      <a class="btn gold big" href="/app" data-i18n="ld.enter">進入系統</a>
+      <a class="btn ghost big" href="/wallet" data-i18n="ld.wallet">開啟錢包</a>
+      <a class="btn ghost big" href="/mining" data-i18n="ld.mining">開始挖礦</a>
+      <a class="btn ghost big" href="/explorer" data-i18n="ld.explorer">區塊瀏覽</a>
+    </div>
+    <div class="ld-meta">
+      <span>Chain ID <b>1337 (0x539)</b></span><span>Symbol <b>TACM · 18</b></span><span>Consensus <b>PoW + PoS + BFT</b></span>
+    </div>
+  </div>
+  <svg class="ld-art" viewBox="0 0 420 320" role="img" aria-label="TAC network">
+    <defs>
+      <linearGradient id="ldG" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#68BE8D"/><stop offset="1" stop-color="#8fd4ad"/>
+      </linearGradient>
+      <linearGradient id="ldY" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#F0B90B"/><stop offset="1" stop-color="#f8d94e"/>
+      </linearGradient>
+      <linearGradient id="ldB" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0" stop-color="#5aa97c"/><stop offset="1" stop-color="#7BAB80"/>
+      </linearGradient>
+      <radialGradient id="ldGlow" cx=".5" cy=".5" r=".5">
+        <stop offset="0" stop-color="#68BE8D" stop-opacity=".35"/><stop offset="1" stop-color="#68BE8D" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <!-- 光暈 -->
+    <circle cx="210" cy="150" r="150" fill="url(#ldGlow)"/>
+    <!-- Solana 風流線（貝茲曲線，綠→黃漸層） -->
+    <g fill="none" stroke-linecap="round">
+      <path d="M20 250 C90 210 140 290 210 240 S330 190 400 230" stroke="url(#ldB)" stroke-width="3" opacity=".8"/>
+      <path d="M10 180 C80 150 130 220 200 170 S320 130 410 170" stroke="url(#ldG)" stroke-width="2.4" opacity=".55"/>
+      <path d="M30 90 C100 70 150 120 220 90 S330 60 410 100" stroke="url(#ldY)" stroke-width="2.2" opacity=".6"/>
+      <path d="M60 300 C120 270 170 320 240 280 S350 250 415 290" stroke="url(#ldG)" stroke-width="1.8" opacity=".4"/>
+    </g>
+    <!-- 粒子點陣 -->
+    <g fill="#68BE8D" opacity=".55">
+      <circle cx="60" cy="70" r="4"/><circle cx="150" cy="50" r="3"/><circle cx="330" cy="90" r="3.5"/>
+      <circle cx="380" cy="200" r="4"/><circle cx="90" cy="290" r="3"/><circle cx="350" cy="280" r="3"/>
+      <circle cx="220" cy="40" r="2.5"/><circle cx="30" cy="150" r="2.5"/>
+    </g>
+    <g fill="#F0B90B" opacity=".8">
+      <circle cx="120" cy="130" r="4"/><circle cx="300" cy="160" r="4"/><circle cx="250" cy="300" r="3.5"/>
+    </g>
+    <!-- 中央 TAC 菱體（Solana 幾何感：多面＋內發光） -->
+    <path d="M210 40 L320 150 L210 290 L100 150 Z" fill="url(#ldG)" opacity=".18"/>
+    <path d="M210 40 L320 150 L210 290 L100 150 Z" fill="none" stroke="url(#ldB)" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M210 40 L210 290 M100 150 L320 150" stroke="#68BE8D" stroke-width="1.8" opacity=".6"/>
+    <path d="M155 95 L265 95 L210 40 Z" fill="#68BE8D" opacity=".12"/>
+    <path d="M155 95 L265 95 L265 205 L155 205 Z" fill="url(#ldY)" opacity=".16"/>
+    <path d="M155 205 L265 205 L210 290 Z" fill="#7BAB80" opacity=".18"/>
+    <circle cx="210" cy="95" r="6" fill="#ffffff" stroke="#68BE8D" stroke-width="2.4"/>
+    <circle cx="155" cy="150" r="5" fill="#ffffff" stroke="#68BE8D" stroke-width="2"/>
+    <circle cx="265" cy="150" r="5" fill="#ffffff" stroke="#68BE8D" stroke-width="2"/>
+    <circle cx="210" cy="205" r="5" fill="#ffffff" stroke="#68BE8D" stroke-width="2"/>
+    <circle cx="210" cy="150" r="3.5" fill="#F0B90B"/>
+    <!-- 衛星菱體 -->
+    <g transform="translate(70,240)"><path d="M0 0 L22 15 L0 32 L-22 15 Z" fill="url(#ldG)" opacity=".3" stroke="#68BE8D" stroke-width="1.8"/></g>
+    <g transform="translate(330,60) scale(.85)"><path d="M0 0 L22 15 L0 32 L-22 15 Z" fill="url(#ldY)" opacity=".35" stroke="#F0B90B" stroke-width="1.6"/></g>
+  </svg>
+</section>
+
+<!-- 統計條（Solana 大數字） -->
+<section class="stat-band">
+  <div class="sb"><b>{{ status.Height }}</b><small data-i18n="index.height">鏈頂高度</small></div>
+  <div class="sb"><b>{{ chain.OnlineMiners }}</b><small>在線礦工</small></div>
+  <div class="sb"><b>{{ chain.TotalMinedTacm }}</b><small data-i18n="chain.mined">全鏈總產出 TACm</small></div>
+  <div class="sb"><b>{{ chain.RewardPool }}</b><small data-i18n="chain.pool">獎勵池</small></div>
+</section>
+
+<!-- 區塊鏈優勢詳細：Solana 風大卡 -->
+<section class="ld-sec">
+  <div class="ld-sec-head">
+    <h2 data-i18n="ld.sec1t">為什麼選擇 TAC Ai 智能鏈？</h2>
+    <p data-i18n="ld.sec1s">不是另一個中心化伺服器——是一個真正屬於用戶的網絡。以下是六大優勢。</p>
+  </div>
+  <div class="ld-grid">
+    <article class="ld-card">
+      <div class="lc-top">
+        <svg viewBox="0 0 48 48" class="ld-i"><circle cx="14" cy="16" r="6" fill="none" stroke="#68BE8D" stroke-width="2.2"/><circle cx="34" cy="16" r="6" fill="none" stroke="#7BAB80" stroke-width="2.2"/><circle cx="24" cy="34" r="6" fill="none" stroke="#F0B90B" stroke-width="2.2"/><path d="M14 22 L24 28 M34 22 L24 28" stroke="#68BE8D" stroke-width="1.6"/></svg>
+      </div>
+      <h3 data-i18n="ld.d1t">真正的去中心化</h3>
+      <p data-i18n="ld.d1s">採用 PoW＋PoS＋BFT 三層共識與動態難度，任何節點都可加入出塊與驗證。沒有單一公司、沒有單一伺服器可以關閉或竄改這條鏈。</p>
+    </article>
+    <article class="ld-card">
+      <div class="lc-top">
+        <svg viewBox="0 0 48 48" class="ld-i"><path d="M24 5 L42 12 V25 C42 34 34 40 24 43 C14 40 6 34 6 25 V12 Z" fill="none" stroke="#68BE8D" stroke-width="2.2"/><path d="M24 15 L33 18 L24 21 L15 18 Z" fill="rgba(104,190,141,.25)"/><path d="M24 21 V33 M15 18 L24 21 M33 18 L24 21" stroke="#68BE8D" stroke-width="1.6"/></svg>
+      </div>
+      <h3 data-i18n="ld.d2t">密碼學級安全</h3>
+      <p data-i18n="ld.d2s">ECDSA 簽名、SHA-256 鏈式哈希、SPV 最終性與 Merkle 驗證層層把關；內建全鏈賬本重放審計，每 100 塊自動核對 coinbase／分潤，不一致即時標記。</p>
+    </article>
+    <article class="ld-card">
+      <div class="lc-top">
+        <svg viewBox="0 0 48 48" class="ld-i"><path d="M10 22 A14 14 0 0 1 38 22 L38 36 A14 14 0 0 1 24 40 A14 14 0 0 1 10 36 Z" fill="none" stroke="#68BE8D" stroke-width="2.2"/><circle cx="24" cy="24" r="8" fill="rgba(104,190,141,.25)" stroke="#68BE8D" stroke-width="1.6"/><path d="M24 16 v16 M16 24 h16" stroke="#68BE8D" stroke-width="1.6"/></svg>
+      </div>
+      <h3 data-i18n="ld.d3t">資產屬於你</h3>
+      <p data-i18n="ld.d3s">沒有綁定姓名的帳戶。錢包私鑰由你保管，鏈上資產直接由你控制；內建交易所與跨鏈橋讓資產自由閃兌、轉入轉出。</p>
+    </article>
+    <article class="ld-card">
+      <div class="lc-top">
+        <svg viewBox="0 0 48 48" class="ld-i"><rect x="6" y="12" width="36" height="24" rx="5" fill="none" stroke="#7BAB80" stroke-width="2.2"/><path d="M6 18 h36" stroke="#68BE8D" stroke-width="1.6"/><circle cx="12" cy="15" r="1.4" fill="#F0B90B"/><path d="M14 28 h20 M14 33 h14" stroke="#68BE8D" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </div>
+      <h3 data-i18n="ld.d4t">完整生態</h3>
+      <p data-i18n="ld.d4s">內建錢包、交易所、DEX、DeFi、IDO、NFT、Token Studio、社群市集、鏈上治理——一個帳號從發幣到交易到治理全閉環。</p>
+    </article>
+    <article class="ld-card">
+      <div class="lc-top">
+        <svg viewBox="0 0 48 48" class="ld-i"><circle cx="24" cy="24" r="17" fill="none" stroke="#68BE8D" stroke-width="2.2"/><path d="M24 12 L24 36 M12 24 L36 24" stroke="#7BAB80" stroke-width="1.8"/><path d="M17 17 L31 31 M31 17 L17 31" stroke="#68BE8D" stroke-width="1.8"/></svg>
+      </div>
+      <h3 data-i18n="ld.d5t">與主流鏈互通</h3>
+      <p data-i18n="ld.d5s">EVM 相容＋eth_* JSON-RPC：MetaMask 直接接入、Type-2（EIP-1559）交易支援；BSC 真實跨鏈橋讓資產在主網之間平滑轉移。</p>
+    </article>
+    <article class="ld-card">
+      <div class="lc-top">
+        <svg viewBox="0 0 48 48" class="ld-i"><path d="M24 6 L42 18 V34 L24 42 L6 34 V18 Z" fill="none" stroke="#F0B90B" stroke-width="2.2"/><path d="M24 6 L42 18 L24 30 L6 18 Z" fill="rgba(240,185,11,.25)"/><path d="M24 30 V42" stroke="#F0B90B" stroke-width="1.6" opacity=".5"/><circle cx="24" cy="20" r="4" fill="#68BE8D"/></svg>
+      </div>
+      <h3 data-i18n="ld.d6t">AI 原生</h3>
+      <p data-i18n="ld.d6s">鏈上 AI 助手直接查詢餘額、交易、出塊與治理參數；社群獎勵自動上鏈。TAC 天生為智能時代而設計。</p>
+    </article>
+  </div>
+</section>
+
+<!-- 技術規格 -->
+<section class="panel">
+  <div class="panel-head"><h2 data-i18n="ld.specT">主網技術規格</h2></div>
+  <div class="spec-grid">
+    <div class="sp"><small>Network / Chain ID</small><b>mainnet · 1337 (0x539)</b></div>
+    <div class="sp"><small>Consensus</small><b>PoW + PoS + BFT + View Change</b></div>
+    <div class="sp"><small>Symbol / Decimals</small><b>TACM · 18</b></div>
+    <div class="sp"><small>Fee Model</small><b>EIP-1559（Base Fee 銷毀）</b></div>
+    <div class="sp"><small>Smart Contracts</small><b>EVM（Solidity）＋ERC-20/721</b></div>
+    <div class="sp"><small>Layer 2</small><b>Rollup + Fraud Proof</b></div>
+    <div class="sp"><small>Interop</small><b>BSC Bridge（SPV＋多簽）</b></div>
+    <div class="sp"><small>Rewards Split</small><b>節點 9% · 獎勵池 16% · 礦工 75%</b></div>
+  </div>
+</section>
+
+<!-- 進入系統（生態導航） -->
+<section class="ld-enter">
+  <h2 data-i18n="ld.enterT">從這裡開始</h2>
+  <div class="ld-enter-grid">
+    <a class="le" href="/app"><b data-i18n="ld.enter">進入系統</b><small>儀表板與鏈狀態</small></a>
+    <a class="le" href="/wallet"><b>錢包</b><small>資產與轉帳</small></a>
+    <a class="le" href="/mining"><b>挖礦</b><small>算力與獎勵</small></a>
+    <a class="le" href="/exchange"><b>交易所</b><small>閃兌與訂單</small></a>
+    <a class="le" href="/dex"><b>DEX</b><small>流動性與兌換</small></a>
+    <a class="le" href="/explorer"><b>區塊瀏覽</b><small>鏈上搜尋</small></a>
+    <a class="le" href="/governance"><b>治理</b><small>提案與投票</small></a>
+    <a class="le" href="/join"><b>加入網絡</b><small>運行你的節點</small></a>
+  </div>
+</section>
+
+<style>
+  /* M81：Solana 風格（亮色）——漸層光暈＋流線＋大圓角卡片 */
+  .ld-hero{display:flex;gap:26px;align-items:center;background:linear-gradient(140deg,#eafaf1 0%,#ffffff 50%,#fdf8e7 100%);border:1px solid rgba(104,190,141,.3);border-radius:24px;padding:44px 36px;margin-bottom:20px;position:relative;overflow:hidden}
+  .ld-glow{position:absolute;border-radius:50%;pointer-events:none}
+  .ld-glow.g1{width:340px;height:340px;right:-90px;top:-100px;background:radial-gradient(circle,rgba(104,190,141,.28),transparent 68%)}
+  .ld-glow.g2{width:280px;height:280px;left:-80px;bottom:-120px;background:radial-gradient(circle,rgba(240,185,11,.22),transparent 68%)}
+  .ld-inner{position:relative;z-index:1;flex:1;min-width:260px}
+  .ld-art{position:relative;z-index:1;flex:none;width:min(360px,44vw);max-width:400px;height:auto}
+  .ld-badge{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.08em;color:#F0B90B;background:rgba(240,185,11,.12);border:1px solid rgba(240,185,11,.45);border-radius:999px;padding:5px 14px;margin-bottom:16px}
+  .ld-title{font-size:clamp(30px,5.8vw,50px);font-weight:800;letter-spacing:-.03em;margin:0 0 12px;color:var(--text);line-height:1.05}
+  .ld-title em{font-style:normal;background:linear-gradient(100deg,#68BE8D 0%,#7BAB80 55%,#F0B90B 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .ld-sub{font-size:15px;color:var(--muted);margin:0 0 24px;max-width:640px;line-height:1.75}
+  .ld-cta{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:22px}
+  .btn.big{padding:13px 26px;font-size:15px;border-radius:12px}
+  .btn.gold{background:linear-gradient(135deg,#F0B90B,#f8d94e);color:#14161a;box-shadow:0 8px 20px rgba(240,185,11,.28)}
+  .btn.gold:hover{transform:translateY(-1px);box-shadow:0 10px 26px rgba(240,185,11,.36)}
+  .ld-meta{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+  .ld-meta span{background:rgba(104,190,141,.08);border:1px solid rgba(104,190,141,.25);border-radius:12px;padding:8px 14px}
+  .ld-meta b{color:var(--text)}
+  .stat-band{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px}
+  .sb{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:16px 18px;text-align:center;box-shadow:0 4px 14px rgba(104,190,141,.06)}
+  .sb b{display:block;font-size:26px;font-weight:800;color:#F0B90B;font-variant-numeric:tabular-nums;word-break:break-all}
+  .sb small{font-size:11px;color:var(--muted)}
+  .ld-sec{margin-bottom:24px}
+  .ld-sec-head{text-align:center;margin-bottom:20px}
+  .ld-sec-head h2{font-size:clamp(22px,3.6vw,32px);font-weight:800;margin:0 0 8px;color:var(--text);letter-spacing:-.02em}
+  .ld-sec-head p{max-width:720px;margin:0 auto;font-size:14px;color:var(--muted)}
+  .ld-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+  .ld-card{background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:22px;position:relative;overflow:hidden;transition:transform .16s,box-shadow .16s;box-shadow:0 2px 10px rgba(104,190,141,.05)}
+  .ld-card::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:linear-gradient(90deg,#68BE8D,#7BAB80,#F0B90B);opacity:.9}
+  .ld-card:hover{transform:translateY(-3px);box-shadow:0 14px 30px rgba(104,190,141,.16)}
+  .lc-top{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .ld-card h3{margin:0 0 8px;font-size:16px;color:var(--text)}
+  .ld-card p{margin:0;font-size:13px;color:var(--muted);line-height:1.75}
+  .ld-i{width:46px;height:46px}
+  .spec-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+  .sp{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:13px 15px;box-shadow:0 2px 8px rgba(104,190,141,.04)}
+  .sp small{display:block;font-size:11px;color:var(--muted);margin-bottom:4px}
+  .sp b{font-size:13px;color:var(--text);word-break:break-all}
+  .ld-enter{margin-top:24px}
+  .ld-enter h2{font-size:24px;font-weight:800;margin:0 0 16px;color:var(--text)}
+  .ld-enter-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px}
+  .le{display:flex;flex-direction:column;gap:4px;background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px;text-decoration:none;transition:border-color .15s,transform .15s,box-shadow .15s}
+  .le:hover{border-color:#F0B90B;transform:translateY(-2px);box-shadow:0 8px 20px rgba(240,185,11,.14)}
+  .le b{font-size:14px;color:var(--text)}
+  .le small{font-size:11px;color:var(--muted)}
+  @media (max-width:640px){ .ld-hero{flex-direction:column;padding:28px 18px} .ld-art{width:min(280px,72vw)} }
+</style>
+
+{% endblock %}

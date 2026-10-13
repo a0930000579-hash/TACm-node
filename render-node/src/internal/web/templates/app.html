@@ -1,0 +1,303 @@
+{% extends "base.html" %}
+{% block title %}TAC Ai Smart Chain · Mainnet{% endblock %}
+{% block content %}
+
+<!-- M79：TAC 品牌首頁 v3（ethereum.org 風格：雙欄 hero＋SVG 菱體插圖＋統計條＋價值主張卡） -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-badge">Mainnet · Chain ID 1337 (0x539) · TACM</div>
+    <h1 class="hero-title">TAC Ai Smart Chain</h1>
+    <p class="hero-sub" data-i18n="index.heroTag">AI-native blockchain · EVM compatible · EIP-1559 · L2 Rollup · BSC Bridge</p>
+    <div class="hero-cta">
+      <a class="btn gold" href="/wallet" data-i18n="index.ctaWallet">進入錢包</a>
+      <a class="btn ghost" href="/mining" data-i18n="index.ctaMining">開始挖礦</a>
+      <a class="btn ghost" href="/join" data-i18n="index.ctaJoin">加入網絡</a>
+      <a class="btn ghost" href="/explorer" data-i18n="index.ctaExplorer">區塊瀏覽</a>
+    </div>
+    <div class="hero-meta">
+      <span class="hm"><small>RPC URL</small><b class="mono" id="heroRpc">…</b></span>
+      <span class="hm"><small>Network</small><b>mainnet</b></span>
+      <span class="hm"><small>Symbol / Decimals</small><b>TACM · 18</b></span>
+    </div>
+  </div>
+  <svg class="hero-art" viewBox="0 0 380 300" role="img" aria-label="TAC network">
+    <defs>
+      <linearGradient id="tacG" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#68BE8D"/><stop offset="1" stop-color="#8fd4ad"/>
+      </linearGradient>
+      <linearGradient id="tacG2" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0" stop-color="#5aa97c"/><stop offset="1" stop-color="#68BE8D"/>
+      </linearGradient>
+    </defs>
+    <!-- 背景節點網絡 -->
+    <g stroke="#68BE8D" stroke-width="1" opacity=".22">
+      <line x1="50" y1="60" x2="130" y2="42"/><line x1="130" y1="42" x2="250" y2="86"/>
+      <line x1="250" y1="86" x2="330" y2="150"/><line x1="50" y1="60" x2="330" y2="150"/>
+      <line x1="50" y1="60" x2="180" y2="250"/><line x1="330" y1="150" x2="180" y2="250"/>
+      <line x1="130" y1="42" x2="180" y2="250"/><line x1="250" y1="86" x2="180" y2="250"/>
+      <line x1="50" y1="60" x2="60" y2="170"/><line x1="330" y1="150" x2="280" y2="240"/>
+    </g>
+    <g fill="#68BE8D" opacity=".5">
+      <circle cx="50" cy="60" r="6"/><circle cx="130" cy="42" r="4.5"/>
+      <circle cx="250" cy="86" r="5"/><circle cx="330" cy="150" r="6"/>
+      <circle cx="60" cy="170" r="4"/><circle cx="280" cy="240" r="4.5"/>
+    </g>
+    <!-- 中央 TAC 菱體（多面體） -->
+    <path d="M190 34 L292 128 L190 268 L88 128 Z" fill="url(#tacG)" opacity=".16"/>
+    <path d="M190 34 L292 128 L190 268 L88 128 Z" fill="none" stroke="url(#tacG2)" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M190 34 L190 268 M88 128 L292 128" stroke="#68BE8D" stroke-width="1.6" opacity=".55"/>
+    <path d="M139 81 L241 81 L190 34 Z" fill="#68BE8D" opacity=".10"/>
+    <path d="M139 81 L241 81 L241 175 L139 175 Z" fill="#68BE8D" opacity=".10"/>
+    <path d="M139 175 L241 175 L190 268 Z" fill="#68BE8D" opacity=".12"/>
+    <!-- 內部節點 -->
+    <circle cx="190" cy="81" r="5" fill="#ffffff" stroke="#68BE8D" stroke-width="2"/>
+    <circle cx="139" cy="128" r="4" fill="#ffffff" stroke="#68BE8D" stroke-width="1.6"/>
+    <circle cx="241" cy="128" r="4" fill="#ffffff" stroke="#68BE8D" stroke-width="1.6"/>
+    <circle cx="190" cy="175" r="4" fill="#ffffff" stroke="#68BE8D" stroke-width="1.6"/>
+    <circle cx="190" cy="128" r="3" fill="#68BE8D"/>
+    <!-- 衛星小菱體 -->
+    <g transform="translate(60,214)"><path d="M0 0 L20 14 L0 30 L-20 14 Z" fill="url(#tacG)" opacity=".25" stroke="#68BE8D" stroke-width="1.6"/></g>
+    <g transform="translate(298,60) scale(.8)"><path d="M0 0 L20 14 L0 30 L-20 14 Z" fill="url(#tacG)" opacity=".25" stroke="#68BE8D" stroke-width="1.6"/></g>
+  </svg>
+</section>
+
+<!-- 統計條（ethereum.org 風大數字） -->
+<section class="stat-band">
+  <div class="sb"><b id="stHeight">{{ status.Height }}</b><small data-i18n="index.height">鏈頂高度</small></div>
+  <div class="sb"><b id="stMiners">{{ chain.OnlineMiners }}</b><small>在線礦工</small></div>
+  <div class="sb"><b id="stTx">—</b><small data-i18n="index.latestTx">最新交易</small></div>
+  <div class="sb"><b id="stMined">{{ chain.TotalMinedTacm }}</b><small data-i18n="chain.mined">全鏈總產出 TACm</small></div>
+</section>
+
+<!-- 價值主張（THE USER-OWNED INTERNET 風） -->
+<section class="value-grid">
+  <div class="val">
+    <svg viewBox="0 0 48 48" class="vi"><path d="M24 4 L40 14 V34 L24 44 L8 34 V14 Z" fill="none" stroke="#68BE8D" stroke-width="2.2"/><path d="M24 4 L40 14 L24 24 L8 14 Z" fill="#68BE8D" opacity=".25"/><circle cx="24" cy="34" r="5" fill="#68BE8D" opacity=".6"/></svg>
+    <h3 data-i18n="index.v1t">你的資產屬於你</h3>
+    <p data-i18n="index.v1s">你的銀行帳戶只是別人資料庫裡的一筆記錄。TAC 是另一個網絡——你直接持有資產，不經第三方。</p>
+  </div>
+  <div class="val">
+    <svg viewBox="0 0 48 48" class="vi"><path d="M10 22 A14 14 0 0 1 38 22 L38 36 A14 14 0 0 1 24 40 A14 14 0 0 1 10 36 Z" fill="none" stroke="#68BE8D" stroke-width="2.2"/><circle cx="24" cy="24" r="8" fill="#68BE8D" opacity=".25" stroke="#68BE8D" stroke-width="1.6"/><path d="M24 16 v16 M16 24 h16" stroke="#68BE8D" stroke-width="1.6"/></svg>
+    <h3 data-i18n="index.v2t">隱私至上</h3>
+    <p data-i18n="index.v2s">沒有與你名字綁定的帳戶、沒有公司監看你的餘額。你的鏈上活動由你掌控。</p>
+  </div>
+  <div class="val">
+    <svg viewBox="0 0 48 48" class="vi"><circle cx="24" cy="24" r="16" fill="none" stroke="#68BE8D" stroke-width="2.2"/><circle cx="24" cy="24" r="8" fill="#68BE8D" opacity=".25"/><path d="M12 8 L24 24" stroke="#68BE8D" stroke-width="1.6"/><circle cx="12" cy="8" r="3.5" fill="#68BE8D"/><circle cx="36" cy="40" r="3.5" fill="#68BE8D"/><path d="M24 24 L36 40" stroke="#68BE8D" stroke-width="1.6"/></svg>
+    <h3 data-i18n="index.v3t">永不離線</h3>
+    <p data-i18n="index.v3s">多節點去中心化網絡，100% 正常運行。沒有單一伺服器可以關閉你的鏈。</p>
+  </div>
+  <div class="val">
+    <svg viewBox="0 0 48 48" class="vi"><path d="M24 6 L42 18 V34 L24 42 L6 34 V18 Z" fill="none" stroke="#68BE8D" stroke-width="2.2"/><path d="M24 6 L42 18 L24 30 L6 18 Z" fill="#68BE8D" opacity=".25"/><path d="M24 30 V42" stroke="#68BE8D" stroke-width="1.6" opacity=".5"/></svg>
+    <h3 data-i18n="index.v4t">AI 原生</h3>
+    <p data-i18n="index.v4s">鏈上 AI 助手＋社群獎勵。TAC 是為智能時代打造的自治網絡。</p>
+  </div>
+</section>
+
+<!-- 功能導航網格（SVG 圖案卡） -->
+<section class="feat-grid">
+  <a class="feat" href="/wallet"><svg viewBox="0 0 40 40" class="fi"><rect x="4" y="10" width="32" height="22" rx="5" fill="none" stroke="#68BE8D" stroke-width="2.4"/><path d="M4 16 h28 v-3 a5 5 0 0 0 -5 -5 H12 a5 5 0 0 0 -5 5 v3 Z" fill="#68BE8D" opacity=".25"/><circle cx="28" cy="24" r="3" fill="#68BE8D"/></svg><b data-i18n="index.ctaWallet">進入錢包</b><small data-i18n="feat.wallet">資產與轉帳</small></a>
+  <a class="feat" href="/mining"><svg viewBox="0 0 40 40" class="fi"><path d="M14 12 L8 6 M14 12 L22 20 M14 12 L16 4 M14 12 L4 14 M22 20 L18 30 L8 34 L4 26 L8 16 L14 12 Z" fill="none" stroke="#68BE8D" stroke-width="2.2" stroke-linejoin="round"/><path d="M18 30 L8 34 L4 26 L8 16 L14 12 L22 20 Z" fill="#68BE8D" opacity=".22"/><path d="M28 10 h8 M28 10 l4 -4 M28 10 l4 4 M32 14 v6 M28 20 h8" stroke="#68BE8D" stroke-width="2.2" stroke-linecap="round"/></svg><b data-i18n="index.ctaMining">開始挖礦</b><small data-i18n="feat.mining">算力與獎勵</small></a>
+  <a class="feat" href="/exchange"><svg viewBox="0 0 40 40" class="fi"><path d="M6 30 h28 M6 30 l6 4 M6 30 l6 -4" fill="none" stroke="#68BE8D" stroke-width="2.2" stroke-linecap="round"/><path d="M10 24 V14 h8 V24 Z" fill="#68BE8D" opacity=".25" stroke="#68BE8D" stroke-width="1.6"/><path d="M22 24 V8 h8 V24 Z" fill="#68BE8D" opacity=".45" stroke="#68BE8D" stroke-width="1.6"/><path d="M34 30 L34 26 M30 30 L30 26 M26 30 L26 26" stroke="#68BE8D" stroke-width="1.6"/></svg><b>交易所</b><small>閃兌與訂單</small></a>
+  <a class="feat" href="/community"><svg viewBox="0 0 40 40" class="fi"><circle cx="14" cy="18" r="9" fill="none" stroke="#68BE8D" stroke-width="2.2"/><path d="M22 20 a9 9 0 0 1 9 9 M22 29 h8" stroke="#68BE8D" stroke-width="2.2" stroke-linecap="round"/><circle cx="11" cy="15" r="1.8" fill="#68BE8D"/><circle cx="17" cy="15" r="1.8" fill="#68BE8D"/><path d="M11 21 l3 -2 h6 l3 2" fill="none" stroke="#68BE8D" stroke-width="1.6"/></svg><b>社群</b><small>動態與獎勵</small></a>
+  <a class="feat" href="/dex"><svg viewBox="0 0 40 40" class="fi"><circle cx="14" cy="20" r="8" fill="none" stroke="#68BE8D" stroke-width="2.2"/><circle cx="26" cy="20" r="8" fill="none" stroke="#68BE8D" stroke-width="2.2"/><path d="M14 14 l8 6 M26 26 l-8 -6 M14 26 l8 -6 M26 14 l-8 6" stroke="#68BE8D" stroke-width="1.8"/></svg><b>DEX</b><small>流動性與兌換</small></a>
+  <a class="feat" href="/explorer"><svg viewBox="0 0 40 40" class="fi"><circle cx="17" cy="17" r="10" fill="none" stroke="#68BE8D" stroke-width="2.4"/><path d="M25 25 L34 34" stroke="#68BE8D" stroke-width="2.8" stroke-linecap="round"/><path d="M17 12 v10 M12 17 h10" stroke="#68BE8D" stroke-width="1.6"/></svg><b data-i18n="index.ctaExplorer">區塊瀏覽</b><small data-i18n="feat.explorer">鏈上搜尋</small></a>
+  <a class="feat" href="/nfts"><svg viewBox="0 0 40 40" class="fi"><rect x="6" y="8" width="28" height="24" rx="4" fill="none" stroke="#68BE8D" stroke-width="2.2"/><circle cx="14" cy="16" r="3.5" fill="#68BE8D" opacity=".45"/><path d="M8 30 L20 18 L32 30" fill="none" stroke="#68BE8D" stroke-width="2.2" stroke-linejoin="round"/></svg><b>NFT</b><small>數位收藏</small></a>
+  <a class="feat" href="/ai"><svg viewBox="0 0 40 40" class="fi"><rect x="8" y="10" width="24" height="16" rx="6" fill="none" stroke="#68BE8D" stroke-width="2.2"/><circle cx="14" cy="18" r="2" fill="#68BE8D"/><circle cx="20" cy="18" r="2" fill="#68BE8D"/><circle cx="26" cy="18" r="2" fill="#68BE8D"/><path d="M14 26 h12 M16 26 v4 M24 26 v4" stroke="#68BE8D" stroke-width="1.8" stroke-linecap="round"/></svg><b>AI 助手</b><small>鏈上問答</small></a>
+</section>
+
+<section class="stat-cards">
+  <div class="card">
+    <div class="card-label" data-i18n="index.height">鏈頂高度</div>
+    <div class="card-value" id="hHeight">{{ status.Height }}</div>
+  </div>
+  <div class="card">
+    <div class="card-label" data-i18n="index.final">最終化高度</div>
+    <div class="card-value final" id="hFinal">{{ status.FinalizedHeight }}</div>
+  </div>
+  <div class="card">
+    <div class="card-label" data-i18n="index.diff">當前難度</div>
+    <div class="card-value" id="hDiff">{{ status.Difficulty }}</div>
+  </div>
+  <div class="card">
+    <div class="card-label" data-i18n="index.mempool">待打包交易</div>
+    <div class="card-value" id="hMempool">{{ status.MempoolSize }}</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Base Fee (TACm/gas)</div>
+    <div class="card-value mono" id="hBaseFee">{{ status.BaseFee|fee8 }}</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Gas Price (建議)</div>
+    <div class="card-value mono" id="hGasPrice">{{ status.GasPrice|fee8 }}</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Burned Total (TACm)</div>
+    <div class="card-value mono" id="hBurned">{{ status.BurnedTotal|fee8 }}</div>
+  </div>
+</section>
+
+<!-- 全鏈儀表 -->
+<section class="panel">
+  <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg> <span data-i18n="index.overview">全鏈儀表</span></h2></div>
+  <div class="chain-dash">
+    <div class="rate-ring">
+      <svg viewBox="0 0 120 120" width="120" height="120">
+        <circle cx="60" cy="60" r="52" class="ring-bg"/>
+        <circle cx="60" cy="60" r="52" class="ring-fg" id="ringRate"/>
+      </svg>
+      <div class="rate-txt"><b id="rateVal">{{ chain.OnlineMiners }}</b><small>在線礦工<br>全網算力 <span id="rateHr">{{ chain.TotalHashrate }}</span></small></div>
+    </div>
+    <div class="dash-cards">
+      <div class="dc"><small data-i18n="chain.mined">全鏈總產出 TACm</small><b id="dcMined">{{ chain.TotalMinedTacm }}</b></div>
+      <div class="dc"><small data-i18n="chain.pool">獎勵池</small><b id="dcPool">{{ chain.RewardPool }}</b></div>
+      <div class="dc"><small data-i18n="chain.tiusd">TiUSD 總流通</small><b id="dcTiUSD">{{ chain.TiUSDSupply }}</b></div>
+      <div class="dc"><small>出塊速率</small><b id="dcRate">—</b></div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero{display:flex;gap:26px;align-items:center;background:linear-gradient(160deg,#e8f7ee 0%,#ffffff 55%,#fbf7ee 100%);border:1px solid rgba(104,190,141,.22);border-radius:20px;padding:36px 30px;margin-bottom:18px;position:relative;overflow:hidden}
+  .hero::before{content:"";position:absolute;right:-90px;top:-90px;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,rgba(104,190,141,.16),transparent 70%)}
+  .hero::after{content:"";position:absolute;left:-60px;bottom:-120px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(240,185,11,.10),transparent 70%)}
+  .hero-inner{position:relative;z-index:1;flex:1;min-width:260px}
+  .hero-art{position:relative;z-index:1;flex:none;width:min(340px,42vw);max-width:380px;height:auto}
+  .hero-badge{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;color:#F0B90B;background:rgba(104,190,141,.08);border:1px solid rgba(104,190,141,.35);border-radius:999px;padding:4px 12px;margin-bottom:14px}
+  .hero-title{font-size:clamp(26px,5vw,42px);font-weight:800;letter-spacing:-.02em;margin:0 0 10px;color:var(--text)}
+  .hero-sub{font-size:15px;color:var(--muted);margin:0 0 20px;max-width:620px}
+  .hero-cta{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+  .btn{display:inline-block;font-size:14px;font-weight:700;border-radius:12px;padding:11px 22px;text-decoration:none;cursor:pointer}
+  .btn.gold{background:#68BE8D;color:#ffffff}
+  .btn.gold:hover{background:#4f68d8}
+  .btn.ghost{border:1px solid var(--border);color:var(--text);background:transparent}
+  .btn.ghost:hover{border-color:#68BE8D;color:#68BE8D}
+  .hero-meta{display:flex;gap:12px;flex-wrap:wrap}
+  .hm{display:inline-flex;flex-direction:column;gap:2px;background:rgba(104,190,141,.05);border:1px solid var(--border);border-radius:10px;padding:8px 12px}
+  .hm small{font-size:10px;color:var(--muted)}
+  .hm b{font-size:13px;color:var(--text);word-break:break-all}
+  .stat-band{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px}
+  .sb{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 18px;text-align:center}
+  .sb b{display:block;font-size:24px;font-weight:800;color:#F0B90B;font-variant-numeric:tabular-nums;word-break:break-all}
+  .sb small{font-size:11px;color:var(--muted)}
+  .value-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:20px}
+  .val{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:20px}
+  .val h3{margin:10px 0 6px;font-size:16px;color:var(--text)}
+  .val p{margin:0;font-size:13px;color:var(--muted);line-height:1.6}
+  .vi{width:44px;height:44px}
+  .feat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+  .feat{display:flex;flex-direction:column;gap:4px;background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 16px;text-decoration:none;transition:border-color .15s,transform .15s}
+  .feat:hover{border-color:#68BE8D;transform:translateY(-2px);box-shadow:0 6px 18px rgba(104,190,141,.12)}
+  .feat .fi{width:30px;height:30px;margin-bottom:4px}
+  .feat b{font-size:14px;color:var(--text)}
+  .feat small{font-size:11px;color:var(--muted)}
+  .chain-dash{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+  .rate-ring{position:relative;width:120px;height:120px;flex:none;margin:0 auto}
+  .rate-ring svg{transform:rotate(-90deg)}
+  .rate-ring .ring-bg{fill:none;stroke:rgba(104,190,141,.14);stroke-width:10}
+  .rate-ring .ring-fg{fill:none;stroke:#68BE8D;stroke-width:10;stroke-linecap:round;stroke-dasharray:0 326.7;transition:stroke-dasharray .8s}
+  .rate-txt{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+  .rate-txt b{font-size:22px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums}
+  .rate-txt small{font-size:10px;color:var(--muted);line-height:1.4;max-width:84px}
+  .dash-cards{flex:1;min-width:200px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .dc{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px}
+  .dc small{font-size:11px;color:var(--muted);display:block;margin-bottom:4px}
+  .dc b{font-size:15px;font-variant-numeric:tabular-nums;color:var(--text);word-break:break-all}
+  .card-value.mono{font-size:17px;word-break:break-all;overflow-wrap:anywhere}
+  @media (max-width:640px){ .hero{flex-direction:column;padding:24px 16px} .hero-art{width:min(260px,70vw)} }
+</style>
+
+<script>
+  // M34/M77/M79：首頁全鏈儀表 10s 即時刷新（API 直連不緩存）；fee 以 TAC_fmtFee 顯示。
+  (function () {
+    var C = 2*Math.PI*52;
+    function fmtFee(v){ return window.TAC_fmtFee ? window.TAC_fmtFee(v) : v; }
+    function fresh() {
+      fetch('/api/chain/stats', {cache:'no-store'}).then(function(r){ return r.json().catch(function(){ return null; }); }).then(function(c){
+        if (!c || !c.ok) return;
+        var el;
+        el = document.getElementById('dcMined'); if (el && c.total_mined_tacm!=null) el.textContent = fmtN(c.total_mined_tacm);
+        el = document.getElementById('dcPool'); if (el && c.reward_pool!=null) el.textContent = fmtN(c.reward_pool);
+        el = document.getElementById('dcTiUSD'); if (el && c.tiusd_supply!=null) el.textContent = (c.tiusd_supply/1000000).toLocaleString('en-US',{maximumFractionDigits:2});
+        el = document.getElementById('stMined'); if (el && c.total_mined_tacm!=null) el.textContent = fmtN(c.total_mined_tacm);
+      }).catch(function(){});
+      fetch('/api/miners', {cache:'no-store'}).then(function(r){ return r.json().catch(function(){ return null; }); }).then(function(m){
+        if (!m || !m.ok) return;
+        var el = document.getElementById('rateVal'); if (el) el.textContent = m.online_count;
+        var el2 = document.getElementById('stMiners'); if (el2) el2.textContent = m.online_count;
+        var ring = document.getElementById('ringRate');
+        var pct = Math.min(100, (m.online_count||0)/8*100);
+        if (ring) ring.style.strokeDasharray = (pct/100*C) + ' ' + C;
+        var hr = 0; (m.splits||[]).forEach(function(sp){ hr += parseFloat(sp.share||0)/1e6; });
+        el = document.getElementById('rateHr'); if (el) el.textContent = hr.toFixed(2)+'M';
+      }).catch(function(){});
+      fetch('/status', {cache:'no-store'}).then(function(r){ return r.json().catch(function(){ return null; }); }).then(function(st){
+        if (!st) return;
+        var el;
+        el = document.getElementById('hHeight'); if (el && st.block_height!=null) el.textContent = st.block_height;
+        el = document.getElementById('stHeight'); if (el && st.block_height!=null) el.textContent = st.block_height;
+        el = document.getElementById('hFinal'); if (el && st.finalized_height!=null) el.textContent = st.finalized_height;
+        el = document.getElementById('hDiff'); if (el && st.effective_difficulty!=null) el.textContent = st.effective_difficulty;
+        el = document.getElementById('hMempool'); if (el && st.mempool_size!=null) el.textContent = st.mempool_size;
+        el = document.getElementById('hBaseFee'); if (el && st.base_fee!=null) el.textContent = fmtFee(st.base_fee);
+        el = document.getElementById('hGasPrice'); if (el && st.gas_price!=null) el.textContent = fmtFee(st.gas_price);
+        el = document.getElementById('hBurned'); if (el && st.burned_total_tacm!=null) el.textContent = fmtFee(st.burned_total_tacm);
+        el = document.getElementById('dcRate'); if (el && st.block_height!=null) el.textContent = st.block_height + ' 塊';
+      }).catch(function(){});
+    }
+    function fmtN(v){ var n=parseFloat(v); if(isNaN(n)) return '—'; return n.toLocaleString('en-US',{maximumFractionDigits:2}); }
+    var rpcEl = document.getElementById('heroRpc');
+    if (rpcEl) rpcEl.textContent = location.protocol + '//' + location.host;
+    fresh();
+    setInterval(fresh, 10000);
+  })();
+</script>
+
+<section class="panel">
+  <div class="panel-head"><h2>最新區塊</h2></div>
+  <div class="table-wrap">
+  <table class="data-table">
+    <thead>
+      <tr><th>高度</th><th>區塊哈希</th><th>提議者</th><th>交易數</th><th>時間</th></tr>
+    </thead>
+    <tbody>
+    {% for b in blocks %}
+      <tr>
+        <td><a class="mono strong" href="/block/{{ b.Height }}">{{ b.Height }}</a></td>
+        <td class="mono"><a href="/block/{{ b.Height }}">{{ b.Hash|shortaddr }}</a></td>
+        <td class="mono"><a href="/address/{{ b.ProposerAddress }}">{{ b.ProposerAddress|shortaddr }}</a></td>
+        <td>{{ b.TxCount }}</td>
+        <td class="nowrap muted">{{ b.Ts|timefmt }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="5" class="muted center">尚無區塊</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-head"><h2 data-i18n="index.latestTx">最新交易</h2></div>
+  <div class="table-wrap">
+  <table class="data-table">
+    <thead>
+      <tr><th>哈希</th><th>區塊</th><th>來源</th><th>目標</th><th>金額 TACm</th><th>備註</th></tr>
+    </thead>
+    <tbody>
+    {% for t in txs %}
+      <tr>
+        <td class="mono"><a href="/tx/{{ t.Hash }}">{{ t.Hash|shortaddr }}</a></td>
+        <td><a class="mono strong" href="/block/{{ t.BlockHeight }}">{{ t.BlockHeight }}</a></td>
+        <td class="mono"><a href="/address/{{ t.From }}">{{ t.From|shortaddr }}</a></td>
+        <td class="mono"><a href="/address/{{ t.To }}">{{ t.To|shortaddr }}</a></td>
+        <td class="nowrap">{{ t.Amount|fmtamt }}</td>
+        <td class="muted">{{ t.Memo|trunc40 }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6" class="muted center">尚無交易</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endblock %}

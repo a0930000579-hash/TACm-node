@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% block title %}TAC Live · 直播{% endblock %}
+{% block content %}
+<section class="pg-banner">
+  <div class="pg-txt"><h1 data-i18n="bn.live">直播</h1><p data-i18n="bn.liveSub">社群直播 · 開播即時互動</p></div>
+  <svg viewBox="0 0 40 40" class="pg-art"><rect x="6" y="10" width="20" height="20" rx="4" fill="none" stroke="#E41E3F" stroke-width="2.2"/><path d="M26 16 L34 12 V28 L26 24" fill="none" stroke="#E41E3F" stroke-width="2.2" stroke-linejoin="round"/><circle cx="13" cy="18" r="1.6" fill="#E41E3F"/></svg>
+</section>
+<style>
+  body { background:#f0f2f5; color:#1c1e21; }
+  .container { background:transparent; }
+  .footer { background:#fff; border-top-color:#dddfe2; color:#65676b; }
+  .bottom-nav { background:rgba(255,255,255,.97); border-top-color:#dddfe2; display:none !important; }
+  .navlinks { display:none !important; }
+  body { padding-bottom:24px; }
+  .lv-wrap{max-width:860px;margin:0 auto}
+  .lv-card{background:#fff;border:1px solid #dddfe2;border-radius:14px;padding:14px;box-shadow:0 1px 2px rgba(0,0,0,.04);margin-bottom:12px}
+  .lv-card h2{margin:0 0 12px;font-size:16px;font-weight:800;display:flex;align-items:center;gap:8px}
+  .lv-room{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid #e4e6eb;border-radius:12px;margin-bottom:10px;cursor:pointer;background:#fff;transition:box-shadow .15s}
+  .lv-room:hover{box-shadow:0 2px 8px rgba(0,0,0,.08)}
+  .lv-thumb{width:96px;height:62px;border-radius:10px;background:linear-gradient(135deg,#E41E3F,#ff8a80);display:flex;align-items:center;justify-content:center;color:#fff;flex:none;position:relative;overflow:hidden}
+  .lv-thumb svg{width:26px;height:26px;stroke:#fff;fill:none;stroke-width:2}
+  .lv-thumb .lv-live{position:absolute;top:4px;left:4px;background:#fff;color:#e41e3f;font-size:9px;font-weight:900;border-radius:4px;padding:1px 5px}
+  .lv-thumb.ended{background:linear-gradient(135deg,#9aa0a6,#c8cdd2)}
+  .lv-meta{flex:1;min-width:0}
+  .lv-meta .t{font-weight:700;font-size:14px;color:#1c1e21;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .lv-meta .s{font-size:12px;color:#65676b;margin-top:3px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .lv-badge{background:#e41e3f;color:#fff;font-size:10px;font-weight:800;border-radius:999px;padding:2px 8px;display:inline-flex;align-items:center;gap:4px}
+  .lv-badge i{width:6px;height:6px;border-radius:50%;background:#fff;display:inline-block;animation:lvblink 1.2s infinite}
+  .lv-badge.end{background:#9aa0a6}
+  @keyframes lvblink{50%{opacity:.3}}
+  .lv-form{display:flex;gap:8px;flex-wrap:wrap}
+  .lv-form input{flex:1;min-width:160px;border:1px solid #dddfe2;border-radius:10px;padding:10px 12px;font-size:13px;background:#fff;color:#1c1e21;box-sizing:border-box}
+  .lv-btn{background:#e41e3f;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:800;cursor:pointer}
+  .lv-btn.ghost{background:#f0f2f5;color:#65676b;border:1px solid #dddfe2}
+  .lv-btn.green{background:#1b8a3a}
+  .lv-room-view{display:flex;flex-direction:column;gap:12px}
+  .lv-stage{position:relative;border-radius:14px;overflow:hidden;background:linear-gradient(135deg,#E41E3F,#ff8a80);aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;color:#fff}
+  .lv-stage svg{width:64px;height:64px;stroke:#fff;fill:none;stroke-width:1.8;opacity:.9}
+  .lv-stage .title{position:absolute;left:12px;bottom:10px;font-weight:800;font-size:15px;text-shadow:0 1px 4px rgba(0,0,0,.4)}
+  .lv-stage .stat{position:absolute;right:12px;top:10px;background:rgba(0,0,0,.35);border-radius:999px;padding:3px 10px;font-size:11px;font-weight:700}
+  .lv-chat{background:#fff;border:1px solid #e4e6eb;border-radius:12px;padding:10px;height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+  .lv-msg{font-size:13px;line-height:1.5}
+  .lv-msg b{color:#1877f2}
+  .lv-msg .tm{color:#a7a8aa;font-size:10px;margin-left:6px}
+  .lv-send{display:flex;gap:8px;margin-top:8px}
+  .lv-send input{flex:1;min-width:0;border:1px solid #dddfe2;border-radius:999px;padding:10px 14px;font-size:13px;background:#f0f2f5}
+  .lv-send button{background:#1877f2;color:#fff;border:none;border-radius:999px;padding:10px 18px;font-weight:700;cursor:pointer;font-size:13px}
+  .lv-empty{color:#65676b;text-align:center;padding:30px 10px;font-size:13px}
+</style>
+
+<div class="lv-wrap">
+  <!-- 列表視圖 -->
+  <div id="lvList">
+    <div class="lv-card">
+      <h2><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" stroke="none" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><circle cx="12" cy="12" r="5"/></svg> 正在直播</h2>
+      <div id="rooms"><div class="lv-empty">載入中…</div></div>
+    </div>
+    <div class="lv-card">
+      <h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M2 12a15 15 0 0 1 20 0"/><path d="M5 15a10 10 0 0 1 14 0"/><circle cx="12" cy="19" r="1.5"/></svg> 我要開播</h2>
+      <div class="lv-form">
+        <input id="lvAddr" placeholder="wallet address (tx0…)" value="">
+        <input id="lvTitle" placeholder="直播標題，例如：今晚一起挖礦聊幣市" value="">
+        <button class="lv-btn" onclick="startLive()">開播</button>
+      </div>
+      <p id="lvMsg" style="font-size:12px;color:#65676b;margin:8px 0 0;word-break:break-all">—</p>
+    </div>
+  </div>
+
+  <!-- 房間視圖 -->
+  <div id="lvRoom" class="lv-room-view" style="display:none">
+    <div class="lv-stage">
+      <svg viewBox="0 0 64 64"><rect x="8" y="16" width="34" height="34" rx="6"/><path d="M42 28 L58 20 V46 L42 38" stroke-linejoin="round"/></svg>
+      <div class="title" id="lvRoomTitle"></div>
+      <div class="stat" id="lvRoomStat"></div>
+    </div>
+    <div class="lv-chat" id="lvChat"></div>
+    <div class="lv-send">
+      <input id="lvSend" placeholder="說點什麼…" onkeydown="if(event.key==='Enter')sendMsg()">
+      <button onclick="sendMsg()">送出</button>
+      <button class="lv-btn ghost" onclick="leaveRoom()">離開</button>
+      <button class="lv-btn green" id="lvEndBtn" style="display:none" onclick="endLive()">結束直播</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// M93：直播 — 列表 / 開播 / 聊天輪詢。
+var curRoom = null, curAfter = 0, lvTimer = null;
+var me = localStorage.getItem('cm_id') || '';
+if(me) document.getElementById('lvAddr').value = me;
+
+function loadRooms(){
+  return get('/api/live/list').then(function(d){
+    var rooms = d.rooms || [];
+    var el = document.getElementById('rooms');
+    if(!rooms.length){ el.innerHTML = '<div class="lv-empty">目前沒有直播，快來開播第一場！</div>'; return; }
+    el.innerHTML = rooms.map(function(r){
+      var live = r.status==='live';
+      return '<div class="lv-room" onclick="openRoom('+r.id+')">'+
+        '<div class="lv-thumb'+(live?'':' ended')+'">'+(live?'<span class="lv-live">LIVE</span>':'')+
+        '<svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 11 L21 7.5 V16.5 L16 13"/></svg></div>'+
+        '<div class="lv-meta"><div class="t">'+escapeHtml(r.title)+'</div>'+
+        '<div class="s"><span class="lv-badge'+(live?'':' end')+'">'+(live?'<i></i>直播中':'已結束')+'</span><span>'+shortAddr(r.owner)+'</span><span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg> '+r.viewers+'</span></div></div>'+
+        '</div>';
+    }).join('');
+  }).catch(function(){ document.getElementById('rooms').innerHTML='<div class="lv-empty">載入失敗</div>'; });
+}
+
+function startLive(){
+  var addr = document.getElementById('lvAddr').value.trim() || me;
+  var title = document.getElementById('lvTitle').value.trim();
+  if(!addr){ document.getElementById('lvMsg').textContent='請輸入錢包地址'; return; }
+  if(!title){ document.getElementById('lvMsg').textContent='請輸入直播標題'; return; }
+  post('/api/live/create', {address:addr, title:title}).then(function(d){
+    localStorage.setItem('cm_id', addr);
+    document.getElementById('lvMsg').textContent='';
+    openRoom(d.room_id, addr);
+  }).catch(function(e){ document.getElementById('lvMsg').textContent='開播失敗：'+e; });
+}
+
+function openRoom(id, ownerAddr){
+  get('/api/live/list').then(function(d){
+    var r = (d.rooms||[]).filter(function(x){ return x.id===id; })[0];
+    if(!r) return;
+    curRoom = id; curAfter = 0;
+    document.getElementById('lvRoomTitle').textContent = r.title;
+    document.getElementById('lvRoomStat').textContent = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg> ' + r.viewers + ' 人在線';
+    var isOwner = ownerAddr ? (ownerAddr===r.owner) : (me===r.owner);
+    document.getElementById('lvEndBtn').style.display = isOwner ? '' : 'none';
+    document.getElementById('lvSend').placeholder = '說點什麼…';
+    document.getElementById('lvList').style.display = 'none';
+    document.getElementById('lvRoom').style.display = '';
+    pollChat(true);
+  });
+}
+
+function pollChat(force){
+  get('/api/live/'+curRoom+'/messages?after='+curAfter).then(function(d){
+    var msgs = d.messages || [];
+    if(!msgs.length && !force) return;
+    var chat = document.getElementById('lvChat');
+    msgs.forEach(function(m){
+      curAfter = Math.max(curAfter, m.id);
+      var div = document.createElement('div');
+      div.className = 'lv-msg';
+      div.innerHTML = '<b>'+shortAddr(m.address)+'</b> '+escapeHtml(m.body)+'<span class="tm">'+timeAgo(m.created_at)+'</span>';
+      chat.appendChild(div);
+    });
+    chat.scrollTop = chat.scrollHeight;
+  }).catch(function(){});
+  if(lvTimer) clearInterval(lvTimer);
+  lvTimer = setInterval(function(){ if(curRoom) pollChat(false); }, 3000);
+}
+
+function sendMsg(){
+  var body = document.getElementById('lvSend').value.trim();
+  if(!body || !curRoom) return;
+  var addr = document.getElementById('lvAddr').value.trim() || me;
+  post('/api/live/'+curRoom+'/message', {address:addr, body:body}).then(function(){
+    document.getElementById('lvSend').value='';
+    pollChat(true);
+  }).catch(function(e){ alert('發送失敗：'+e); });
+}
+
+function endLive(){
+  var addr = document.getElementById('lvAddr').value.trim() || me;
+  post('/api/live/'+curRoom+'/end', {address:addr}).then(function(){
+    leaveRoom();
+  }).catch(function(e){ alert('結束失敗：'+e); });
+}
+
+function leaveRoom(){
+  if(lvTimer) clearInterval(lvTimer);
+  curRoom = null;
+  document.getElementById('lvRoom').style.display = 'none';
+  document.getElementById('lvList').style.display = '';
+  loadRooms();
+}
+
+// 公用的 get/post/shortAddr/escapeHtml/timeAgo 取自全域（base.html 已提供）。
+// M94：社群影片 tab 帶 ?room= 直接進房（直播不與社群脫鉤）。
+(function(){
+  var q = new URLSearchParams(location.search).get('room');
+  if(q){ var addr = localStorage.getItem('cm_id')||''; loadRooms().then(function(){ openRoom(parseInt(q,10), addr); }); }
+  else { loadRooms(); }
+})();
+</script>
+{% endblock %}
