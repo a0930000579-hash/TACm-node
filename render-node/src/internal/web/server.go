@@ -205,7 +205,14 @@ func (s *Server) routes() {
 	// cmd/web 以 TACM_DOWNLOADS_DIR 指向 dataDir/downloads（絕對路徑，不隨 cwd 漂移）。
 	os.MkdirAll(downloadsDirPath(), 0o755)
 	s.mux.Handle("GET /downloads/", http.StripPrefix("/downloads/", http.FileServer(http.Dir(downloadsDirPath()))))
-	// M103：純節點模式（--serve-dapp=false）——只暴露鏈數據與瀏覽器介面，
+	// M148：節點架設者面板——節點管理功能（綁定收款地址／節點獎勵查詢／提領），
+	// 非 DApp：純節點模式與完整模式都掛載，架設者隨時可管理自己的節點。
+	s.mux.HandleFunc("GET /node-panel", s.handleNodePanel)
+	s.mux.HandleFunc("GET /api/node/panel", s.handleNodePanelAPI)
+	s.mux.HandleFunc("POST /api/node/setup", s.handleNodeSetupAPI)
+	s.mux.HandleFunc("POST /api/node/bind", s.handleNodeBindAPI)
+	s.mux.HandleFunc("POST /api/node/withdraw", s.handleNodeWithdrawAPI)
+	// M103：純節點模式（--serve-dapp=false）——只暴露鏈數據與節點管理介面，
 	// 不掛載錢包/交易所/挖礦/社群/治理等整套 DApp（節點只做區塊數據流通）。
 	if !s.ServeDApp {
 		s.routesNodeOnly()
@@ -232,12 +239,6 @@ func (s *Server) routes() {
 	// M64：節點健康度監控（全網狀態統一視界）。
 	s.mux.HandleFunc("GET /network", s.handleNetwork)
 	s.mux.HandleFunc("GET /api/network", s.handleNetworkAPI)
-	// M148：節點架設者面板（綁定收款地址／節點獎勵查詢／提領轉入 tac web3 錢包）。
-	s.mux.HandleFunc("GET /node-panel", s.handleNodePanel)
-	s.mux.HandleFunc("GET /api/node/panel", s.handleNodePanelAPI)
-	s.mux.HandleFunc("POST /api/node/setup", s.handleNodeSetupAPI)
-	s.mux.HandleFunc("POST /api/node/bind", s.handleNodeBindAPI)
-	s.mux.HandleFunc("POST /api/node/withdraw", s.handleNodeWithdrawAPI)
 	// M66：鏈上審計 JSON——區塊頭＋完整交易（含 coinbase 明細），供 tacctl audit 驗證
 	// 「每塊 coinbase 總額 == BlockReward」；/block/{height} 仍為 HTML 瀏覽器頁。
 	s.mux.HandleFunc("GET /api/block/{height}", s.handleBlockAPI)

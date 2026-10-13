@@ -148,6 +148,45 @@ func TestNodePanelSetupBindWithdraw(t *testing.T) {
 	}
 }
 
+// TestNodePanelNodeOnlyMode：純節點模式（-serve-dapp=false）下，節點面板仍可用。
+func TestNodePanelNodeOnlyMode(t *testing.T) {
+	cleanNodeConfig(t)
+	srv, err := NewWithNetworkMode(newFake(), "mainnet", false, 3) // 純節點模式（-serve-dapp=false）
+	if err != nil {
+		t.Fatalf("NewWithNetworkMode: %v", err)
+	}
+	ts := httptest.NewServer(srv.Handler())
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + "/node-panel")
+	if err != nil {
+		t.Fatalf("GET /node-panel: %v", err)
+	}
+	body := readAllString(resp)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK || !strings.Contains(body, "節點架設者面板") {
+		t.Errorf("純節點模式 /node-panel 狀態=%d 或缺少標題", resp.StatusCode)
+	}
+
+	st, j := getJSONMap(t, ts.URL+"/api/node/panel")
+	if st != http.StatusOK {
+		t.Fatalf("純節點模式 /api/node/panel 狀態=%d", st)
+	}
+	if j["node_id"] == nil || j["node_address"] == nil {
+		t.Errorf("panel 缺 node_id/node_address")
+	}
+
+	// 純節點模式不該有 DApp 路由（錢包）。
+	resp2, err := http.Get(ts.URL + "/wallet")
+	if err != nil {
+		t.Fatalf("GET /wallet: %v", err)
+	}
+	resp2.Body.Close()
+	if resp2.StatusCode == http.StatusOK {
+		t.Errorf("純節點模式不應提供 /wallet（DApp 路由）")
+	}
+}
+
 // getJSONMap GET 並解析 JSON。
 func getJSONMap(t *testing.T, url string) (int, map[string]any) {
 	t.Helper()
