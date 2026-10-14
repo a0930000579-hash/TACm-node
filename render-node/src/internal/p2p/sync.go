@@ -108,6 +108,13 @@ func (n *Network) bestPeers(limit int) []Peer {
 
 // syncOnce 嘗試追齊；回傳 true 表示本輪有實際進展（任一 peer 完成拉取）。
 func (n *Network) syncOnce() bool {
+	// M149d：非阻塞鎖——上次同步未完成（如整鏈重放 14000 塊）時，缺口觸發直接跳過，
+	// 根治 Render 每 2-3 秒一塊就疊加一次完整重放的 OOM 重啟循環。
+	if !n.syncMu.TryLock() {
+		log.Printf("[p2p] 同步已在進行中，跳過本次缺口觸發")
+		return false
+	}
+	defer n.syncMu.Unlock()
 	// M122：依序嘗試 top-3 在線 peer——最佳 peer 拉取失敗（離線/瞬斷）時
 	// 自動 fallback 次佳，不再整輪空轉等下一 tick。
 	for _, p := range n.bestPeers(3) {

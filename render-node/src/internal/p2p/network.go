@@ -16,6 +16,7 @@ type Network struct {
 	mux    *http.ServeMux
 
 	mu         sync.Mutex
+	syncMu     sync.Mutex // M149d：同步在跑鎖（防缺口觸發的 syncOnce 疊加 → OOM 重啟循環）
 	peers      map[string]*Peer  // nodeID（或臨時 peer@url）-> Peer
 	urlIndex   map[string]string // baseURL -> nodeID
 	seenBlocks map[string]struct{}
