@@ -201,6 +201,7 @@ func (n *Network) fetchBlocksParallel(p Peer, from, to int64) ([]blockData, bool
 		return batch, true
 	}
 
+	log.Printf("[p2p] 同步拉取：分 %d 段並行拉取 %d..%d（每段上限 500 塊）", len(segs), from, to)
 	workers := runtime.GOMAXPROCS(0)
 	if workers > 4 {
 		workers = 4
@@ -221,11 +222,13 @@ func (n *Network) fetchBlocksParallel(p Peer, from, to int64) ([]blockData, bool
 	}
 
 	all := make(map[int64]blockData, total)
-	for range segs {
+	for i := range segs {
 		r := <-results
 		if r.err != nil {
+			log.Printf("[p2p] 同步拉取失敗（段 %d/%d）: %v", i+1, len(segs), r.err)
 			return nil, false
 		}
+		log.Printf("[p2p] 同步拉取：段 %d/%d 完成（%d 塊）", i+1, len(segs), len(r.blocks))
 		for _, bd := range r.blocks {
 			all[bd.Block.Height] = bd
 		}
@@ -306,8 +309,10 @@ func (n *Network) doReorg(best Peer, from int64) {
 
 // reorgFullChain 信任 best peer 的創世並整鏈重放（本機自產創世與主網不同源時）。
 func (n *Network) reorgFullChain(best Peer) {
+	log.Printf("[p2p] 整鏈替換開始：拉取 0..%d 全部區塊", best.Height)
 	blocks, ok := n.fetchBlocksParallel(best, 0, best.Height)
 	if !ok {
+		log.Printf("[p2p] 整鏈替換失敗：區塊拉取失敗/缺塊（此輪放棄，等待下一缺口觸發）")
 		return
 	}
 	all := make([]chaindb.Block, 0, len(blocks))
@@ -316,9 +321,22 @@ func (n *Network) reorgFullChain(best Peer) {
 		all = append(all, *bd.Block)
 		txs = append(txs, bd.Txs)
 	}
-	if err := n.host.ReorgChain(-1, all, txs); err != nil {
-		log.Printf("[p2p] 整鏈替換失敗（%d 塊）: %v", len(all), err)
+	log.Printf("[p2p] 整鏈替換：已拉取 %d 塊，開始分批重放（每段 500 塊）", len(all))
+	const seg = 500
+	for start := int64(0); start <= best.Height; start += seg {
+		end := start + seg - 1
+		if end > best.Height {
+			end = best.Height
+		}
+		segBlocks := all[start : end+1]
+		segTxs := txs[start : end+1]
+		if err := n.host.ReorgChain(start-1, segBlocks, segTxs); err != nil {
+			log.Printf("[p2p] 整鏈替換失敗（段 %d..%d，%d 塊）: %v", start, end, len(segBlocks), err)
+			return
+		}
+		log.Printf("[p2p] 整鏈替換進度：段 %d..%d 完成（累計 %d 塊）", start, end, end+1)
 	}
+	log.Printf("[p2p] 整鏈替換完成：鏈頂 %d", best.Height)
 }
 
 func (n *Network) fetchPeerBlock(p Peer, h int64) (*chaindb.Block, []chaindb.Transaction, error) {
