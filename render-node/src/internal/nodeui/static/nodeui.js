@@ -187,7 +187,7 @@
       tr.innerHTML =
         "<td>" + short(p.node_id, 10) + (p.owner === "self" ? " · " + esc(t("n.you")) : "") + "</td>" +
         "<td>" + p.height + "</td>" +
-        "<td>" + p.finalized + "</td>" +
+        "<td>" + (p.finalized_height ?? p.finalized ?? 0) + "</td>" +
         "<td>" + mark + " " + esc(p.online ? t("n.online") : t("n.offline")) + "</td>";
       tb.appendChild(tr);
     });

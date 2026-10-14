@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"log"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -291,7 +292,9 @@ func (n *Network) doReorg(best Peer, from int64) {
 		blocks = append(blocks, *b)
 		allTxs = append(allTxs, txs)
 	}
-	_ = n.host.ReorgChain(fork, blocks, allTxs)
+	if err := n.host.ReorgChain(fork, blocks, allTxs); err != nil {
+		log.Printf("[p2p] 重組失敗 fork=%d: %v", fork, err)
+	}
 }
 
 // reorgFullChain 信任 best peer 的創世並整鏈重放（本機自產創世與主網不同源時）。
@@ -306,7 +309,9 @@ func (n *Network) reorgFullChain(best Peer) {
 		all = append(all, *bd.Block)
 		txs = append(txs, bd.Txs)
 	}
-	_ = n.host.ReorgChain(-1, all, txs)
+	if err := n.host.ReorgChain(-1, all, txs); err != nil {
+		log.Printf("[p2p] 整鏈替換失敗（%d 塊）: %v", len(all), err)
+	}
 }
 
 func (n *Network) fetchPeerBlock(p Peer, h int64) (*chaindb.Block, []chaindb.Transaction, error) {

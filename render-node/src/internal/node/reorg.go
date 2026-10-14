@@ -39,9 +39,10 @@ func (h *p2pHost) ReorgChain(forkPoint int64, blocks []chaindb.Block, txs [][]ch
 			if fb != nil {
 				wantPrev = fb.Hash
 			}
-		} else {
+		} else if i > 0 {
 			wantPrev = blocks[i-1].Hash
 		}
+		// i==0 && forkPoint<0：整鏈替換（信任來源鏈創世），創世 prev_hash 不校驗。
 		prev := ""
 		if b.PrevHash != nil {
 			prev = *b.PrevHash
