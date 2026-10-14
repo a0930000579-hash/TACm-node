@@ -182,7 +182,12 @@ func verifyIncomingTxs(n *Node, b *chaindb.Block, txs []chaindb.Transaction) err
 		cbTotal += v
 		i++
 	}
+	// M149i：與 verifyBlockStructure（reorg.go）及出塊側（node.go）一致的 emission-aware 驗證：
+	// annual_decay 用 EmissionAmount（錨點主網 1.5045/塊），否則 BlockReward（halving）。
 	wantReward := chaindb.BlockReward(b.Height)
+	if cfg, err := chaindb.LoadEmission(int64(n.cfg.BlockTime)); err == nil && cfg.Model == "annual_decay" {
+		wantReward = chaindb.EmissionAmount(b.Height, int64(n.cfg.BlockTime))
+	}
 	if abs(cbTotal-wantReward) > 1e-9 {
 		return fmt.Errorf("coinbase 總額=%g 應為 %g", cbTotal, wantReward)
 	}
