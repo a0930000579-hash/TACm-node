@@ -32,8 +32,8 @@ type Network struct {
 // New 構造 P2P 網絡並加入引導節點（尚未啟動循環）。
 func New(cfg Config, host Host) (*Network, error) {
 	if cfg.HeartbeatInterval <= 0 {
-		// M149：15s 保活——避免 2s 高頻心跳觸發雲平台/IP-Pool 動態防護（封鎖雲端節點 IP）。
-		cfg.HeartbeatInterval = 15 * time.Second
+		// M149b：60s 保活——極低頻，避免心跳觸發雲平台/IP-Pool 動態防護（封鎖雲端節點 IP）。
+		cfg.HeartbeatInterval = 60 * time.Second
 	}
 	if cfg.SyncInterval <= 0 {
 		cfg.SyncInterval = 2 * time.Second

@@ -45,14 +45,13 @@ func (n *Network) syncLoop(ctx context.Context) {
 				case <-time.After(100 * time.Millisecond):
 				}
 			}
-			// 退避調節：有進展→回到基準；無進展（連不上/被防護）→ 翻倍至 60s 上限。
+			// 退避調節：有進展→回到基準；無進展（連不上/被防護）→ 一步退到 60s。
+			// 逐級翻倍會讓前幾輪（10s/20s/40s）仍持續打對端，維持雲端防護清洗；
+			// 一步到位後每分鐘最多 1 個請求，防護自然解除。
 			if progress {
 				interval = base
-			} else if interval < 60*time.Second {
-				interval *= 2
-				if interval > 60*time.Second {
-					interval = 60 * time.Second
-				}
+			} else {
+				interval = 60 * time.Second
 			}
 			ticker.Reset(interval)
 		}
