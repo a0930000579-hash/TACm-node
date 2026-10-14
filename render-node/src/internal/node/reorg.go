@@ -31,7 +31,7 @@ func (h *p2pHost) ReorgChain(forkPoint int64, blocks []chaindb.Block, txs [][]ch
 			return errors.New("重組塊高度不連續")
 		}
 		wantPrev := ""
-		if i == 0 {
+		if i == 0 && forkPoint >= 0 {
 			fb, err := n.db.GetBlock(forkPoint)
 			if err != nil {
 				return err
@@ -92,6 +92,10 @@ func (h *p2pHost) ReorgChain(forkPoint int64, blocks []chaindb.Block, txs [][]ch
 // verifyBlockStructure 驗證區塊的結構有效性（不依賴賬戶狀態）：
 // coinbase 總額、普通交易簽名、Merkle 根、PoW。
 func verifyBlockStructure(b *chaindb.Block, txs []chaindb.Transaction) error {
+	if b.Height == 0 {
+		// 創世為特殊塊（社群基金 + 空 Merkle 根），結構由來源鏈信任承接。
+		return nil
+	}
 	if len(txs) == 0 {
 		return errors.New("區塊缺少 coinbase 交易")
 	}

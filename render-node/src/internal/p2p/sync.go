@@ -129,8 +129,13 @@ func (n *Network) syncFrom(p Peer) bool {
 	if self >= 0 {
 		pb, _, perr := n.fetchPeerBlock(p, self)
 		lb, _, lerr := n.host.BlockDetail(self)
-		if perr != nil || pb == nil || lerr != nil || lb == nil {
+		if perr != nil || pb == nil {
 			return false
+		}
+		// 本機無此高度區塊（空鏈或缺塊）：走重組；doReorg 在無共同祖先時整鏈替換。
+		if lerr != nil || lb == nil {
+			n.doReorg(p, self)
+			return true
 		}
 		if pb.Hash != lb.Hash {
 			n.doReorg(p, self)
@@ -271,7 +276,9 @@ func (n *Network) doReorg(best Peer, from int64) {
 		}
 	}
 	if fork < 0 {
-		return // 創世都不一致，拒絕重組
+		// 創世都不一致：信任 best peer 的整條鏈，整鏈替換（含創世 #0）。
+		n.reorgFullChain(best)
+		return
 	}
 
 	blocks := make([]chaindb.Block, 0, best.Height-fork)
@@ -285,6 +292,21 @@ func (n *Network) doReorg(best Peer, from int64) {
 		allTxs = append(allTxs, txs)
 	}
 	_ = n.host.ReorgChain(fork, blocks, allTxs)
+}
+
+// reorgFullChain 信任 best peer 的創世並整鏈重放（本機自產創世與主網不同源時）。
+func (n *Network) reorgFullChain(best Peer) {
+	blocks, ok := n.fetchBlocksParallel(best, 0, best.Height)
+	if !ok {
+		return
+	}
+	all := make([]chaindb.Block, 0, len(blocks))
+	txs := make([][]chaindb.Transaction, 0, len(blocks))
+	for _, bd := range blocks {
+		all = append(all, *bd.Block)
+		txs = append(txs, bd.Txs)
+	}
+	_ = n.host.ReorgChain(-1, all, txs)
 }
 
 func (n *Network) fetchPeerBlock(p Peer, h int64) (*chaindb.Block, []chaindb.Transaction, error) {
