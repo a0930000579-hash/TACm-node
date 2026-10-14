@@ -146,9 +146,11 @@ func (n *Network) syncFrom(p Peer) bool {
 			return true
 		}
 		if pb.Hash != lb.Hash {
+			log.Printf("[p2p] 創世哈希不同（本機 %s vs 錨點 %s）→ 整鏈替換", lb.Hash[:12], pb.Hash[:12])
 			n.doReorg(p, self)
 			return true
 		}
+		log.Printf("[p2p] 創世哈希相同（%s）→ 線性追 %d..%d", pb.Hash[:12], self+1, p.Height)
 	}
 
 	// M121：線性追塊——缺口分片並行拉取（Goroutine），按高度合併後順序接入；
@@ -161,11 +163,14 @@ func (n *Network) syncFrom(p Peer) bool {
 	for _, bd := range blocks {
 		if err := n.host.OnIncomingBlock(bd.Block, bd.Txs); err != nil {
 			// 缺口/驗證失敗：單塊再試一次；仍失敗則中止本輪（等下一 tick）。
+			log.Printf("[p2p] 線性追接入失敗 h=%d（首試）: %v；單塊重試", bd.Block.Height, err)
 			sb, stxs, serr := n.fetchPeerBlock(p, bd.Block.Height)
 			if serr != nil || sb == nil {
+				log.Printf("[p2p] 線性追重試拉取失敗 h=%d: %v", bd.Block.Height, serr)
 				return false
 			}
 			if err := n.host.OnIncomingBlock(sb, stxs); err != nil {
+				log.Printf("[p2p] 線性追接入失敗 h=%d（重試後仍失敗）: %v", sb.Height, err)
 				return false
 			}
 		}
