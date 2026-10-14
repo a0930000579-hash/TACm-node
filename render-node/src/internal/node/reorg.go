@@ -50,7 +50,7 @@ func (h *p2pHost) ReorgChain(forkPoint int64, blocks []chaindb.Block, txs [][]ch
 		if prev != wantPrev {
 			return fmt.Errorf("重組塊 %d prev_hash 不匹配", b.Height)
 		}
-		if err := verifyBlockStructure(b, txs[i]); err != nil {
+		if err := verifyBlockStructure(b, txs[i], int64(h.n.cfg.BlockTime)); err != nil {
 			return err
 		}
 		newCD += int64(b.Difficulty)
@@ -92,7 +92,7 @@ func (h *p2pHost) ReorgChain(forkPoint int64, blocks []chaindb.Block, txs [][]ch
 
 // verifyBlockStructure 驗證區塊的結構有效性（不依賴賬戶狀態）：
 // coinbase 總額、普通交易簽名、Merkle 根、PoW。
-func verifyBlockStructure(b *chaindb.Block, txs []chaindb.Transaction) error {
+func verifyBlockStructure(b *chaindb.Block, txs []chaindb.Transaction, blockTimeSec int64) error {
 	if b.Height == 0 {
 		// 創世為特殊塊（社群基金 + 空 Merkle 根），結構由來源鏈信任承接。
 		return nil
@@ -115,9 +115,18 @@ func verifyBlockStructure(b *chaindb.Block, txs []chaindb.Transaction) error {
 		cbTotal += got
 		i++
 	}
+	// M149g：coinbase 總額驗證與出塊側一致（node.go 出塊：LoadEmission 看
+	// Model==annual_decay 用 EmissionAmount，否則 BlockReward）。錨點主網
+	// 採 annual_decay（TACM_MAX_SUPPLY=52003300，6 年，年衰減 25%），
+	// h=1 獎勵 = InitialSubsidy = 1.5045；驗證側必須用同一模型精確匹配。
 	wantReward := chaindb.BlockReward(b.Height)
+	model := "halving"
+	if cfg, err := chaindb.LoadEmission(blockTimeSec); err == nil && cfg.Model == "annual_decay" {
+		wantReward = chaindb.EmissionAmount(b.Height, blockTimeSec)
+		model = cfg.Model
+	}
 	if abs(cbTotal-wantReward) > 1e-9 {
-		return fmt.Errorf("coinbase 總額=%g 應為 %g", cbTotal, wantReward)
+		return fmt.Errorf("coinbase 總額=%g 應為 %g（emission=%s）", cbTotal, wantReward, model)
 	}
 
 	for j := i; j < len(txs); j++ {

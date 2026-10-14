@@ -106,6 +106,19 @@ func (n *Network) bestPeers(limit int) []Peer {
 	return ps
 }
 
+// sameGenesisTx 比較兩條創世的交易內容（from/to/amount），用於識別「哈希相同但內容不同」的創世。
+func sameGenesisTx(a, b []chaindb.Transaction) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i].FromAddr != b[i].FromAddr || a[i].ToAddr != b[i].ToAddr || a[i].Amount != b[i].Amount {
+			return false
+		}
+	}
+	return true
+}
+
 // syncOnce 嘗試追齊；回傳 true 表示本輪有實際進展（任一 peer 完成拉取）。
 func (n *Network) syncOnce() bool {
 	// M149d：非阻塞鎖——上次同步未完成（如整鏈重放 14000 塊）時，缺口觸發直接跳過，
@@ -135,8 +148,8 @@ func (n *Network) syncFrom(p Peer) bool {
 
 	// 比較共同高度 self 的區塊哈希，判斷是線性落後還是分叉。
 	if self >= 0 {
-		pb, _, perr := n.fetchPeerBlock(p, self)
-		lb, _, lerr := n.host.BlockDetail(self)
+		pb, pbTxs, perr := n.fetchPeerBlock(p, self)
+		lb, lbTxs, lerr := n.host.BlockDetail(self)
 		if perr != nil || pb == nil {
 			return false
 		}
@@ -145,12 +158,15 @@ func (n *Network) syncFrom(p Peer) bool {
 			n.doReorg(p, self)
 			return true
 		}
-		if pb.Hash != lb.Hash {
-			log.Printf("[p2p] 創世哈希不同（本機 %s vs 錨點 %s）→ 整鏈替換", lb.Hash[:12], pb.Hash[:12])
+		// M149f：創世哈希是難度 0 固定值（000000000000…），哈希相同不代表內容相同；
+		// self==0 時額外比較創世交易（社群基金地址），不同仍走整鏈替換。
+		genesisDiff := pb.Hash != lb.Hash || (self == 0 && !sameGenesisTx(pbTxs, lbTxs))
+		if genesisDiff {
+			log.Printf("[p2p] 創世不同（哈希/內容）→ 整鏈替換（本機 %s vs 錨點 %s）", lb.Hash[:12], pb.Hash[:12])
 			n.doReorg(p, self)
 			return true
 		}
-		log.Printf("[p2p] 創世哈希相同（%s）→ 線性追 %d..%d", pb.Hash[:12], self+1, p.Height)
+		log.Printf("[p2p] 創世一致 → 線性追 %d..%d", self+1, p.Height)
 	}
 
 	// M121：線性追塊——缺口分片並行拉取（Goroutine），按高度合併後順序接入；
