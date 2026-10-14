@@ -27,7 +27,7 @@
       "n.kBaseFee": "基礎費",
       "n.kConsensus": "共識機制",
       "n.kReward": "節點獎勵",
-      "n.rewardDesc": "每個區塊鑄造 10 TACM：9% 歸出塊節點、16% 挹注獎勵池、75% 依在線算力分配給礦工。",
+      "n.rewardDesc": "每個區塊按發行模型（年衰減/annual_decay）鑄造：9% 歸出塊節點、16% 挹注獎勵池、75% 依在線算力分配給礦工。",
       "n.pPeers": "P2P 節點",
       "n.tNode": "節點",
       "n.tHeight": "高度",
