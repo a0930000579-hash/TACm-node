@@ -297,12 +297,16 @@ func (n *Network) fetchPeerBlocks(p Peer, from, to int64) ([]blockData, error) {
 func (n *Network) doReorg(best Peer, from int64) {
 	fork := int64(-1)
 	for h := from; h >= 0; h-- {
-		pb, _, perr := n.fetchPeerBlock(best, h)
-		lb, _, lerr := n.host.BlockDetail(h)
+		pb, pbTxs, perr := n.fetchPeerBlock(best, h)
+		lb, lbTxs, lerr := n.host.BlockDetail(h)
 		if perr != nil || pb == nil || lerr != nil || lb == nil {
 			continue
 		}
 		if pb.Hash == lb.Hash {
+			// M149h：創世哈希是難度 0 固定值，相同不代表內容相同；內容不同不視為共同祖先。
+			if h == 0 && !sameGenesisTx(pbTxs, lbTxs) {
+				continue
+			}
 			fork = h
 			break
 		}
@@ -313,19 +317,35 @@ func (n *Network) doReorg(best Peer, from int64) {
 		return
 	}
 
-	blocks := make([]chaindb.Block, 0, best.Height-fork)
-	allTxs := make([][]chaindb.Transaction, 0, best.Height-fork)
-	for h := fork + 1; h <= best.Height; h++ {
-		b, txs, err := n.fetchPeerBlock(best, h)
-		if err != nil || b == nil {
+	// M149h：fork≥0 重組——分批並行拉取 fork+1..best（取代逐塊串行 HTTP 瓶頸），
+	// 再每 500 塊一段重放（與整鏈替換同模式），進度逐段 log。
+	blocks, ok := n.fetchBlocksParallel(best, fork+1, best.Height)
+	if !ok {
+		log.Printf("[p2p] 重組拉取失敗 fork=%d（分批並行，此輪放棄）", fork)
+		return
+	}
+	all := make([]chaindb.Block, 0, len(blocks))
+	txs := make([][]chaindb.Transaction, 0, len(blocks))
+	for _, bd := range blocks {
+		all = append(all, *bd.Block)
+		txs = append(txs, bd.Txs)
+	}
+	log.Printf("[p2p] 重組：已拉取 %d 塊，開始分批重放（fork=%d，每段 500 塊）", len(all), fork)
+	const seg = 500
+	for start := fork + 1; start <= best.Height; start += seg {
+		end := start + seg - 1
+		if end > best.Height {
+			end = best.Height
+		}
+		segBlocks := all[start-fork-1 : end-fork]
+		segTxs := txs[start-fork-1 : end-fork]
+		if err := n.host.ReorgChain(start-1, segBlocks, segTxs); err != nil {
+			log.Printf("[p2p] 重組失敗（段 %d..%d，%d 塊）: %v", start, end, len(segBlocks), err)
 			return
 		}
-		blocks = append(blocks, *b)
-		allTxs = append(allTxs, txs)
+		log.Printf("[p2p] 重組進度：段 %d..%d 完成（累計 %d 塊）", start, end, end)
 	}
-	if err := n.host.ReorgChain(fork, blocks, allTxs); err != nil {
-		log.Printf("[p2p] 重組失敗 fork=%d: %v", fork, err)
-	}
+	log.Printf("[p2p] 重組完成：鏈頂 %d", best.Height)
 }
 
 // reorgFullChain 信任 best peer 的創世並整鏈重放（本機自產創世與主網不同源時）。
