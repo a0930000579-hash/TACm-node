@@ -8,12 +8,15 @@ import (
 	"math/big"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"tacm/internal/crypto"
+	"tacm/internal/governance"
 	"tacm/internal/vm"
+	"tacm/internal/wallet"
 )
 
 // 本檔驗證 M44 代幣發行閉環（經 RPC 層）：
@@ -321,4 +324,284 @@ func must0x(t *testing.T, tx0 string) string {
 		t.Fatal(err)
 	}
 	return evm
+}
+
+// M151c：treasury 出塊撥款 e2e——提案通過→到期→出塊引擎自獎勵池撥款→收款人入帳。
+func TestGovernanceTreasuryPayout(t *testing.T) {
+	n, _, admin := contractStudioSetup(t)
+	// M151c-v2：治理金庫注資 100 TACm（模擬手續費預留累積）。
+	if err := n.walletSvc.Deposit(wallet.TreasuryAddr, wallet.AssetTACm, wallet.NewAmountF(100, wallet.AssetTACm), "test topup"); err != nil {
+		t.Fatal(err)
+	}
+	rpBefore, _ := n.walletSvc.Balance(wallet.RewardPoolAddr)
+	// 投票窗口縮小至 2 塊以加速。
+	if err := n.gov.SetConfig(governance.GovConfig{VotingWindow: 2, PassThreshold: 0.667}); err != nil {
+		t.Fatal(err)
+	}
+	aliceKP, err := crypto.GenerateKeyPair()
+	if err != nil {
+		t.Fatal(err)
+	}
+	alice, _ := aliceKP.Address()
+	before, err := n.walletSvc.Balance(alice)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := n.DB().GetTipHeight()
+	id, err := n.gov.Propose("test treasury payout", "reward pool -> alice",
+		governance.TypeTreasury, alice, "30", admin, 100, h, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := n.gov.Vote(id, admin, governance.ChoiceYes, 100, h+1, ""); err != nil {
+		t.Fatal(err)
+	}
+	// 等待撥款到帳（end=h+2；結算+撥款由出塊引擎處理，最多等 15s）。
+	deadline := time.Now().Add(15 * time.Second)
+	for time.Now().Before(deadline) {
+		if bal, _ := n.walletSvc.Balance(alice); bal.TACmBalance.String() != before.TACmBalance.String() {
+			break
+		}
+		time.Sleep(300 * time.Millisecond)
+	}
+	after, _ := n.walletSvc.Balance(alice)
+	got, _ := strconv.ParseFloat(after.TACmBalance.String(), 64)
+	want, _ := strconv.ParseFloat(before.TACmBalance.String(), 64)
+	if got-want < 29.99 {
+		t.Fatalf("撥款未到帳：before=%s after=%s", before.TACmBalance, after.TACmBalance)
+	}
+	// 提案狀態應為 executed。
+	ps, _ := n.gov.List()
+	found := false
+	for _, p := range ps {
+		if p.ID == id && p.Status == governance.StatusExecuted {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("treasury 提案應為 executed")
+	}
+	// 治理金庫應扣 30（100-30=70；期間無挹注入此池）。
+	poolAfter, _ := n.walletSvc.Balance(wallet.TreasuryAddr)
+	pa, _ := strconv.ParseFloat(poolAfter.TACmBalance.String(), 64)
+	paT := pa / 1e18 // raw → TACM
+	if paT < 69.9 || paT > 70.1 {
+		t.Fatalf("治理金庫應約 70（100-30），得 %v", poolAfter.TACmBalance)
+	}
+	// 獎勵池不應被治理撥款動用（純做市用途；期間僅 coinbase 挹注，只增不減）。
+	rpAfter, _ := n.walletSvc.Balance(wallet.RewardPoolAddr)
+	if rpAfter.TACmBalance.Cmp(rpBefore.TACmBalance) < 0 {
+		t.Fatalf("獎勵池不應被治理撥款動用（應只增不減）：before=%v after=%v", rpBefore.TACmBalance, rpAfter.TACmBalance)
+	}
+}
+
+
+// M151c：RPC 層投票權重——權威帳本為 wallet store（錢包餘額 → 1 TACM = 1 票）。
+// 修復：線上發現 tacmBalanceOf(DB accounts) 為 0，改由錢包服務餘額計權。
+func TestGovernanceVoteViaRPC(t *testing.T) {
+	n, srv, _ := contractStudioSetup(t)
+	aliceKP, err := crypto.GenerateKeyPair()
+	if err != nil {
+		t.Fatal(err)
+	}
+	alice, _ := aliceKP.Address()
+	// 注資錢包服務 100 TACm（權威帳本）。
+	if err := n.walletSvc.Deposit(alice, wallet.AssetTACm, wallet.NewAmountF(100, wallet.AssetTACm), "test"); err != nil {
+		t.Fatal(err)
+	}
+	if err := n.gov.SetConfig(governance.GovConfig{VotingWindow: 2, PassThreshold: 0.667}); err != nil {
+		t.Fatal(err)
+	}
+	// 經 RPC 發起 meta 提案。
+	propBody := fmt.Sprintf(`{"title":"rpc vote","desc":"","ptype":"meta","param_key":"","param_value":"","address":"%s"}`, alice)
+	pr, err := http.Post(srv.URL+"/api/governance/propose", "application/json", strings.NewReader(propBody))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pr.Body.Close()
+	var pd struct {
+		OK    bool    `json:"ok"`
+		Power float64 `json:"power"`
+		ID    int64   `json:"proposal_id"`
+	}
+	if err := json.NewDecoder(pr.Body).Decode(&pd); err != nil {
+		t.Fatal(err)
+	}
+	if !pd.OK || pd.ID <= 0 {
+		t.Fatalf("提案應成功：%+v", pd)
+	}
+	if pd.Power < 99.9 || pd.Power > 100.1 {
+		t.Fatalf("提案權重應為 100（錢包餘額），得 %v", pd.Power)
+	}
+	// 經 RPC 投票（錢包餘額權重，非 accounts 表）。
+	voteBody := fmt.Sprintf(`{"proposal_id":%d,"choice":"yes","address":"%s"}`, pd.ID, alice)
+	vr, err := http.Post(srv.URL+"/api/governance/vote", "application/json", strings.NewReader(voteBody))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer vr.Body.Close()
+	var vd struct {
+		OK    bool    `json:"ok"`
+		Power float64 `json:"power"`
+	}
+	if err := json.NewDecoder(vr.Body).Decode(&vd); err != nil {
+		t.Fatal(err)
+	}
+	if !vd.OK {
+		t.Fatalf("投票應成功（錢包餘額權重）")
+	}
+	if vd.Power < 99.9 || vd.Power > 100.1 {
+		t.Fatalf("投票權重應為 100，得 %v", vd.Power)
+	}
+}
+
+// M151c-v2 死鎖回歸：param 提案通過→applyFn（內部重入 g.Config/SetConfig）不死鎖。
+// 線上事故：TallyAndExecute 曾於持 g.mu.Lock() 下呼叫 applyGovernanceParam，
+// 其內部再呼叫 g.Config()（RLock）與 g.SetConfig()（Lock）→ 同 goroutine 重入
+// 互鎖 → 出塊引擎卡死、鏈停止出塊、proposals 端點掛起。重構為三階段
+// （持鎖讀取→釋鎖執行→持鎖寫回）後，此測試必須在時限內完成且端點可查。
+func TestGovernanceParamApplyNoDeadlock(t *testing.T) {
+	n, srv, admin := contractStudioSetup(t)
+	// 注資提案人權重（錢包餘額＝投票權重）。
+	if err := n.walletSvc.Deposit(admin, wallet.AssetTACm, wallet.NewAmountF(100, wallet.AssetTACm), "test power"); err != nil {
+		t.Fatal(err)
+	}
+	if err := n.gov.SetConfig(governance.GovConfig{VotingWindow: 2, PassThreshold: 0.667}); err != nil {
+		t.Fatal(err)
+	}
+	h := n.DB().GetTipHeight()
+	id, err := n.gov.Propose("enable treasury fee", "30pct fee to treasury",
+		governance.TypeParam, "treasury_fee_bps", "3000", admin, 100, h, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := n.gov.Vote(id, admin, governance.ChoiceYes, 100, h+1, ""); err != nil {
+		t.Fatal(err)
+	}
+	// 出塊引擎自動 TallyAndExecute；若死鎖則提案永不 executed 且 List 掛起。
+	deadline := time.Now().Add(15 * time.Second)
+	executed := false
+	for time.Now().Before(deadline) {
+		ps, err := n.gov.List() // 死鎖時此呼叫掛起（RLock 等待被死鎖的 Lock）。
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, p := range ps {
+			if p.ID == id && p.Status == governance.StatusExecuted {
+				executed = true
+			}
+		}
+		if executed {
+			break
+		}
+		time.Sleep(300 * time.Millisecond)
+	}
+	if !executed {
+		t.Fatal("param 提案應在投票窗口結束後 executed（疑似 TallyAndExecute 死鎖）")
+	}
+	// 參數應已熱更新（applyGovernanceParam 成功重入 g.SetConfig）。
+	if got := n.gov.Config().TreasuryFeeBps; got != 3000 {
+		t.Fatalf("treasury_fee_bps 應熱更新為 3000，得 %v", got)
+	}
+	// RPC 端點應可查（無掛起）。
+	out := studioGetJSON(t, srv, "/api/governance/proposals")
+	if out["ok"] != true {
+		t.Fatalf("proposals 端點應正常回應：%v", out)
+	}
+	// 端點應反映新參數。
+	out = studioGetJSON(t, srv, "/api/governance/params")
+	if out["ok"] != true {
+		t.Fatalf("params 端點應正常回應：%v", out)
+	}
+}
+
+// M151c-v2：社群基金備援——治理金庫餘額不足時，由創世社群基金補足撥款。
+func TestTreasuryCommunityFallback(t *testing.T) {
+	n, _, admin := contractStudioSetup(t)
+	pool, err := n.CommunityPoolAddress()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// 社群基金注資 30 TACm；治理金庫不注資（餘額 0）。
+	if err := n.walletSvc.Deposit(pool, wallet.AssetTACm, wallet.NewAmountF(30, wallet.AssetTACm), "community fund"); err != nil {
+		t.Fatal(err)
+	}
+	if err := n.gov.SetConfig(governance.GovConfig{VotingWindow: 2, PassThreshold: 0.667}); err != nil {
+		t.Fatal(err)
+	}
+	aliceKP, err := crypto.GenerateKeyPair()
+	if err != nil {
+		t.Fatal(err)
+	}
+	alice, _ := aliceKP.Address()
+	before, _ := n.walletSvc.Balance(alice)
+	h := n.DB().GetTipHeight()
+	id, err := n.gov.Propose("community fallback", "pool -> alice", governance.TypeTreasury, alice, "10", admin, 100, h, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := n.gov.Vote(id, admin, governance.ChoiceYes, 100, h+1, ""); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.Now().Add(15 * time.Second)
+	for time.Now().Before(deadline) {
+		if bal, _ := n.walletSvc.Balance(alice); bal.TACmBalance.String() != before.TACmBalance.String() {
+			break
+		}
+		time.Sleep(300 * time.Millisecond)
+	}
+	after, _ := n.walletSvc.Balance(alice)
+	got, _ := strconv.ParseFloat(after.TACmBalance.String(), 64)
+	want, _ := strconv.ParseFloat(before.TACmBalance.String(), 64)
+	if got-want < 9.99 {
+		t.Fatalf("社群基金撥款未到帳：before=%s after=%s", before.TACmBalance, after.TACmBalance)
+	}
+	// 社群基金應扣 10（30-10=20）。
+	poolAfter, _ := n.walletSvc.Balance(pool)
+	pf, _ := strconv.ParseFloat(poolAfter.TACmBalance.String(), 64)
+	pfT := pf / 1e18
+	if pfT < 19.9 || pfT > 20.1 {
+		t.Fatalf("社群基金應約 20（30-10），得 %v", poolAfter.TACmBalance)
+	}
+}
+
+// M151c-v2：治理金庫與社群基金皆不足時，提案保留 queued（下個區塊重試，不硬執行、不超額）。
+func TestTreasuryInsufficientStaysQueued(t *testing.T) {
+	n, _, admin := contractStudioSetup(t)
+	// 治理金庫僅 5 TACm（不足以支付 10）。
+	if err := n.walletSvc.Deposit(wallet.TreasuryAddr, wallet.AssetTACm, wallet.NewAmountF(5, wallet.AssetTACm), "low"); err != nil {
+		t.Fatal(err)
+	}
+	if err := n.gov.SetConfig(governance.GovConfig{VotingWindow: 2, PassThreshold: 0.667}); err != nil {
+		t.Fatal(err)
+	}
+	aliceKP, err := crypto.GenerateKeyPair()
+	if err != nil {
+		t.Fatal(err)
+	}
+	alice, _ := aliceKP.Address()
+	before, _ := n.walletSvc.Balance(alice)
+	h := n.DB().GetTipHeight()
+	id, err := n.gov.Propose("insufficient", "low -> alice", governance.TypeTreasury, alice, "10", admin, 100, h, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := n.gov.Vote(id, admin, governance.ChoiceYes, 100, h+1, ""); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(6 * time.Second)
+	after, _ := n.walletSvc.Balance(alice)
+	if after.TACmBalance.String() != before.TACmBalance.String() {
+		t.Fatalf("餘額不足不應撥款：before=%s after=%s", before.TACmBalance, after.TACmBalance)
+	}
+	ps, _ := n.gov.List()
+	for _, p := range ps {
+		if p.ID == id {
+			if p.Status != governance.StatusQueued {
+				t.Fatalf("餘額不足應保留 queued（下個區塊重試），得 %s", p.Status)
+			}
+			return
+		}
+	}
+	t.Fatalf("提案不存在")
 }

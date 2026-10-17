@@ -21,13 +21,10 @@ func TestDynamicValidatorsFromPOS(t *testing.T) {
 	}
 	insertGenesis(t, n)
 
-	// 以本節點密鑰註冊為驗證人並自質押。
+	// M149m：以本節點密鑰鏈上自質押（驗證人集來源已改為鏈上質押狀態）。
 	pubhex := hex.EncodeToString(n.keypair.PublicKeyCompressed())
-	if _, err := n.posStore.RegisterValidator(1, n.nodeAddress, "validator-a", 0.05, pubhex); err != nil {
-		t.Fatalf("註冊驗證人: %v", err)
-	}
-	if _, err := n.posStore.Stake(1, n.nodeAddress, 5000, nil); err != nil {
-		t.Fatalf("質押: %v", err)
+	if err := n.db.ApplyPosStake(n.nodeAddress, pubhex, 5000, time.Now().Unix()); err != nil {
+		t.Fatalf("鏈上質押: %v", err)
 	}
 	if err := n.RebuildValidatorSetFromPOS(); err != nil {
 		t.Fatalf("重建驗證人集: %v", err)

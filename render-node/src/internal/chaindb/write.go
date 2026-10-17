@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 // InsertBlock 在單一事務內插入區塊及其交易，順序完成：
@@ -56,6 +57,26 @@ func (c *ChainDB) InsertBlock(block *Block, txs []Transaction) error {
 		if err := updateBalance(tx, t.FromAddr, t.ToAddr,
 			strOr(t.Amount), strOr(t.Fee), strOr(t.Burned), proposer); err != nil {
 			return err
+		}
+		// M149m：鏈上質押——memo 前綴 pos:stake 的交易累計驗證人權重（全網一致）。
+		if strings.HasPrefix(t.Memo, PosStakeMemo) {
+			var amt float64
+			_, _ = fmt.Sscanf(strOr(t.Amount), "%g", &amt)
+			if err := applyPosStakeTx(tx, t.FromAddr, t.Pubkey, amt, t.Ts); err != nil {
+				return err
+			}
+		}
+		// M149m-2：節點引導獎勵——新節點首次註冊核發 1,000 TACm 並自動質押（限額限量）。
+		if strings.HasPrefix(t.Memo, PosBootstrapMemo) {
+			if err := applyPosBootstrapTx(tx, c, t.FromAddr, t.Pubkey, t.Ts); err != nil {
+				return err
+			}
+		}
+		// M149m-9：PoT 節點公鑰註冊（node:reg）——免質押取得時間權證出塊資格。
+		if strings.HasPrefix(t.Memo, NodeRegMemo) {
+			if err := applyNodeRegTx(tx, t.FromAddr, t.Pubkey, t.Ts); err != nil {
+				return err
+			}
 		}
 		if _, err := tx.Exec("DELETE FROM mempool WHERE tx_hash = ?", t.TxHash); err != nil {
 			return fmt.Errorf("chaindb: 清理內存池失敗: %w", err)
@@ -280,4 +301,19 @@ func (c *ChainDB) SetAccountPubkey(address, pubkey string) error {
 		c.cache.clear()
 	}
 	return nil
+}
+
+// applyPosStakeTx 事務內累計質押（與 InsertBlock 同事務，重放確定性）。
+func applyPosStakeTx(tx *sql.Tx, address, pubkey string, amount float64, ts int64) error {
+	if amount <= 0 {
+		return nil
+	}
+	_, err := tx.Exec(`INSERT INTO pos_validators (address, total_stake, pubkey, status, first_seen, last_active)
+		VALUES (?, ?, ?, 'active', ?, ?)
+		ON CONFLICT(address) DO UPDATE SET
+			total_stake = total_stake + excluded.total_stake,
+			pubkey = excluded.pubkey,
+			last_active = excluded.last_active`,
+		address, amount, pubkey, ts, ts)
+	return err
 }

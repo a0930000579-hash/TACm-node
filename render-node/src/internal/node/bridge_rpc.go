@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 
 	bridgepkg "tacm/internal/bridge"
 )
@@ -216,6 +218,35 @@ func (s *RPCServer) handleBridgeStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, stats)
+}
+
+// handleBridgeTxs GET /bridge/txs?address=...&limit=N — 依地址查詢跨鏈交易歷史
+// （含 TAC 側鎖定/mint 與 BSC 側解鎖記錄），供跨鏈橋前端歷史卡使用。
+func (s *RPCServer) handleBridgeTxs(w http.ResponseWriter, r *http.Request) {
+	b := s.requireBridge(w)
+	if b == nil {
+		return
+	}
+	addr := strings.TrimSpace(r.URL.Query().Get("address"))
+	if addr == "" {
+		writeErr(w, http.StatusBadRequest, "address 必填")
+		return
+	}
+	limit := 20
+	if v := strings.TrimSpace(r.URL.Query().Get("limit")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 100 {
+			limit = n
+		}
+	}
+	txs, err := b.ByAddress(addr, limit)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if txs == nil {
+		txs = []bridgepkg.BridgeTx{}
+	}
+	writeJSON(w, http.StatusOK, txs)
 }
 
 // requireBridgeAdmin 檢查管理員身份：橋管理端點要求登入（kill-switch 不能匿名觸發）。

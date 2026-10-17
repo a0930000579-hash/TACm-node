@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% block title %}TAC Community · Ads{% endblock %}
+{% block content %}
+<style>
+  /* M97：廣告投放中心（FB/YT 式：Sponsored 標記、投放位置、每日預算、曝光/點擊） */
+  body{background:#f0f2f5;color:#1c1e21;margin:0}
+  .topbar,.footer,.bottom-nav{display:none!important}
+  .ad-wrap{max-width:480px;margin:0 auto;padding:0 0 72px}
+  .ad-top{position:sticky;top:0;z-index:40;background:rgba(255,255,255,.97);border-bottom:1px solid #dddfe2;display:flex;align-items:center;gap:10px;padding:10px 14px}
+  .ad-top button{background:none;border:none;padding:6px;border-radius:50%;cursor:pointer}
+  .ad-top button svg{width:22px;height:22px;stroke:#1c1e21;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .ad-top .t{font-weight:800;font-size:16px}
+  .ad-id{display:flex;gap:8px;margin:12px 16px}
+  .ad-id input{flex:1;border:1px solid #dddfe2;border-radius:999px;padding:10px 14px;font-size:14px;outline:none;min-width:0}
+  .ad-id button{background:#1877f2;color:#fff;border:none;border-radius:999px;padding:10px 16px;font-weight:700;font-size:13px;flex:none}
+  .ad-card{background:#fff;border:1px solid #dddfe2;border-radius:14px;margin:0 16px 12px;padding:14px}
+  .ad-card h3{display:flex;align-items:center;gap:8px;font-size:14px;margin:0 0 10px}
+  .ad-card h3 svg{width:18px;height:18px;stroke:#9c27b0;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .ad-card input,.ad-card textarea,.ad-card select{width:100%;box-sizing:border-box;border:1px solid #dddfe2;border-radius:10px;padding:9px 12px;font-size:13px;margin-bottom:8px;outline:none;font-family:inherit}
+  .ad-card .row2{display:flex;gap:8px}
+  .ad-card .row2 input{flex:1}
+  .ad-card label{font-size:11px;font-weight:700;color:#65676b;display:block;margin:2px 0 4px}
+  .ad-placement{display:flex;gap:8px;margin-bottom:8px}
+  .ad-placement button{flex:1;border:1.5px solid #dddfe2;background:#fff;border-radius:10px;padding:9px 4px;font-size:12px;font-weight:700;color:#65676b;cursor:pointer}
+  .ad-placement button.on{border-color:#9c27b0;color:#9c27b0;background:#fdf4ff}
+  .ad-btn{width:100%;background:#9c27b0;color:#fff;border:none;border-radius:999px;padding:11px;font-weight:800;font-size:14px;cursor:pointer}
+  .ad-rule{font-size:11px;color:#65676b;line-height:1.7;margin-top:10px;border-top:1px solid #f0f2f5;padding-top:8px}
+  .ad-sec{margin:18px 16px 4px;font-size:14px;font-weight:800;display:flex;align-items:center;gap:8px}
+  .ad-sec svg{width:18px;height:18px;stroke:#9c27b0;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .ad-item{background:#fff;border:1px solid #dddfe2;border-radius:12px;margin:0 16px 10px;padding:12px}
+  .ad-item .ad-t{font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .ad-item .ad-b{font-size:13px;color:#1c1e21;margin-top:4px;word-break:break-word;line-height:1.5}
+  .ad-item .ad-m{font-size:11px;color:#65676b;margin-top:6px;line-height:1.6}
+  .ad-item img,.ad-item video{max-width:100%;border-radius:10px;margin-top:8px;display:block}
+  .ad-item video{max-height:240px;background:#f0f2f5}
+  .ad-tag{font-size:11px;font-weight:800;padding:3px 8px;border-radius:999px}
+  .ad-tag.on{background:#e8f5e9;color:#1b8a3a}
+  .ad-tag.wait{background:#fff4e5;color:#b26a00}
+  .ad-item .go{background:#1b8a3a;color:#fff;border:none;border-radius:999px;padding:8px 16px;font-size:13px;font-weight:700;margin-top:8px;cursor:pointer}
+  .ad-empty{text-align:center;color:#65676b;padding:30px 20px;font-size:14px}
+  .ad-bottom{position:fixed;left:0;right:0;bottom:0;z-index:60;background:rgba(255,255,255,.97);border-top:1px solid #dddfe2;display:flex;justify-content:space-around;padding:6px 2px calc(6px + env(safe-area-inset-bottom))}
+  .ad-bottom a{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;color:#65676b;text-decoration:none}
+  .ad-bottom a svg{width:22px;height:22px;stroke:#65676b;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .ad-bottom a.on{color:#1877f2}
+  .ad-bottom a.on svg{stroke:#1877f2}
+</style>
+
+<div class="ad-wrap">
+  <div class="ad-top">
+    <button onclick="location='/community'"><svg viewBox="0 0 24 24"><path d="M19 12 H6 M11 6 L5 12 L11 18"/></svg></button>
+    <div class="t"><svg viewBox="0 0 28 28" style="width:20px;height:20px;vertical-align:-4px;stroke:#1877f2;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;margin-right:6px"><path d="M14 4 C8 4 5 9 5 14 c0 4 2 7 4 9 v2 h10 v-2 c2-2 4-5 4-9 C23 9 20 4 14 4 Z"/><circle cx="14" cy="13" r="3.4"/><path d="M10.5 21.5 h7"/></svg><span data-i18n="cm.brand">TAC 社群</span></div>
+    <div style="margin-left:auto;display:flex;gap:6px">
+      <button onclick="location='/community/profile'"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21 C4 16 7.5 13.5 12 13.5 C16.5 13.5 20 16 20 21"/></svg></button>
+      <button onclick="TAC_I18N.toggle()">EN</button>
+    </div>
+  </div>
+
+  <div class="ad-id">
+    <input id="myAddr" placeholder="enter wallet address (tx0)…" value="">
+    <button onclick="setMe()"><span data-i18n="cm.switch">切換</span></button>
+  </div>
+
+  <div class="ad-card">
+    <h3><svg viewBox="0 0 24 24"><path d="M3 11 V15 H5 L9 19 V7 L5 11 Z"/><path d="M13 8 C15 9.5 15 14.5 13 16"/><path d="M17 5 C20.5 8 20.5 16 17 19"/></svg><span data-i18n="cm.adCreate">建立廣告</span></h3>
+    <input id="adTitle" placeholder="Ad title / 廣告標題">
+    <textarea id="adBody" placeholder="Ad content / 廣告內容" style="min-height:64px"></textarea>
+    <label>Media URL (image or video / 圖片或影片網址)</label>
+    <input id="adMedia" placeholder="https://… (optional)">
+    <label><span data-i18n="cm.adPlace">投放位置</span>（<span data-i18n="cm.adPlaceRule">比照 Facebook／YouTube 插播</span>）</label>
+    <div class="ad-placement" id="adPlaceSel">
+      <button class="on" data-v="feed">動態流</button>
+      <button data-v="video">影片流</button>
+      <button data-v="all">兩者</button>
+    </div>
+    <div class="row2">
+      <div style="flex:1"><label><span data-i18n="cm.adBudget">總預算</span> TACM</label><input id="adBudget" type="number" min="0.01" step="0.01" placeholder="e.g. 100"></div>
+      <div style="flex:1"><label><span data-i18n="cm.adDaily">每日預算</span> TACM</label><input id="adDaily" type="number" min="0" step="0.01" placeholder="e.g. 10 (optional)"></div>
+    </div>
+    <label><span data-i18n="cm.adTarget">點擊跳轉網址</span>（<span data-i18n="cm.adTargetRule">按「了解更多」前往</span>）</label>
+    <input id="adTarget" placeholder="https://… (optional)">
+    <button class="ad-btn" onclick="createAd()"><span data-i18n="cm.adSubmit">發佈廣告（付款後投放）</span></button>
+    <div id="adMsg" style="font-size:12px;color:#e41e3f;margin-top:8px"></div>
+    <div class="ad-rule">
+      <b>投放規則（Facebook／YouTube 模式）</b><br>
+      · 廣告標記 <b>Sponsored</b> 顯示在動態流第 4 則之後、影片流每 5 支之後插播<br>
+      · 付款後才開始投放（TACM 全額入資金池）<br>
+      · 低曝光廣告優先輪播，曝光／點擊即時計數<br>
+      · 每日預算可設為每日投放上限（0 = 不限制）
+    </div>
+  </div>
+
+  <div class="ad-sec"><svg viewBox="0 0 24 24"><path d="M3 11 V15 H5 L9 19 V7 L5 11 Z"/><path d="M13 8 C15 9.5 15 14.5 13 16"/><path d="M17 5 C20.5 8 20.5 16 17 19"/></svg><span data-i18n="cm.myAds">我的廣告</span></div>
+  <div id="adList"><div class="ad-empty">載入中…</div></div>
+</div>
+
+<nav class="ad-bottom">
+  <a href="/community"><svg viewBox="0 0 24 24"><path d="M3 10 L12 3 L21 10 V21 H15 V14 H9 V21 H3 Z"/></svg><span data-i18n="cm.home">首頁</span></a>
+  <a href="/community/videos"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 11 L21 7.5 V16.5 L16 13"/></svg><span data-i18n="cm.video">影片</span></a>
+  <a href="/community/friends"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20 C2.5 15.5 5 13 9 13 C13 13 15.5 15.5 15.5 20"/><circle cx="17" cy="9" r="2.8"/><path d="M16 13.5 C19 13.5 21.5 15.5 21.5 19"/></svg><span data-i18n="cm.friends">好友</span></a>
+  <a href="/community/market"><svg viewBox="0 0 24 24"><path d="M4 7 H20 L18.5 16 H5.5 Z"/><circle cx="9" cy="20" r="1.6"/><circle cx="15.5" cy="20" r="1.6"/><path d="M7 10 V6 C7 3.8 8.8 2.5 10.5 2.5 C12 2.5 13 3.6 13 5"/></svg><span data-i18n="cm.market">市集</span></a>
+  <a href="/community/notifications"><svg viewBox="0 0 24 24"><path d="M12 3 C8 3 6 6 6 9.5 V15 L4 17 H20 L18 15 V9.5 C18 6 16 3 12 3 Z"/><path d="M9.5 20 C10 21.5 11 22 12 22 C13 22 14 21.5 14.5 20"/></svg><span data-i18n="cm.notify">通知</span></a>
+  <a href="/community/profile"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21 C4 16 7.5 13.5 12 13.5 C16.5 13.5 20 16 20 21"/></svg><span data-i18n="cm.me">個人</span></a>
+</nav>
+
+<script>
+function get(p){ return fetch(p).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); }); }
+function post(p,b){ return fetch(p, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(b||{})}).then(function(r){ if(!r.ok) return r.json().then(function(j){throw new Error(j.error||r.status)}); return r.json(); }); }
+function shortAddr(a){ if(!a) return '—'; if(a.length<=16) return a; return a.slice(0,10)+'…'+a.slice(-6); }
+function escapeHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+var me = localStorage.getItem('cm_id') || '';
+function setMe(){ me = document.getElementById('myAddr').value.trim(); localStorage.setItem('cm_id', me); loadAds(); }
+document.getElementById('myAddr').value = me;
+get('/status').then(function(st){ if(!me){ me = st.address||''; document.getElementById('myAddr').value = me; } loadAds(); }).catch(function(){ loadAds(); });
+
+var adPlace = 'feed';
+document.getElementById('adPlaceSel').addEventListener('click', function(e){
+  var b = e.target.closest('button'); if(!b) return;
+  document.querySelectorAll('#adPlaceSel button').forEach(function(x){ x.classList.remove('on'); });
+  b.classList.add('on'); adPlace = b.dataset.v;
+});
+
+function createAd(){
+  var addr = me || document.getElementById('myAddr').value.trim();
+  if(!addr){ document.getElementById('adMsg').textContent = TAC_TE('請先輸入你的錢包地址'); return; }
+  me = addr; localStorage.setItem('cm_id', me);
+  var title = document.getElementById('adTitle').value.trim();
+  var body = document.getElementById('adBody').value.trim();
+  var budget = parseFloat(document.getElementById('adBudget').value);
+  var daily = parseFloat(document.getElementById('adDaily').value) || 0;
+  var media = document.getElementById('adMedia').value.trim();
+  var target = document.getElementById('adTarget').value.trim();
+  if(!title || !(budget>0)){ document.getElementById('adMsg').textContent = TAC_TE('請填寫廣告標題與總預算'); return; }
+  post('/api/community/ads/create', {address:me, title:title, body:body, media_url:media||null, budget_tacm:budget, daily_budget_tacm:daily, placements:adPlace, target:target||null}).then(function(d){
+    document.getElementById('adMsg').style.color = '#1b8a3a';
+    document.getElementById('adMsg').textContent = TAC_TE('廣告已建立（ID #')+d.ad_id+TAC_TE('）。預算 ')+d.amount_tacm+TAC_TE(' TACM 請轉至 ')+d.pay_to+TAC_TE('，備註：')+d.memo;
+    loadAds();
+  }).catch(function(e){ document.getElementById('adMsg').style.color='#e41e3f'; document.getElementById('adMsg').textContent = TAC_TE('發佈失敗：')+e; });
+}
+
+function loadAds(){
+  var el = document.getElementById('adList');
+  get('/api/community/ads').then(function(d){
+    var items = d.items||[];
+    el.innerHTML = items.map(function(a){
+      var mine = (me && a.address === me);
+      var st = a.status === 'active'
+        ? '<span class="ad-tag on">'+TAC_TE('投放中')+'</span>'
+        : '<span class="ad-tag wait">'+TAC_TE('待付款')+'</span>';
+      var pay = (a.status !== 'active' && mine)
+        ? '<button class="go" onclick="payAd('+a.id+')">'+TAC_TE('付款投放')+'</button>'
+        : '';
+      var media = '';
+      if(a.media_url){
+        media = /\.(mp4|webm|m3u8)(\?|$)/i.test(a.media_url)
+          ? '<video src="'+escapeHtml(a.media_url)+'" controls playsinline preload="metadata"></video>'
+          : '<img src="'+escapeHtml(a.media_url)+'" loading="lazy" alt="">';
+      }
+      var place = a.placements === 'all' ? TAC_TE('動態流+影片流') : (a.placements === 'video' ? TAC_TE('影片流') : TAC_TE('動態流'));
+      return '<div class="ad-item"><div class="ad-t">'+escapeHtml(a.title)+' '+st+'</div>'+
+        (a.body?'<div class="ad-b">'+escapeHtml(a.body)+'</div>':'')+
+        media+
+        '<div class="ad-m">Sponsored · '+place+' · '+TAC_TE('總預算')+' '+Number(a.budget_tacm).toLocaleString('en-US',{maximumFractionDigits:4})+' TACM'+
+        (a.daily_budget_tacm>0 ? ' · '+TAC_TE('每日')+' '+Number(a.daily_budget_tacm).toLocaleString('en-US',{maximumFractionDigits:4}) : '')+
+        ' · '+TAC_TE('曝光')+' '+a.impressions+' · '+TAC_TE('點擊')+' '+a.clicks+' · '+shortAddr(a.address)+'</div>'+pay+'</div>';
+    }).join('') || '<div class="ad-empty">'+TAC_TE('尚無廣告')+'</div>';
+  }).catch(function(){ el.innerHTML = '<div class="ad-empty">'+TAC_TE('載入失敗')+'</div>'; });
+}
+
+function payAd(id){
+  if(!me){ document.getElementById('adMsg').textContent = TAC_TE('請先輸入你的錢包地址'); return; }
+  if(!confirm(TAC_TE('確認支付廣告預算並開始投放？'))) return;
+  post('/api/community/ads/'+id+'/pay', {address:me}).then(function(d){
+    alert(TAC_TE('廣告已投放（ID #')+d.ad_id+TAC_TE('，')+d.amount_tacm+TAC_TE(' TACM 入資金池）'));
+    loadAds();
+  }).catch(function(e){ alert(TAC_TE('付款失敗：')+e); });
+}
+</script>
+{% endblock %}

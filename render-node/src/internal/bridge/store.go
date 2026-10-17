@@ -146,10 +146,11 @@ func (s *Store) GetBridgeTx(id string) (*BridgeTx, error) {
 	return tx, nil
 }
 
-// GetBridgeTxsByAddress 查詢與地址相關的跨鏈交易。
+// GetBridgeTxsByAddress 查詢與地址相關的跨鏈交易（地址大小寫不敏感，
+// 因為 BSC 側來源為小寫 hex、TAC 側可能為 checksum/混合大小寫）。
 func (s *Store) GetBridgeTxsByAddress(address string, limit int) ([]BridgeTx, error) {
 	rows, err := s.db.Query(`SELECT bridge_tx_id FROM bridge_transactions
-		WHERE source_address=? OR target_address=?
+		WHERE LOWER(source_address)=LOWER(?) OR LOWER(target_address)=LOWER(?)
 		ORDER BY created_at DESC LIMIT ?`, address, address, limit)
 	if err != nil {
 		return nil, err

@@ -26,6 +26,9 @@
   .np-btn:hover{background:var(--brand2)}
   .np-msg{font-size:13px;color:var(--muted)}
   .badge{display:inline-block;background:#eef7f1;color:#2e7d5b;border:1px solid var(--line);border-radius:999px;padding:2px 10px;font-size:12px;font-weight:700}
+  .warn{background:#fff7ed;border:1px solid #f59e0b;border-left:4px solid #f59e0b;border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:#92400e}
+  .rv-ok{display:inline-block;background:#eef7f1;color:#2e7d5b;border:1px solid var(--line);border-radius:999px;padding:4px 14px;font-size:13px;font-weight:800}
+  .rv-no{display:inline-block;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;border-radius:999px;padding:4px 14px;font-size:13px;font-weight:800}
   @media(max-width:600px){body{padding:10px}.panel{padding:16px}.chain-grid{grid-template-columns:1fr 1fr}}
 </style>
 </head>
@@ -35,7 +38,7 @@
 
   <section class="panel">
     <div class="panel-head"><h2>節點架設者面板</h2></div>
-    <p class="muted">管理你的節點：綁定收款地址、查詢節點獎勵（coinbase:node 9%）、將獎勵提領轉入 TACm web3 錢包。操作需節點管理密碼。</p>
+    <p class="muted">管理你的節點：綁定收款地址、查詢節點獎勵（coinbase:node 45%，在線均分）、將獎勵提領轉入 TACm web3 錢包。操作需節點管理密碼。</p>
   </section>
 
   <section class="panel">
@@ -65,12 +68,32 @@
     <div class="form-row"><button class="np-btn" onclick="bindAddr()">綁定收款地址</button> <span class="np-msg" id="bindMsg"></span></div>
   </section>
 
+  <div class="warn" id="npWarn" style="display:none"></div>
+
+  <section class="panel">
+    <div class="panel-head"><h2>節點獎勵驗證器（鏈上）</h2></div>
+    <p class="muted">掃描最近 200 個區塊的 coinbase:node 入帳與心跳——即使單筆獎勵很小，也能確認節點是否真的在領獎。</p>
+    <div style="margin:8px 0 12px" id="rvBadge">驗證中…</div>
+    <div class="chain-grid">
+      <div class="cg"><small>入帳筆數（近 200 塊）</small><b id="rvCount">—</b></div>
+      <div class="cg"><small>累計入帳</small><b id="rvTotal">—</b></div>
+      <div class="cg"><small>最近入帳區塊</small><b id="rvLast">—</b></div>
+      <div class="cg"><small>心跳上鏈（近 200 塊）</small><b id="rvHb">—</b></div>
+    </div>
+    <p class="muted" style="margin-top:10px">節點身份密鑰（助記詞/私鑰）儲存在節點資料目錄 node_config.json——請立即備份，遺失即無法找回節點身份與獎勵。</p>
+  </section>
+
   <section class="panel" id="wdBox">
     <div class="panel-head"><h2>提領節點獎勵</h2></div>
     <p class="muted">以節點私鑰簽名，把節點獎勵轉入綁定錢包（上鏈、可於區塊瀏覽器查詢）。</p>
     <div class="form-row"><input id="wdAmount" inputmode="decimal" placeholder="提領金額（TACm）" autocomplete="off"></div>
     <div class="form-row"><input type="password" id="wdPass" placeholder="管理密碼（操作驗證）" autocomplete="current-password"></div>
     <div class="form-row"><button class="np-btn" onclick="withdraw()">提領到綁定錢包</button> <span class="np-msg" id="wdMsg"></span></div>
+  </section>
+  <section class="panel">
+    <div class="panel-head"><h2>PoT 節點資格（時間權證出塊）</h2></div>
+    <p class="muted">免費註冊公鑰（node:reg，金額 0、手續費 0）。註冊後依在線時長取得無質押出塊權重（每在線 6 小時 +1，上限 10）；節點啟動時已自動註冊，失敗可手動重試。</p>
+    <div class="form-row"><button class="np-btn" onclick="regPot()">註冊為 PoT 節點</button> <span class="np-msg" id="regMsg"></span></div>
   </section>
 </div>
 
@@ -97,6 +120,29 @@
       box('#bindPass').style.display = d.admin_set ? '' : 'none';
       box('#wdPass').style.display = d.admin_set ? '' : 'none';
       if (d.payout_address) { box('#payoutAddr').value = d.payout_address; }
+      // 節點獎勵驗證器（M149o）
+      var rv = d.reward_count || 0, rvT = d.reward_total || '0';
+      show('#rvCount', rv + ' 筆');
+      show('#rvTotal', esc(rvT) + ' TACm');
+      show('#rvLast', d.last_reward_block ? '#' + d.last_reward_block : '尚未收到');
+      show('#rvHb', (d.heartbeat_count || 0) + ' 次' + (d.last_heartbeat ? '（最後 #' + d.last_heartbeat + '）' : ''));
+      var badge = box('#rvBadge');
+      if (rv > 0) {
+        badge.className = 'rv-ok';
+        badge.textContent = '✓ 已確認收到節點獎勵（近 200 塊入帳 ' + rv + ' 筆）';
+      } else {
+        badge.className = 'rv-no';
+        badge.textContent = '○ 近 200 塊尚未收到獎勵——請確認節點在線（心跳上鏈）與 PoT 註冊，獎勵在入帳後立即顯示';
+      }
+      // 強制安全提示：未綁定／未設密碼／助記詞備份
+      var warns = [];
+      if (!d.admin_set) { warns.push('⚠ 尚未設置管理密碼——請立即設置（至少 6 字元），否則無法綁定收款地址與提領獎勵'); }
+      if (!d.payout_address) { warns.push('⚠ 尚未綁定收款地址——節點獎勵將無法提領，請立即綁定 TACm web3 錢包地址'); }
+      if (warns.length) {
+        var w = box('#npWarn');
+        w.style.display = '';
+        w.innerHTML = warns.map(function (t) { return '<div style="margin:2px 0">' + t + '</div>'; }).join('');
+      }
     }).catch(function () { show('#pNodeId', '載入失敗'); });
   }
   window.setupAdmin = function () {
@@ -122,6 +168,12 @@
     post('/api/node/withdraw', { admin_pass: pass, amount: amt }).then(function (r) {
       show('#wdMsg', r.ok ? '已提交上鏈：' + r.j.tx_hash : (r.j.message || '提領失敗'));
       if (r.ok) { box('#wdAmount').value = ''; refresh(); }
+    });
+  };
+  window.regPot = function () {
+    post('/api/node/register', {}).then(function (r) {
+      show('#regMsg', r.ok ? '已提交上鏈：' + r.j.tx_hash : (r.j.message || '註冊失敗'));
+      if (r.ok) { refresh(); }
     });
   };
   refresh();

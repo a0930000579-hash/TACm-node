@@ -42,10 +42,10 @@ func TestWalletSyncCoinbase(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// M70：節點 9% 每塊歸出塊節點（節點獎勵歸節點）——節點自身即使未開機也收到節點獎勵；
-	// 無「開機」礦工時其餘 75%+16%＝91% 入獎勵池（M36 語義保留）。
-	// 2 塊 × 10 × 9% ＝ 1.8 TACm。
-	wantNode, _ := new(big.Int).SetString("1800000000000000000", 10)
+	// M70：節點 45% 每塊由在線節點均分（節點獎勵歸節點）——節點自身即使未開機也收到節點獎勵；
+	// 無「開機」礦工時其餘 40%+15%＝55% 入獎勵池（M36 語義保留）。
+	// 2 塊 × 10 × 45% ＝ 9 TACm。
+	wantNode, _ := new(big.Int).SetString("9000000000000000000", 10)
 	if acc.TACmBalance.Cmp(wantNode) != 0 {
 		t.Fatalf("節點獎勵=%s want 1.8e18（9%%×10×2）", acc.TACmBalance)
 	}
@@ -53,7 +53,7 @@ func TestWalletSyncCoinbase(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantPool, _ := new(big.Int).SetString("18200000000000000000", 10) // 91%×10×2
+	wantPool, _ := new(big.Int).SetString("11000000000000000000", 10) // 55%×10×2
 	if pool.TACmBalance.Cmp(wantPool) != 0 {
 		t.Fatalf("獎勵池挹注=%s want 1.82e19 (91pct coinbase×2塊)", pool.TACmBalance)
 	}
@@ -166,8 +166,8 @@ func TestWalletSyncChainTx(t *testing.T) {
 	}
 	waitFor(t, func() bool {
 		bal, _ := parseBal(n.db.GetBalance(n.nodeAddress))
-		return bal > 2
-	}, 20*time.Second, "等待 coinbase 瓜分入節點地址")
+		return bal > 2 && n.DB().GetNonce(n.nodeAddress) >= 1
+	}, 20*time.Second, "等待 coinbase 瓜分入節點地址與心跳上鏈")
 	tx := signedTx(t, n.keypair, bobAddr, "1.5", "0.03", n.DB().GetNonce(n.nodeAddress))
 	if _, err := n.SubmitTransaction(tx); err != nil {
 		t.Fatal(err)

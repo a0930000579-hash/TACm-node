@@ -1,7 +1,7 @@
 package wallet
 
 // pool.go — 獎勵池／交易所資金池聚合視圖（對齊原本「理財&獎勵池」語義）：
-//   池資金 = coinbase 12% 自動挹注 + 交易所手續費 topup；可 withdraw 至地址作為交易所運營資金。
+//   池資金 = coinbase 15% 自動挹注 + 交易所手續費 topup；可 withdraw 至地址作為交易所運營資金。
 //   提供 balance / total_injected / total_claimed 三視角與最近動帳。
 
 import (

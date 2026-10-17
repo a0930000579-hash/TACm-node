@@ -2,7 +2,7 @@ package node
 
 // reward_withdraw_rpc.go — M77：節點獎勵提取（架設者領取 coinbase:node 節點獎勵）。
 //
-// 節點獎勵（M70：每塊 coinbase 9% 歸出塊節點，memo=coinbase:node）自動累計在
+// 節點獎勵（M70：每塊 coinbase 45% 由在線節點均分，memo=coinbase:node）自動累計在
 // 節點金鑰地址。本端點以節點金鑰代簽一筆轉帳，把節點地址餘額轉到架設者指定地址。
 // 安全邊界：節點金鑰是伺服器上的資產，僅允許本機（loopback）呼叫——外部網路
 // 不能動走節點餘額。

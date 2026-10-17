@@ -7,6 +7,7 @@ import (
 	"math"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -33,6 +34,30 @@ type Bridge struct {
 	verifier     *MessageVerifier
 	// proposals 緩存收到的跨鏈提案（messageID → 消息），供簽名聚合與執行。
 	proposals map[string]*CrossChainMessage
+	// assetSettler（M150e）目標鏈資產結算器：由外部（node）注入後，
+	// 鎖定/解鎖時於 TAC 側真實移動資產（金庫模型），實現資產級互通。
+	// 為 nil 時維持純 DB 記帳（向後相容、測試與歷史模式）。
+	assetSettler AssetSettler
+}
+
+// AssetSettler 目標鏈資產結算器：橋在 TAC 側真實移動 TACM（金庫模型）。
+// 由外部組裝層注入實作（wallet.Service + 金庫地址）；介面隔離可讓
+// 橋模組不依賴錢包套件，也便於測試注入 mock。
+type AssetSettler interface {
+	// LockOnSource 源鏈鎖定：從用戶地址扣 TACM 入金庫（TAC→BSC）。
+	// 返回錯誤表示鎖定失敗（呼叫方不得建單）。amount 為含手續費前金額。
+	LockOnSource(sourceAddr string, amount float64) error
+	// ReleaseOnTarget 目標鏈釋放：從金庫轉 TACM 給目標地址（BSC→TAC）。
+	// amount 為實際入帳金額（扣橋手續費後）。返回錯誤表示釋放失敗，
+	// 呼叫方不得將單標記為 confirmed。
+	ReleaseOnTarget(targetAddr string, amount float64) error
+}
+
+// SetAssetSettler 注入目標鏈資產結算器（須在啟動跨鏈操作前呼叫一次）。
+func (b *Bridge) SetAssetSettler(s AssetSettler) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.assetSettler = s
 }
 
 // New 建立跨鏈橋並初始化持久配置。
@@ -171,6 +196,15 @@ func (b *Bridge) createTransfer(source, target, srcAddr, tgtAddr string,
 	}
 	if err := b.validateChains(source, target); err != nil {
 		return nil, err
+	}
+	// M150e：資產級互通——源鏈為 TAC 時先真實鎖定（用戶 TACM → 金庫）。
+	// 鎖定失敗則不建單（資產未動、單不存在，呼叫方可重試）。
+	// 注意：此處持有 b.mu，鎖定器內部不得反向呼叫橋（bridge→wallet
+	// 單向依賴，無死鎖；組裝層須保證不引入反向呼叫）。
+	if b.assetSettler != nil && strings.EqualFold(source, "tacm") {
+		if err := b.assetSettler.LockOnSource(srcAddr, amount); err != nil {
+			return nil, fmt.Errorf("TAC 側鎖定資產失敗: %w", err)
+		}
 	}
 	minAmt, err := b.minAmount()
 	if err != nil {
@@ -326,6 +360,14 @@ func (b *Bridge) UnlockOnTarget(bridgeTxID, unlockTxHash string) (*BridgeTx, err
 	tx, err := b.loadAndCheck(bridgeTxID, StatusBurning)
 	if err != nil {
 		return nil, err
+	}
+	// M150e：資產級互通——目標鏈為 TAC 時先真實釋放（金庫 → 目標地址）。
+	// 釋放失敗則單停留 burning（狀態誠實、資產不假裝到帳）；重試由
+	// 中繼/守衛的 burning 收尾流程負責（本輪先以錯誤返回，不標記 confirmed）。
+	if b.assetSettler != nil && strings.EqualFold(tx.TargetChain, "tacm") {
+		if err := b.assetSettler.ReleaseOnTarget(tx.TargetAddress, tx.ReceivedAmount); err != nil {
+			return nil, fmt.Errorf("TAC 側釋放資產失敗: %w", err)
+		}
 	}
 	now := time.Now().Unix()
 	tx.Status = StatusConfirmed

@@ -219,6 +219,17 @@ CREATE TABLE IF NOT EXISTS defi_vault_positions (
   underlying_amount REAL NOT NULL DEFAULT 0,
   last_compound INTEGER NOT NULL,
   created_at INTEGER NOT NULL
+);;
+CREATE TABLE IF NOT EXISTS defi_cdps (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  owner TEXT NOT NULL,
+  collateral REAL NOT NULL DEFAULT 0,
+  debt REAL NOT NULL DEFAULT 0,
+  fee_accrued REAL NOT NULL DEFAULT 0,
+  liq_price REAL NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'open',
+  opened_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_vault_addr ON defi_vault_positions(address, vault_id);
 `

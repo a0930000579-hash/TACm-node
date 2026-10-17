@@ -1,0 +1,752 @@
+{% extends "base.html" %}
+{% block title %}TAC Community · Feed{% endblock %}
+{% block content %}
+<style>
+  /* M31：社群採 Facebook 淺色風（背景去深色） */
+  body { background: #f0f2f5; color: #1c1e21; }
+  .container { background: transparent; }
+  .footer { background: #fff; border-top-color: #dddfe2; color: #65676b; }
+  .bottom-nav { background: rgba(255, 255, 255, 0.97); border-top-color: #dddfe2; }
+  .bottom-nav a { color: #65676b; }
+  .bottom-nav { display:none !important; }
+  .navlinks { display:none !important; }
+  .cm-wrap{max-width:1080px;margin:0 auto}
+  .cm-head{background:#1877f2;background:linear-gradient(135deg,#1877f2,#166fe5);border-radius:16px;padding:16px 18px;color:#fff;display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+  .cm-head .cm-logo{width:46px;height:46px;border-radius:12px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800}
+  .cm-head h2{margin:0;font-size:19px;font-weight:800}
+  .cm-head .cm-sub{font-size:12px;opacity:.85}
+  .cm-layout{display:grid;grid-template-columns:250px 1fr 300px;gap:14px;align-items:start}
+  @media (max-width:960px){ .cm-layout{grid-template-columns:1fr} .cm-side-l{display:none} .cm-side-r{order:2} }
+  .cm-card{background:#fff;border:1px solid #dddfe2;border-radius:12px;padding:14px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .cm-card h3{margin:0 0 10px;font-size:14px;color:#1c1e21;display:flex;align-items:center;gap:8px;font-weight:700}
+  .cm-tag{display:inline-block;font-size:11px;font-weight:700;border-radius:6px;padding:2px 8px;background:#e7f3ff;color:#1877f2}
+  .cm-tag.market{background:#e8f5e9;color:#1b8a3a}
+  .cm-tag.ad{background:#fff3e0;color:#e65100}
+  .cm-id{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .cm-id input{flex:1;min-width:0;border:1px solid #dddfe2;border-radius:8px;padding:9px 10px;font-size:13px;background:#f5f6f7;color:#1c1e21;font-family:ui-monospace,monospace}
+  .cm-id button{background:#1877f2;color:#fff;border:none;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;flex:none}
+  .cm-composer{display:flex;flex-direction:column;gap:10px}
+  .cm-stories{display:flex;gap:10px;overflow-x:auto;padding:10px 4px;margin-bottom:2px;-webkit-overflow-scrolling:touch}
+  .cm-story{flex:0 0 auto;width:64px;text-align:center;cursor:pointer}
+  .cm-story .sav{width:58px;height:58px;border-radius:50%;border:3px solid #f0b90b;object-fit:cover;display:block;background:#e4e6eb;color:#65676b;font-size:20px;font-weight:700;line-height:52px;margin:0 auto}
+  .cm-story .stx{font-size:10px;color:#65676b;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cm-img{width:100%;max-height:420px;object-fit:cover;border-radius:10px;margin:10px 0;cursor:zoom-in;background:#e4e6eb}
+  .cm-stars{font-size:13px;color:#f0b90b;cursor:pointer;margin-top:6px}
+  .cm-comp-top{display:flex;align-items:flex-start;gap:10px}
+  .cm-comp-ava{width:40px;height:40px;border-radius:50%;background:#1877f2;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex:none;margin-top:2px}
+  .cm-comp-main{flex:1;min-width:0}
+  .cm-comp-input{width:100%;box-sizing:border-box;min-height:52px;border:1px solid #dddfe2;border-radius:999px;padding:14px 18px;font-size:14px;background:#f0f2f5;cursor:text;color:#65676b;display:flex;align-items:center}
+  .cm-comp-input.on{border-radius:14px;background:#fff;color:#1c1e21;cursor:text;align-items:flex-start;flex-direction:column;gap:8px;padding:12px 14px}
+  .rich-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+  .rich-btn{border:1px solid #dddfe2;background:#fff;border-radius:8px;padding:3px 10px;cursor:pointer;font-size:13px;color:#1b8a3a}
+  .rich-btn:hover{background:#e8f5e9}
+  .cm-editor{width:100%;box-sizing:border-box;min-height:72px;border:1px solid #dddfe2;border-radius:12px;padding:10px 12px;font-size:14px;background:#fff;overflow-y:auto;line-height:1.5;display:none}
+  .cm-editor:empty:before{content:attr(data-placeholder);color:#a7a8aa;pointer-events:none}
+  .cm-editor b,.cm-editor strong{font-weight:700}.cm-editor i,.cm-editor em{font-style:italic}
+  .cm-stars{color:#f0b90b;font-size:12px;letter-spacing:1px}
+  .cm-stars .off{color:#d4d5d8}
+  .cm-composer .cm-side{display:flex;flex-direction:row;flex-wrap:wrap;gap:8px;width:100%}
+  .cm-composer .cm-side select,.cm-composer .cm-side input{flex:1;min-width:110px;border:1px solid #dddfe2;border-radius:8px;padding:9px;font-size:13px;background:#fff;box-sizing:border-box}
+  .cm-composer .cm-side .cm-post-btn{flex:1;min-width:110px}
+  .cm-post-btn{background:#1877f2;color:#fff;border:none;border-radius:8px;padding:10px 14px;font-weight:700;font-size:14px;cursor:pointer}
+  .cm-post{margin-bottom:12px;padding:14px}
+  .cm-author{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .cm-ava{width:40px;height:40px;border-radius:50%;background:#1877f2;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex:none}
+  .cm-author .nm{font-weight:700;font-size:14px;color:#1c1e21}
+  .cm-ava.photo{background:#fff;overflow:hidden}
+  .cm-ava.photo img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+  .cm-op{display:inline-flex;gap:6px;margin-left:auto;align-items:center}
+  .cm-op button{background:#e4e6eb;border:none;border-radius:999px;padding:4px 10px;font-size:11px;font-weight:700;color:#65676b;cursor:pointer}
+  .cm-op button.del{color:#e41e3f}
+  .cm-author .tm{font-size:11px;color:#65676b}
+  .cm-body{font-size:14px;color:#050505;line-height:1.6;white-space:pre-wrap;word-break:break-word;margin-bottom:10px}
+  .cm-price{display:inline-block;background:#e7f3ff;color:#1877f2;font-weight:800;border-radius:8px;padding:4px 10px;font-size:13px;margin-bottom:10px}
+  .cm-actions{display:flex;gap:8px;border-top:1px solid #e4e6eb;padding-top:8px}
+  .cm-act{flex:1;text-align:center;background:#f0f2f5;border:none;border-radius:8px;padding:8px 0;font-size:13px;font-weight:600;color:#65676b;cursor:pointer}
+  .cm-act.on{background:#e7f3ff;color:#1877f2}
+  .cm-comments{margin-top:8px;border-top:1px solid #e4e6eb;padding-top:8px;display:none}
+  .cm-comments.open{display:block}
+  .cm-com{margin:6px 0;font-size:13px}
+  .cm-com b{color:#1877f2;margin-right:6px}
+  .cm-comadd{display:flex;gap:6px;margin-top:8px}
+  .cm-comadd input{flex:1;min-width:0;border:1px solid #dddfe2;border-radius:8px;padding:8px 10px;font-size:13px;background:#f5f6f7}
+  .cm-comadd button{background:#1877f2;color:#fff;border:none;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:700;cursor:pointer}
+  .cm-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #e4e6eb}
+  .cm-item:last-child{border-bottom:none}
+  .cm-item .it-t{flex:1;min-width:0;font-weight:700;font-size:13px;color:#1c1e21;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cm-item .it-p{font-weight:800;color:#1877f2;font-size:13px;flex:none}
+  .cm-item button{background:#e7f3ff;color:#1877f2;border:none;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;flex:none}
+  .cm-buy{position:fixed;left:0;right:0;bottom:0;top:0;background:rgba(0,0,0,.5);display:none;align-items:flex-end;justify-content:center;z-index:70}
+  .cm-buy.open{display:flex}
+  .cm-buy .sheet{background:#fff;width:100%;max-width:560px;border-radius:16px 16px 0 0;padding:18px;max-height:80vh;overflow:auto}
+  .cm-buy .sheet h3{margin:0 0 10px;font-size:16px;color:#1c1e21}
+  .cm-buy .row{font-size:13px;color:#1c1e21;padding:8px 0;border-bottom:1px solid #e4e6eb;word-break:break-all}
+  .cm-buy .row b{color:#1877f2}
+  .cm-buy .close{background:#f0f2f5;border:none;border-radius:8px;padding:10px;font-weight:700;font-size:14px;margin-top:12px;width:100%;cursor:pointer}
+  .cm-ad{background:#f0f2f5;border:1px dashed #dddfe2;border-radius:12px;padding:12px;margin-bottom:10px}
+  .cm-ad .ad-t{font-weight:800;font-size:14px;color:#1c1e21}
+  .cm-ad .ad-b{font-size:13px;color:#65676b;margin-top:4px}
+  .cm-ad .ad-m{font-size:11px;color:#1877f2;margin-top:6px;font-weight:600}
+  .cm-empty{color:#65676b;font-size:13px;text-align:center;padding:20px 0}
+  .cm-msg{font-size:12px;color:#f02849;margin-top:8px;text-align:center;min-height:14px}
+  .mono-s{font-family:ui-monospace,monospace;font-size:12px;word-break:break-all}
+  .cm-topbtn{background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:700;cursor:pointer}
+  .cm-feedtab{background:#f0f2f5;border:1px solid #dddfe2;border-radius:999px;padding:6px 14px;font-size:13px;font-weight:700;color:#65676b;cursor:pointer}
+  .cm-feedtab.on{background:#e7f3ff;color:#1877f2;border-color:#1877f2}
+  .cm-follow{background:#1877f2;color:#fff;border:none;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;flex:none;margin-left:auto}
+  .cm-follow.on{background:#f0f2f5;color:#65676b}
+  .cm-reward-line{font-size:13px;color:#1c1e21;margin:6px 0;word-break:break-all}
+  .cm-reward-top{border-top:1px solid #e4e6eb;margin-top:10px;padding-top:8px}
+  .cm-rt-item{display:flex;align-items:center;gap:8px;font-size:12px;color:#65676b;padding:5px 0;border-bottom:1px solid #f0f2f5}
+  .cm-rt-item b{color:#1877f2}
+  /* ===== M93 Facebook 化 ===== */
+  .cm-topbar{position:sticky;top:0;z-index:50;background:#fff;border-bottom:1px solid #dddfe2;padding:8px 0;margin-bottom:10px;border-radius:0}
+  .cm-topbar-in{max-width:1080px;margin:0 auto;display:flex;align-items:center;gap:10px;padding:0 4px}
+  .cm-tbl{display:flex;align-items:center;gap:8px;font-weight:800;font-size:18px;color:#1877f2;flex:none}
+  .cm-tbl svg{width:28px;height:28px}
+  .cm-search{flex:1;min-width:0;position:relative}
+  .cm-search input{width:100%;box-sizing:border-box;border:1px solid #dddfe2;background:#f0f2f5;border-radius:999px;padding:9px 14px 9px 34px;font-size:13px;color:#1c1e21}
+  .cm-search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:16px;height:16px;stroke:#65676b}
+  .cm-tb-btn{flex:none;background:#e7f3ff;color:#1877f2;border:none;border-radius:999px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer}
+  .cm-video{width:100%;border-radius:10px;margin:10px 0;background:#000;max-height:420px}
+  .cm-live-badge{display:inline-flex;align-items:center;gap:4px;background:#e41e3f;color:#fff;font-size:11px;font-weight:800;border-radius:6px;padding:2px 8px}
+  .cm-live-badge i{width:7px;height:7px;border-radius:50%;background:#fff;display:inline-block;animation:cmblink 1.2s infinite}
+  @keyframes cmblink{50%{opacity:.3}}
+  .cm-bottom{position:fixed;left:0;right:0;bottom:0;z-index:60;background:rgba(255,255,255,.97);border-top:1px solid #dddfe2;display:flex;justify-content:space-around;padding:6px 2px calc(6px + env(safe-area-inset-bottom))}
+  .cm-bottom a{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;color:#65676b;text-decoration:none;position:relative}
+  .cm-bottom a svg{width:22px;height:22px;stroke:#65676b;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .cm-bottom a.on{color:#1877f2}
+  .cm-bottom a.on svg{stroke:#1877f2}
+  .cm-bottom .bdg{position:absolute;top:-2px;right:-6px;background:#e41e3f;color:#fff;font-size:9px;font-weight:800;border-radius:999px;padding:1px 5px}
+  body{padding-bottom:64px}
+  .cm-post .cm-author .cm-ava,.cm-comp-ava{background:linear-gradient(135deg,#1877f2,#68BE8D)}
+  /* ===== M94：社群 FB 化——單一頂欄/全屏發文/簡約圖標/直播與個人 ===== */
+  .topbar,.footer{display:none!important}
+  .cm-tb-right{display:flex;align-items:center;gap:4px;margin-left:auto}
+  .cm-tb-btn{display:inline-flex;align-items:center;gap:6px;background:none;border:none;color:#65676b;font-size:13px;font-weight:600;padding:7px 9px;border-radius:999px;cursor:pointer;text-decoration:none}
+  .cm-tb-btn svg{width:18px;height:18px;stroke:#65676b;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .cm-tb-btn:hover{background:#f0f2f5}
+  #cmLangBtn{background:#f0f2f5;color:#1c1e21}
+  .cm-modal{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box}
+  .cm-modal-card{background:#fff;border-radius:16px;width:100%;max-width:520px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+  .cm-modal-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #e4e6eb;font-weight:700;font-size:15px;color:#1c1e21}
+  .cm-modal-x{background:none;border:none;font-size:16px;color:#65676b;cursor:pointer;padding:6px 10px}
+  .cm-modal-body{padding:16px}
+  .cm-modal-id{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .cm-modal-id .cm-ava{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#1877f2,#68BE8D);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;flex:none}
+  .cm-modal textarea{width:100%;box-sizing:border-box;min-height:140px;border:none;font-size:16px;resize:none;outline:none;line-height:1.5;color:#1c1e21;font-family:inherit}
+  .cm-modal textarea::placeholder{color:#a7a8aa}
+  .cm-modal-media{margin:6px 0}
+  .cm-media-btn{display:inline-flex;align-items:center;gap:8px;border:1px solid #dddfe2;border-radius:999px;padding:9px 16px;font-size:13px;color:#1877f2;font-weight:700;background:#fff;cursor:pointer}
+  .cm-media-btn svg{width:16px;height:16px;stroke:#1877f2;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .cm-preview{margin:10px 0}
+  .cm-preview img,.cm-preview video{max-width:100%;max-height:220px;border-radius:10px;background:#e4e6eb}
+  .cm-modal-kind{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+  .cm-modal-kind select,.cm-modal-kind input{flex:1;min-width:130px;border:1px solid #dddfe2;border-radius:8px;padding:9px;font-size:13px;background:#fff;color:#1c1e21;box-sizing:border-box}
+  .cm-modal-post{width:100%;margin-top:4px}
+  .cm-live-row{display:flex;gap:10px;overflow-x:auto;padding-bottom:2px;margin-bottom:12px;-webkit-overflow-scrolling:touch}
+  .lv-mini{flex:0 0 auto;background:#fff;border:1px solid #dddfe2;border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:8px;font-size:12px;color:#1c1e21;cursor:pointer;max-width:230px;min-width:150px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .lv-mini .lv-dot{width:9px;height:9px;border-radius:50%;background:#e41e3f;flex:none;animation:lvblink 1.2s infinite}
+  @keyframes lvblink{50%{opacity:.35}}
+  .lv-mini b{font-size:12px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cm-me{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .cm-me .cm-ava.big{width:56px;height:56px;font-size:22px;border-radius:50%;background:linear-gradient(135deg,#1877f2,#68BE8D);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;flex:none}
+  .cm-me .nm{font-weight:700;font-size:15px;color:#1c1e21}
+  .cm-me .tm{font-size:12px;color:#65676b;word-break:break-all}
+  .cm-me-stats{width:100%;display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid #e4e6eb;padding-top:10px}
+  .cm-me-stats span{background:#f0f2f5;border-radius:999px;padding:4px 12px;font-size:12px;color:#1c1e21}
+  .cm-act{display:inline-flex;align-items:center;gap:6px;background:none;border:none;color:#65676b;font-size:13px;font-weight:600;padding:8px 10px;border-radius:8px;cursor:pointer}
+  .cm-act svg{width:18px;height:18px;stroke:#65676b;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .cm-act:hover{background:#f0f2f5}
+  .cm-vwrap{position:relative;border-radius:12px;overflow:hidden;margin-top:8px;cursor:pointer}
+  .cm-vplay{position:absolute;right:8px;top:8px;background:rgba(0,0,0,.55);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;gap:4px;padding:5px 10px;border-radius:999px;pointer-events:none;z-index:2}
+</style>
+
+<div class="cm-wrap">
+  <div class="cm-topbar"><div class="cm-topbar-in">
+    <div class="cm-tbl">
+      <svg viewBox="0 0 28 28"><path d="M14 4 C8 4 5 9 5 14 c0 4 2 7 4 9 v2 h10 v-2 c2-2 4-5 4-9 C23 9 20 4 14 4 Z"/><circle cx="14" cy="13" r="3.4"/><path d="M10.5 21.5 h7"/></svg>
+      <span data-i18n="cm.brand">TAC 社群</span>
+    </div>
+    <div class="cm-search">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21 L16.5 16.5"/></svg>
+      <input id="cmSearch" placeholder="搜尋貼文…" oninput="filterFeed()">
+    </div>
+    <div class="cm-tb-right">
+      <a class="cm-tb-btn" href="/auth/login"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21 C4 16 7.5 13.5 12 13.5 C16.5 13.5 20 16 20 21"/></svg><span data-i18n="cm.login">登入</span></a>
+      <button class="cm-tb-btn" onclick="location='/'"><svg viewBox="0 0 24 24"><path d="M19 12 H6 M11 6 L5 12 L11 18"/></svg><span data-i18n="cm.back">返回</span></button>
+      <button class="cm-tb-btn" id="cmLangBtn" onclick="TAC_I18N.toggle()">EN</button>
+    </div>
+  </div></div>
+
+  <div class="cm-layout">
+    <!-- 左：個人身份 -->
+    <aside class="cm-side-l">
+      <div class="cm-card">
+        <h3><svg viewBox="0 0 24 24" style="width:16px;height:16px;vertical-align:-3px;stroke:#1877f2;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;margin-right:6px"><circle cx="12" cy="8" r="4"/><path d="M4 21 C4 16 7.5 13.5 12 13.5 C16.5 13.5 20 16 20 21"/></svg>我的身份</h3>
+        <div class="cm-id">
+          <input id="myAddr" placeholder="enter wallet address..." value="">
+          <button onclick="setIdentity()">切換</button>
+        </div>
+        <p style="font-size:12px;color:#65676b;margin:0;line-height:1.6">社群身分＝TAC 錢包地址（tx0 開頭）。發文、按讚、留言、市集與廣告皆以該地址記錄。</p>
+      </div>
+      <div class="cm-card" style="margin-top:12px">
+        <h3><svg viewBox="0 0 24 24" style="width:16px;height:16px;vertical-align:-3px;stroke:#1b8a3a;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;margin-right:6px"><path d="M3 7 V19 C3 20.1 3.9 21 5 21 H19 C20.1 21 21 20.1 21 19 V14 M3 7 C3 5.9 3.9 5 5 5 H18 C19.1 5 20 5.9 20 7 V8 M16 15 H16.01"/></svg>快捷入金至交易所</h3>
+        <div style="display:flex;gap:6px">
+          <input id="depAmt" type="number" min="0" placeholder="TACM" style="flex:1;min-width:0;border:1px solid #dddfe2;border-radius:8px;padding:8px;font-size:13px">
+          <button class="cm-topbtn" style="background:#1877f2;color:#fff" onclick="depositEx()">轉入</button>
+        </div>
+        <p id="depMsg" style="font-size:12px;color:#65676b;margin:8px 0 0;word-break:break-all">—</p>
+      </div>
+      <!-- M73-B：互動積分與鏈上獎勵 -->
+      <div class="cm-card" style="margin-top:12px">
+        <h3><svg viewBox="0 0 24 24" style="width:16px;height:16px;vertical-align:-3px;stroke:#f0b90b;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;margin-right:6px"><path d="M12 3 L14.2 8.6 L20 9 L15.6 12.7 L17.2 18.6 L12 15.4 L6.8 18.6 L8.4 12.7 L4 9 L9.8 8.6 Z"/></svg>互動積分與鏈上獎勵</h3>
+        <div class="cm-id">
+          <input id="rewardAddr" placeholder="wallet address" value="">
+          <button onclick="loadRewards()">查詢</button>
+        </div>
+        <p class="cm-reward-line" id="myPts">—</p>
+        <p class="cm-reward-line" id="rwMeta">—</p>
+        <button class="cm-post-btn" style="width:100%" onclick="settleNow()">立即結算</button>
+        <div class="cm-reward-top" id="rwTop"></div>
+      </div>
+    </aside>
+
+    <!-- 中：動態牆 -->
+    <section>
+      <div class="cm-card">
+        <h3><svg viewBox="0 0 24 24" style="width:16px;height:16px;vertical-align:-3px;stroke:#1877f2;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;margin-right:6px"><path d="M4 20 L4 15.5 L15.5 4 C16.9 2.6 19.1 2.6 20.5 4 C21.9 5.4 21.9 7.6 20.5 8.5 L9 20 Z"/><path d="M13.5 6 L18 10.5"/></svg>發佈動態 / 商品</h3>
+        <div id="stories" class="cm-stories" style="display:none"></div>
+        <div class="cm-composer">
+          <div class="cm-comp-top">
+            <div class="cm-comp-ava" id="compAva">?</div>
+            <div class="cm-comp-main">
+              <div class="cm-comp-input" id="compInput" onclick="openModal()"><svg viewBox="0 0 24 24" style="width:18px;height:18px;vertical-align:-3px;stroke:#65676b;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;margin-right:6px"><path d="M4 20 L4 15.5 L15.5 4 C16.9 2.6 19.1 2.6 20.5 4 C21.9 5.4 21.9 7.6 20.5 8.5 L9 20 Z"/><path d="M13.5 6 L18 10.5"/></svg>在想些什麼？</div>
+              <div style="display:none" id="compPanel">
+                <div class="rich-bar">
+                  <button type="button" class="rich-btn" onclick="richCmd('bold')" title="Bold"><b>B</b></button>
+                  <button type="button" class="rich-btn" onclick="richCmd('italic')" title="Italic"><i>I</i></button>
+                  <button type="button" class="rich-btn" onclick="richCmd('formatBlock','h2')" title="Heading">H2</button>
+                  <button type="button" class="rich-btn" onclick="richLink()" title="Link"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1.5 1.5"/><path d="M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1.5-1.5"/></svg></button>
+                  <button type="button" class="rich-btn" onclick="toggleImgInput()" title="Image"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M3 17l5-5 3 3 4-4 6 6"/></svg></button>
+                </div>
+                <div class="cm-imgwrap" id="cmImgWrap" style="display:none">
+                  <input id="postImg" type="url" placeholder="Image URL (https://...)" style="width:100%;box-sizing:border-box;border:1px solid #dddfe2;border-radius:8px;padding:9px;font-size:13px">
+                </div>
+                <div id="postContent" class="cm-editor" contenteditable="true" data-placeholder="Share mining daily & ideas... (market: item description)"></div>
+                <div class="cm-imgwrap" id="cmVidWrap" style="display:none">
+                  <input id="postVid" type="url" placeholder="Video URL (https://...mp4 / YouTube link)" style="width:100%;box-sizing:border-box;border:1px solid #dddfe2;border-radius:8px;padding:9px;font-size:13px">
+                </div>
+                <div class="cm-side">
+                  <select id="postKind">
+                    <option value="post">動態</option>
+                    <option value="video">影片</option>
+                    <option value="live">直播</option>
+                    <option value="market">市集商品</option>
+                  </select>
+                  <input id="postPrice" type="number" min="0" step="0.01" placeholder="price TACM (market)">
+                  <button class="cm-post-btn" onclick="publish()">發布</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="lb" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:999;align-items:center;justify-content:center;cursor:zoom-out" onclick="closeLb()">
+          <img id="lbImg" style="max-width:94vw;max-height:88vh;border-radius:12px;object-fit:contain">
+        </div>
+        <div style="display:flex;gap:6px;margin-top:8px">
+          <button class="cm-feedtab on" id="tabAll" onclick="tabFeed('all')">全部動態</button>
+          <button class="cm-feedtab" id="tabFollow" onclick="tabFeed('following')">追蹤中</button>
+        </div>
+        <div id="postMsg" class="cm-msg"></div>
+      </div>
+      <div id="feed" style="margin-top:12px"></div>
+    </section>
+
+  </div>
+</div>
+
+  <!-- M94：FB 全屏發文 -->
+  <div class="cm-modal" id="cmModal" style="display:none">
+    <div class="cm-modal-card">
+      <div class="cm-modal-head"><span data-i18n="cm.newPost">建立貼文</span><button class="cm-modal-x" onclick="closeModal()" aria-label="close"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+      <div class="cm-modal-body">
+        <div class="cm-modal-id"><div class="cm-ava" id="mava">?</div><b id="mname" style="color:#1c1e21">—</b></div>
+        <textarea id="cmText" placeholder="在想些什麼？"></textarea>
+        <div class="cm-modal-media">
+          <button type="button" class="cm-media-btn" onclick="document.getElementById('cmFile').click()"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M5 19 L10 13 L14 17 L17 13 L21 18"/></svg><span data-i18n="cm.upload">上傳圖片/影片</span></button>
+          <input type="file" id="cmFile" accept="image/*,video/*" style="display:none" onchange="uploadMedia(this)">
+          <span id="cmMediaTag" style="font-size:12px;color:#65676b;margin-left:10px"></span>
+        </div>
+        <div id="cmPreview" class="cm-preview"></div>
+        <div class="cm-modal-kind">
+          <select id="postKindM">
+            <option value="post" data-i18n="cm.kPost">動態</option>
+            <option value="video" data-i18n="cm.kVideo">影片</option>
+            <option value="live" data-i18n="cm.kLive">直播</option>
+            <option value="market" data-i18n="cm.kMarket">市集商品</option>
+          </select>
+          <input id="postPriceM" placeholder="市集價格 TACM" style="display:none">
+        </div>
+        <button class="cm-post-btn cm-modal-post" onclick="publish()" data-i18n="cm.post">發布</button>
+        <div id="mMsg" style="font-size:12px;color:#e41e3f;margin-top:8px"></div>
+      </div>
+    </div>
+  </div>
+  <nav class="cm-bottom">
+    <a href="/community" class="on"><svg viewBox="0 0 24 24"><path d="M3 10 L12 3 L21 10 V21 H15 V14 H9 V21 H3 Z"/></svg><span data-i18n="cm.home">首頁</span></a>
+    <a href="/community/videos"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 11 L21 7.5 V16.5 L16 13"/></svg><span data-i18n="cm.video">影片</span></a>
+    <a href="/community/friends"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20 C2.5 15.5 5 13 9 13 C13 13 15.5 15.5 15.5 20"/><circle cx="17" cy="9" r="2.8"/><path d="M16 13.5 C19 13.5 21.5 15.5 21.5 19"/></svg><span data-i18n="cm.friends">好友</span></a>
+    <a href="/community/market"><svg viewBox="0 0 24 24"><path d="M4 7 H20 L18.5 16 H5.5 Z"/><circle cx="9" cy="20" r="1.6"/><circle cx="15.5" cy="20" r="1.6"/><path d="M7 10 V6 C7 3.8 8.8 2.5 10.5 2.5 C12 2.5 13 3.6 13 5"/></svg><span data-i18n="cm.market">市集</span></a>
+    <a href="/community/notifications"><svg viewBox="0 0 24 24"><path d="M12 3 C8 3 6 6 6 9.5 V15 L4 17 H20 L18 15 V9.5 C18 6 16 3 12 3 Z"/><path d="M9.5 20 C10 21.5 11 22 12 22 C13 22 14 21.5 14.5 20"/></svg><span data-i18n="cm.notify">通知</span><span class="bdg" id="nbPts2">0</span></a>
+    <a href="/community/profile"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21 C4 16 7.5 13.5 12 13.5 C16.5 13.5 20 16 20 21"/></svg><span data-i18n="cm.me">個人</span></a>
+  </nav>
+
+<!-- 市集購買底單 -->
+<div class="cm-buy" id="buySheet">
+  <div class="sheet">
+    <h3><svg viewBox="0 0 24 24" style="width:16px;height:16px;vertical-align:-3px;stroke:#e41e3f;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;margin-right:6px"><path d="M4 7 H20 L18.5 16 H5.5 Z"/><circle cx="9" cy="20" r="1.6"/><circle cx="15.5" cy="20" r="1.6"/><path d="M7 10 V6 C7 3.8 8.8 2.5 10.5 2.5 C12 2.5 13 3.6 13 5"/></svg>購買商品（TACM 鏈上轉帳）</h3>
+    <div id="buyInfo"></div>
+    <button class="close" onclick="closeBuy()">關閉</button>
+  </div>
+</div>
+<div class="cm-buy" id="reviewSheet">
+  <div class="sheet">
+    <h3><svg viewBox="0 0 24 24" style="width:16px;height:16px;vertical-align:-3px;stroke:#f0b90b;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;margin-right:6px"><path d="M12 3 L14.2 8.6 L20 9 L15.6 12.7 L17.2 18.6 L12 15.4 L6.8 18.6 L8.4 12.7 L4 9 L9.8 8.6 Z"/></svg>評價市集商品</h3>
+    <input type="hidden" id="reviewId">
+    <div class="row">評分（1-5）</div>
+    <select id="reviewStars" style="width:100%;padding:8px;border-radius:10px;border:1px solid #dddfe2;margin-bottom:10px">
+      <option value="5">5 星 — 非常好</option>
+      <option value="4">4 星 — 好</option>
+      <option value="3">3 星 — 普通</option>
+      <option value="2">2 星 — 不佳</option>
+      <option value="1">1 星 — 很差</option>
+    </select>
+    <textarea id="reviewComment" placeholder="Comment (optional)" style="width:100%;box-sizing:border-box;min-height:64px;border:1px solid #dddfe2;border-radius:10px;padding:8px"></textarea>
+    <div class="row" id="reviewMsg"></div>
+    <button class="cm-act cm-buybtn" style="width:100%" onclick="submitReview()"><svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M4 12.5 L9.5 18 L20 6.5"/></svg>送出評價</button>
+    <button class="close" onclick="closeReview()">關閉</button>
+  </div>
+</div>
+
+<script>
+// M95：首頁＝全部動態牆；底部導航跳獨立頁（影片/好友/通知/個人）。
+function tabFeed(t){
+  if(t==='all'){ scope=''; document.getElementById('tabAll').classList.add('on'); document.getElementById('tabFollow').classList.remove('on'); refresh(); }
+  else if(t==='following'){ scope='following'; document.getElementById('tabAll').classList.remove('on'); document.getElementById('tabFollow').classList.add('on'); refresh(); }
+}
+function filterFeed(){
+  var q = document.getElementById('cmSearch').value.trim().toLowerCase();
+  var cards = document.querySelectorAll('#feed .cm-post');
+  cards.forEach(function(c){
+    var txt = (c.innerText||'').toLowerCase();
+    c.style.display = (q==='' || txt.indexOf(q)>=0) ? '' : 'none';
+  });
+}
+// 影片/直播 kind 時顯示影片網址輸入。
+document.addEventListener('change', function(e){
+  if(e.target && e.target.id==='postKind'){
+    var k = e.target.value;
+    document.getElementById('cmVidWrap').style.display = (k==='video'||k==='live') ? '' : 'none';
+    document.getElementById('postPrice').parentElement.style.display = (k==='market') ? '' : 'none';
+  }
+});
+
+// M31：RPC 預設同源（同埠合併模式 RPC 即 web 埠）；仍可用 ?rpc=端口 覆蓋。
+function get(p){ return fetch(p).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); }); }
+function post(p,b){ return fetch(p, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(b||{})}).then(function(r){ if(!r.ok) return r.json().then(function(j){throw new Error(j.error||r.status)}); return r.json(); }); }
+var me = '';
+function shortAddr(a){ if(!a) return '—'; if(a.length<=16) return a; return a.slice(0,10)+'…'+a.slice(-6); }
+function timeAgo(ts){ var d=Date.now()/1000-ts; if(d<60) return '剛剛'; if(d<3600) return Math.floor(d/60)+' 分鐘前'; if(d<86400) return Math.floor(d/3600)+' 小時前'; return Math.floor(d/86400)+' 天前'; }
+function setIdentity(){ me = document.getElementById('myAddr').value.trim(); localStorage.setItem('cm_id', me); refresh(); }
+function ensureMe(){
+  refreshAva(); if(!me){ me=(localStorage.getItem('cm_id')||TAC_TE('')); document.getElementById('myAddr').value=me; if(!me){ document.getElementById('postMsg').textContent='請先輸入你的錢包地址（tx0 開頭）'; return false; } } return true; }
+
+function renderFeed(fd){
+  var items = (fd.items||[]).filter(function(p){ return p.kind!=='market'; });
+  var ads = fd.ads||[];
+  var el = document.getElementById('feed');
+  if(!items.length && !ads.length){ el.innerHTML='<div class="cm-card cm-empty">尚無動態，來發第一篇吧！</div>'; return; }
+  var out = []; var ai = 0;
+  items.forEach(function(p, i){
+    out.push(postCard(p));
+    if((i+1)%4===0 && ai<ads.length){ out.push(adCard(ads[ai++])); }
+  });
+  while(ai<ads.length && out.length>=4){ out.push(adCard(ads[ai++])); }
+  el.innerHTML = out.join('');
+  refreshFollowBtns();
+  if(window._cmTab==='video'){
+    document.querySelectorAll('#feed .cm-post').forEach(function(c){
+      c.style.display = (c.querySelector('video')||c.querySelector('.cm-live-badge')) ? '' : 'none';
+    });
+  }
+  return;
+  function postCard(p){
+    var market = p.kind==='market';
+    var likeOn = '';
+    var price = p.price_tacm ? '<div class="cm-price">'+Number(p.price_tacm).toLocaleString('en-US',{maximumFractionDigits:4})+' TACM</div>' : '';
+    var buyBtn = market ? '<button class="cm-act" onclick="buyIntent('+p.id+')"><svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:#65676b;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M4 7 H20 L18.5 16 H5.5 Z"/><circle cx="9" cy="20" r="1.6"/><circle cx="15.5" cy="20" r="1.6"/><path d="M7 10 V6 C7 3.8 8.8 2.5 10.5 2.5 C12 2.5 13 3.6 13 5"/></svg>購買</button>' : '';
+    var tagTxt = p.kind==='market' ? '市集' : (p.kind==='video' ? '<span class="cm-tag video"><svg viewBox="0 0 24 24" style="width:12px;height:12px;vertical-align:-1px;stroke:#1877f2;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;margin-right:3px"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 11 L21 7.5 V16.5 L16 13"/></svg>影片</span>' : (p.kind==='live' ? '<span class="cm-live-badge"><i></i>直播</span>' : '動態'));
+    var tagCls = p.kind==='market' ? ' market' : '';
+    var vidHtml = p.video_url ? '<div class="cm-vwrap" onclick="openVideo(\''+escapeHtml(p.video_url)+'\')"><video class="cm-video" src="'+escapeHtml(p.video_url)+'" controls preload="metadata" playsinline></video><span class="cm-vplay"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M8 5 L19 12 L8 19 Z"/></svg>'+TAC_TE('開啟影片')+'</span></div>' : '';
+    // M73-B：追蹤按鈕（非本人貼文）。
+    var followBtn = (me && p.address && p.address!==me) ? '<button class="cm-follow" data-a="'+p.address+'" onclick="toggleFollow(this,\''+p.address+'\')">追蹤</button>' : '';
+    var avaHtml = p.avatar_url
+      ? '<div class="cm-ava photo"><img src="'+escapeHtml(p.avatar_url)+'" alt=""></div>'
+      : '<div class="cm-ava">'+(p.author_name||p.author||p.address||TAC_TE('T')).slice(0,1).toUpperCase()+'</div>';
+    var nmTxt = escapeHtml(p.author_name||'') || shortAddr(p.address);
+    var op = (me && p.address===me)
+      ? '<span class="cm-op"><button onclick="editPost('+p.id+')">'+TAC_TE('編輯')+'</button><button class="del" onclick="delPost('+p.id+')">'+TAC_TE('刪除')+'</button></span>'
+      : '';
+    return '<div class="cm-card cm-post">'+
+      '<div class="cm-author">'+avaHtml+
+      '<div><div class="nm">'+nmTxt+'</div><div class="tm">'+timeAgo(p.created_at)+' · <span class="cm-tag'+tagCls+'">'+tagTxt+'</span></div></div>'+op+followBtn+'</div>'+
+      '<div class="cm-body">'+(p.content||TAC_TE(''))+'</div>'+
+      (p.image_url?'<img class="cm-img" src="'+escapeHtml(p.image_url)+'" loading="lazy" onclick="lightbox(this.src)" alt="">':'')+
+      vidHtml+
+      (market?stars:'')+(market?price:'')+
+      '<div class="cm-actions">'+
+      '<button class="cm-act" onclick="likePost('+p.id+',this)"><svg viewBox="0 0 24 24"><path d="M7 21 V10 M3 12 V19 C3 20 4 21 5 21 H17 C18 21 19 20 19.5 18.5 L21 10 C21 9 20.5 8 19.5 8 H14 L15 4.5 C15.5 3 14.5 2 13.5 2 H12.5 L8 9 V21"/></svg>讚 <span>'+p.likes+'</span></button>'+
+      '<button class="cm-act" onclick="toggleComments('+p.id+',this)"><svg viewBox="0 0 24 24"><path d="M21 12 C21 16 17.5 19 12 19 C10.5 19 9 18.7 7.7 18.2 L4 20 L5.3 16.5 C3.9 15.3 3 13.8 3 12 C3 8 6.5 5 12 5 C17.5 5 21 8 21 12 Z"/></svg>留言 <span>'+p.comments+'</span></button>'+
+      '<button class="cm-act" onclick="sharePost('+p.id+')"><svg viewBox="0 0 24 24"><path d="M12 3 L20 9 L12 15 L12 11 C8 11 5 12.5 3.5 16 C4 12 6.5 9 12 9 Z"/></svg>分享</button>'+
+      buyBtn+
+      '</div>'+
+      '<div class="cm-comments" id="cmt-'+p.id+'"><div id="cmtlist-'+p.id+'"></div>'+
+      '<div class="cm-comadd"><input id="cmtin-'+p.id+'" placeholder="Write a comment..."><button onclick="addComment('+p.id+')">送出</button></div></div>'+
+      '</div>';
+  }
+
+  function adCard(a){
+    trackImp(a.id);
+    var media = '';
+    if(a.media_url){
+      media = /\.(mp4|webm|m3u8)(\?|$)/i.test(a.media_url)
+        ? '<div class="cm-vwrap" onclick="openVideo(\''+escapeHtml(a.media_url)+'\')"><video class="cm-video" src="'+escapeHtml(a.media_url)+'" controls preload="metadata" playsinline></video></div>'
+        : '<img class="cm-img" src="'+escapeHtml(a.media_url)+'" loading="lazy" alt="">';
+    }
+    return '<div class="cm-card cm-post cm-adpost">'+
+      '<div class="cm-adhead"><svg viewBox="0 0 24 24" style="width:15px;height:15px;vertical-align:-3px;stroke:#9c27b0;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;margin-right:5px"><path d="M3 11 V15 H5 L9 19 V7 L5 11 Z"/><path d="M13 8 C15 9.5 15 14.5 13 16"/><path d="M17 5 C20.5 8 20.5 16 17 19"/></svg>Sponsored · TAC 廣告 · 曝光 '+a.impressions+'</div>'+
+      '<div class="cm-body" style="font-weight:700;font-size:15px">'+escapeHtml(a.title)+'</div>'+
+      (a.body?'<div class="cm-body">'+escapeHtml(a.body)+'</div>':'')+
+      media+
+      '<div class="cm-actions">'+
+      '<button class="cm-act" onclick="adClick('+a.id+',\''+escapeHtml(a.target||'')+'\')"><svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:#9c27b0;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;margin-right:4px"><path d="M4 12 H20 M14 6 L20 12 L14 18"/></svg>'+TAC_TE('了解更多')+'</button>'+
+      '</div></div>';
+  }
+}
+function trackImp(id){ try{ post('/api/community/ads/'+id+'/impression', {address:me}); }catch(e){} }
+function adClick(id, target){ try{ post('/api/community/ads/'+id+'/click', {address:me}); }catch(e){} if(target){ window.open(target,'_blank'); } }
+function refreshFollowBtns(){
+  if(!me) return;
+  get('/api/community/following?address='+encodeURIComponent(me)).then(function(d){
+    var set = {};
+    (d.items||[]).forEach(function(a){ set[a]=1; });
+    document.querySelectorAll('.cm-follow').forEach(function(btn){
+      var a = btn.getAttribute('data-a');
+      if(!a) return;
+      if(set[a]){ btn.classList.add('on'); btn.textContent = TAC_TE('已追蹤'); }
+      else { btn.classList.remove('on'); btn.textContent = TAC_TE('追蹤'); }
+    });
+  }).catch(function(){});
+}
+function toggleFollow(btn, addr){
+  if(!ensureMe()) return;
+  var on = btn.classList.contains('on');
+  var m = on ? 'DELETE' : 'POST';
+  fetch('/api/community/follow', {method:m, headers:{'Content-Type':'application/json'}, body: JSON.stringify({follower:me, followee:addr})})
+    .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function(){ refreshFollowBtns(); if(scope==='following') refresh(); })
+    .catch(function(e){ alert(TAC_TE('操作失敗：')+e); });
+}
+var scope = '';
+function setScope(v){
+  scope = v;
+  document.getElementById('tabAll').classList.toggle('on', v==='');
+  document.getElementById('tabFollow').classList.toggle('on', v==='following');
+  refresh();
+}
+function loadFeed(){
+  var q = scope==='following' ? '?scope=following&address='+encodeURIComponent(me||'') : '';
+  return get('/api/community/feed'+q);
+}
+// M73-B：我的積分／排行／結算。
+function loadRewards(){
+  var addr = document.getElementById('rewardAddr').value.trim() || me || (localStorage.getItem('cm_id')||'');
+  if(!addr){ alert(TAC_TE('請先輸入錢包地址')); return; }
+  get('/api/community/rewards?address='+encodeURIComponent(addr)).then(function(d){
+    document.getElementById('myPts').textContent = TAC_TE('我的積分：') + d.my_points + ' 分';
+    var nb = d.my_points || 0;
+    if(document.getElementById('nbPts')) document.getElementById('nbPts').textContent = nb;
+    if(document.getElementById('nbPts2')) document.getElementById('nbPts2').textContent = nb;
+    document.getElementById('rwMeta').textContent = TAC_TE('結算週期：每 ') + d.interval + TAC_TE(' 塊／每期 ') + d.per_period + ' TACM · ' + TAC_TE('已結算 ') + d.period + TAC_TE(' 期');
+    var top = d.top || [];
+    var html = '<div style="font-weight:700;font-size:12px;color:#1c1e21;margin-bottom:4px">'+TAC_TE('積分排行榜')+'</div>';
+    if(!top.length){ html += '<div class="cm-empty">'+TAC_TE('暫無積分')+'</div>'; }
+    top.slice(0,10).forEach(function(r, i){
+      html += '<div class="cm-rt-item"><span>'+(i+1)+'.</span><span class="mono-s" style="flex:1">'+shortAddr(r.address)+'</span><b>'+r.points+' 分</b></div>';
+    });
+    document.getElementById('rwTop').innerHTML = html;
+  }).catch(function(e){ alert(TAC_TE('查詢失敗：')+e); });
+}
+function settleNow(){
+  post('/api/community/settle').then(function(d){
+    alert(TAC_TE('結算完成，') + d.settled + TAC_TE(' 位成員獲得鏈上獎勵'));
+    loadRewards();
+  }).catch(function(e){ alert(TAC_TE('結算失敗：')+e); });
+}
+function openVideo(u){ window.open(u, '_blank'); }
+function escapeHtml(s){ return (s||TAC_TE('')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function richCmd(cmd, arg){
+  var ed = document.getElementById('postContent');
+  ed.focus();
+  document.execCommand(cmd, false, arg||null);
+}
+function richLink(){
+  var url = prompt('Link URL (http/https):');
+  if(url && /^https?:\/\//i.test(url)){ document.execCommand('createLink', false, url); }
+}
+function starsHTML(avg, n, pid){
+  if(!n){ return '<span class="cm-stars" onclick="openReviews(event,'+pid+')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M12 3l2.8 6 6.2.6-4.6 4.2 1.3 6.2L12 17l-5.7 3 1.3-6.2L3 9.6 9.2 9 12 3z"/></svg><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M12 3l2.8 6 6.2.6-4.6 4.2 1.3 6.2L12 17l-5.7 3 1.3-6.2L3 9.6 9.2 9 12 3z"/></svg><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M12 3l2.8 6 6.2.6-4.6 4.2 1.3 6.2L12 17l-5.7 3 1.3-6.2L3 9.6 9.2 9 12 3z"/></svg><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M12 3l2.8 6 6.2.6-4.6 4.2 1.3 6.2L12 17l-5.7 3 1.3-6.2L3 9.6 9.2 9 12 3z"/></svg><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M12 3l2.8 6 6.2.6-4.6 4.2 1.3 6.2L12 17l-5.7 3 1.3-6.2L3 9.6 9.2 9 12 3z"/></svg> <span style="color:#a7a8aa">(0)</span></span>'; }
+  var full = Math.round(avg);
+  var s = '';
+  for(var i=1;i<=5;i++){ s += (i<=full)?'<svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:#f0b90b;fill:#f0b90b"><path d="M12 3 L14.2 8.6 L20 9 L15.6 12.7 L17.2 18.6 L12 15.4 L6.8 18.6 L8.4 12.7 L4 9 L9.8 8.6 Z"/></svg>':'<svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:#ced0d4;fill:none"><path d="M12 3 L14.2 8.6 L20 9 L15.6 12.7 L17.2 18.6 L12 15.4 L6.8 18.6 L8.4 12.7 L4 9 L9.8 8.6 Z"/></svg>'; }
+  return '<span class="cm-stars" onclick="openReviews(event,'+pid+')">'+s+' <span style="color:#a7a8aa">('+n+')</span></span>';
+}
+function openReviews(ev, id){
+  ev.stopPropagation();
+  get('/api/community/market/'+id+'/reviews').then(function(d){
+    var list = (d.items||[]);
+    var html = list.map(function(r){
+      return '<div style="padding:8px 0;border-bottom:1px solid #e4e6eb"><div style="color:#f0b90b">'+'<svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:#f0b90b;fill:#f0b90b"><path d="M12 3 L14.2 8.6 L20 9 L15.6 12.7 L17.2 18.6 L12 15.4 L6.8 18.6 L8.4 12.7 L4 9 L9.8 8.6 Z"/></svg>'.repeat(r.rating)+'</div><div style="font-size:12px;color:#65676b">'+shortAddr(r.address)+' · '+timeAgo(r.created_at)+'</div>'+(r.comment?'<div style="font-size:13px;margin-top:4px">'+escapeHtml(r.comment)+'</div>':'')+'</div>';
+    }).join('') || '<div style="padding:10px 0;color:#65676b">尚無評價</div>';
+    alert('<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg> '+ (curLang&&curLang()==='zh'?'評價列表':'Reviews') + ' (' + list.length + ')\n\n' + html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' '));
+  }).catch(function(){});
+}
+function openReview(id){
+  if(!ensureMe()) return;
+  document.getElementById('reviewSheet').classList.add('open');
+  document.getElementById('reviewId').value = id;
+  document.getElementById('reviewStars').value = 5;
+  document.getElementById('reviewComment').value = '';
+  document.getElementById('reviewMsg').textContent = '';
+}
+function submitReview(){
+  var id = document.getElementById('reviewId').value;
+  var rating = parseInt(document.getElementById('reviewStars').value||'5', 10);
+  var comment = document.getElementById('reviewComment').value.trim();
+  post('/api/community/market/'+id+'/review', {address:me, rating:rating, comment:comment})
+    .then(function(){ document.getElementById('reviewSheet').classList.remove('open'); refresh(); })
+    .catch(function(e){ document.getElementById('reviewMsg').textContent='評價失敗：'+e; });
+}
+function closeReview(){ document.getElementById('reviewSheet').classList.remove('open'); }
+function openComposer(){
+  var inp = document.getElementById('compInput');
+  var panel = document.getElementById('compPanel');
+  var ed = document.getElementById('postContent');
+  if(inp) inp.classList.add('on');
+  if(panel) panel.style.display='block';
+  if(ed){ ed.style.display='block'; ed.focus(); }
+}
+function openModal(){
+  refreshAva();
+  document.getElementById('mava').textContent = (me||'?').slice(0,1).toUpperCase();
+  document.getElementById('mname').textContent = shortAddr(me)||'—';
+  document.getElementById('cmModal').style.display='flex';
+  setTimeout(function(){ document.getElementById('cmText').focus(); }, 60);
+}
+function closeModal(){
+  document.getElementById('cmModal').style.display='none';
+  window._cmMediaUrl='';
+  document.getElementById('cmPreview').innerHTML='';
+  document.getElementById('cmMediaTag').textContent='';
+  document.getElementById('cmFile').value='';
+  document.getElementById('mMsg').textContent='';
+  document.getElementById('postPriceM').style.display='none';
+  document.getElementById('cmText').value='';
+}
+document.addEventListener('change', function(e){
+  if(e.target && e.target.id==='postKindM'){
+    document.getElementById('postPriceM').style.display = (e.target.value==='market') ? '' : 'none';
+  }
+});
+function uploadMedia(inp){
+  if(!inp.files || !inp.files.length) return;
+  var f = inp.files[0];
+  if(f.size > 64*1024*1024){ alert('檔案超過 64MB 上限'); inp.value=''; return; }
+  var fd = new FormData();
+  fd.append('file', f);
+  fetch('/api/upload', {method:'POST', body: fd})
+    .then(function(r){ if(!r.ok) return r.json().then(function(j){ throw new Error(j.error||r.status); }); return r.json(); })
+    .then(function(d){
+      window._cmMediaUrl = d.url;
+      document.getElementById('cmMediaTag').textContent = f.name;
+      var pv = document.getElementById('cmPreview');
+      pv.innerHTML = (d.type.indexOf('video')>=0)
+        ? '<video src="'+d.url+'" controls preload="metadata" playsinline></video>'
+        : '<img src="'+d.url+'" alt="">';
+      var kindSel = document.getElementById('postKindM');
+      if(d.type.indexOf('video')>=0 && kindSel.value==='post'){ kindSel.value='video'; }
+    })
+    .catch(function(e){ document.getElementById('mMsg').textContent='上傳失敗：'+e; });
+}
+function closeComposer(){
+  var inp = document.getElementById('compInput');
+  var panel = document.getElementById('compPanel');
+  var ed = document.getElementById('postContent');
+  if(ed && (ed.innerText||'').trim()===''){ if(inp) inp.classList.remove('on'); if(panel) panel.style.display='none'; if(ed) ed.style.display='none'; }
+}
+function refreshAva(){
+  var el = document.getElementById('compAva');
+  if(el && me){ el.textContent = (me||'?').slice(0,1).toUpperCase(); }
+}
+function publish(){
+  if(!ensureMe()) return;
+  var kind = document.getElementById('postKindM').value;
+  var content = (document.getElementById('cmText').value||'').trim();
+  var mediaUrl = (window._cmMediaUrl||'').trim();
+  if(!content && !mediaUrl){ document.getElementById('mMsg').textContent='內容不可為空'; return; }
+  if(kind==='market' && !(parseFloat(document.getElementById('postPriceM').value)>0)){ document.getElementById('mMsg').textContent='市集請填價格'; return; }
+  if((kind==='video'||kind==='live') && !mediaUrl){ document.getElementById('mMsg').textContent='請先上傳圖片/影片'; return; }
+  var pprice = kind==='market' ? (parseFloat(document.getElementById('postPriceM').value)||0) : null;
+  var isVideo = (kind==='video'||kind==='live');
+  post('/api/community/post', {address:me, kind:kind, content:content, image_url: (mediaUrl&&!isVideo)?mediaUrl:null, video_url: isVideo?mediaUrl:null, price_tacm:pprice})
+    .then(function(){ closeModal(); refresh(); })
+    .catch(function(e){ document.getElementById('mMsg').textContent='發布失敗：'+e; });
+}
+function sharePost(id){
+  var u = location.origin + '/community?post=' + id;
+  var t = (curLang&&curLang()==='zh') ? '已複製貼文連結' : 'Post link copied';
+  try { navigator.clipboard.writeText(u); alert(t); } catch(e){ prompt('Post link:', u); }
+}
+function likePost(id, btn){
+  if(!ensureMe()) return;
+  post('/api/community/post/'+id+'/like', {address:me}).then(function(){ refresh(); }).catch(function(e){ alert(TAC_TE('按讚失敗：')+e); });
+}
+function toggleComments(id){
+  var box = document.getElementById('cmt-'+id);
+  box.classList.toggle('open');
+  if(box.classList.contains('open')) loadComments(id);
+}
+function loadComments(id){
+  get('/api/community/post/'+id+'/comments').then(function(d){
+    var el = document.getElementById('cmtlist-'+id);
+    el.innerHTML = (d.items||[]).map(function(c){ return '<div class="cm-com"><b>'+shortAddr(c.address)+'</b>'+escapeHtml(c.body)+'</div>'; }).join('') || '<div class="cm-com" style="color:#65676b">尚無留言</div>';
+  }).catch(function(){});
+}
+function addComment(id){
+  if(!ensureMe()) return;
+  var body = document.getElementById('cmtin-'+id).value.trim();
+  if(!body) return;
+  post('/api/community/post/'+id+'/comments', {address:me, body:body}).then(function(){ loadComments(id); document.getElementById('cmtin-'+id).value=''; refresh(); }).catch(function(e){ alert(TAC_TE('留言失敗：')+e); });
+}
+function renderMarket(items){
+  var el = document.getElementById('marketList');
+  el.innerHTML = (items||[]).map(function(p){
+    var soldTag = p.sold ? '<span class="cm-tag sold">已售出</span>' : '';
+    var btn = p.sold ? '<button class="cm-act" disabled>已售出</button>' : '<button class="cm-act" onclick="buyIntent('+p.id+')"><svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:#65676b;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M4 7 H20 L18.5 16 H5.5 Z"/><circle cx="9" cy="20" r="1.6"/><circle cx="15.5" cy="20" r="1.6"/><path d="M7 10 V6 C7 3.8 8.8 2.5 10.5 2.5 C12 2.5 13 3.6 13 5"/></svg>購買</button>';
+    return '<div class="cm-item"><div class="it-t">'+escapeHtml((p.content||TAC_TE('')).replace(/<[^>]+>/g,' ').split('\n')[0].slice(0,40))+' '+soldTag+'</div>'+
+      '<div class="it-stars">'+starsHTML(p.rating||0, p.rating_count||0)+'</div>'+
+      '<div class="it-p">'+Number(p.price_tacm||0).toLocaleString('en-US',{maximumFractionDigits:4})+'</div>'+
+      btn+' <button class="cm-act" onclick="openReview('+p.id+')"><svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:#f0b90b;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;margin-right:4px"><path d="M12 3 L14.2 8.6 L20 9 L15.6 12.7 L17.2 18.6 L12 15.4 L6.8 18.6 L8.4 12.7 L4 9 L9.8 8.6 Z"/></svg>評價</button></div>';
+  }).join('') || '<div class="cm-empty">市集尚無商品</div>';
+}
+function buyIntent(id){
+  if(!ensureMe()) return;
+  get('/api/community/market/'+id+'/buy-intent?address='+encodeURIComponent(me)).then(function(d){
+    document.getElementById('buySheet').classList.add('open');
+    document.getElementById('buyInfo').innerHTML =
+      '<div class="row">商品 ID：<b>#'+id+'</b></div>'+
+      '<div class="row">賣家地址：<b class="mono-s">'+d.to+'</b></div>'+
+      '<div class="row">金額：<b>'+Number(d.amount_tacm).toLocaleString('en-US',{maximumFractionDigits:4})+' TACM</b></div>'+
+      '<div class="row">鏈上費（2%）：<b>'+Number(d.fee_tacm||0).toLocaleString('en-US',{maximumFractionDigits:4})+' TACM</b></div>'+
+      '<div class="row">合計：<b>'+(Number(d.amount_tacm)+Number(d.fee_tacm||0)).toLocaleString('en-US',{maximumFractionDigits:4})+' TACM</b></div>'+
+      '<div class="row">備註：<b class="mono-s">'+d.memo+'</b></div>'+
+      '<button class="cm-act cm-buybtn" onclick="confirmBuy('+id+')"><svg viewBox="0 0 24 24" style="width:15px;height:15px;vertical-align:-2px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;margin-right:4px"><path d="M4 12.5 L9.5 18 L20 6.5"/></svg>確認付款（一鍵轉帳）</button>'+
+      '<div class="row" id="buyResult"></div>';
+  }).catch(function(e){ alert(TAC_TE('購買意向失敗：')+e); });
+}
+function confirmBuy(id){
+  var btn = document.querySelector('#buySheet .cm-buybtn');
+  if(btn){ btn.disabled=true; btn.textContent='處理中…'; }
+  post('/api/community/market/'+id+'/buy', {address:me}).then(function(d){
+    document.getElementById('buyResult').innerHTML =
+      '<div class="ok"><svg viewBox="0 0 24 24" style="width:15px;height:15px;vertical-align:-2px;stroke:#1b8a3a;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;margin-right:4px"><path d="M4 12.5 L9.5 18 L20 6.5"/></svg>付款成功　實付 '+Number(d.fee_tacm||0).toLocaleString('en-US',{maximumFractionDigits:4})+' TACM 鏈上費（已入資金池）</div>'+
+      '<div class="row">賣家：<b class="mono-s">'+d.to+'</b></div>'+
+      '<div class="row">memo：<b class="mono-s">'+d.memo+'</b></div>';
+    setTimeout(refresh, 600);
+  }).catch(function(e){
+    document.getElementById('buyResult').innerHTML='<div class="err"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg> '+e+'</div>';
+    if(btn){ btn.disabled=false; btn.textContent='確認付款（一鍵轉帳）'; }
+  });
+}
+function closeBuy(){ document.getElementById('buySheet').classList.remove('open'); }
+function renderAds(items){
+  var el = document.getElementById('adsList');
+  el.innerHTML = (items||[]).map(function(a){
+    var st = a.status === 'active' ? '<span class="cm-tag live">投放中</span>' : '<span class="cm-tag">待付款</span>';
+    var payBtn = (a.status !== 'active' && a.address === me) ? '<button class="cm-act" onclick="payAd('+a.id+')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="3"/><path d="M3 10h18"/></svg> 付款投放</button>' : '';
+    return '<div class="cm-ad"><div class="ad-t">'+escapeHtml(a.title)+' '+st+'</div>'+
+      (a.body?'<div class="ad-b">'+escapeHtml(a.body)+'</div>':'')+
+      '<div class="ad-m">Sponsored · 預算 '+Number(a.budget_tacm).toLocaleString('en-US',{maximumFractionDigits:4})+' TACM · '+shortAddr(a.address)+'</div>'+
+      (payBtn?('<div class="cm-actions">'+payBtn+'</div>'):'')+'</div>';
+  }).join('') || '<div class="cm-empty">尚無廣告</div>';
+}
+function payAd(id){
+  if(!ensureMe()) return;
+  if(!confirm(TAC_TE('確認支付廣告預算（TACM 全額入資金池）並開始投放？'))) return;
+  post('/api/community/ads/'+id+'/pay', {address:me}).then(function(d){
+    alert(TAC_TE('廣告已投放（ID #')+d.ad_id+TAC_TE('，')+d.amount_tacm+TAC_TE(' TACM 入資金池）'));
+    refresh();
+  }).catch(function(e){ alert(TAC_TE('付款失敗：')+e); });
+}
+function createAd(){
+  if(!ensureMe()) return;
+  var title = document.getElementById('adTitle').value.trim();
+  var budget = parseFloat(document.getElementById('adBudget').value||TAC_TE('0'));
+  var body = document.getElementById('adBody').value.trim();
+  if(!title || !(budget>0)){ alert(TAC_TE('請填寫廣告標題與預算')); return; }
+  post('/api/community/ads/create', {address:me, title:title, body:body, budget_tacm:budget}).then(function(d){
+    alert(TAC_TE('廣告已發佈（ID #')+d.ad_id+TAC_TE('）。預算 ')+d.amount_tacm+TAC_TE(' TACM 請轉至 ')+d.pay_to+TAC_TE('，備註：')+d.memo);
+    document.getElementById('adTitle').value=''; document.getElementById('adBody').value=''; document.getElementById('adBudget').value='';
+    refresh();
+  }).catch(function(e){ alert(TAC_TE('發佈失敗：')+e); });
+}
+function depositEx(){
+  if(!ensureMe()) return;
+  var amt = document.getElementById('depAmt').value.trim();
+  if(!(parseFloat(amt)>0)){ document.getElementById('depMsg').textContent='請輸入金額'; return; }
+  post('/api/community/transfer/exchange', {address:me, amount:amt}).then(function(d){
+    document.getElementById('depMsg').textContent='已轉入交易所 '+d.amount+' TACM（鏈上費 '+d.chain_fee+'）';
+  }).catch(function(e){ document.getElementById('depMsg').textContent='轉入失敗：'+e; });
+}
+
+function refresh(){
+  Promise.all([loadFeed(), get('/api/community/stats')])
+    .then(function(rs){
+      renderFeed(rs[0]);
+      if(me) loadRewards();
+    }).catch(function(e){ document.getElementById('postMsg').textContent='社群資料載入失敗（'+base+'）：'+e; });
+}
+
+get('/status').then(function(st){
+  if(!localStorage.getItem('cm_id')){ me = st.address||''; document.getElementById('myAddr').value=me; }
+  else { me = localStorage.getItem('cm_id'); document.getElementById('myAddr').value=me; }
+  refresh();
+}).catch(function(){ refresh(); });
+
+function editPost(id){
+  var txt = prompt(TAC_TE('編輯貼文內容：'), '');
+  if(txt===null) return;
+  post('/api/community/post/'+id+'/edit', {address: me, content: txt})
+    .then(function(){ alert(TAC_TE('已更新')); loadFeed(); })
+    .catch(function(e){ alert(TAC_TE('編輯失敗')+'：'+e); });
+}
+function delPost(id){
+  if(!confirm(TAC_TE('確定刪除這則貼文？'))) return;
+  post('/api/community/post/'+id+'/delete', {address: me})
+    .then(function(){ alert(TAC_TE('已刪除')); loadFeed(); })
+    .catch(function(e){ alert(TAC_TE('刪除失敗')+'：'+e); });
+}
+</script>
+{% endblock %}

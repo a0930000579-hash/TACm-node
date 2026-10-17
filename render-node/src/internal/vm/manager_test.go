@@ -266,3 +266,30 @@ func TestApplyCallGasLimit(t *testing.T) {
 		t.Fatalf("預設 gas 應成功: %+v err=%v", cr2, err)
 	}
 }
+
+// M151c：eth_call 直接呼叫 precompile 0x09（VRF）——無需合約碼。
+func TestManagerCallVRFPrecompileDirect(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "tac_evm.db")
+	m, err := NewContractManager(dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer m.Close()
+	cr, err := m.SimulateCallGas("0x0000000000000000000000000000000000000009",
+		"0x0000000000000000000000000000000000000000", []byte{0x11}, big.NewInt(0), m.defaultGas)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cr.OK || cr.Reverted {
+		t.Fatalf("VRF precompile 直接呼叫應成功: %+v", cr)
+	}
+	if len(cr.ReturnData) != 64 { // hex 32 bytes
+		t.Fatalf("VRF 輸出應 32 bytes（hex 64 字元）: %d", len(cr.ReturnData))
+	}
+	// 非 precompile 無 code 地址仍應「contract not deployed」。
+	cr2, _ := m.SimulateCallGas("0x000000000000000000000000000000000000000a",
+		"0x0000000000000000000000000000000000000000", []byte{0x11}, big.NewInt(0), m.defaultGas)
+	if cr2.OK || cr2.Error != "contract not deployed" {
+		t.Fatalf("0x0a 無 code 應 contract not deployed: %+v", cr2)
+	}
+}

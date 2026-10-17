@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}TAC Ai Assistant{% endblock %}
+{% block content %}
+<section class="pg-banner">
+  <div class="pg-txt"><h1 data-i18n="bn.ai">AI 助手</h1><p data-i18n="bn.aiSub">鏈上問答</p></div>
+  <svg viewBox="0 0 40 40" class="pg-art"><rect x="8" y="10" width="24" height="16" rx="6" fill="none" stroke="#68BE8D" stroke-width="2.2"/><circle cx="14" cy="18" r="2" fill="#68BE8D"/><circle cx="20" cy="18" r="2" fill="#68BE8D"/><circle cx="26" cy="18" r="2" fill="#68BE8D"/><path d="M14 26 h12 M16 26 v4 M24 26 v4" stroke="#68BE8D" stroke-width="1.8" stroke-linecap="round"/></svg>
+</section>
+<style>
+  /* M73-A：AI 助手頁（鏈上智能助手，App 化） */
+  body { background: linear-gradient(180deg,#e8f7ee 0,#ffffff 40%,#f0f2f5 40%); min-height:100vh; }
+  .ai-wrap{max-width:860px;margin:0 auto;padding-bottom:90px}
+  .ai-head{background:linear-gradient(135deg,#1877f2,#0f9df5);border-radius:18px;padding:20px 22px;color:#fff;display:flex;align-items:center;gap:14px;margin:14px 0;box-shadow:0 6px 20px rgba(15,120,240,.25)}
+  .ai-logo{width:52px;height:52px;border-radius:14px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800}
+  .ai-head h2{margin:0;font-size:19px;font-weight:800}
+  .ai-head .ai-sub{font-size:12px;opacity:.88;margin-top:3px}
+  .ai-chips{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+  .ai-model{margin:0 0 12px;font-size:11px;color:#5d6778;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .ai-model .tag{display:inline-flex;align-items:center;gap:5px;border:1px solid #d6e4f5;border-radius:999px;padding:3px 10px;background:#f7fafd}
+  .ai-model .tag b{color:#1877f2;font-weight:600}
+  .ai-model .dot{width:8px;height:8px;border-radius:50%;background:#b9bec7;display:inline-block}
+  .ai-model .dot.on{background:#0ecb81}
+  .ai-chip{background:#fff;border:1px solid #d6e4f5;color:#1877f2;border-radius:999px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s}
+  .ai-chip:hover{background:#1877f2;color:#fff;border-color:#1877f2}
+  .ai-card{background:#fff;border:1px solid #e4e6eb;border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .ai-hist{margin:8px 12px 0;padding:8px 10px;background:#f0fbf4;border:1px solid #bfe8cf;border-radius:12px;font-size:12px}
+  .ai-hist .hist-title{color:#1b8a3a;font-weight:700;margin-bottom:4px}
+  .ai-hist .hist-item{display:flex;justify-content:space-between;gap:6px;padding:3px 6px;border-radius:8px;cursor:pointer;color:#374151}
+  .ai-hist .hist-item:hover{background:#e3f5ea}
+  .ai-hist .hist-q{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ai-hist .hist-x{color:#9ca3af;font-weight:700;padding:0 4px}
+  .ai-hist .hist-clear{margin-top:4px;background:none;border:none;color:#b45309;cursor:pointer;font-size:12px}
+  .ai-chat{max-height:52vh;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+  .ai-msg{max-width:86%;padding:10px 14px;border-radius:14px;font-size:13.5px;line-height:1.7;white-space:pre-wrap;word-break:break-word}
+  .ai-msg.user{align-self:flex-end;background:#1877f2;color:#fff;border-bottom-right-radius:4px}
+  .ai-msg.bot{align-self:flex-start;background:#f0f4fa;color:#1c1e21;border-bottom-left-radius:4px;border:1px solid #e4e6eb}
+  .ai-msg.err{align-self:flex-start;background:#fdecea;color:#c0392b;border:1px solid #f5c6c0;border-bottom-left-radius:4px}
+  .ai-input{display:flex;gap:10px;padding:12px 16px;border-top:1px solid #e4e6eb}
+  .ai-input input{flex:1;min-width:0;border:1px solid #d6e4f5;border-radius:10px;padding:11px 14px;font-size:14px;background:#f7fafd;color:#1c1e21}
+  .ai-input button{background:#1877f2;color:#fff;border:none;border-radius:10px;padding:0 22px;font-size:14px;font-weight:700;cursor:pointer;flex:none}
+  .ai-typing{color:#65676b;font-size:12px;padding:2px 4px}
+</style>
+
+<div class="ai-wrap">
+  <div class="ai-head">
+    <div class="ai-logo">泰</div>
+    <div>
+      <h2 data-i18n="ai_assistant">AI 助手</h2>
+      <div class="ai-sub" data-i18n="ai_sub">鏈上智能助手 —— 問鏈上數據，即時回答</div>
+    </div>
+  </div>
+
+  <div class="ai-model" id="aiModel">
+    <span class="tag"><span class="dot"></span> AI 引擎：<b>偵測中…</b></span>
+  </div>
+
+  <div class="ai-chips" id="aiChips">
+    <button class="ai-chip" data-i18n="ai_suggest_status">節點狀態</button>
+    <button class="ai-chip" data-i18n="ai_suggest_block">最新區塊</button>
+    <button class="ai-chip" data-i18n="ai_suggest_audit">鏈上審計</button>
+    <button class="ai-chip" data-i18n="ai_suggest_reward">獎勵分潤</button>
+    <button class="ai-chip" data-i18n="ai_suggest_miner">在線礦工</button>
+    <button class="ai-chip" data-i18n="ai_suggest_supply">總供應</button>
+    <button class="ai-chip" data-i18n="ai_suggest_join">加入節點</button>
+    <button class="ai-chip" data-i18n="ai_suggest_transfer">轉帳指引</button>
+  </div>
+
+  <div class="ai-card">
+    <div class="ai-hist" id="aiHist"></div>
+    <div class="ai-chat" id="aiChat"></div>
+    <div class="ai-input">
+      <input id="aiQ" data-i18n-placeholder="ai_placeholder" placeholder="輸入問題…（例如：節點狀態）" autocomplete="off" />
+      <button id="aiSend" data-i18n="ai_send">發送</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // M102-4：本地 AI 模型狀態（model=llama → 本地大模型；model=rule → 規則式回退）。
+  function showModel(m){
+    var el = document.getElementById('aiModel');
+    if (!el) return;
+    if (m === 'llama'){
+      el.innerHTML = '<span class="tag"><span class="dot on"></span> AI 引擎：<b>本地大模型（Qwen · llama.cpp）</b></span>';
+    } else if (m === 'rule'){
+      el.innerHTML = '<span class="tag"><span class="dot"></span> AI 引擎：<b>規則式助手</b> <span style="color:#b9bec7">（安裝本地模型請執行 scripts/install-llama.sh）</span></span>';
+    }
+  }
+
+  // M73-A：AI 助手前端。同源 /api/ai/ask；?rpc= 可覆蓋（與其他頁一致）。
+  var apiBase = '';
+  var m = (location.search||'').match(/[?&]rpc=([^&]+)/);
+  if (m) apiBase = decodeURIComponent(m[1]);
+  var chat = document.getElementById('aiChat');
+  renderHist();
+  var q = document.getElementById('aiQ');
+  var send = document.getElementById('aiSend');
+
+  function curLang(){ return (window.__TAC_LANG__ === 'zh') ? 'zh' : 'en'; }
+
+  function addMsg(text, who){
+    var div = document.createElement('div');
+    div.className = 'ai-msg ' + who;
+    div.textContent = text;
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  // M90：多輪記憶——最近 3 輪問答存 localStorage，隨 ctx 帶入，支援「追問」上下文。
+  function getHistory(){ try { return JSON.parse(localStorage.getItem('tac_ai_hist') || '[]'); } catch(e){ return []; } }
+  function saveTurn(q, a){
+    var h = getHistory(); h.push({q:q, a:(a||'').slice(0,180)});
+    if(h.length > 6) h = h.slice(-6);
+    try { localStorage.setItem('tac_ai_hist', JSON.stringify(h)); } catch(e){}
+    renderHist();
+  }
+  function renderHist(){
+    var el = document.getElementById('aiHist');
+    var h = getHistory();
+    el.innerHTML = (h.length ? '<div class="hist-title">'+((curLang()==='zh')?'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 1v4M15 1v4M9 19v4M15 19v4M1 9h4M1 15h4M19 9h4M19 15h4"/></svg> 多輪記憶（近 '+h.length+' 輪）':'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 1v4M15 1v4M9 19v4M15 19v4M1 9h4M1 15h4M19 9h4M19 15h4"/></svg> Multi-turn memory (last '+h.length+')')+'</div>' : '') +
+      h.map(function(t,i){
+        return '<div class="hist-item" onclick="reask('+(h.length-1-i)+')"><span class="hist-q">'+t.q.slice(0,24)+'</span><span class="hist-x" onclick="event.stopPropagation();delHist('+(h.length-1-i)+')">×</span></div>';
+      }).join('') +
+      (h.length ? '<button class="hist-clear" onclick="clearHist()">'+((curLang()==='zh')?'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg> 清除記憶':'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg> Clear')+'</button>' : '');
+  }
+  function reask(i){ var h = getHistory(); if(h[i]){ document.getElementById('aiInput').value = h[i].q; document.getElementById('aiInput').focus(); } }
+  function delHist(i){ var h = getHistory(); h.splice(i,1); try { localStorage.setItem('tac_ai_hist', JSON.stringify(h)); } catch(e){} renderHist(); }
+  function clearHist(){ try { localStorage.removeItem('tac_ai_hist'); } catch(e){} renderHist(); }
+  function ask(text){
+    if(!text) return;
+    addMsg(text, 'user');
+    var d = document.createElement('div');
+    d.className = 'ai-typing';
+    d.textContent = (curLang()==='zh') ? '思考中…' : 'Thinking…';
+    chat.appendChild(d); chat.scrollTop = chat.scrollHeight;
+    var h = getHistory();
+    var ctx = h.slice(-3).map(function(t){ return 'Q:'+t.q+' A:'+t.a; }).join('\n');
+    var url = apiBase + '/api/ai/ask?q=' + encodeURIComponent(text) + '&lang=' + curLang() + '&ctx=' + encodeURIComponent(ctx);
+    showModel('probe');
+    fetch(url).then(function(r){ return r.json(); }).then(function(j){
+      if(d.parentNode) d.parentNode.removeChild(d);
+      if(j && j.ok){ showModel(j.model || 'rule'); addMsg(j.answer || '', 'bot'); saveTurn(text, j.answer || ''); }
+      else { addMsg((j && j.error) ? j.error : 'error', 'err'); }
+    }).catch(function(e){
+      if(d.parentNode) d.parentNode.removeChild(d);
+      addMsg('Error: ' + e, 'err');
+    });
+  }
+
+  send.addEventListener('click', function(){ var v=q.value.trim(); q.value=''; ask(v); });
+  q.addEventListener('keydown', function(e){ if(e.key==='Enter'){ var v=q.value.trim(); q.value=''; ask(v);} });
+
+  var chips = document.querySelectorAll('.ai-chip');
+  for(var i=0;i<chips.length;i++){
+    chips[i].addEventListener('click', function(){ ask(this.textContent.trim()); });
+  }
+
+  // 歡迎訊息
+  addMsg((curLang()==='zh') ? '你好，我是 TAC Ai，TAC Ai 智能鏈上智能助手。問我節點狀態、區塊、審計、獎勵、餘額等鏈上數據吧！' : "Hi, I'm TAC Ai, the TAC Ai Smart Chain on-chain assistant. Ask me about node status, blocks, audit, rewards, balances and more!", 'bot');
+})();
+</script>
+{% endblock %}

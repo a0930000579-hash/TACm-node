@@ -169,6 +169,14 @@ func NewRPCServer(n *Node) *RPCServer {
 	s.addRoute("POST /api/defi/borrow", s.handleDefiBorrow)
 	s.addRoute("POST /api/defi/repay", s.handleDefiRepay)
 	s.addRoute("GET /api/defi/ido-projects", s.handleDefiIDOProjects)
+	s.addRoute("POST /api/defi/cdp/open", s.handleDefiCDPOpen)
+	s.addRoute("POST /api/defi/cdp/add", s.handleDefiCDPAdd)
+	s.addRoute("POST /api/defi/cdp/withdraw", s.handleDefiCDPWithdraw)
+	s.addRoute("POST /api/defi/cdp/repay", s.handleDefiCDPRepay)
+	s.addRoute("POST /api/defi/cdp/close", s.handleDefiCDPClose)
+	s.addRoute("POST /api/defi/cdp/liquidate", s.handleDefiCDPLiquidate)
+	s.addRoute("GET /api/defi/cdp/my", s.handleDefiCDPMy)
+	s.addRoute("GET /api/defi/cdp/market", s.handleDefiCDPMarket)
 	s.addRoute("GET /api/defi/my-ido", s.handleDefiMyIDO)
 	s.addRoute("POST /api/defi/ido-subscribe", s.handleDefiIDOSubscribe)
 	s.addRoute("POST /api/defi/ido-claim/{id}", s.handleDefiIDOClaim)
@@ -264,6 +272,7 @@ func NewRPCServer(n *Node) *RPCServer {
 	// 跨鏈橋
 	s.addRoute("GET /bridge/chains", s.handleBridgeChains)
 	s.addRoute("GET /bridge/stats", s.handleBridgeStats)
+	s.addRoute("GET /bridge/txs", s.handleBridgeTxs)
 	s.addRoute("POST /bridge/lock", s.handleBridgeLock)
 	s.addRoute("POST /bridge/burn", s.handleBridgeBurn)
 	s.addRoute("POST /bridge/confirm-lock", s.handleBridgeConfirmLock)
@@ -279,6 +288,7 @@ func NewRPCServer(n *Node) *RPCServer {
 	s.addRoute("GET /api/governance/params", s.handleGovernanceParams)
 	s.addRoute("POST /api/governance/propose", s.handleGovernancePropose)
 	s.addRoute("POST /api/governance/vote", s.handleGovernanceVote)
+	s.addRoute("GET /api/governance/config", s.handleGovernanceConfig)
 
 	return s
 }
