@@ -10,7 +10,6 @@ import (
 	"tacm/internal/consensus/bft"
 	"tacm/internal/crypto"
 	"tacm/internal/p2p"
-	"tacm/internal/wallet"
 )
 
 type p2pHost struct{ n *Node }
@@ -206,17 +205,6 @@ func verifyIncomingTxs(n *Node, b *chaindb.Block, txs []chaindb.Transaction) err
 
 	for j := i; j < len(txs); j++ {
 		t := txs[j]
-		// M151c：治理 treasury 撥款交易無簽名（語意同 coinbase，全節點照單執行）；
-		// M151c-v2：來源為治理金庫/創世社群基金/舊版獎勵池。
-		treasuryFrom := t.FromAddr == chaindb.RewardPoolAddr || t.FromAddr == wallet.TreasuryAddr
-		if !treasuryFrom && strings.HasPrefix(t.Memo, "gov:treasury:") {
-			if cp, cerr := n.CommunityPoolAddress(); cerr == nil && t.FromAddr == cp {
-				treasuryFrom = true
-			}
-		}
-		if treasuryFrom && strings.HasPrefix(t.Memo, "gov:treasury:") {
-			continue
-		}
 		m := map[string]any{
 			"from": t.FromAddr, "to": t.ToAddr, "amount": t.Amount, "fee": t.Fee,
 			"memo": t.Memo, "ts": t.Ts, "nonce": t.Nonce, "pubkey": t.Pubkey,

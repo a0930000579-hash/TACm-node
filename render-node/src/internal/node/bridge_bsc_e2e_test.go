@@ -95,16 +95,6 @@ func TestBSCRelayStatusEndpoint(t *testing.T) {
 	if !strings.HasPrefix(body["signer_addr"].(string), "0x") {
 		t.Fatalf("signer_addr=%v", body["signer_addr"])
 	}
-
-	// M150j：chain 參數——bsc 已啟用、ethereum 未啟用應 disabled。
-	sc, body = httpJSON(t, "GET", srv.URL+"/bridge/bsc/status?chain=bsc", nil)
-	if sc != 200 || body["enabled"] != true {
-		t.Fatalf("chain=bsc 應 enabled: %d %v", sc, body)
-	}
-	sc, body = httpJSON(t, "GET", srv.URL+"/bridge/bsc/status?chain=ethereum", nil)
-	if sc != 200 || body["enabled"] != false {
-		t.Fatalf("chain=ethereum 未啟用應 disabled: %d %v", sc, body)
-	}
 }
 
 func TestBSCRelayMintEndToEnd(t *testing.T) {
@@ -150,7 +140,7 @@ func TestBSCRelayMintEndToEnd(t *testing.T) {
 	deadline := time.Now().Add(8 * time.Second)
 	for time.Now().Before(deadline) {
 		if len(st.rawTxs) >= 1 {
-			// 驗證 calldata 為 withdraw selector（M150b：中繼 mint 走 TACBridge.withdraw）。
+			// 驗證 calldata 為 mint selector。
 			raw, err := crypto.HexDecode(strings.TrimPrefix(st.rawTxs[0], "0x"))
 			if err != nil {
 				t.Fatal(err)
@@ -159,14 +149,13 @@ func TestBSCRelayMintEndToEnd(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			sel := crypto.ABISelector(bridge.SigWithdrawV2)
-			if len(dec.Data) <= 4 || dec.Data[0] != sel[0] || dec.Data[1] != sel[1] {
+			sel := crypto.ABISelector(bridge.SigMint)
+			if len(dec.Data) != 68 || dec.Data[0] != sel[0] || dec.Data[1] != sel[1] {
 				t.Fatalf("calldata=%x", dec.Data)
 			}
-			// 金額 25 TACm 扣 0.1% 費 → 24.975e18 wei
-			// （withdraw(string,address,uint256,uint256) 動態編碼：amount 位於 offset 68）。
+			// 金額 25 TACm 扣 0.1% 費 → 24.975e18 wei。
 			want, _ := new(big.Int).SetString("24975000000000000000", 10)
-			got := new(big.Int).SetBytes(dec.Data[68:100])
+			got := new(big.Int).SetBytes(dec.Data[36:68])
 			if got.Cmp(want) != 0 {
 				t.Fatalf("mint 金額=%s 期望 %s", got, want)
 			}

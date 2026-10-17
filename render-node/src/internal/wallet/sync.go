@@ -11,11 +11,9 @@ import (
 
 // RewardPoolAddr 鏈上獎勵池帳戶（coinbase 按 PoolShareBps 挹注；交易所手續費可結算入池）。
 const RewardPoolAddr = "reward_pool"
-// TreasuryAddr 治理金庫帳戶（M151c-v2：手續費預留流入，供治理撥款動用）。
-const TreasuryAddr = "treasury_pool"
 
-// PoolShareBps 每區塊 coinbase 挹注獎勵池的比例（15% = 1500 bp，對齊 M149o 節點45%/池15%/礦工40% 經濟模型）。
-const PoolShareBps = 1500
+// PoolShareBps 每區塊 coinbase 挹注獎勵池的比例（16% = 1600 bp，對齊 M70 節點9%/池16%/礦工75% 經濟模型）。
+const PoolShareBps = 1600
 
 // ApplyBlock 把鏈上一個已確認區塊的交易同步到錢包帳本（TACm 資產）。
 // 冪等：僅接受嚴格連續的高度（lastApplied+1）；重複/跳號（含鏈重組）返回錯誤。
@@ -61,25 +59,12 @@ func (s *Service) ApplyBlock(height int64, txs []chaindb.Transaction) error {
 			continue
 		}
 		if tx.FromAddr != tx.ToAddr {
-			// M151c-v2：手續費預留——依 treasuryFeeBps 拆分：部分入治理金庫，
-			// 其餘入 fee 帳戶（交易所做市資金）；from 仍扣 amount+全額 fee（守恆）。
-			treasuryShare := big.NewInt(0)
-			if s.treasuryFeeBps > 0 && s.treasuryFeeBps <= 10000 {
-				treasuryShare = new(big.Int).Mul(fee, big.NewInt(int64(s.treasuryFeeBps)))
-				treasuryShare.Div(treasuryShare, big.NewInt(10000))
-			}
-			feeRest := new(big.Int).Sub(fee, treasuryShare)
 			total := new(big.Int).Add(amount, fee)
 			entries = append(entries,
 				Entry(KindTransferOut, tx.FromAddr, AssetTACm, new(big.Int).Neg(total), memo),
 				Entry(KindTransferIn, tx.ToAddr, AssetTACm, amount, memo),
+				Entry(KindFee, "fee", AssetTACm, fee, memo),
 			)
-			if feeRest.Sign() > 0 {
-				entries = append(entries, Entry(KindFee, "fee", AssetTACm, feeRest, memo))
-			}
-			if treasuryShare.Sign() > 0 {
-				entries = append(entries, Entry(KindFee, TreasuryAddr, AssetTACm, treasuryShare, memo))
-			}
 		} else {
 			// 自轉：僅扣手續費。
 			entries = append(entries, Entry(KindFee, tx.FromAddr, AssetTACm, new(big.Int).Neg(fee), memo))

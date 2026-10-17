@@ -32,7 +32,7 @@ type Server struct {
 	mux        *http.ServeMux
 }
 
-// New 建立節點 UI 服務器。mainnetURL 為開放挖礦/主網入口（預設創世節點）。
+// New 建立節點 UI 服務器。mainnetURL 為開放挖礦/主網入口（預設錨點）。
 func New(n *node.Node, mainnetURL, nodeID string) *Server {
 	if mainnetURL == "" {
 		mainnetURL = "http://2.28.201.174:8080"
@@ -58,9 +58,6 @@ func New(n *node.Node, mainnetURL, nodeID string) *Server {
 	mux.HandleFunc("POST /api/node/setup", s.handleNodeSetupAPI)
 	mux.HandleFunc("POST /api/node/bind", s.handleNodeBindAPI)
 	mux.HandleFunc("POST /api/node/withdraw", s.handleNodeWithdrawAPI)
-	mux.HandleFunc("POST /api/node/stake", s.handleNodeStakeAPI) // M149m 質押成為驗證人
-	mux.HandleFunc("POST /api/node/bootstrap", s.handleNodeBootstrapAPI) // M149m-2 節點引導獎勵
-	mux.HandleFunc("POST /api/node/register", s.handleNodeRegisterAPI) // M149m-9 PoT 節點註冊
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(mustSub(assets, "static")))))
 	s.mux = mux
 	return s

@@ -2,8 +2,6 @@ package bridge
 
 import (
 	"encoding/hex"
-	"errors"
-	"fmt"
 	"testing"
 	"time"
 
@@ -219,113 +217,5 @@ func TestKillSwitchPersists(t *testing.T) {
 	}
 	if _, err := b2.LockAndMint("tacm", "ethereum", "tx0src", "0xtgt", 100, "TACM"); err != ErrBridgePaused {
 		t.Fatalf("重啟後操作仍應被拒，實際 %v", err)
-	}
-}
-
-// mockSettler M150e：記錄鎖定/釋放呼叫的測試資產結算器。
-type mockSettler struct {
-	locks    []string
-	releases []string
-	failLock bool
-	failRel  bool
-}
-
-func (m *mockSettler) LockOnSource(src string, amt float64) error {
-	if m.failLock {
-		return errors.New("mock lock fail")
-	}
-	m.locks = append(m.locks, fmt.Sprintf("%s:%.6f", src, amt))
-	return nil
-}
-
-func (m *mockSettler) ReleaseOnTarget(tgt string, amt float64) error {
-	if m.failRel {
-		return errors.New("mock release fail")
-	}
-	m.releases = append(m.releases, fmt.Sprintf("%s:%.6f", tgt, amt))
-	return nil
-}
-
-// TestAssetSettlerGoldVault M150e：金庫模型——TAC→BSC 鎖定扣用戶資產入金庫；
-// BSC→TAC 解鎖從金庫釋放 received 給目標；任一失敗則不建單/不 confirmed。
-func TestAssetSettlerGoldVault(t *testing.T) {
-	b := newTestBridge(t)
-	defer b.Close()
-
-	ms := &mockSettler{}
-	b.SetAssetSettler(ms)
-
-	// 1. TAC→BSC：LockAndMint 應觸發 LockOnSource（金額＝鎖定量，含手續費前）。
-	res, err := b.LockAndMint("tacm", "ethereum", "tx0src", "0xtgt", 100, "TACM")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(ms.locks) != 1 || ms.locks[0] != "tx0src:100.000000" {
-		t.Fatalf("鎖定呼叫錯誤: %v", ms.locks)
-	}
-	id := res.BridgeTxID
-
-	// 2. 鎖定失敗 → 不建單。
-	ms.failLock = true
-	if _, err := b.LockAndMint("tacm", "ethereum", "tx0src", "0xtgt", 100, "TACM"); err == nil {
-		t.Fatal("鎖定失敗仍應返回錯誤")
-	}
-	if _, err := b.Status(id); err != nil {
-		t.Fatal(err)
-	}
-	ms.failLock = false
-
-	// 3. BSC→TAC：UnlockOnTarget 應觸發 ReleaseOnTarget（金額＝received，扣手續費後）。
-	res2, err := b.BurnAndUnlock("ethereum", "tacm", "0xsrc", "tx0tgt", 50, "TACM")
-	if err != nil {
-		t.Fatal(err)
-	}
-	id2 := res2.BridgeTxID
-	if _, err := b.ConfirmBurn(id2, "burn-hash"); err != nil {
-		t.Fatal(err)
-	}
-	done, err := b.UnlockOnTarget(id2, "unlock-hash")
-	if err != nil {
-		t.Fatalf("解鎖失敗: %v", err)
-	}
-	if len(ms.releases) != 1 || ms.releases[0] != "tx0tgt:49.950000" {
-		t.Fatalf("釋放呼叫錯誤: %v（期望 tx0tgt:49.950000）", ms.releases)
-	}
-	if done.Status != StatusConfirmed {
-		t.Fatalf("終態=%s 期望 confirmed", done.Status)
-	}
-
-	// 4. 釋放失敗 → 不 confirmed（單停留 burning）。
-	ms.failRel = true
-	res3, err := b.BurnAndUnlock("ethereum", "tacm", "0xsrc", "tx0tgt2", 10, "TACM")
-	if err != nil {
-		t.Fatal(err)
-	}
-	id3 := res3.BridgeTxID
-	if _, err := b.ConfirmBurn(id3, "burn-hash2"); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := b.UnlockOnTarget(id3, "unlock-hash2"); err == nil {
-		t.Fatal("釋放失敗仍應返回錯誤")
-	}
-	st, err := b.Status(id3)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if st.Status != StatusBurning {
-		t.Fatalf("釋放失敗後狀態=%s 期望 burning", st.Status)
-	}
-	ms.failRel = false
-
-	// 5. 重試釋放成功 → confirmed（燃燒單可重試）。
-	if _, err := b.UnlockOnTarget(id3, "unlock-hash2"); err != nil {
-		t.Fatalf("重試解鎖失敗: %v", err)
-	}
-	st2, err := b.Status(id3)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if st2.Status != StatusConfirmed {
-		t.Fatalf("重試後狀態=%s 期望 confirmed", st2.Status)
 	}
 }

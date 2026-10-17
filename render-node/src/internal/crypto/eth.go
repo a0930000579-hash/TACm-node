@@ -71,11 +71,6 @@ func (t *EthTx) Payload() []byte {
 		rlpEncodeBytes(t.To),
 		rlpEncodeInt(t.Value),
 		rlpEncodeBytes(t.Data),
-		// EIP-155：簽名 hash 需含 [chainID, 0, 0]；缺此三欄時節點
-		// 會以 EIP-155 重組 hash 驗證，簽名失效（BSC 真實 mint balance 0）。
-		rlpEncodeInt(t.ChainID),
-		rlpEncodeInt(nil),
-		rlpEncodeInt(nil),
 	)
 }
 
@@ -244,11 +239,6 @@ func DecodeEthRawTx(raw []byte) (*EthTx, error) {
 	if item.list == nil || len(item.list) != 9 {
 		return nil, fmt.Errorf("eth: 交易需為 9 元素 list，got %d", len(item.list))
 	}
-	// EIP-155：v>=35 時 chainID=(v-35)/2，填入使 Payload() 重建與簽名一致。
-	chainID := big.NewInt(0)
-	if v := item.list[6].itemInt(); v != nil && v.Int64() >= 35 {
-		chainID = new(big.Int).Div(new(big.Int).Sub(v, big.NewInt(35)), big.NewInt(2))
-	}
 	return &EthTx{
 		Nonce:    item.list[0].itemInt(),
 		GasPrice: item.list[1].itemInt(),
@@ -259,7 +249,6 @@ func DecodeEthRawTx(raw []byte) (*EthTx, error) {
 		V:        item.list[6].itemInt(),
 		R:        item.list[7].itemInt(),
 		S:        item.list[8].itemInt(),
-		ChainID:  chainID,
 		Raw:      raw,
 	}, nil
 }

@@ -42,11 +42,9 @@ func (n *Node) GetStatus() Status {
 	diff := n.adjDiff
 	dist := n.distributed
 	n.mu.Unlock()
-	// M149m-6：共識標識——TACm 為 PoT（時間權證）＋ PoS（質押）永續雙共識
-	// （時間挖礦 30%＋PoS 40%＋在線時長 30%），不具真實 PoW 算力。
-	consensus := "tacm_pot_pos"
+	consensus := "pow_dynamic"
 	if dist {
-		consensus = "tacm_pot_pos_bft"
+		consensus = "pow_bft_distributed"
 	}
 	// 難度是鏈上事實：以鏈頂區塊記錄的難度為準（follower 與錨點顯示同一值），
 	// 僅在鏈空（創世後尚未出塊）時退回本地調整值。
@@ -69,7 +67,7 @@ func (n *Node) GetStatus() Status {
 		EmissionModel: "halving",
 	}
 	st.BridgeEnabled = n.bridge != nil
-	st.BSCRelayEnabled = n.relays["bsc"] != nil
+	st.BSCRelayEnabled = n.bscRelay != nil
 	tip := n.db.GetTipHeight()
 	if cfg, err := chaindb.LoadEmission(int64(n.cfg.BlockTime)); err == nil && cfg.Model == "annual_decay" {
 		st.EmissionModel = cfg.Model

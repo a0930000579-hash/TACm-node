@@ -6,11 +6,11 @@ import (
 	"testing"
 )
 
-// TestBuildCoinbaseTxs：鏈上瓜分明細——M149o 三分發：節點 45%（出塊節點）＋池 15%＋礦工 40% 按算力瓜分（末位補齊）；
-// 無在線礦工時節點 45% 給出塊節點、其餘 40%+15% 入池；多筆哈希唯一。
+// TestBuildCoinbaseTxs：鏈上瓜分明細——M70 三分發：節點 9%（出塊節點）＋池 16%＋礦工 75% 按算力瓜分（末位補齊）；
+// 無在線礦工時節點 9% 給出塊節點、其餘 75%+16% 入池；多筆哈希唯一。
 func TestBuildCoinbaseTxs(t *testing.T) {
-	// 有礦工：a1 算力 1、a2 算力 3，reward=10 → 節點 4.5（proposer）、池 1.5、
-	// 礦工 40%＝4 → a1=1、a2=3。
+	// 有礦工：a1 算力 1、a2 算力 3，reward=10 → 節點 0.9（proposer）、池 1.6、
+	// 礦工 75%＝7.5 → a1=1.875、a2=5.625。
 	txs := BuildCoinbaseTxs(5, "proposer", 12345,
 		[]CoinbaseSplit{{Address: "a1", Share: 1}, {Address: "a2", Share: 3}}, 10)
 	if len(txs) != 4 {
@@ -27,17 +27,17 @@ func TestBuildCoinbaseTxs(t *testing.T) {
 		}
 		got[tx.ToAddr] = v
 	}
-	if math.Abs(got["proposer"]-4.5) > 1e-9 || math.Abs(got["a1"]-1) > 1e-9 ||
-		math.Abs(got["a2"]-3) > 1e-9 || math.Abs(got[RewardPoolAddr]-1.5) > 1e-9 {
+	if math.Abs(got["proposer"]-0.9) > 1e-9 || math.Abs(got["a1"]-1.875) > 1e-9 ||
+		math.Abs(got["a2"]-5.625) > 1e-9 || math.Abs(got[RewardPoolAddr]-1.6) > 1e-9 {
 		t.Fatalf("瓜分錯誤: %+v", got)
 	}
-	// 恆等式：4.5＋1＋3＋1.5 == 10。
+	// 恆等式：0.9＋1.875＋5.625＋1.6 == 10。
 	sum := got["proposer"] + got["a1"] + got["a2"] + got[RewardPoolAddr]
 	if math.Abs(sum-10) > 1e-9 {
 		t.Fatalf("恆等式不成立: %g != 10", sum)
 	}
 
-	// 無礦工：節點 45% 給出塊節點、其餘 55%（40%+15%）入池（M36 語義）。
+	// 無礦工：節點 9% 給出塊節點、其餘 91%（75%+16%）入池（M36 語義）。
 	txs2 := BuildCoinbaseTxs(6, "proposer", 12346, nil, 10)
 	totalPool := 0.0
 	nodeAmt := 0.0
@@ -54,11 +54,11 @@ func TestBuildCoinbaseTxs(t *testing.T) {
 			t.Fatalf("無礦工收款人應只有獎勵池與出塊節點: %+v", tx)
 		}
 	}
-	if math.Abs(totalPool-5.5) > 1e-9 {
-		t.Fatalf("無礦工入池總額=%g want 5.5（40%%+15%%）", totalPool)
+	if math.Abs(totalPool-9.1) > 1e-9 {
+		t.Fatalf("無礦工入池總額=%g want 9.1（75%%+16%%）", totalPool)
 	}
-	if math.Abs(nodeAmt-4.5) > 1e-9 {
-		t.Fatalf("無礦工節點獎勵=%g want 4.5（45%%）", nodeAmt)
+	if math.Abs(nodeAmt-0.9) > 1e-9 {
+		t.Fatalf("無礦工節點獎勵=%g want 0.9（9%%）", nodeAmt)
 	}
 
 	// 多筆哈希唯一（避免 merkle 衝突）。

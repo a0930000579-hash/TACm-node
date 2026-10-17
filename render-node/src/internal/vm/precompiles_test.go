@@ -1,6 +1,6 @@
 package vm
 
-// M134-A：EVM Precompiles 測試（ecrecover/sha256/ripemd160/identity/VRF）。
+// M134-A：EVM Precompiles 測試（ecrecover/sha256/ripemd160/identity）。
 
 import (
 	"encoding/hex"
@@ -14,7 +14,7 @@ import (
 )
 
 func TestM134PrecompileIdentity(t *testing.T) {
-	out, matched, gas, err := runPrecompile(NewContext(), big.NewInt(4), []byte("hello world"))
+	out, matched, gas, err := runPrecompile(big.NewInt(4), []byte("hello world"))
 	if err != nil || !matched {
 		t.Fatalf("identity 應無誤且 matched: %v %v", err, matched)
 	}
@@ -27,7 +27,7 @@ func TestM134PrecompileIdentity(t *testing.T) {
 }
 
 func TestM134PrecompileSha256(t *testing.T) {
-	out, matched, _, err := runPrecompile(NewContext(), big.NewInt(2), []byte("abc"))
+	out, matched, _, err := runPrecompile(big.NewInt(2), []byte("abc"))
 	if err != nil || !matched {
 		t.Fatalf("sha256 失敗: %v", err)
 	}
@@ -38,7 +38,7 @@ func TestM134PrecompileSha256(t *testing.T) {
 }
 
 func TestM134PrecompileRipemd160(t *testing.T) {
-	out, matched, _, err := runPrecompile(NewContext(), big.NewInt(3), []byte("abc"))
+	out, matched, _, err := runPrecompile(big.NewInt(3), []byte("abc"))
 	if err != nil || !matched {
 		t.Fatalf("ripemd160 失敗: %v", err)
 	}
@@ -75,7 +75,7 @@ func TestM134PrecompileEcrecover(t *testing.T) {
 			input = append(input, v...)
 			input = append(input, c[1:33]...)
 			input = append(input, c[33:65]...)
-			out, matched, _, err := runPrecompile(NewContext(), big.NewInt(1), input)
+			out, matched, _, err := runPrecompile(big.NewInt(1), input)
 			if err != nil || !matched {
 				continue
 			}
@@ -101,7 +101,7 @@ func TestM134PrecompileEcrecover(t *testing.T) {
 		input = append(input, v...)
 		input = append(input, compact[1:33]...)
 		input = append(input, compact[33:65]...)
-		out, matched, _, err := runPrecompile(NewContext(), big.NewInt(1), input)
+		out, matched, _, err := runPrecompile(big.NewInt(1), input)
 		if err == nil && matched && len(out) == 32 && string(out[12:]) == string(want) {
 			ok = true
 			break
@@ -143,79 +143,5 @@ func TestM134PrecompileViaContract(t *testing.T) {
 	want := "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
 	if hex.EncodeToString(res.ReturnData) != want {
 		t.Fatalf("合約 CALL sha256 輸出錯誤: %s", hex.EncodeToString(res.ReturnData))
-	}
-}
-
-// M151c：VRF precompile（0x09）——RANDAO 式鏈上隨機。
-func TestM151cVRFDeterministic(t *testing.T) {
-	ctx := NewContext()
-	ctx.BlockNumber = 100
-	ctx.BlockCoinbase = "tx01CoinbaseAddr"
-	out1, matched, gas, err := runPrecompile(ctx, big.NewInt(9), []byte("seed-1"))
-	if err != nil || !matched {
-		t.Fatalf("VRF 應無誤且 matched: %v %v", err, matched)
-	}
-	if len(out1) != 32 {
-		t.Fatalf("VRF 輸出應 32 bytes: %d", len(out1))
-	}
-	if gas != 30000 {
-		t.Fatalf("VRF gas 應 30000: %d", gas)
-	}
-	// 同區塊同輸入 → 同輸出（確定性）。
-	out2, _, _, _ := runPrecompile(ctx, big.NewInt(9), []byte("seed-1"))
-	if hex.EncodeToString(out1) != hex.EncodeToString(out2) {
-		t.Fatal("同區塊同輸入應同輸出")
-	}
-}
-
-func TestM151cVRFVariesByBlockAndSeed(t *testing.T) {
-	ctx := NewContext()
-	ctx.BlockNumber = 100
-	ctx.BlockTimestamp = 1700000000
-	ctx.BlockCoinbase = "tx01CoinbaseAddr"
-	base, _, _, _ := runPrecompile(ctx, big.NewInt(9), []byte("seed"))
-	// 不同區塊（timestamp 不同）→ 不同輸出。
-	ctx2 := NewContext()
-	ctx2.BlockNumber = 101
-	ctx2.BlockTimestamp = 1700000001
-	ctx2.BlockCoinbase = "tx01CoinbaseAddr"
-	other, _, _, _ := runPrecompile(ctx2, big.NewInt(9), []byte("seed"))
-	if hex.EncodeToString(base) == hex.EncodeToString(other) {
-		t.Fatal("不同區塊應不同輸出")
-	}
-	// 不同 seed → 不同輸出。
-	other2, _, _, _ := runPrecompile(ctx, big.NewInt(9), []byte("seed-x"))
-	if hex.EncodeToString(base) == hex.EncodeToString(other2) {
-		t.Fatal("不同 seed 應不同輸出")
-	}
-	// 空輸入仍回 32 bytes（seed=0）。
-	empty, _, _, _ := runPrecompile(ctx, big.NewInt(9), nil)
-	if len(empty) != 32 {
-		t.Fatalf("空輸入應回 32 bytes: %d", len(empty))
-	}
-}
-
-// M151c：VRF 依區塊 timestamp 變化（每塊新隨機的實務來源）。
-func TestM151cVRFVariesByTimestamp(t *testing.T) {
-	ctx := NewContext()
-	ctx.BlockNumber = 100
-	ctx.BlockTimestamp = 1700000000
-	ctx.BlockCoinbase = "tx01CoinbaseAddr"
-	base, _, _, _ := runPrecompile(ctx, big.NewInt(9), []byte("seed"))
-	ctx3 := NewContext()
-	ctx3.BlockNumber = 100
-	ctx3.BlockTimestamp = 1700000005
-	ctx3.BlockCoinbase = "tx01CoinbaseAddr"
-	ts, _, _, _ := runPrecompile(ctx3, big.NewInt(9), []byte("seed"))
-	if hex.EncodeToString(base) == hex.EncodeToString(ts) {
-		t.Fatal("不同 timestamp 應不同輸出")
-	}
-}
-
-// M151c：VRF 非 precompile 地址不匹配。
-func TestM151cVRFNonPrecompile(t *testing.T) {
-	_, matched, _, _ := runPrecompile(NewContext(), big.NewInt(8), nil)
-	if matched {
-		t.Fatal("地址 0x08 非 precompile，不應 matched")
 	}
 }

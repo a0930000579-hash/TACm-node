@@ -22,7 +22,7 @@ func DefaultConfig() Config {
 		UnlockPeriod:    86400 * 7,
 		AnnualYield:     0.12,
 		ValidatorCount:  21,
-		ValidatorMinStk: 1_000.0, // M149m 去中心化：門檻降為 1,000 TACm（用戶決定）
+		ValidatorMinStk: 10_000.0,
 		RewardInterval:  3600,
 		SlashRate:       0.05,
 	}

@@ -32,7 +32,7 @@ func (n *Node) SubmitTransaction(tx map[string]any) (string, error) {
 	if !crypto.IsValidAddress(from) {
 		return "", errors.New("invalid from address")
 	}
-	if to != chaindb.PosStakePoolAddr && !crypto.IsValidAddress(to) {
+	if !crypto.IsValidAddress(to) {
 		return "", errors.New("invalid to address")
 	}
 	if !verifyTxSignature(tx, signature, from) {
@@ -60,7 +60,7 @@ func (n *Node) validateVerified(tx map[string]any, extraPending int) (string, er
 	if !crypto.IsValidAddress(from) {
 		return "", errors.New("invalid from address")
 	}
-	if to != chaindb.PosStakePoolAddr && !crypto.IsValidAddress(to) {
+	if !crypto.IsValidAddress(to) {
 		return "", errors.New("invalid to address")
 	}
 

@@ -16,7 +16,6 @@ package node
 // 同一條鏈，看到的在線礦工、算力與瓜分完全一致 → 錨點/節點不再有入口差異。
 
 import (
-	"log"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -93,43 +92,6 @@ func (n *Node) buildHeartbeatTx(minerAddr string, on bool, hashrate int64) (map[
 	}
 	tx["signature"] = sig
 	return tx, nil
-}
-
-// M149m-7：節點在線心跳——節點（含 follower）定期發 hb:on:0 心跳，計入鏈上
-// 在線節點集，依時間權證領取 45% 節點獎勵（不再只有出塊節點獨享）。
-func (n *Node) StartNodeHeartbeat(interval time.Duration, stop <-chan struct{}) {
-	go func() {
-		ticker := time.NewTicker(interval)
-		defer ticker.Stop()
-		// M149m-9：節點啟動自動 PoT 公鑰註冊（免費、冪等——已註冊則跳過）。
-		if regs, err := n.db.GetNodeRegistry(); err == nil {
-			found := false
-			for i := range regs {
-				if regs[i].Address == n.nodeAddress {
-					found = true
-					break
-				}
-			}
-			if !found {
-				if _, err := n.RegisterAsPotNode(); err != nil {
-					log.Printf("[node-hb] PoT 節點註冊失敗: %v", err)
-				}
-			}
-		}
-		if _, err := n.SubmitHeartbeat(n.nodeAddress, true, 0); err != nil {
-			log.Printf("[node-hb] 初始心跳失敗: %v", err)
-		}
-		for {
-			select {
-			case <-stop:
-				return
-			case <-ticker.C:
-				if _, err := n.SubmitHeartbeat(n.nodeAddress, true, 0); err != nil {
-					log.Printf("[node-hb] 心跳失敗: %v", err)
-				}
-			}
-		}
-	}()
 }
 
 // SubmitHeartbeat 提交礦工在線/離線交易（入 mempool + P2P 廣播）；返回交易哈希。

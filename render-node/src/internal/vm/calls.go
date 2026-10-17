@@ -104,8 +104,8 @@ func (in *Interpreter) doMessageCall(toBig, value *big.Int,
 		}
 	}
 
-	// M134-A：EVM precompile（0x01-0x09）優先於合約碼執行。
-	if out, matched, pcGas, pcErr := runPrecompile(in.ctx, toBig, input); matched {
+	// M134-A：EVM precompile（0x01-0x04）優先於合約碼執行。
+	if out, matched, pcGas, pcErr := runPrecompile(toBig, input); matched {
 		if pcErr != nil {
 			in.world.Revert(snap)
 			return false

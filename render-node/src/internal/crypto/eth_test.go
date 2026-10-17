@@ -63,10 +63,6 @@ func TestEthRLPRoundTrip(t *testing.T) {
 		rlpEncodeBytes(to),
 		rlpEncodeInt(big.NewInt(500)),
 		rlpEncodeBytes([]byte{0xde, 0xad}),
-		// EIP-155 9 欄：v=27 → chainID=0，尾三欄 [0,0,0]。
-		rlpEncodeInt(big.NewInt(0)),
-		rlpEncodeInt(big.NewInt(0)),
-		rlpEncodeInt(big.NewInt(0)),
 	)
 
 	tx, err := DecodeEthRawTx(raw)
@@ -79,7 +75,7 @@ func TestEthRLPRoundTrip(t *testing.T) {
 	if tx.Value.Int64() != 500 || !bytes.Equal(tx.To, bytes.Repeat([]byte{0x11}, 20)) || !bytes.Equal(tx.Data, []byte{0xde, 0xad}) {
 		t.Fatalf("欄位不符: %v %x %x", tx.Value, tx.To, tx.Data)
 	}
-	// Payload 重建須與標準 EIP-155 9 欄 RLP 一致。
+	// Payload 重建須與原 6 欄 RLP 一致。
 	if !bytes.Equal(tx.Payload(), payloadWant) {
 		t.Fatalf("payload 重建不符")
 	}

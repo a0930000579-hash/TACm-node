@@ -32,8 +32,8 @@ func roundCoinbase(v float64) float64 {
 // CoinbaseAggregate 鏈上 coinbase 聚合結果（記憶存檔點：M68 核心結構）。
 type CoinbaseAggregate struct {
 	Total      float64            // 全鏈 coinbase 總額（鏈上真實總產出）
-	Pool       float64            // coinbase:pool 累計（獎勵池挹注來源，15%）
-	Node       float64            // coinbase:node 累計（節點獎勵，45%，M70）
+	Pool       float64            // coinbase:pool 累計（獎勵池挹注來源，16%）
+	Node       float64            // coinbase:node 累計（節點獎勵，9%，M70）
 	Miners     map[string]float64 // 各地址 coinbase:miner 累計（鏈上真實「我的收益」）
 	MinerCount map[string]int     // 各地址 coinbase:miner 交易筆數
 	Count      int                // coinbase 交易總筆數

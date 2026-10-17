@@ -52,7 +52,7 @@ func (s *RPCServer) handleExchangePool(w http.ResponseWriter, r *http.Request) {
 		"pool":     wallet.RewardPoolAddr,
 		"assets":   assets,
 		"share_bp": wallet.PoolShareBps,
-		"note":     "獎勵池＝交易所資金池：每區塊 coinbase 15% 自動挹注＋交易所手續費結算；資金作交易所運營/流動性用途",
+		"note":     "獎勵池＝交易所資金池：每區塊 coinbase 12% 自動挹注＋交易所手續費結算；資金作交易所運營/流動性用途",
 	})
 }
 

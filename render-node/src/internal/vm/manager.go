@@ -299,23 +299,11 @@ func (m *ContractManager) runCallWithGas(addr0x, caller0x string,
 	calldata []byte, callValue *big.Int, gas uint64) *CallResult {
 	addr := NormalizeAddress(addr0x)
 	caller := NormalizeAddress(caller0x)
-	if callValue == nil {
-		callValue = new(big.Int)
-	}
-
-	// M151c：precompile 地址（0x01-0x09）可直接呼叫（如 eth_call 至 0x09 VRF），無需合約碼。
-	if tb := addrToInt(addr); tb != nil && tb.Sign() > 0 && tb.Uint64() <= 9 {
-		ctx := m.newCtxGas(addr, caller, caller, callValue, gas)
-		out, matched, pcGas, perr := runPrecompile(ctx, tb, calldata)
-		if matched {
-			if perr != nil {
-				return &CallResult{OK: false, Reverted: true, GasUsed: pcGas, Error: perr.Error()}
-			}
-			return &CallResult{OK: true, GasUsed: pcGas, ReturnData: hex.EncodeToString(out)}
-		}
-	}
 	if !m.world.HasCode(addr) {
 		return &CallResult{OK: false, Error: "contract not deployed"}
+	}
+	if callValue == nil {
+		callValue = new(big.Int)
 	}
 
 	ctx := m.newCtxGas(addr, caller, caller, callValue, gas)

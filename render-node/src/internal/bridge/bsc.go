@@ -34,9 +34,6 @@ const (
 	// LockProxy：用戶存入 BSC 側代幣並指定 TAC 收款地址（燒毀並廣播 Deposit）。
 	SigDeposit  = "deposit(address,uint256)"
 	SigWithdraw = "withdraw(uint256)"
-	// M150b：多資產橋中繼 mint——直接呼叫 MappedToken.mint 會被 onlyBridge 拒絕，
-	// 正確路徑是呼叫 TACBridge.withdraw（onlyOwner），由橋合約內部 mint 映射代幣。
-	SigWithdrawV2 = "withdraw(string,address,uint256,uint256)"
 
 	// 事件。
 	// Deposit(address indexed token, address indexed from, address indexed to, uint256 amount, uint256 nonce)
@@ -69,9 +66,8 @@ type BSClog struct {
 
 // BSCClient 為 BSC JSON-RPC 客戶端（不引入外部鏈客戶端，純 HTTP）。
 type BSCClient struct {
-	rpcURL  string // 主 RPC：發送/執行視角（eth_sendRawTransaction、estimateGas…）
-	scanURL string // 掃描 RPC：讀取視角（eth_getLogs、eth_blockNumber）；空則回退主 RPC
-	hc      *http.Client
+	rpcURL string
+	hc     *http.Client
 }
 
 // NewBSCClient 建 BSC JSON-RPC 客戶端。
@@ -84,15 +80,6 @@ func NewBSCClient(rpcURL string, timeout time.Duration) (*BSCClient, error) {
 		rpcURL: rpcURL,
 		hc:     &http.Client{Timeout: timeout},
 	}, nil
-}
-
-// SetScanURL 設定掃描專用 RPC（eth_getLogs/eth_blockNumber 走此節點）。
-// 空值或相同值表示掃描與發送共用主 RPC。
-func (c *BSCClient) SetScanURL(scanURL string) {
-	scanURL = strings.TrimSpace(scanURL)
-	if scanURL != "" && scanURL != c.rpcURL {
-		c.scanURL = scanURL
-	}
 }
 
 type bscRPCReq struct {
@@ -112,22 +99,8 @@ type bscRPCRes struct {
 	} `json:"error"`
 }
 
-// call 執行 JSON-RPC 方法（主 RPC），結果解碼至 out（out 可為 nil）。
+// call 執行 JSON-RPC 方法，結果解碼至 out（out 可為 nil）。
 func (c *BSCClient) call(ctx context.Context, method string, params []any, out any) error {
-	return c.callTo(ctx, c.rpcURL, method, params, out)
-}
-
-// callScan 執行 JSON-RPC 方法（掃描 RPC；未設 scanURL 時回退主 RPC）。
-func (c *BSCClient) callScan(ctx context.Context, method string, params []any, out any) error {
-	url := c.scanURL
-	if url == "" {
-		url = c.rpcURL
-	}
-	return c.callTo(ctx, url, method, params, out)
-}
-
-// callTo 對指定 URL 執行 JSON-RPC 方法。
-func (c *BSCClient) callTo(ctx context.Context, url, method string, params []any, out any) error {
 	var id int
 	if len(params) > 0 {
 		id = int(time.Now().UnixNano() % 1_000_000)
@@ -136,7 +109,7 @@ func (c *BSCClient) callTo(ctx context.Context, url, method string, params []any
 	if err != nil {
 		return fmt.Errorf("bsc: 序列化請求失敗: %w", err)
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.rpcURL, bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("bsc: 建請求失敗: %w", err)
 	}
@@ -180,7 +153,7 @@ func (c *BSCClient) ChainID(ctx context.Context) (int64, error) {
 // BlockNumber 回最新區塊號。
 func (c *BSCClient) BlockNumber(ctx context.Context) (int64, error) {
 	var hexStr string
-	if err := c.callScan(ctx, "eth_blockNumber", []any{}, &hexStr); err != nil {
+	if err := c.call(ctx, "eth_blockNumber", []any{}, &hexStr); err != nil {
 		return 0, err
 	}
 	return parseHexInt64(hexStr)
@@ -279,7 +252,7 @@ func (c *BSCClient) Logs(ctx context.Context, fromBlock, toBlock int64, addresse
 		filter["topics"] = topics
 	}
 	var logs []BSClog
-	if err := c.callScan(ctx, "eth_getLogs", []any{filter}, &logs); err != nil {
+	if err := c.call(ctx, "eth_getLogs", []any{filter}, &logs); err != nil {
 		return nil, err
 	}
 	return logs, nil
@@ -335,27 +308,6 @@ func (bc *BridgeContract) WithdrawCalldata(nonce *big.Int) ([]byte, error) {
 	return crypto.ABIEncodeCall(crypto.ABISelector(SigWithdraw), nonce)
 }
 
-// WithdrawV2Calldata 組 TACBridge.withdraw（多資產橋中繼 mint）的 calldata：
-// withdraw(string symbol, address to, uint256 amount, uint256 nonce)。
-func (bc *BridgeContract) WithdrawV2Calldata(symbol string, to string, amount, nonce *big.Int) ([]byte, error) {
-	toB, err := crypto.EthAddressBytes(to)
-	if err != nil {
-		return nil, err
-	}
-	return crypto.ABIEncodeCall(crypto.ABISelector(SigWithdrawV2), symbol, toB, amount, nonce)
-}
-
-// SendWithdraw 呼叫 TACBridge.withdraw（onlyOwner）於 BSC 側執行跨鏈 mint：
-// TAC 側鎖定後，中繼以 owner 身份在橋合約執行 withdraw → 內部 mint 映射代幣。
-func (bc *BridgeContract) SendWithdraw(ctx context.Context, from string, priv *EthSigner,
-	symbol string, to string, amount, nonce *big.Int, chainID int64) (string, error) {
-	data, err := bc.WithdrawV2Calldata(symbol, to, amount, nonce)
-	if err != nil {
-		return "", err
-	}
-	return bc.signAndSend(ctx, from, priv, bc.lockProxyAddr, data, chainID)
-}
-
 // SendMint 以 relayer 私鑰簽署並發送 mint 交易，回 BSC tx hash。
 // from 為 relayer 地址（0x）。
 func (bc *BridgeContract) SendMint(ctx context.Context, from string, priv *EthSigner, to string, amount *big.Int, chainID int64) (string, error) {
@@ -391,7 +343,6 @@ func (bc *BridgeContract) signAndSend(ctx context.Context, from string, priv *Et
 		To:       toB,
 		Value:    big.NewInt(0),
 		Data:     data,
-		ChainID:  big.NewInt(chainID),
 	}
 	raw, err := priv.SignRaw(tx, chainID)
 	if err != nil {
@@ -400,22 +351,8 @@ func (bc *BridgeContract) signAndSend(ctx context.Context, from string, priv *Et
 	return bc.client.SendRaw(ctx, "0x"+crypto.HexEncode(raw))
 }
 
-// topicAddrBytes 把 indexed address topic（20 或 32 字節）正規化為 20 字節。
-// 真實鏈上 topics 為 ABI uint160 的 32 字節左填充；測試/部分節點可能回 20 字節。
-func topicAddrBytes(b []byte) ([]byte, error) {
-	switch len(b) {
-	case 20:
-		return b, nil
-	case 32:
-		return b[12:], nil
-	default:
-		return nil, fmt.Errorf("bsc: topics 地址應為 20/32 字節, got %d", len(b))
-	}
-}
-
 // ParseDepositLogs 從 logs 解析 BSC→TAC 的存款事件（topic0 匹配、解碼 indexed 參數）。
-// 僅接受指定代幣地址的事件（比對 indexed token 參數；事件來源為 LockProxy，
-// 不能以 log.Address 比對 token）。
+// 僅接受指定代幣地址的事件。
 func ParseDepositLogs(logs []BSClog, tokenAddr string) ([]DepositEvent, error) {
 	topic := "0x" + crypto.HexEncode(crypto.Keccak256([]byte(EventDeposit)))
 	tokenAddr = strings.ToLower(normalize0x(tokenAddr))
@@ -427,32 +364,20 @@ func ParseDepositLogs(logs []BSClog, tokenAddr string) ([]DepositEvent, error) {
 		if !strings.EqualFold(lg.Topics[0], topic) {
 			continue
 		}
+		if !strings.EqualFold(normalize0x(lg.Address), tokenAddr) {
+			continue
+		}
 		tokB, err := crypto.HexDecode(strings.TrimPrefix(lg.Topics[1], "0x"))
 		if err != nil {
 			return nil, fmt.Errorf("bsc: 解析 Deposit token 失敗: %w", err)
-		}
-		tokB, err = topicAddrBytes(tokB)
-		if err != nil {
-			return nil, err
-		}
-		if !strings.EqualFold(crypto.EthAddressHex(tokB), tokenAddr) {
-			continue
 		}
 		fromB, err := crypto.HexDecode(strings.TrimPrefix(lg.Topics[2], "0x"))
 		if err != nil {
 			return nil, fmt.Errorf("bsc: 解析 Deposit from 失敗: %w", err)
 		}
-		fromB, err = topicAddrBytes(fromB)
-		if err != nil {
-			return nil, err
-		}
 		toB, err := crypto.HexDecode(strings.TrimPrefix(lg.Topics[3], "0x"))
 		if err != nil {
 			return nil, fmt.Errorf("bsc: 解析 Deposit to 失敗: %w", err)
-		}
-		toB, err = topicAddrBytes(toB)
-		if err != nil {
-			return nil, err
 		}
 		dataB, err := crypto.HexDecode(strings.TrimPrefix(lg.Data, "0x"))
 		if err != nil {

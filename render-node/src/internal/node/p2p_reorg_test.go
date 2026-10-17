@@ -80,11 +80,11 @@ func TestP2PReorgHeavier(t *testing.T) {
 		t.Error("重組前後鏈頂相同，分叉未生效")
 	}
 
-	// 賬戶應與新鏈一致：本地 h1（無開機礦工）節點 45% 獎勵 4.5 進帳（M70 節點獎勵歸節點）；
-	// 競爭塊 h2'/h3' 由 mineCompeting 手工 coinbase 給提議者（2×10=20）→ 節點餘額 = 24.5。
+	// 賬戶應與新鏈一致：本地 h1（無開機礦工）節點 9% 獎勵 0.9 進帳（M70 節點獎勵歸節點）；
+	// 競爭塊 h2'/h3' 由 mineCompeting 手工 coinbase 給提議者（2×10=20）→ 節點餘額 = 20.9。
 	bal, _ := parseBal(n.db.GetBalance(n.Address()))
-	if bal != 24.5 {
-		t.Errorf("重組後節點餘額=%g 應為 24.5", bal)
+	if bal != 20.9 {
+		t.Errorf("重組後節點餘額=%g 應為 20.9", bal)
 	}
 }
 

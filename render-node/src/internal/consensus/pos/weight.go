@@ -5,8 +5,7 @@ import (
 	"strconv"
 )
 
-// ConsensusWeights 為 PoT（時間權證）+ PoS（質押）永續雙共識權重。
-// TACm 不具真實算力：挖礦本質是時間權證（與 PoW 僅形式相似）。
+// ConsensusWeights 為三元混合共識權重。
 type ConsensusWeights struct {
 	PowWeight     float64 `json:"pow_weight"`
 	PosWeight     float64 `json:"pos_weight"`
@@ -39,8 +38,7 @@ func (s *Store) GetPosWeight(address string) (float64, error) {
 	return math.Min(1.0, user/total), nil
 }
 
-// GetConsensusWeights 計算 PoT+PoS 永續共識權重：
-// 時間挖礦（虛擬算力以時間計）30% + PoS（質押）40% + 在線時長 30%。
+// GetConsensusWeights 計算三元混合共識權重：PoW 30% + PoS 40% + 時間權證 30%。
 func (s *Store) GetConsensusWeights(address string, timeOnlineSec int64) (*ConsensusWeights, error) {
 	posW, err := s.GetPosWeight(address)
 	if err != nil {

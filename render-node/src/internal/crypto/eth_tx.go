@@ -121,11 +121,7 @@ func ABISelector(sig string) [4]byte {
 // 支援參數型別：uint256（*big.Int/int64/uint64/int）、address（[]byte 20B 或 0x 字串）、
 // bytes32（[32]byte）、bool、string、[]byte（動態）。
 func ABIEncodeCall(selector [4]byte, args ...any) ([]byte, error) {
-	// ABI 動態參數 offset 的基準是「整個 head 區塊的末尾」，即參數數 × 32；
-	// 若用逐步累加的 len(head) 計算，動態參數（string/[]byte）的 offset 會少算
-	// 本參數之後的槽位，導致 calldata 中動態資料位置錯亂（M150b：withdraw string symbol）。
-	headSize := len(args) * 32
-	head := make([]byte, 0, headSize)
+	head := make([]byte, 0, len(args)*32)
 	tail := make([]byte, 0, 64)
 	for _, a := range args {
 		switch v := a.(type) {
@@ -155,14 +151,14 @@ func ABIEncodeCall(selector [4]byte, args ...any) ([]byte, error) {
 				head = append(head, append(make([]byte, 12), v...)...)
 				continue
 			}
-			// 其餘 []byte 為動態 bytes：offset（head 區塊末尾＋前面 tail）→ tail 長度+資料。
-			off := big.NewInt(int64(headSize + len(tail)))
+			// 其餘 []byte 為動態 bytes：offset（head 已有長度）→ tail 長度+資料。
+			off := big.NewInt(int64(len(head) + len(tail)))
 			head = append(head, pad32(off)...)
 			tail = append(tail, pad32(big.NewInt(int64(len(v))))...)
 			tail = append(tail, v...)
 			tail = padTail(tail)
 		case string:
-			off := big.NewInt(int64(headSize + len(tail)))
+			off := big.NewInt(int64(len(head) + len(tail)))
 			head = append(head, pad32(off)...)
 			b := []byte(v)
 			tail = append(tail, pad32(big.NewInt(int64(len(b))))...)

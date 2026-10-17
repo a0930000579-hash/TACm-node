@@ -34,7 +34,7 @@ func TestPersonalSignRecoverRoundTrip(t *testing.T) {
 	addr := EthAddressHex(digest[len(digest)-20:])
 
 	// 對空訊息與普通訊息簽名，恢復回原地址。
-	for _, msg := range [][]byte{[]byte(""), []byte("hello world"), []byte("TAC Ai signature test")} {
+	for _, msg := range [][]byte{[]byte(""), []byte("hello world"), []byte("泰坦Ai 簽名測試")} {
 		sig, err := SignPersonalMessage(msg, kp.PrivateKey())
 		if err != nil {
 			t.Fatal(err)

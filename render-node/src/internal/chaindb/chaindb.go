@@ -95,24 +95,6 @@ CREATE TABLE IF NOT EXISTS mempool (
     received_at INTEGER,
     fee TEXT
 );
-CREATE TABLE IF NOT EXISTS pos_bootstraps (
-    address TEXT PRIMARY KEY,
-    ts INTEGER NOT NULL
-);
-CREATE TABLE IF NOT EXISTS node_registry (
-    address TEXT PRIMARY KEY,
-    pubkey TEXT NOT NULL,
-    first_seen INTEGER NOT NULL,
-    last_active INTEGER NOT NULL
-);
-CREATE TABLE IF NOT EXISTS pos_validators (
-    address TEXT PRIMARY KEY,
-    total_stake REAL DEFAULT 0,
-    pubkey TEXT,
-    status TEXT DEFAULT 'active',
-    first_seen INTEGER NOT NULL,
-    last_active INTEGER NOT NULL
-);
 CREATE TABLE IF NOT EXISTS peers (
     node_id TEXT PRIMARY KEY,
     rpc_url TEXT,

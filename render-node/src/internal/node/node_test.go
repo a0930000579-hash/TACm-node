@@ -79,20 +79,20 @@ func TestNodeProducesBlocks(t *testing.T) {
 
 	height := n.DB().GetTipHeight()
 	// M70：coinbase 瓜分寫入區塊——無「開機」礦工時節點 9% 歸出塊節點（節點獎勵），
-	// 其餘 40%+15%＝55% 入獎勵池；節點地址進帳＝高度×4.5（45%）。
+	// 其餘 75%+16%＝91% 入獎勵池；節點地址進帳＝高度×0.9。
 	bal, err := strconv.ParseFloat(n.DB().GetBalance(n.Address()), 64)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := float64(height) * 4.5; math.Abs(bal-want) > 1e-6 {
+	if want := float64(height) * 0.9; math.Abs(bal-want) > 1e-6 {
 		t.Errorf("節點未開機節點獎勵=%g want %g (9%%×height=%d)", bal, want, height)
 	}
 	pool, err := strconv.ParseFloat(n.DB().GetBalance(chaindb.RewardPoolAddr), 64)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := float64(height) * 5.5; math.Abs(pool-want) > 1e-6 {
-		t.Errorf("獎勵池=%g want %g (55%%×height=%d)", pool, want, height)
+	if want := float64(height) * 9.1; math.Abs(pool-want) > 1e-6 {
+		t.Errorf("獎勵池=%g want %g (91%%×height=%d)", pool, want, height)
 	}
 }
 
