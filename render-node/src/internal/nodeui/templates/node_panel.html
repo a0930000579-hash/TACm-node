@@ -95,6 +95,19 @@
     <p class="muted">免費註冊公鑰（node:reg，金額 0、手續費 0）。註冊後依在線時長取得無質押出塊權重（每在線 6 小時 +1，上限 10）；節點啟動時已自動註冊，失敗可手動重試。</p>
     <div class="form-row"><button class="np-btn" onclick="regPot()">註冊為 PoT 節點</button> <span class="np-msg" id="regMsg"></span></div>
   </section>
+  <section class="panel">
+    <div class="panel-head"><h2>共識與網路診斷</h2></div>
+    <p class="muted">本節點 BFT 最終化高度與驗證人集狀態；最終化需 >2/3 驗證人提交，單/雙驗證人網路屬正常現狀，不影響出塊與同步。</p>
+    <div class="chain-grid">
+      <div class="cg"><small>BFT 最終化高度</small><b id="cFinal">—</b></div>
+      <div class="cg"><small>驗證人總數</small><b id="cVals">—</b></div>
+      <div class="cg"><small>驗證人總權重</small><b id="cPower">—</b></div>
+      <div class="cg"><small>最終化門檻（2/3）</small><b id="cQuorum">—</b></div>
+    </div>
+    <p class="muted" id="cNote" style="margin-top:8px"></p>
+    <div style="margin:12px 0 6px"><b>P2P 對等節點（admin_peers）</b></div>
+    <div id="peersBox" style="font-size:13px">載入中…</div>
+  </section>
 </div>
 
 <script>
@@ -126,6 +139,24 @@
       show('#rvTotal', esc(rvT) + ' TACm');
       show('#rvLast', d.last_reward_block ? '#' + d.last_reward_block : '尚未收到');
       show('#rvHb', (d.heartbeat_count || 0) + ' 次' + (d.last_heartbeat ? '（最後 #' + d.last_heartbeat + '）' : ''));
+      // v53-B2/C4：共識診斷與對等節點
+      show('#cFinal', d.finalized_height > 0 ? '#' + d.finalized_height : '未達成（0）');
+      show('#cVals', d.validator_total != null ? d.validator_total : '—');
+      show('#cPower', d.validator_power != null ? d.validator_power : '—');
+      show('#cQuorum', d.validator_quorum != null ? d.validator_quorum : '—');
+      show('#cNote', d.consensus_note || '');
+      var pb = box('#peersBox');
+      if (Array.isArray(d.peers) && d.peers.length > 0) {
+        var rows = d.peers.map(function (p) {
+          return '<div style="border-bottom:1px solid #eee;padding:6px 0">'
+            + '<b>' + esc(p.id) + '</b> ' + (p.online ? '<span style="color:#16a34a">● 在線</span>' : '<span style="color:#dc2626">○ 離線</span>')
+            + '<br><small>' + esc(p.base_url) + '</small>'
+            + '<br><small>height ' + (p.height || 0) + ' · finalized ' + (p.finalized_height || 0) + ' · last ' + esc(p.last_seen || '') + '</small></div>';
+        }).join('');
+        pb.innerHTML = rows;
+      } else {
+        pb.textContent = '目前無 P2P 對等節點（未啟用 -p2p 或尚未連上 seed）';
+      }
       var badge = box('#rvBadge');
       if (rv > 0) {
         badge.className = 'rv-ok';

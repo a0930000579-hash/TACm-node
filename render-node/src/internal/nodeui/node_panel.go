@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"tacm/internal/crypto"
 )
@@ -94,6 +95,29 @@ func (s *Server) handleNodePanelAPI(w http.ResponseWriter, r *http.Request) {
 	if v["node_id"] == "" {
 		v["node_id"] = s.nodeID
 	}
+	// v53-B2/C4：共識診斷（follower 的 finalized 0 為真實 2/3 共識現狀，附說明）
+	// + P2P 對等節點（admin_peers 資料源，與主鏈 admin_peers 同構）。
+	fh := s.n.FinalizedHeight()
+	vs := s.n.ValidatorSet()
+	v["finalized_height"] = fh
+	v["validator_total"] = vs.Len()
+	v["validator_power"] = vs.TotalPower()
+	v["validator_quorum"] = vs.QuorumPower()
+	v["consensus_note"] = ""
+	if fh <= 0 {
+		v["consensus_note"] = "尚未達成 BFT 2/3 最終化：最終化需 >2/3 驗證人對同一區塊提交 precommit；單/雙驗證人網路屬正常狀態，不影響出塊與同步"
+	}
+	peers := []map[string]any{}
+	if pn := s.n.P2PNet(); pn != nil {
+		for _, p := range pn.PeerSnapshot() {
+			peers = append(peers, map[string]any{
+				"id": p.NodeID, "base_url": p.BaseURL, "owner": p.Owner,
+				"height": p.Height, "finalized_height": p.Finalized,
+				"online": p.Online, "last_seen": p.LastSeen.Format(time.RFC3339),
+			})
+		}
+	}
+	v["peers"] = peers
 	writeJSON(w, v)
 }
 

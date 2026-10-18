@@ -428,6 +428,27 @@ func (s *RPCServer) dispatchEthRPC(req ethRPCRequest) ethRPCResponse {
 		} else {
 			result = out
 		}
+	case "debug_traceBlockByNumber":
+		out, err := s.debugTraceBlock(req.Params, false)
+		if err != nil {
+			rpcErr = ethError(-32603, err.Error())
+		} else {
+			result = out
+		}
+	case "debug_traceBlockByHash":
+		out, err := s.debugTraceBlock(req.Params, true)
+		if err != nil {
+			rpcErr = ethError(-32603, err.Error())
+		} else {
+			result = out
+		}
+	case "txpool_inspect":
+		out, err := s.txpoolInspect()
+		if err != nil {
+			rpcErr = ethError(-32603, err.Error())
+		} else {
+			result = out
+		}
 	case "debug_traceCall": // M151e：主流調試工具（hardhat/viem/Remix）模擬呼叫追蹤
 		out, err := s.debugTraceCall(req.Params)
 		if err != nil {
@@ -642,6 +663,18 @@ func (s *RPCServer) ethGetBlockByNumber(params []any) (any, error) {
 	b, err := s.node.db.GetLatestBlock()
 	if err != nil || b == nil {
 		return nil, errors.New("eth: 無區塊")
+	}
+	// C3：safe/finalized 標籤（主流鏈新增）。TACm 單鏈即時出塊：
+	// safe＝latest（無延遲最終化語義）、finalized＝本節點 BFT 最終化高度（未達成時回 latest）。
+	switch tag {
+	case "safe":
+		tag = "latest"
+	case "finalized":
+		if fh := s.node.FinalizedHeight(); fh > 0 {
+			tag = "0x" + strconv.FormatInt(fh, 16)
+		} else {
+			tag = "latest"
+		}
 	}
 	if tag != "latest" && tag != "" && tag != "pending" {
 		if h := parseEthBlock(tag, b.Height); h >= 0 {

@@ -30,6 +30,8 @@ type Server struct {
 	nodeID     string
 	started    time.Time
 	mux        *http.ServeMux
+	hub        *wsHub
+	stopCh     chan struct{}
 }
 
 // New 建立節點 UI 服務器。mainnetURL 為開放挖礦/主網入口（預設創世節點）。
@@ -40,12 +42,17 @@ func New(n *node.Node, mainnetURL, nodeID string) *Server {
 	if nodeID == "" {
 		nodeID = "node"
 	}
-	s := &Server{n: n, mainnetURL: strings.TrimRight(mainnetURL, "/"), nodeID: nodeID, started: time.Now()}
+	s := &Server{n: n, mainnetURL: strings.TrimRight(mainnetURL, "/"), nodeID: nodeID, started: time.Now(), hub: newWSHub()}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	})
+	// v53-B1：節點端只讀 eth JSON-RPC（查詢面與主鏈同級，寫入仍走主鏈）。
+	mux.HandleFunc("POST /eth", s.handleEthReadonly)
+	mux.HandleFunc("POST /eth/", s.handleEthReadonly)
+	// v53-C5：節點端 WebSocket eth_subscribe（newHeads/newPendingTransactions）。
+	mux.HandleFunc("GET /ws", s.handleWS)
 	// 根路由精確匹配（GET /{$}）：避免與 P2P 全方法 /p2p/ 在 Go 1.22 ServeMux 衝突。
 	mux.HandleFunc("GET /{$}", s.handleIndex)
 	mux.HandleFunc("GET /api/status", s.handleStatus)
@@ -63,11 +70,27 @@ func New(n *node.Node, mainnetURL, nodeID string) *Server {
 	mux.HandleFunc("POST /api/node/register", s.handleNodeRegisterAPI) // M149m-9 PoT 節點註冊
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(mustSub(assets, "static")))))
 	s.mux = mux
+	// v53-C5：啟動 WS 推送循環（新區塊/交易池變化輪詢廣播）。
+	go s.wsPump(s.stopCh)
 	return s
 }
 
-// Handler 回傳可掛載/監聽的 HTTP Handler。
-func (s *Server) Handler() http.Handler { return s.mux }
+// Mux 回傳原始 ServeMux（供 cmd/nodeweb 同埠合併 P2P 路由）。
+func (s *Server) Mux() *http.ServeMux { return s.mux }
+
+// Handler 回傳可掛載/監聽的 HTTP Handler（含 panic 防護：v53-A5 任一 request
+// panic 回 500 而非讓整個節點程序崩潰）。
+func (s *Server) Handler() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if rec := recover(); rec != nil {
+				log.Printf("[nodeui] panic recovered: %v (path=%s)", rec, r.URL.Path)
+				http.Error(w, "internal error", http.StatusInternalServerError)
+			}
+		}()
+		s.mux.ServeHTTP(w, r)
+	})
+}
 
 // ListenAndServe 在指定 addr 上提供節點 UI。
 func (s *Server) ListenAndServe(addr string) error {
