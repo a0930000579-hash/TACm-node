@@ -10,9 +10,12 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
+	"os"
+	"strconv"
 	"strings"
 
 	"tacm/internal/defi"
+	"tacm/internal/dex"
 	"tacm/internal/wallet"
 )
 
@@ -751,4 +754,382 @@ func (s *RPCServer) handleDefiVaultCompound(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "yield": yield, "new_shares": newShares, "message": "復投成功"})
+}
+
+// ============ M149s：DAI 式 CDP（TiUSD 超額抵押真實化） ============
+
+// cdpTACMPriceUSD 回 TACm 參考價（USD）——M149s：鏈上化價格來源：
+//   1) env TAC_TACM_PRICE_USD（人工覆寫，優先）
+//   2) 未設時聚合鏈上 DEX AMM 池現貨價（tacm 對 tiusd/usdt 池）
+//   3) 兩者皆無回 0：CDP 開倉/清算/取回一律拒絕（不允許以假價格運作，真實化原則）。
+func (s *RPCServer) cdpTACMPriceUSD() float64 {
+	if s.node == nil {
+		return 0
+	}
+	if v, err := strconv.ParseFloat(os.Getenv("TAC_TACM_PRICE_USD"), 64); err == nil && v > 0 {
+		return v
+	}
+	if s.node.dex != nil {
+		pools, err := s.node.dex.Pools()
+		if err == nil {
+			return dexPriceForTACM(pools)
+		}
+	}
+	return 0
+}
+
+// dexPriceForTACM 從 DEX 池清單聚合 TACm 現貨價（純函數，可測）：
+// 找 tacm↔tiusd / tacm↔usdt 池，price = reserve(quote)/reserve(tacm)；
+// 多個合格池取最新（返回第一個命中，池列表按建立序）。
+func dexPriceForTACM(pools []*dex.Pool) float64 {
+	for _, p := range pools {
+		var rTacm, rQuote *big.Int
+		var quote string
+		switch {
+		case strings.EqualFold(p.Token0, "tacm"):
+			rTacm, rQuote, quote = p.Reserve0, p.Reserve1, p.Token1
+		case strings.EqualFold(p.Token1, "tacm"):
+			rTacm, rQuote, quote = p.Reserve1, p.Reserve0, p.Token0
+		default:
+			continue
+		}
+		if rTacm == nil || rQuote == nil || rTacm.Sign() <= 0 || rQuote.Sign() <= 0 {
+			continue
+		}
+		if !strings.EqualFold(quote, "tiusd") && !strings.EqualFold(quote, "usdt") {
+			continue
+		}
+		price := new(big.Float).Quo(new(big.Float).SetInt(rQuote), new(big.Float).SetInt(rTacm))
+		v, _ := price.Float64()
+		if v > 0 {
+			return v
+		}
+	}
+	return 0
+}
+
+// handleDefiCDPOpen POST /api/defi/cdp/open {address, collateral_amount, borrow_amount}
+// DAI 式開倉：抵押 TACm（鎖入 defi_cdp 帳戶）→ 鏈上鑄造 TiUSD 入帳；抵押率 ≥ 150%。
+func (s *RPCServer) handleDefiCDPOpen(w http.ResponseWriter, r *http.Request) {
+	ds, ok := s.defiSvc()
+	if !ok || s.node == nil || s.node.walletSvc == nil {
+		writeErr(w, http.StatusServiceUnavailable, "DeFi 未啟用")
+		return
+	}
+	var req struct {
+		Address         string  `json:"address"`
+		CollateralAmount float64 `json:"collateral_amount"`
+		BorrowAmount    float64 `json:"borrow_amount"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_json")
+		return
+	}
+	req.Address = strings.TrimSpace(req.Address)
+	if req.Address == "" || req.CollateralAmount <= 0 || req.BorrowAmount <= 0 {
+		writeErr(w, http.StatusBadRequest, "缺少地址或金額無效")
+		return
+	}
+	price := s.cdpTACMPriceUSD()
+	if price <= 0 {
+		writeErr(w, http.StatusServiceUnavailable, "TACm 參考價未配置（請設定 TAC_TACM_PRICE_USD 後重啟）")
+		return
+	}
+	// 抵押品鎖入 CDP 帳戶（免二次費的資金池內部轉帳）。
+	if err := s.node.walletSvc.InternalTransfer(req.Address, defi.CDPAccount, wallet.AssetTACm, amountOf(req.CollateralAmount, string(wallet.AssetTACm)), "defi:cdp:lock"); err != nil {
+		writeErr(w, http.StatusBadRequest, "抵押鎖倉失敗："+err.Error())
+		return
+	}
+	id, err := ds.OpenCDP(req.Address, req.CollateralAmount, req.BorrowAmount, price)
+	if err != nil {
+		_ = s.node.walletSvc.InternalTransfer(defi.CDPAccount, req.Address, wallet.AssetTACm, amountOf(req.CollateralAmount, string(wallet.AssetTACm)), "defi:cdp:refund")
+		writeErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	// 借出 TiUSD：鏈上供給層鑄造入帳（peg 1 USDT）。
+	amtI64 := wallet.NewAmountF(req.BorrowAmount, wallet.AssetTiUSD).I64
+	if _, err := s.node.walletSvc.MintTiUSD(req.Address, amtI64, fmt.Sprintf("defi:cdp:mint:%d", id)); err != nil {
+		// 鑄造失敗：退回抵押品並關閉倉位（供給上限/下限保護）。
+		_, _, _ = ds.Repay(id, req.BorrowAmount)
+		_ = s.node.walletSvc.InternalTransfer(defi.CDPAccount, req.Address, wallet.AssetTACm, amountOf(req.CollateralAmount, string(wallet.AssetTACm)), "defi:cdp:refund")
+		writeErr(w, http.StatusInternalServerError, "TiUSD 發行失敗："+err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "cdp_id": id, "collateral": req.CollateralAmount, "borrow": req.BorrowAmount, "message": "CDP 開倉成功（超額抵押 150%）"})
+}
+
+// handleDefiCDPAdd POST /api/defi/cdp/add {address, cdp_id, amount}
+func (s *RPCServer) handleDefiCDPAdd(w http.ResponseWriter, r *http.Request) {
+	ds, ok := s.defiSvc()
+	if !ok || s.node == nil || s.node.walletSvc == nil {
+		writeErr(w, http.StatusServiceUnavailable, "DeFi 未啟用")
+		return
+	}
+	var req struct {
+		Address string  `json:"address"`
+		CDPID   int64   `json:"cdp_id"`
+		Amount  float64 `json:"amount"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_json")
+		return
+	}
+	req.Address = strings.TrimSpace(req.Address)
+	if req.Address == "" || req.Amount <= 0 {
+		writeErr(w, http.StatusBadRequest, "缺少地址或金額無效")
+		return
+	}
+	if err := s.node.walletSvc.InternalTransfer(req.Address, defi.CDPAccount, wallet.AssetTACm, amountOf(req.Amount, string(wallet.AssetTACm)), "defi:cdp:add"); err != nil {
+		writeErr(w, http.StatusBadRequest, "追加抵押轉帳失敗："+err.Error())
+		return
+	}
+	if err := ds.AddCollateral(req.CDPID, req.Amount); err != nil {
+		_ = s.node.walletSvc.InternalTransfer(defi.CDPAccount, req.Address, wallet.AssetTACm, amountOf(req.Amount, string(wallet.AssetTACm)), "defi:cdp:refund")
+		writeErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "cdp_id": req.CDPID, "message": "追加抵押成功"})
+}
+
+// handleDefiCDPWithdraw POST /api/defi/cdp/withdraw {address, cdp_id, amount}
+func (s *RPCServer) handleDefiCDPWithdraw(w http.ResponseWriter, r *http.Request) {
+	ds, ok := s.defiSvc()
+	if !ok || s.node == nil || s.node.walletSvc == nil {
+		writeErr(w, http.StatusServiceUnavailable, "DeFi 未啟用")
+		return
+	}
+	var req struct {
+		Address string  `json:"address"`
+		CDPID   int64   `json:"cdp_id"`
+		Amount  float64 `json:"amount"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_json")
+		return
+	}
+	req.Address = strings.TrimSpace(req.Address)
+	if req.Address == "" || req.Amount <= 0 {
+		writeErr(w, http.StatusBadRequest, "缺少地址或金額無效")
+		return
+	}
+	price := s.cdpTACMPriceUSD()
+	if price <= 0 {
+		writeErr(w, http.StatusServiceUnavailable, "TACm 參考價未配置")
+		return
+	}
+	if err := ds.WithdrawCollateral(req.CDPID, req.Amount, price); err != nil {
+		writeErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := s.node.walletSvc.InternalTransfer(defi.CDPAccount, req.Address, wallet.AssetTACm, amountOf(req.Amount, string(wallet.AssetTACm)), "defi:cdp:withdraw"); err != nil {
+		writeErr(w, http.StatusInternalServerError, "取回轉帳失敗："+err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "cdp_id": req.CDPID, "amount": req.Amount, "message": "取回抵押品成功"})
+}
+
+// handleDefiCDPRepay POST /api/defi/cdp/repay {address, cdp_id, amount}
+// 償還 TiUSD（先抵穩定費）：用戶 TiUSD 鎖入 CDP 帳戶並由供給層銷毀。
+func (s *RPCServer) handleDefiCDPRepay(w http.ResponseWriter, r *http.Request) {
+	ds, ok := s.defiSvc()
+	if !ok || s.node == nil || s.node.walletSvc == nil {
+		writeErr(w, http.StatusServiceUnavailable, "DeFi 未啟用")
+		return
+	}
+	var req struct {
+		Address string  `json:"address"`
+		CDPID   int64   `json:"cdp_id"`
+		Amount  float64 `json:"amount"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_json")
+		return
+	}
+	req.Address = strings.TrimSpace(req.Address)
+	if req.Address == "" || req.Amount <= 0 {
+		writeErr(w, http.StatusBadRequest, "缺少地址或金額無效")
+		return
+	}
+	// 用戶 TiUSD 鎖入 CDP 帳戶（償還即鎖定）。
+	if _, err := s.node.walletSvc.Transfer(req.Address, defi.CDPAccount, wallet.AssetTiUSD, amountOf(req.Amount, string(wallet.AssetTiUSD)), "defi:cdp:repay"); err != nil {
+		writeErr(w, http.StatusBadRequest, "償還轉帳失敗："+err.Error())
+		return
+	}
+	amtI64 := wallet.NewAmountF(req.Amount, wallet.AssetTiUSD).I64
+	if _, err := s.node.walletSvc.BurnTiUSD(amtI64, "defi:cdp:burn"); err != nil {
+		_ = s.node.walletSvc.InternalTransfer(defi.CDPAccount, req.Address, wallet.AssetTiUSD, amountOf(req.Amount, string(wallet.AssetTiUSD)), "defi:cdp:refund")
+		writeErr(w, http.StatusBadRequest, "TiUSD 銷毀失敗："+err.Error())
+		return
+	}
+	remain, paid, err := ds.Repay(req.CDPID, req.Amount)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "cdp_id": req.CDPID, "paid": paid, "remain": remain, "message": "償還成功"})
+}
+
+// handleDefiCDPClose POST /api/defi/cdp/close {address, cdp_id}
+// 全額償還並釋放全部抵押品。
+func (s *RPCServer) handleDefiCDPClose(w http.ResponseWriter, r *http.Request) {
+	ds, ok := s.defiSvc()
+	if !ok || s.node == nil || s.node.walletSvc == nil {
+		writeErr(w, http.StatusServiceUnavailable, "DeFi 未啟用")
+		return
+	}
+	var req struct {
+		Address string `json:"address"`
+		CDPID   int64  `json:"cdp_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_json")
+		return
+	}
+	req.Address = strings.TrimSpace(req.Address)
+	if req.Address == "" {
+		writeErr(w, http.StatusBadRequest, "缺少地址")
+		return
+	}
+	c, err := ds.GetCDP(req.CDPID)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if c.Owner != req.Address {
+		writeErr(w, http.StatusForbidden, "僅倉位持有人可平倉")
+		return
+	}
+	if c.Status != defi.CDPStatusOpen {
+		writeErr(w, http.StatusBadRequest, "倉位非開啟狀態")
+		return
+	}
+	// 計提穩定費後取得最新債務。
+	if err := ds.AccrueStabilityFee(req.CDPID, 0); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	c, _ = ds.GetCDP(req.CDPID)
+	if c.Debt > 0 {
+		if _, err := s.node.walletSvc.Transfer(req.Address, defi.CDPAccount, wallet.AssetTiUSD, amountOf(c.Debt, string(wallet.AssetTiUSD)), "defi:cdp:close-repay"); err != nil {
+			writeErr(w, http.StatusBadRequest, "償還轉帳失敗："+err.Error())
+			return
+		}
+		amtI64 := wallet.NewAmountF(c.Debt, wallet.AssetTiUSD).I64
+		if _, err := s.node.walletSvc.BurnTiUSD(amtI64, "defi:cdp:close-burn"); err != nil {
+			writeErr(w, http.StatusBadRequest, "TiUSD 銷毀失敗："+err.Error())
+			return
+		}
+		if _, _, err := ds.Repay(req.CDPID, c.Debt); err != nil {
+			writeErr(w, http.StatusBadRequest, err.Error())
+			return
+		}
+	}
+	// 釋放全部抵押品。
+	rel, _ := ds.GetCDP(req.CDPID)
+	if rel.Collateral > 0 {
+		if err := s.node.walletSvc.InternalTransfer(defi.CDPAccount, req.Address, wallet.AssetTACm, amountOf(rel.Collateral, string(wallet.AssetTACm)), "defi:cdp:release"); err != nil {
+			writeErr(w, http.StatusInternalServerError, "抵押品釋放失敗："+err.Error())
+			return
+		}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "cdp_id": req.CDPID, "message": "CDP 已平倉，抵押品已釋放"})
+}
+
+// handleDefiCDPLiquidate POST /api/defi/cdp/liquidate {address, cdp_id}
+// 清算（DAI 式）：清算人償還全部債務 TiUSD，取得 債務×(1+5%)/市價 的抵押品。
+func (s *RPCServer) handleDefiCDPLiquidate(w http.ResponseWriter, r *http.Request) {
+	ds, ok := s.defiSvc()
+	if !ok || s.node == nil || s.node.walletSvc == nil {
+		writeErr(w, http.StatusServiceUnavailable, "DeFi 未啟用")
+		return
+	}
+	var req struct {
+		Address string `json:"address"`
+		CDPID   int64  `json:"cdp_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_json")
+		return
+	}
+	req.Address = strings.TrimSpace(req.Address)
+	if req.Address == "" {
+		writeErr(w, http.StatusBadRequest, "缺少地址")
+		return
+	}
+	price := s.cdpTACMPriceUSD()
+	if price <= 0 {
+		writeErr(w, http.StatusServiceUnavailable, "TACm 參考價未配置")
+		return
+	}
+	seizable, debt, err := ds.Liquidate(req.CDPID, price)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	// 清算人償還債務 TiUSD（鎖入 CDP 帳戶＋供給層銷毀）。
+	if _, err := s.node.walletSvc.Transfer(req.Address, defi.CDPAccount, wallet.AssetTiUSD, amountOf(debt, string(wallet.AssetTiUSD)), "defi:cdp:liq-repay"); err != nil {
+		writeErr(w, http.StatusBadRequest, "清算償還失敗："+err.Error())
+		return
+	}
+	amtI64 := wallet.NewAmountF(debt, wallet.AssetTiUSD).I64
+	if _, err := s.node.walletSvc.BurnTiUSD(amtI64, "defi:cdp:liq-burn"); err != nil {
+		writeErr(w, http.StatusBadRequest, "TiUSD 銷毀失敗："+err.Error())
+		return
+	}
+	// 清算人取得抵押品（含 5% 罰金折扣）。
+	if err := s.node.walletSvc.InternalTransfer(defi.CDPAccount, req.Address, wallet.AssetTACm, amountOf(seizable, string(wallet.AssetTACm)), "defi:cdp:liq-seize"); err != nil {
+		writeErr(w, http.StatusInternalServerError, "清算抵押品轉移失敗："+err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "cdp_id": req.CDPID, "seizable": seizable, "debt_paid": debt, "message": "清算完成（含 5% 罰金折扣）"})
+}
+
+// handleDefiCDPMy GET /api/defi/cdp/my?address=
+func (s *RPCServer) handleDefiCDPMy(w http.ResponseWriter, r *http.Request) {
+	ds, ok := s.defiSvc()
+	if !ok {
+		writeErr(w, http.StatusServiceUnavailable, "DeFi 未啟用")
+		return
+	}
+	addr := strings.TrimSpace(r.URL.Query().Get("address"))
+	if addr == "" {
+		writeErr(w, http.StatusBadRequest, "缺少地址")
+		return
+	}
+	cps, err := ds.MyCDPs(addr)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	price := s.cdpTACMPriceUSD()
+	// 附加即時抵押率。
+	type cdpView struct {
+		defi.CDP
+		Ratio float64 `json:"ratio"`
+	}
+	out := make([]cdpView, 0, len(cps))
+	for _, c := range cps {
+		v := cdpView{CDP: c}
+		if c.Status == defi.CDPStatusOpen && c.Debt > 0 && price > 0 {
+			v.Ratio = c.Collateral * price / c.Debt
+		}
+		out = append(out, v)
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "cdps": out, "price_usd": price})
+}
+
+// handleDefiCDPMarket GET /api/defi/cdp/market
+func (s *RPCServer) handleDefiCDPMarket(w http.ResponseWriter, r *http.Request) {
+	ds, ok := s.defiSvc()
+	if !ok {
+		writeErr(w, http.StatusServiceUnavailable, "DeFi 未啟用")
+		return
+	}
+	price := s.cdpTACMPriceUSD()
+	m, err := ds.CDPMarketView(price)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "market": m})
 }

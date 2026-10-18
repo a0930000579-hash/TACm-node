@@ -220,3 +220,40 @@ func applyPosBootstrapTx(tx *sql.Tx, c *ChainDB, from, pubkey string, ts int64) 
 	}
 	return nil
 }
+
+// ValidatorStat 驗證人視角統計（M160：權重＋委託總額＋委託人數，一次查詢回傳）。
+type ValidatorStat struct {
+	Validator    string  `json:"validator"`
+	TotalStake   float64 `json:"total_stake"`
+	Pubkey       string  `json:"pubkey"`
+	Status       string  `json:"status"`
+	FirstSeen    int64   `json:"first_seen"`
+	LastActive   int64   `json:"last_active"`
+	DelegTotal   float64 `json:"deleg_total"`
+	DelegatorNum int64   `json:"delegator_count"`
+}
+
+// ListValidatorsWithDelegations 返回全驗證人＋委託聚合（LEFT JOIN delegations，
+// 一次查詢避免 N+1；任何節點同步同鏈結果一致）。
+func (c *ChainDB) ListValidatorsWithDelegations() ([]ValidatorStat, error) {
+	rows, err := c.db.Query(`SELECT v.address, v.total_stake, v.pubkey, v.status, v.first_seen, v.last_active,
+		COALESCE(SUM(CASE WHEN d.amount > 0 THEN d.amount ELSE 0 END), 0),
+		COUNT(CASE WHEN d.amount > 0 THEN d.delegator END)
+		FROM pos_validators v
+		LEFT JOIN delegations d ON d.validator = v.address
+		GROUP BY v.address ORDER BY v.total_stake DESC`)
+	if err != nil {
+		return nil, fmt.Errorf("chaindb: 驗證人統計查詢失敗: %w", err)
+	}
+	defer rows.Close()
+	var out []ValidatorStat
+	for rows.Next() {
+		var vs ValidatorStat
+		if err := rows.Scan(&vs.Validator, &vs.TotalStake, &vs.Pubkey, &vs.Status, &vs.FirstSeen, &vs.LastActive,
+			&vs.DelegTotal, &vs.DelegatorNum); err != nil {
+			return nil, err
+		}
+		out = append(out, vs)
+	}
+	return out, rows.Err()
+}

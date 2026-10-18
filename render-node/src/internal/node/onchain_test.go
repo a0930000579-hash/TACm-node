@@ -10,7 +10,7 @@ import (
 )
 
 // TestOnChainCoinbaseAggregate 出塊後聚合：total == 塊數×出塊獎勵；M70 三分發——
-// node == 塊數×9%（節點獎勵，給出塊節點）、pool == 塊數×16%、miner/reserve == 75%。
+// node == 塊數×45%（節點獎勵，在線節點均分）、pool == 塊數×15%、miner/reserve == 40%。
 func TestOnChainCoinbaseAggregate(t *testing.T) {
 	n, _ := startMiningNode(t)
 	waitFor(t, func() bool { return n.DB().GetTipHeight() >= 3 }, 25*time.Second, "等待出塊到 h3")
@@ -31,13 +31,13 @@ func TestOnChainCoinbaseAggregate(t *testing.T) {
 	if math.Abs(agg.Total-want) > 1e-6 {
 		t.Fatalf("Total=%v 應約等於 %v（高度 %d）", agg.Total, want, tip)
 	}
-	// pool 份額 16%：每塊 10 × 16% = 1.6。
-	wantPool := float64(tip) * 1.6
+	// pool 份額 15%：每塊 10 × 15% = 1.5。
+	wantPool := float64(tip) * 1.5
 	if math.Abs(agg.Pool-wantPool) > 1e-6 {
 		t.Fatalf("Pool=%v 應約等於 %v", agg.Pool, wantPool)
 	}
-	// node 份額 9%：每塊 10 × 9% = 0.9（M70 節點獎勵）。
-	wantNode := float64(tip) * 0.9
+	// node 份額 45%：每塊 10 × 45% = 4.5（M70 節點獎勵）。
+	wantNode := float64(tip) * 4.5
 	if math.Abs(agg.Node-wantNode) > 1e-6 {
 		t.Fatalf("Node=%v 應約等於 %v", agg.Node, wantNode)
 	}

@@ -169,6 +169,14 @@ func NewRPCServer(n *Node) *RPCServer {
 	s.addRoute("POST /api/defi/borrow", s.handleDefiBorrow)
 	s.addRoute("POST /api/defi/repay", s.handleDefiRepay)
 	s.addRoute("GET /api/defi/ido-projects", s.handleDefiIDOProjects)
+	s.addRoute("POST /api/defi/cdp/open", s.handleDefiCDPOpen)
+	s.addRoute("POST /api/defi/cdp/add", s.handleDefiCDPAdd)
+	s.addRoute("POST /api/defi/cdp/withdraw", s.handleDefiCDPWithdraw)
+	s.addRoute("POST /api/defi/cdp/repay", s.handleDefiCDPRepay)
+	s.addRoute("POST /api/defi/cdp/close", s.handleDefiCDPClose)
+	s.addRoute("POST /api/defi/cdp/liquidate", s.handleDefiCDPLiquidate)
+	s.addRoute("GET /api/defi/cdp/my", s.handleDefiCDPMy)
+	s.addRoute("GET /api/defi/cdp/market", s.handleDefiCDPMarket)
 	s.addRoute("GET /api/defi/my-ido", s.handleDefiMyIDO)
 	s.addRoute("POST /api/defi/ido-subscribe", s.handleDefiIDOSubscribe)
 	s.addRoute("POST /api/defi/ido-claim/{id}", s.handleDefiIDOClaim)
@@ -220,6 +228,57 @@ func NewRPCServer(n *Node) *RPCServer {
 	s.addRoute("POST /contract/nft/approve", s.handleContractNFTApprove)
 	s.addRoute("POST /contract/nft/set-approval-for-all", s.handleContractNFTSetApprovalForAll)
 
+	// P1-①：TAC-ENS 鏈上命名服務（.tac 域名）——部署/狀態/註冊/查詢/組 calldata。
+	s.addRoute("POST /tacns/deploy", s.handleTACNSDeploy)
+	s.addRoute("GET /tacns/status", s.handleTACNSStatus)
+	s.addRoute("POST /tacns/register", s.handleTACNSRegister)
+	s.addRoute("GET /tacns/query", s.handleTACNSQuery)
+	s.addRoute("POST /tacns/calldata", s.handleTACNSCalldata)
+
+	// M152：鏈上預言機——喂價快照/單價/手動覆寫/歷史。
+	s.addRoute("GET /oracle/prices", s.handleOraclePrices)
+	s.addRoute("GET /oracle/price", s.handleOraclePrice)
+	s.addRoute("POST /oracle/feed", s.handleOracleFeed)
+	s.addRoute("GET /oracle/history", s.handleOracleHistory)
+	s.addRoute("POST /oracle/feeder", s.handleOracleFeeder)
+	s.addRoute("POST /oracle/aggregate", s.handleOracleAggregate)
+	s.addRoute("POST /aa/submit", s.handleAASubmit)
+	s.addRoute("POST /aa/estimate", s.handleAAEstimate)
+	s.addRoute("GET /aa/status", s.handleAAStatus)
+	// M155 索引 API（Etherscan 風公共查詢面，只讀）。
+	s.addRoute("GET /api/v1/stats", s.handleIndexerStats)
+	s.addRoute("GET /api/v1/blocks", s.handleIndexerBlocks)
+	s.addRoute("GET /api/v1/block/{id}", s.handleIndexerBlock)
+	s.addRoute("GET /api/v1/tx/{hash}", s.handleIndexerTx)
+	s.addRoute("GET /api/v1/txs", s.handleIndexerTxs)
+	s.addRoute("GET /api/v1/address/{addr}", s.handleIndexerAddress)
+	s.addRoute("GET /api/v1/delegations", s.handleIndexerDelegations)
+	s.addRoute("GET /api/v1/delegations/{delegator}", s.handleIndexerDelegator)
+	s.addRoute("GET /api/v1/validators", s.handleIndexerValidators)
+
+	// M156：質押委託（Staking Delegation）——委託/撤銷/狀態。
+	s.addRoute("POST /stake/delegate", s.handleStakeDelegate)
+	s.addRoute("POST /stake/undelegate", s.handleStakeUndelegate)
+	s.addRoute("GET /stake/status", s.handleStakeStatus)
+
+	// P1-②：TACWallet 多簽合約錢包（Safe 風格 N/M＋EIP-1271）——
+	// 部署/狀態/owner 管理/門檻/提議/批准/查詢/組 calldata。
+	s.addRoute("POST /tacwallet/deploy", s.handleTACWalletDeploy)
+	s.addRoute("GET /tacwallet/status", s.handleTACWalletStatus)
+	s.addRoute("POST /tacwallet/owner", s.handleTACWalletOwner)
+	s.addRoute("POST /tacwallet/threshold", s.handleTACWalletThreshold)
+	s.addRoute("POST /tacwallet/submit", s.handleTACWalletSubmit)
+	s.addRoute("POST /tacwallet/approve", s.handleTACWalletApprove)
+	s.addRoute("GET /tacwallet/query", s.handleTACWalletQuery)
+	s.addRoute("POST /tacwallet/calldata", s.handleTACWalletCalldata)
+	s.addRoute("POST /tacgov/deploy", s.handleTACGovDeploy)
+	s.addRoute("GET /tacgov/status", s.handleTACGovStatus)
+	s.addRoute("POST /tacgov/propose", s.handleTACGovPropose)
+	s.addRoute("POST /tacgov/vote", s.handleTACGovVote)
+	s.addRoute("POST /tacgov/execute", s.handleTACGovExecute)
+	s.addRoute("GET /tacgov/query", s.handleTACGovQuery)
+	s.addRoute("POST /tacgov/calldata", s.handleTACGovCalldata)
+
 	// M135：鏈上多代幣（ERC-1155）部署/查詢/mint/單筆/批次轉移/全域授權。
 	s.addRoute("POST /contract/erc1155/deploy", s.handleContractErc1155Deploy)
 	s.addRoute("GET /contract/erc1155/{address}", s.handleContractErc1155Info)
@@ -264,6 +323,7 @@ func NewRPCServer(n *Node) *RPCServer {
 	// 跨鏈橋
 	s.addRoute("GET /bridge/chains", s.handleBridgeChains)
 	s.addRoute("GET /bridge/stats", s.handleBridgeStats)
+	s.addRoute("GET /bridge/txs", s.handleBridgeTxs)
 	s.addRoute("POST /bridge/lock", s.handleBridgeLock)
 	s.addRoute("POST /bridge/burn", s.handleBridgeBurn)
 	s.addRoute("POST /bridge/confirm-lock", s.handleBridgeConfirmLock)
@@ -279,6 +339,7 @@ func NewRPCServer(n *Node) *RPCServer {
 	s.addRoute("GET /api/governance/params", s.handleGovernanceParams)
 	s.addRoute("POST /api/governance/propose", s.handleGovernancePropose)
 	s.addRoute("POST /api/governance/vote", s.handleGovernanceVote)
+	s.addRoute("GET /api/governance/config", s.handleGovernanceConfig)
 
 	return s
 }

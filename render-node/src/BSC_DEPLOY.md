@@ -145,6 +145,40 @@ npx hardhat run scripts/deploy.js --network bscTestnet
 
 ---
 
+### 2.4 多資產互通（TACm／TiUSD／USDT 映射，推薦做法）
+
+> 合約源碼：`deploy/bsc/TACBridge.sol`（零依賴、Remix 直接編譯；單一 LockProxy 管理多代幣）。
+
+**一鍵拿地址（推薦）**——Node 環境（本地或 Termux）：
+
+```bash
+cd deploy/bsc && npm install
+node deploy.js 0x<你的私鑰> bsctest
+# 輸出 BRIDGE_ADDR＋三個映射代幣地址＋可直接貼入節點 env 的 TAC_BSC_ASSETS
+```
+
+（測試網需少量 tBNB：https://www.bnbchain.org/en/testnet-faucet）
+
+**或手動（Remix）**：
+1. Remix 開啟 `TACBridge.sol` → 環境 Injected Provider（MetaMask，BSC 測試網 ChainID 97）。
+2. 部署 `TACBridge`（constructor 無參數）→ 記 `BRIDGE_ADDR`。
+3. 依序呼叫 `deployMapped("tacm", "TACM on BSC")`、`deployMapped("tiusd", "TiUSD on BSC")`、`deployMapped("usdt", "USDT on BSC")` → 記三個映射代幣地址。
+4. 節點設定（本機 flag 或 Render env 皆可）——**部署後免改程式碼**：
+
+```bash
+export TAC_BSC_ASSETS='[
+  {"token":"tacm","bsc_token":"<TACM_TOKEN>","bsc_lock_proxy":"<BRIDGE_ADDR>","min_amount":0.001},
+  {"token":"tiusd","bsc_token":"<TIUSD_TOKEN>","bsc_lock_proxy":"<BRIDGE_ADDR>","min_amount":1},
+  {"token":"usdt","bsc_token":"<USDT_TOKEN>","bsc_lock_proxy":"<BRIDGE_ADDR>","min_amount":1}
+]'
+```
+
+> Go 端 `AssetsFromEnv()` 自動解析（`internal/bridge/relayer.go`），非法項（token 空／地址非 0x）自動過濾；
+> 未設 env 時向後相容回退單一 TACM（舊 `-bsc-token/-bsc-lock-proxy` 旗標）。
+> 事件簽章與 Go 端一致：`Deposit(address,address,address,uint256,uint256)`（前三 indexed）。
+> 驗收（閉環）：`curl <node>/bridge/bsc/status` → `assets` 欄位列出全部映射資產；
+> 再用映射代幣對任一地址 `approve` 後 `deposit("tiusd", <to>, <amt>)` → 節點 relayer 自動掃描並在 TAC 側建立解鎖單（`/bridge` 頁可見 pending→burning 狀態）。
+
 ## 3. 啟動 TAC 節點並啟用 BSC Relayer
 
 ### 3.1 本機（Linux/macOS/WSL）

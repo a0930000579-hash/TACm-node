@@ -460,6 +460,36 @@ func (s *Server) handleGovernance(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "governance.html", pongo2.Context{})
 }
 
+// handleTacns GET /tacns — 鏈上命名服務（TAC-ENS，.tac 名稱註冊/解析，獨立 DApp 頁）。
+// 實時數據由前端直接讀取節點 RPC（?rpc= 可覆蓋）。
+func (s *Server) handleTacns(w http.ResponseWriter, r *http.Request) {
+	s.render(w, "tacns.html", pongo2.Context{})
+}
+
+// handleOracle GET /oracle — 鏈上預言機（主流幣即時喂價，節點級服務）。
+// 實時數據由前端直接讀取節點 RPC（/oracle/*）。
+func (s *Server) handleOracle(w http.ResponseWriter, r *http.Request) {
+	s.render(w, "oracle.html", pongo2.Context{})
+}
+
+// handleAA GET /aa — 帳戶抽象（EIP-4337 智能帳戶，Bundler 代執行）。
+// 實時數據由前端直接讀取節點 RPC（/aa/*）。
+func (s *Server) handleAA(w http.ResponseWriter, r *http.Request) {
+	s.render(w, "aa.html", pongo2.Context{})
+}
+
+// handleAPIDocs GET /api-docs — 索引 API（Indexer）文檔頁。
+// 端點本體在節點 RPC /api/v1/*；此頁為開發者查詢指引。
+func (s *Server) handleAPIDocs(w http.ResponseWriter, r *http.Request) {
+	s.render(w, "api_docs.html", pongo2.Context{})
+}
+
+// handleStake GET /stake — 質押委託（Staking Delegation）頁。
+// 委託/撤銷/查詢由前端直接讀取節點 RPC（/stake/*）。
+func (s *Server) handleStake(w http.ResponseWriter, r *http.Request) {
+	s.render(w, "stake.html", pongo2.Context{})
+}
+
 // handleDefi GET /defi — DeFi 中心（流動性挖礦＋借貸市場，App 化）。
 // 實時數據由前端直接讀取節點 RPC（?rpc= 可覆蓋）。
 func (s *Server) handleDefi(w http.ResponseWriter, r *http.Request) {

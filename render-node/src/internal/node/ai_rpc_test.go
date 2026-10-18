@@ -86,7 +86,7 @@ func TestAIAssistantAnswers(t *testing.T) {
 		{"audit", "en", "consistent"},
 		{"查詢地址 " + testAlice + " 的餘額", "zh", "1000"},
 		{"balance of " + testAlice, "en", "1000"},
-		{"獎勵怎麼分", "zh", "16%"},
+		{"獎勵怎麼分", "zh", "15%"},
 		{"rewards", "en", "M70"},
 		{"在線礦工", "zh", "礦工"},
 		{"總供應", "zh", "供應"},

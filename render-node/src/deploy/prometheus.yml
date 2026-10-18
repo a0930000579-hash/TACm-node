@@ -1,4 +1,4 @@
-# 泰坦Ai Smart Chain — Prometheus 抓取配置（M143-C 監控告警）
+# TAC Ai Smart Chain — Prometheus 抓取配置（M143-C 監控告警）
 # 用法：prometheus --config.file=prometheus.yml
 # 告警規則見 alerts.yml（本檔下方 rule_files 已掛載）。
 

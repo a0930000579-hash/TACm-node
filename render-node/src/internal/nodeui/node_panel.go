@@ -85,6 +85,12 @@ func (s *Server) handleNodePanelAPI(w http.ResponseWriter, r *http.Request) {
 		"admin_set":      cfg.AdminPassHash != "",
 		"height":         s.n.DB().GetTipHeight(),
 	}
+	rs := s.n.DB().NodeRewardStats(addr, 200)
+	v["reward_count"] = rs.RewardCount
+	v["reward_total"] = rs.RewardTotal
+	v["last_reward_block"] = rs.LastRewardBlock
+	v["heartbeat_count"] = rs.HeartbeatCount
+	v["last_heartbeat"] = rs.LastHeartbeat
 	if v["node_id"] == "" {
 		v["node_id"] = s.nodeID
 	}
@@ -203,6 +209,57 @@ func (s *Server) handleNodeWithdrawAPI(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{
 		"ok": true, "tx_hash": hash, "txid": txid,
 		"message": "提領交易已提交上鏈",
+	})
+}
+
+
+// handleNodeStakeAPI M149m：質押成為驗證人（鏈上質押交易 pos:stake → pos_stake_pool）。
+// handleNodeRegisterAPI M149m-9：PoT 節點公鑰註冊（免費、無質押）。
+func (s *Server) handleNodeRegisterAPI(w http.ResponseWriter, r *http.Request) {
+	hash, err := s.n.RegisterAsPotNode()
+	if err != nil {
+		writeErrJSON(w, http.StatusBadRequest, "註冊失敗: "+err.Error())
+		return
+	}
+	writeJSON(w, map[string]any{
+		"ok": true, "tx_hash": hash,
+		"message": "PoT 節點註冊交易已提交，入塊後取得時間權證出塊資格",
+	})
+}
+
+func (s *Server) handleNodeStakeAPI(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Amount float64 `json:"amount"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeErrJSON(w, http.StatusBadRequest, "JSON 格式錯誤")
+		return
+	}
+	if req.Amount <= 0 {
+		writeErrJSON(w, http.StatusBadRequest, "質押金額必須為正")
+		return
+	}
+	hash, err := s.n.StakeAsValidator(req.Amount)
+	if err != nil {
+		writeErrJSON(w, http.StatusBadRequest, "質押失敗: "+err.Error())
+		return
+	}
+	writeJSON(w, map[string]any{
+		"ok": true, "tx_hash": hash, "amount": req.Amount,
+		"message": "質押交易已提交，入塊後最多 1 分鐘進入驗證人集",
+	})
+}
+
+// handleNodeBootstrapAPI M149m-2：新節點領取引導獎勵（創世社群基金核發 1,000 並自動質押）。
+func (s *Server) handleNodeBootstrapAPI(w http.ResponseWriter, r *http.Request) {
+	hash, err := s.n.StakeAsBootstrap()
+	if err != nil {
+		writeErrJSON(w, http.StatusBadRequest, "領取失敗: "+err.Error())
+		return
+	}
+	writeJSON(w, map[string]any{
+		"ok": true, "tx_hash": hash, "amount": 1000,
+		"message": "引導獎勵交易已提交，入塊後核發 1,000 TACm 並自動質押",
 	})
 }
 

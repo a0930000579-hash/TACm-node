@@ -87,6 +87,52 @@ func Open(dataDir string) (*Store, error) {
 }
 
 // Close 關閉帳本。
+// Accounts 返回全部錢包帳戶（快照導出用）。
+func (s *Store) Accounts() ([]Account, error) {
+	rows, err := s.db.Query(`SELECT address, tacm_balance, tiusd_balance, usdt_balance, created_ts, updated_ts FROM wallet_accounts`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Account
+	for rows.Next() {
+		var a Account
+		var tacm string
+		if err := rows.Scan(&a.Address, &tacm, &a.TiUSDBalance, &a.USDTBalance, &a.CreatedTs, &a.UpdatedTs); err != nil {
+			return nil, err
+		}
+		bi, ok := new(big.Int).SetString(tacm, 10)
+		if !ok {
+			bi = new(big.Int)
+		}
+		a.TACmBalance = bi
+		out = append(out, a)
+	}
+	return out, rows.Err()
+}
+
+// ImportAccounts 批量導入/覆寫帳戶餘額（快照導入用）。
+func (s *Store) ImportAccounts(accs []Account) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	for _, a := range accs {
+		tacm := "0"
+		if a.TACmBalance != nil {
+			tacm = a.TACmBalance.String()
+		}
+		if _, err := tx.Exec(`INSERT OR REPLACE INTO wallet_accounts
+			(address, tacm_balance, tiusd_balance, usdt_balance, created_ts, updated_ts)
+			VALUES (?, ?, ?, ?, ?, ?)`,
+			a.Address, tacm, a.TiUSDBalance, a.USDTBalance, a.CreatedTs, a.UpdatedTs); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
 func (s *Store) Close() error { return s.db.Close() }
 
 // Account 為一個錢包帳戶的資產快照。

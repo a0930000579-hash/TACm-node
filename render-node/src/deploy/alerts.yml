@@ -1,4 +1,4 @@
-# 泰坦Ai Smart Chain — 告警規則（M143-C）
+# TAC Ai Smart Chain — 告警規則（M143-C）
 # 掛載於 prometheus.yml 的 rule_files；與 Alertmanager 搭配可推送郵件/群組。
 # 關鍵監控對象：出塊停滯、P2P 對等節點歸零、交易池異常、磁碟空間、橋暫停。
 

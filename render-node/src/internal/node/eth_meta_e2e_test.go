@@ -45,6 +45,12 @@ func TestEthMetaMethods(t *testing.T) {
 		t.Fatalf("eth_accounts 應含節點地址: %v", accs)
 	}
 
+	// P0-③ eth_requestAccounts：EIP-1193 直連入口，與 eth_accounts 同源。
+	reqAccs := ethResult(t, srv, "eth_requestAccounts").([]any)
+	if len(reqAccs) == 0 || reqAccs[0] != cb {
+		t.Fatalf("eth_requestAccounts 應回節點地址: %v", reqAccs)
+	}
+
 	// eth_maxPriorityFeePerGas：0x hex。
 	tip := ethResult(t, srv, "eth_maxPriorityFeePerGas").(string)
 	if !strings.HasPrefix(tip, "0x") {

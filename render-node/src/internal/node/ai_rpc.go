@@ -87,7 +87,7 @@ var aiIntents = []struct {
 	{aiBlock, "區塊資訊（最新區塊或指定高度）", "Block info (latest or a specific height)"},
 	{aiAudit, "鏈上審計（一致/守恆/賬本）", "On-chain audit (consistent / ledger conservation)"},
 	{aiAddress, "地址餘額（鏈上 TACm）", "Address balance (on-chain TACm)"},
-	{aiReward, "獎勵（池 16% / 節點 9% / 礦工 75%）", "Rewards (pool 16% / node 9% / miner 75%)"},
+	{aiReward, "獎勵（池 15% / 節點 45% / 礦工 40%）", "Rewards (pool 15% / node 45% / miner 40%)"},
 	{aiMiner, "在線礦工與挖礦指引", "Online miners & mining guide"},
 	{aiSupply, "供應與發行", "Supply & emission"},
 	{aiJoin, "加入節點（seed / 驗證人）", "Join the network (seed / validator)"},
@@ -339,10 +339,10 @@ func (s *RPCServer) aiRewardAnswer(zh bool) string {
 	minted := reward * float64(tip)
 	pool := s.node.db.GetBalance(chaindb.RewardPoolAddr)
 	if zh {
-		return fmt.Sprintf("獎勵模型（M70，每塊 %s TACm）：\n- 節點 9%%：歸出塊節點（memo coinbase:node）\n- 池 16%%：挹注獎勵池（memo coinbase:pool，鏈上獎勵池餘額 %s TACm）\n- 礦工 75%%：按鏈上在線礦工算力瓜分（memo coinbase:miner）；無礦工時併入池（reserve）\n- 目前鏈頂 #%d，已發行 ≈ %s TACm\n「網路」頁審計面板可看全鏈實際分潤（on_chain_pool/node_share）。",
+		return fmt.Sprintf("獎勵模型（M70，每塊 %s TACm）：\n- 節點 45%%：由鏈上在線節點（PoT）均分（memo coinbase:node）\n- 池 15%%：挹注獎勵池（memo coinbase:pool，鏈上獎勵池餘額 %s TACm）\n- 礦工 40%%：按鏈上在線礦工算力瓜分（memo coinbase:miner）；無礦工時併入池（reserve）\n- 目前鏈頂 #%d，已發行 ≈ %s TACm\n「網路」頁審計面板可看全鏈實際分潤（on_chain_pool/node_share）。",
 			chaindb.FormatFloat(reward), pool, tip, chaindb.FormatFloat(minted))
 	}
-	return fmt.Sprintf("Rewards (M70 model, %s TACm/block):\n- Node 9%%: to the block producer (memo coinbase:node)\n- Pool 16%%: to the reward pool (memo coinbase:pool; on-chain pool balance %s TACm)\n- Miners 75%%: split by on-chain hashrate (memo coinbase:miner); if no miner online, merged into the pool (reserve)\n- Tip #%d → ≈ %s TACm minted\nSee the Network audit panel for the actual on-chain split (on_chain_pool/node_share).",
+	return fmt.Sprintf("Rewards (M70 model, %s TACm/block):\n- Node 45%%: split equally among online PoT nodes (memo coinbase:node)\n- Pool 15%%: to the reward pool (memo coinbase:pool; on-chain pool balance %s TACm)\n- Miners 40%%: split by on-chain hashrate (memo coinbase:miner); if no miner online, merged into the pool (reserve)\n- Tip #%d → ≈ %s TACm minted\nSee the Network audit panel for the actual on-chain split (on_chain_pool/node_share).",
 		chaindb.FormatFloat(reward), pool, tip, chaindb.FormatFloat(minted))
 }
 
@@ -357,10 +357,10 @@ func (s *RPCServer) aiMinerAnswer(zh bool) string {
 		}
 	}
 	if zh {
-		return fmt.Sprintf("鏈上在線礦工：%d 台（按算力瓜分每塊 75%% 獎勵；心跳窗口 %d 塊）。\n挖礦指引：開啟「挖礦」頁 → 註冊礦機 → 保持開機（心跳自動上鏈）→ 每塊 75%% 獎勵依算力比例自動分配。\n可問「加入節點」了解成為節點的方式。",
+		return fmt.Sprintf("鏈上在線礦工：%d 台（按算力瓜分每塊 40%% 獎勵；心跳窗口 %d 塊）。\n挖礦指引：開啟「挖礦」頁 → 註冊礦機 → 保持開機（心跳自動上鏈）→ 每塊 40%% 獎勵依算力比例自動分配。\n可問「加入節點」了解成為節點的方式。",
 			count, hbWindow)
 	}
-	return fmt.Sprintf("Online miners on-chain: %d (they split 75%% of each block reward by hashrate; heartbeat window %d blocks).\nMining guide: open the Mining page → register your miner → keep it online (heartbeat is on-chain automatically) → 75%% of each block is split by hashrate.\nAsk 'join network' to learn how to become a node.",
+	return fmt.Sprintf("Online miners on-chain: %d (they split 40%% of each block reward by hashrate; heartbeat window %d blocks).\nMining guide: open the Mining page → register your miner → keep it online (heartbeat is on-chain automatically) → 40%% of each block is split by hashrate.\nAsk 'join network' to learn how to become a node.",
 		count, hbWindow)
 }
 
@@ -380,9 +380,9 @@ func (s *RPCServer) aiSupplyAnswer(zh bool) string {
 
 func (s *RPCServer) aiJoinAnswer(zh bool) string {
 	if zh {
-		return "加入 TACm 主網成為節點：\n1. 在伺服器安裝 Go，clone tacm-go 程式碼；\n2. 以 seed 節點啟動並同步（公開 seed 列表在「加入節點」頁）；\n3. 連上 P2P 後自動同步區塊，參與 PoW 出塊與 BFT 最終性投票；\n4. 節點每塊獲得 coinbase 9% 節點獎勵（memo coinbase:node）。\n詳細步驟請看「加入節點」頁。"
+		return "加入 TACm 主網成為節點：\n1. 在伺服器安裝 Go，clone tacm-go 程式碼；\n2. 以 seed 節點啟動並同步（公開 seed 列表在「加入節點」頁）；\n3. 連上 P2P 後自動同步區塊，參與 PoT 出塊與 BFT 最終性投票；\n4. 在線節點每塊均分 coinbase 45% 節點獎勵（memo coinbase:node，PoT 時間權證）。\n詳細步驟請看「加入節點」頁。"
 	}
-	return "Join the TACm mainnet as a node:\n1. Install Go, clone the tacm-go repo;\n2. Start with a seed node and sync (public seed list on the Join page);\n3. Once connected via P2P you sync blocks and participate in PoW mining & BFT finality voting;\n4. Nodes earn 9% of each block as node reward (memo coinbase:node).\nSee the Join page for the full steps."
+	return "Join the TACm mainnet as a node:\n1. Install Go, clone the tacm-go repo;\n2. Start with a seed node and sync (public seed list on the Join page);\n3. Once connected via P2P you sync blocks and participate in PoT mining & BFT finality voting;\n4. Online nodes split 45% of each block as node reward (memo coinbase:node, PoT time warrant).\nSee the Join page for the full steps."
 }
 
 func (s *RPCServer) aiTransferAnswer(zh bool) string {
@@ -395,9 +395,9 @@ func (s *RPCServer) aiTransferAnswer(zh bool) string {
 func (s *RPCServer) aiHelpAnswer(zh bool) string {
 	var b strings.Builder
 	if zh {
-		b.WriteString("我是 TACm 鏈上智能助手，可以回答（中/英）：\n")
+		b.WriteString("我是 TAC Ai 鏈上智能助手，可以回答（中/英）：\n")
 	} else {
-		b.WriteString("I'm the TACm on-chain assistant. I can answer (EN/ZH):\n")
+		b.WriteString("I'm the TAC Ai on-chain assistant. I can answer (EN/ZH):\n")
 	}
 	for _, it := range aiIntents {
 		if zh {

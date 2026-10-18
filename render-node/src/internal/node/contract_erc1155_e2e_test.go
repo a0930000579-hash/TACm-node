@@ -57,11 +57,15 @@ func TestContractErc1155DeployMintTransferBatch(t *testing.T) {
 		}
 	}
 
-	// balanceOf(admin, 1) 應等 100。
+	// balanceOf(admin, 1) 應等 100、id=2 應等 50（兩筆 mint 依序入塊，等待兩筆皆上鏈）。
 	waitFor(t, func() bool {
-		b := studioGetJSON(t, srv, "/contract/erc1155/"+contractAddr+"?holder="+admin+"&id=1")
-		return b["ok"] == true && b["balance_of"] == "100"
-	}, 8*time.Second, "balanceOf(admin,1) 未達 100")
+		b1 := studioGetJSON(t, srv, "/contract/erc1155/"+contractAddr+"?holder="+admin+"&id=1")
+		if b1["ok"] != true || b1["balance_of"] != "100" {
+			return false
+		}
+		b2 := studioGetJSON(t, srv, "/contract/erc1155/"+contractAddr+"?holder="+admin+"&id=2")
+		return b2["ok"] == true && b2["balance_of"] == "50"
+	}, 8*time.Second, "balanceOf(admin,1/2) 未達 100/50")
 	if b := studioGetJSON(t, srv, "/contract/erc1155/"+contractAddr+"?holder="+admin+"&id=2"); b["balance_of"] != "50" {
 		t.Fatalf("balanceOf(admin,2) 應為 50，得到 %v", b["balance_of"])
 	}

@@ -2,9 +2,11 @@ package node
 
 import (
 	"encoding/json"
+	"math/big"
 	"net/http"
-	"strconv"
 	"strings"
+
+	"tacm/internal/wallet"
 )
 
 // governanceProposeReq POST /api/governance/propose {title,desc,ptype,param_key,param_value,address}
@@ -22,6 +24,20 @@ type governanceVoteReq struct {
 	ProposalID int64  `json:"proposal_id"`
 	Choice     string `json:"choice"`
 	Address    string `json:"address"`
+}
+
+// walletBalanceOf 回傳地址錢包服務 TACm 餘額（raw wei → TACM float，M151 投票權重）。
+// 權威帳本為 wallet store（錢包頁/交易所/挖礦收益均寫入此層），非 VM accounts 表。
+func walletBalanceOf(ws *wallet.Service, addr string) float64 {
+	if ws == nil {
+		return 0
+	}
+	acc, err := ws.Balance(addr)
+	if err != nil || acc == nil {
+		return 0
+	}
+	f, _ := new(big.Float).SetInt(acc.TACmBalance).Float64()
+	return f / 1e18
 }
 
 // handleGovernanceProposals GET /api/governance/proposals
@@ -70,12 +86,13 @@ func (s *RPCServer) handleGovernancePropose(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	tip := s.node.DB().GetTipHeight()
-	id, err := gov.Propose(req.Title, req.Desc, req.PType, req.ParamKey, req.ParamValue, req.Address, tip, "")
+	power := walletBalanceOf(s.node.walletSvc, req.Address)
+	id, err := gov.Propose(req.Title, req.Desc, req.PType, req.ParamKey, req.ParamValue, req.Address, power, tip, "")
 	if err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"ok": false, "error": err.Error()})
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "proposal_id": id})
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "proposal_id": id, "power": power})
 }
 
 // handleGovernanceVote POST /api/governance/vote
@@ -100,14 +117,11 @@ func (s *RPCServer) handleGovernanceVote(w http.ResponseWriter, r *http.Request)
 		writeJSON(w, http.StatusBadRequest, map[string]any{"ok": false, "error": "invalid_proposal_id"})
 		return
 	}
-	// 投票權重：1 基本票 + 持幣加成（TACm 餘額每 1,000,000 加 1，上限 9）。
-	power := 1.0
-	if bal, err := strconv.ParseFloat(s.node.DB().GetBalance(req.Address), 64); err == nil && bal > 0 {
-		bonus := bal / 1000000
-		if bonus > 9 {
-			bonus = 9
-		}
-		power += bonus
+	// 投票權重（M151）：鏈上 TACm 餘額直接加權（1 TACM = 1 票，與主流 DAO 一致）。
+	power := walletBalanceOf(s.node.walletSvc, req.Address)
+	if power <= 0 {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"ok": false, "error": "zero_balance_no_voting_power"})
+		return
 	}
 	tip := s.node.DB().GetTipHeight()
 	if err := gov.Vote(req.ProposalID, req.Address, req.Choice, power, tip, ""); err != nil {
@@ -115,6 +129,17 @@ func (s *RPCServer) handleGovernanceVote(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "proposal_id": req.ProposalID, "power": power})
+}
+
+// handleGovernanceConfig GET /api/governance/config
+// 回傳治理參數（M151：投票窗口/通過門檻/法定人數/時間鎖/提案門檻）。
+func (s *RPCServer) handleGovernanceConfig(w http.ResponseWriter, r *http.Request) {
+	gov := s.node.Governance()
+	if gov == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"ok": false, "error": "governance_disabled"})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "config": gov.Config()})
 }
 
 // validTACAddress 輕量地址格式檢查（tx0 開頭或獎勵池）。

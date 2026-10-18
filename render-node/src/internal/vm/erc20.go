@@ -28,6 +28,10 @@ var (
 	SelectorAllowance     = []byte{0xdd, 0x62, 0xed, 0x3e} // allowance(address,address)
 	SelectorTransferFrom  = []byte{0x23, 0xb8, 0x72, 0xdd} // transferFrom(address,address,uint256)
 	SelectorDecimals      = []byte{0x31, 0x3c, 0xe5, 0x67} // decimals()
+	// EIP-2612 permit（EIP-712 離線授權）selector。
+	SelectorPermit          = []byte{0xd5, 0x05, 0xac, 0xcf} // permit(address,address,uint256,uint256,uint8,bytes32,bytes32)
+	SelectorNonces          = []byte{0x7e, 0xce, 0xbe, 0x00} // nonces(address)
+	SelectorDomainSeparator = []byte{0x36, 0x44, 0xe5, 0x15} // DOMAIN_SEPARATOR()
 	// 標準事件 topic0（keccak256 簽名）——與乙太坊主網一致。
 	TopicTransfer = []byte{0xdd, 0xf2, 0x52, 0xad, 0x1b, 0xe2, 0xc8, 0x9b,
 		0x69, 0xc2, 0xb0, 0x68, 0xfc, 0x37, 0x8d, 0xaa, 0x95, 0x2b, 0xa7, 0xf1,
@@ -37,6 +41,15 @@ var (
 		0xf7, 0xb2, 0x29, 0x1e, 0x5b, 0x20, 0x0a, 0xc8, 0xc7, 0xc3, 0xb9, 0x25}
 	// allowance 嵌套映射基礎 slot（自訂布局：keccak(spender‖keccak(owner‖3))）。
 	AllowanceBaseSlot = big.NewInt(3)
+	// EIP-2612 permit 常數（EIP-712）。
+	// PermitTypeHash：keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)")
+	PermitTypeHash = BytesToInt(Keccak256([]byte("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)")))
+	// DomainTypeHash：keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")
+	DomainTypeHash = BytesToInt(Keccak256([]byte("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")))
+	// VersionHash：keccak256("1")——permit domain 固定 version。
+	VersionHash = BytesToInt(Keccak256([]byte("1")))
+	// NonceBaseSlot：nonce 映射基礎 slot（mapping(address=>uint256) at slot 4，與 allowance/balance 錯開）。
+	NonceBaseSlot = big.NewInt(4)
 )
 
 // RET32 為「值 MSTORE@0、RETURN(0,32)」尾碼。
@@ -72,12 +85,38 @@ func selNum(sel []byte) *big.Int {
 //	slot2                = symbol（右對齊 32-byte）
 //	slot[address]        = balance（以 256-bit 整數為 key）
 //	allowance(owner,spender) = keccak(spender ‖ keccak(owner ‖ 3))（嵌套映射）
+//	nonces(owner)        = keccak(owner ‖ 4)（EIP-2612 mapping，slot 4）
 func Erc20Runtime() []byte {
-	// ---- dispatch：9 個 selector 比較對（統一 39 bytes：80 7F<sel> 14 61<dst> 57）＋fallback ----
+	return erc20RuntimeBuild(nil)
+}
+
+// Erc20RuntimePermit 回傳含 EIP-2612 permit / nonces / DOMAIN_SEPARATOR 的
+// runtime 位元組碼。nameHash＝keccak256(name)（EIP-712 domain name hash，
+// 由部署流程以實際 name 計算後注入）。
+func Erc20RuntimePermit(nameHash *big.Int) []byte {
+	if nameHash == nil {
+		nameHash = BytesToInt(Keccak256(nil))
+	}
+	return erc20RuntimeBuild(nameHash)
+}
+
+// erc20RuntimeBuild 為 runtime 共用建構：nameHash 為 nil 時只有 9 個標準
+// selector（無 permit）；非 nil 時追加 nonces/DOMAIN_SEPARATOR/permit。
+func erc20RuntimeBuild(nameHash *big.Int) []byte {
+	// ---- dispatch：9 個（無 permit）或 12 個（含 permit）selector 比較對＋fallback ----
 	selOrder := [][]byte{
 		SelectorTotalSupply, SelectorBalanceOf, SelectorTransfer,
 		SelectorName, SelectorSymbol,
 		SelectorApprove, SelectorAllowance, SelectorTransferFrom, SelectorDecimals,
+	}
+	segs := []builtSeg{
+		erc20SegTotalSupply(), erc20SegBalanceOf(), erc20SegTransfer(),
+		erc20SegName(), erc20SegSymbol(), erc20SegApprove(), erc20SegAllowance(),
+		erc20SegTransferFrom(), erc20SegDecimals(),
+	}
+	if nameHash != nil {
+		selOrder = append(selOrder, SelectorNonces, SelectorDomainSeparator, SelectorPermit)
+		segs = append(segs, erc20SegNonces(), erc20SegDomainSeparator(nameHash), erc20SegPermit(nameHash))
 	}
 	header := []byte{0x60, 0x00, 0x35} // CALLDATALOAD(0)
 	header = append(header, push32(new(big.Int).Lsh(big.NewInt(1), 224))...)
@@ -94,12 +133,6 @@ func Erc20Runtime() []byte {
 	}
 	d = append(d, 0x60, 0x00, 0x60, 0x00, 0xF3) // fallback RETURN(0,0)
 
-	// ---- 9 個實作段（各段回傳自身 code＋相對跳轉清單）----
-	segs := []builtSeg{
-		erc20SegTotalSupply(), erc20SegBalanceOf(), erc20SegTransfer(),
-		erc20SegName(), erc20SegSymbol(), erc20SegApprove(), erc20SegAllowance(),
-		erc20SegTransferFrom(), erc20SegDecimals(),
-	}
 	// 計算各段絕對偏移。
 	labs := make([]int, len(segs))
 	off := len(d)
@@ -153,12 +186,17 @@ func allowSlotCode(ownerCode, spenderCode []byte) []byte {
 }
 
 var (
-	codeCaller     = []byte{0x33}             // CALLER
-	codeCalldata4  = []byte{0x60, 0x04, 0x35} // CALLDATALOAD(4)
-	codeCalldata24 = []byte{0x60, 0x24, 0x35} // CALLDATALOAD(36)
-	codeCalldata68 = []byte{0x60, 0x44, 0x35} // CALLDATALOAD(68)
-	codeLog3Tail   = []byte{0x60, 0x20, 0x60, 0x00, 0xA3} // LOG3 size=32 offset=0
-	codeReturnTrue = []byte{0x60, 0x01}       // PUSH1 1
+	codeCaller       = []byte{0x33}             // CALLER
+	codeCalldata4    = []byte{0x60, 0x04, 0x35} // CALLDATALOAD(4)
+	codeCalldata24   = []byte{0x60, 0x24, 0x35} // CALLDATALOAD(36)
+	codeCalldata36   = []byte{0x60, 0x24, 0x35} // CALLDATALOAD(36)（permit spender）
+	codeCalldata68   = []byte{0x60, 0x44, 0x35} // CALLDATALOAD(68)
+	codePermitDeadline  = []byte{0x60, 0x64, 0x35} // CALLDATALOAD(100)（permit deadline）
+	codePermitV  = []byte{0x60, 0x84, 0x35} // CALLDATALOAD(132)（permit v）
+	codePermitR  = []byte{0x60, 0xA4, 0x35} // CALLDATALOAD(164)（permit r）
+	codePermitS  = []byte{0x60, 0xC4, 0x35} // CALLDATALOAD(196)（permit s）
+	codeLog3Tail     = []byte{0x60, 0x20, 0x60, 0x00, 0xA3} // LOG3 size=32 offset=0
+	codeReturnTrue   = []byte{0x60, 0x01}       // PUSH1 1
 )
 
 // erc20SegTotalSupply: totalSupply → SLOAD slot0 → RETURN(0,32)
@@ -313,16 +351,195 @@ func erc20SegTransferFrom() builtSeg {
 	return builtSeg{code: b, jumps: jumps}
 }
 
-// Erc20Init 回傳部署位元組碼（無 name/symbol 元資料）：把 totalSupply 寫入
-// slot0、並將總供應量全部結給部署者（CALLER=creator），最後回傳 runtime。
+// erc20SegNonces: nonces(owner)——SLOAD keccak(owner‖4) → RETURN(0,32)。
+// nonce slot 布局：mapping(address=>uint256) at slot 4（與 allowance/balance 錯開）。
+func erc20SegNonces() builtSeg {
+	b := []byte{0x5B} // JUMPDEST
+	b = append(b, codeCalldata4...)
+	b = append(b, 0x60, 0x00, 0x52)            // mem[0]=owner
+	b = append(b, 0x60, 0x04, 0x60, 0x20, 0x52) // mem[32]=4
+	b = append(b, 0x60, 0x40, 0x60, 0x00, 0x20) // SHA3(0,64) → slot
+	b = append(b, 0x54)                        // SLOAD
+	b = append(b, RET32...)
+	return builtSeg{code: b}
+}
+
+// erc20SegDomainSeparator: DOMAIN_SEPARATOR()——keccak256(DOMAIN_TYPEHASH‖
+// nameHash‖versionHash‖chainId‖this) → RETURN(0,32)。chainId 取 CHAINID
+// opcode（0x46）、verifyingContract 取 ADDRESS（address(this)），與
+// EIP-712 標準一致。
+func erc20SegDomainSeparator(nameHash *big.Int) builtSeg {
+	var b []byte
+	b = append(b, 0x5B) // JUMPDEST
+	b = append(b, push32(DomainTypeHash)...)
+	b = append(b, 0x60, 0x00, 0x52)            // mem[0]=typehash
+	b = append(b, push32(nameHash)...)
+	b = append(b, 0x60, 0x20, 0x52)            // mem[32]=nameHash
+	b = append(b, push32(VersionHash)...)
+	b = append(b, 0x60, 0x40, 0x52)            // mem[64]=versionHash
+	b = append(b, 0x46)                        // CHAINID
+	b = append(b, 0x60, 0x60, 0x52)            // mem[96]=chainId
+	b = append(b, 0x30)                        // ADDRESS（address(this)）
+	b = append(b, 0x60, 0x80, 0x52)            // mem[128]=verifyingContract
+	b = append(b, 0x60, 0xA0, 0x60, 0x00, 0x20) // SHA3(0,160) → domain
+	b = append(b, RET32...)
+	return builtSeg{code: b}
+}
+
+// erc20SegPermit: permit(owner, spender, value, deadline, v, r, s)——EIP-2612
+// 離線授權。流程：
+//  1. deadline 檢查：now > deadline → REVERT。
+//  2. nonce = SLOAD keccak(owner‖4)。
+//  3. structHash = keccak256(PERMIT_TYPEHASH‖owner‖spender‖value‖nonce‖deadline)。
+//  4. domainSeparator = keccak256(DOMAIN_TYPEHASH‖nameHash‖versionHash‖chainId‖this)。
+//  5. digest = keccak256("\x19\x01"‖domainSeparator‖structHash)。
+//  6. ecrecover（precompile 0x01）→ recovered == owner，否則 REVERT。
+//  7. nonce+1 SSTORE；allowance[owner][spender] = value SSTORE。
+//  8. 回傳 1。
+func erc20SegPermit(nameHash *big.Int) builtSeg {
+	var b []byte
+	var jumps []segJump
+
+	b = append(b, 0x5B) // JUMPDEST
+
+	// ---- 1) deadline 檢查：now > deadline → REVERT ----
+	b = append(b, 0x42)                    // TIMESTAMP → now
+	b = append(b, codePermitDeadline...)      // deadline
+	b = append(b, 0x11, 0x15)              // GT ISZERO（有效時=1）
+	deadlineJump := len(b) + 1
+	b = append(b, 0x61, 0x00, 0x00, 0x57) // JUMPI ok_deadline
+	b = append(b, 0x60, 0x00, 0x60, 0x00, 0xFD) // REVERT
+	okDeadline := len(b)
+	b = append(b, 0x5B)                    // ok_deadline
+	jumps = append(jumps, segJump{pos: deadlineJump, target: okDeadline})
+
+	// ---- 2) nonce = SLOAD keccak(owner‖4) ----
+	b = append(b, codeCalldata4...)
+	b = append(b, 0x60, 0x00, 0x52)            // mem[0]=owner
+	b = append(b, 0x60, 0x04, 0x60, 0x20, 0x52) // mem[32]=4
+	b = append(b, 0x60, 0x40, 0x60, 0x00, 0x20) // SHA3(0,64) → slot
+	b = append(b, 0x54)                        // SLOAD → nonce
+
+	// ---- 3) structHash = keccak256(PERMIT_TYPEHASH‖owner‖spender‖value‖nonce‖deadline) ----
+	b = append(b, push32(PermitTypeHash)...)
+	b = append(b, 0x60, 0x00, 0x52)            // mem[0]=typehash
+	b = append(b, codeCalldata4...)
+	b = append(b, 0x60, 0x20, 0x52)            // mem[32]=owner
+	b = append(b, codeCalldata36...)
+	b = append(b, 0x60, 0x40, 0x52)            // mem[64]=spender
+	b = append(b, codeCalldata68...)
+	b = append(b, 0x60, 0x60, 0x52)            // mem[96]=value
+	b = append(b, 0x80)                        // DUP1 nonce
+	b = append(b, 0x60, 0x80, 0x52)            // mem[128]=nonce
+	b = append(b, codePermitDeadline...)
+	b = append(b, 0x60, 0xA0, 0x52)            // mem[160]=deadline
+	b = append(b, 0x60, 0xC0, 0x60, 0x00, 0x20) // SHA3(0,192) → structHash
+
+	// ---- 4) domainSeparator = keccak256(DOMAIN_TYPEHASH‖nameHash‖versionHash‖chainId‖this) ----
+	b = append(b, push32(DomainTypeHash)...)
+	b = append(b, 0x60, 0x00, 0x52)
+	b = append(b, push32(nameHash)...)
+	b = append(b, 0x60, 0x20, 0x52)
+	b = append(b, push32(VersionHash)...)
+	b = append(b, 0x60, 0x40, 0x52)
+	b = append(b, 0x46)                        // CHAINID
+	b = append(b, 0x60, 0x60, 0x52)
+	b = append(b, 0x30)                        // ADDRESS（address(this)）
+	b = append(b, 0x60, 0x80, 0x52)            // mem[128]=verifyingContract
+	b = append(b, 0x60, 0xA0, 0x60, 0x00, 0x20) // SHA3(0,160) → domain
+
+	// ---- 5) digest = keccak256("\x19\x01"‖domain‖structHash)；寫回 mem[0:32] ----
+	b = append(b, 0x60, 0x19, 0x60, 0x00, 0x53) // MSTORE8(0,0x19)
+	b = append(b, 0x60, 0x01, 0x60, 0x01, 0x53) // MSTORE8(1,0x01)
+	b = append(b, 0x80, 0x60, 0x02, 0x52)       // DUP1 domain；MSTORE(2,domain)
+	b = append(b, 0x81, 0x60, 0x22, 0x52)       // DUP2 structHash；MSTORE(34,structHash)
+	b = append(b, 0x60, 0x42, 0x60, 0x00, 0x20) // SHA3(0,66) → digest（0x19 0x01‖domain‖structHash）
+	b = append(b, 0x60, 0x00, 0x52)             // mem[0]=digest（ecrecover input）
+
+	// ---- 6) ecrecover：CALL precompile 0x01，input=digest‖v‖r‖s（mem[0:128]）----
+	b = append(b, codePermitV...)
+	b = append(b, 0x60, 0x20, 0x52)            // mem[32]=v
+	b = append(b, codePermitR...)
+	b = append(b, 0x60, 0x40, 0x52)            // mem[64]=r
+	b = append(b, codePermitS...)
+	b = append(b, 0x60, 0x60, 0x52)            // mem[96]=s
+	b = append(b, 0x60, 0x20)                  // outSize=32（棧底）
+	b = append(b, 0x60, 0x00)                  // outOffset=0
+	b = append(b, 0x61, 0x00, 0x80)            // inSize=128
+	b = append(b, 0x60, 0x00)                  // inOffset=0
+	b = append(b, 0x60, 0x00)                  // value=0
+	b = append(b, 0x60, 0x01)                  // addr=0x01
+	b = append(b, 0x61, 0x0B, 0xB8)            // gas=3000（棧頂，EVM 慣例）
+	b = append(b, 0xF1)                        // CALL → ok
+	b = append(b, 0x15)                        // ISZERO（ok=0 時=1）
+	callFailJump := len(b) + 1
+	b = append(b, 0x61, 0x00, 0x00, 0x57)      // JUMPI revert_label
+	b = append(b, 0x60, 0x00, 0x51)            // MLOAD(0) → recovered
+	b = append(b, codeCalldata4...)            // owner
+	b = append(b, 0x14)                        // EQ（相等=1）
+	okSignJump := len(b) + 1
+	b = append(b, 0x61, 0x00, 0x00, 0x57)      // JUMPI ok_sign
+	revertLabel := len(b)
+	b = append(b, 0x5B)                        // JUMPDEST revert_label
+	b = append(b, 0x60, 0x00, 0x60, 0x00, 0xFD) // REVERT
+	jumps = append(jumps, segJump{pos: callFailJump, target: revertLabel})
+	okSign := len(b)
+	b = append(b, 0x5B)                        // JUMPDEST ok_sign
+	jumps = append(jumps, segJump{pos: okSignJump, target: okSign})
+
+	// ---- 7) nonce+1：重算 slot → SLOAD → +1 → SSTORE ----
+	b = append(b, codeCalldata4...)
+	b = append(b, 0x60, 0x00, 0x52)
+	b = append(b, 0x60, 0x04, 0x60, 0x20, 0x52)
+	b = append(b, 0x60, 0x40, 0x60, 0x00, 0x20) // SHA3 → slot
+	b = append(b, 0x80)                        // DUP1
+	b = append(b, 0x54)                        // SLOAD → nonce
+	b = append(b, 0x60, 0x01)                  // PUSH1 1
+	b = append(b, 0x01)                        // ADD
+	b = append(b, 0x90)                        // SWAP1 → [nonce+1, slot]
+	b = append(b, 0x55)                        // SSTORE
+
+	// ---- 8) allowance[owner][spender] = value ----
+	b = append(b, allowSlotCode(codeCalldata4, codeCalldata36)...)
+	b = append(b, codeCalldata68...)            // value
+	b = append(b, 0x90)                        // SWAP1 → [value, slot]
+	b = append(b, 0x55)                        // SSTORE
+
+	// ---- 9) 回傳 1 ----
+	b = append(b, codeReturnTrue...)
+	b = append(b, RET32...)
+
+	return builtSeg{code: b, jumps: jumps}
+}
+
+// Erc20Init 回傳部署位元組碼（無 name/symbol 元資料，不含 permit）：把
+// totalSupply 寫入 slot0、並將總供應量全部結給部署者（CALLER=creator），
+// 最後回傳 runtime。
 func Erc20Init(totalSupply *big.Int) []byte {
-	return Erc20InitWithMeta(totalSupply, nil, nil)
+	runtime := Erc20Runtime()
+	var b []byte
+	b = append(b, push32(totalSupply)...)
+	b = append(b, 0x60, 0x00) // key 0
+	b = append(b, 0x55)       // SSTORE
+	b = append(b, push32(totalSupply)...)
+	b = append(b, 0x33) // CALLER → creator（key 頂）
+	b = append(b, 0x55) // SSTORE
+	initLen := len(b)
+	rl := len(runtime)
+	src := initLen + 15
+	b = append(b, 0x61, byte(rl>>8), byte(rl&0xFF))                   // PUSH2 size
+	b = append(b, 0x61, byte(src>>8), byte(src&0xFF))                 // PUSH2 src
+	b = append(b, 0x60, 0x00)                                         // PUSH dest
+	b = append(b, 0x39)                                               // CODECOPY（dest 棧頂）
+	b = append(b, 0x61, byte(rl>>8), byte(rl&0xFF), 0x60, 0x00, 0xF3) // RETURN(0, rl)
+	return append(b, runtime...)
 }
 
 // Erc20InitWithMeta 回傳帶元資料（name/symbol）的部署位元組碼：額外把
-// name 寫入 slot1、symbol 寫入 slot2（皆為右對齊 32-byte）。
+// name 寫入 slot1、symbol 寫入 slot2（皆為右對齊 32-byte），並採用含
+// EIP-2612 permit 的 runtime（新部署合約一律支援 permit）。
 func Erc20InitWithMeta(totalSupply *big.Int, name, symbol []byte) []byte {
-	runtime := Erc20Runtime()
+	runtime := Erc20RuntimePermit(BytesToInt(Keccak256(name)))
 	var b []byte
 	// slot0 = totalSupply（SSTORE：key 棧頂，先壓 value 再壓 key 0）
 	b = append(b, push32(totalSupply)...)
@@ -407,4 +624,27 @@ func Erc20TransferFromCalldata(from0x, to0x string, amount *big.Int) []byte {
 // Erc20DecimalsCalldata 組裝 decimals() calldata。
 func Erc20DecimalsCalldata() []byte {
 	return append([]byte{}, SelectorDecimals...)
+}
+
+// Erc20PermitCalldata 組裝 permit(owner, spender, value, deadline, v, r, s) calldata。
+func Erc20PermitCalldata(owner0x, spender0x string, value, deadline *big.Int, v byte, r, s []byte) []byte {
+	out := append([]byte{}, SelectorPermit...)
+	out = append(out, IntToBytes(addrToInt(owner0x), 32)...)
+	out = append(out, IntToBytes(addrToInt(spender0x), 32)...)
+	out = append(out, IntToBytes(value, 32)...)
+	out = append(out, IntToBytes(deadline, 32)...)
+	out = append(out, IntToBytes(big.NewInt(int64(v)), 32)...)
+	out = append(out, IntToBytes(new(big.Int).SetBytes(r), 32)...)
+	return append(out, IntToBytes(new(big.Int).SetBytes(s), 32)...)
+}
+
+// Erc20NoncesCalldata 組裝 nonces(owner) calldata。
+func Erc20NoncesCalldata(owner0x string) []byte {
+	out := append([]byte{}, SelectorNonces...)
+	return append(out, IntToBytes(addrToInt(owner0x), 32)...)
+}
+
+// Erc20DomainSeparatorCalldata 組裝 DOMAIN_SEPARATOR() calldata。
+func Erc20DomainSeparatorCalldata() []byte {
+	return append([]byte{}, SelectorDomainSeparator...)
 }

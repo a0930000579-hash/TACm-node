@@ -320,3 +320,36 @@ func TestApplyBlock(t *testing.T) {
 		t.Fatalf("bob=%s want 1.5 TACM", bob.TACmBalance)
 	}
 }
+
+// M159：委託解綁返還——pos:unbond_pay（from 空）→ 質押池扣、委託人入（非增發）。
+func TestApplyBlockUnbondPay(t *testing.T) {
+	st, _ := Open(t.TempDir())
+	defer st.Close()
+	svc := NewService(st)
+	if err := svc.Deposit("alice", AssetTACm, amt("1000", AssetTACm), "fund"); err != nil {
+		t.Fatal(err)
+	}
+	// 委託鎖倉：alice → 質押池（模擬 handleStakeDelegate）。
+	if _, err := svc.Transfer("alice", "pos_stake_pool", AssetTACm, amt("500", AssetTACm), "stake delegate"); err != nil {
+		t.Fatal(err)
+	}
+	// 解綁返還交易（height 1）。
+	tx := []chaindb.Transaction{{
+		TxHash: "ub1", FromAddr: "", ToAddr: "alice", Amount: "500", Fee: "0",
+		Memo: "pos:unbond_pay:alice:tx0validator00000000000000000000000000",
+	}}
+	if err := svc.ApplyBlock(1, tx); err != nil {
+		t.Fatal(err)
+	}
+	alice, _ := svc.Balance("alice")
+	// 1000 − (500 + fee) + 500 = 1000 − fee（委託鎖倉 Transfer 收取手續費）。
+	fee := feeAmount(AssetTACm, amt("500", AssetTACm))
+	want := new(big.Int).Sub(bigS("1000000000000000000000"), fee.Big)
+	if alice.TACmBalance.Cmp(want) != 0 {
+		t.Fatalf("alice=%s want %s（返還後僅扣一次委託手續費）", alice.TACmBalance, want)
+	}
+	pool, _ := svc.Balance("pos_stake_pool")
+	if pool.TACmBalance.Sign() != 0 {
+		t.Fatalf("質押池=%s want 0（返還扣盡鎖倉）", pool.TACmBalance)
+	}
+}

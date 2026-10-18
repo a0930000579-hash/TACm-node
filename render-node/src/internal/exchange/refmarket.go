@@ -313,11 +313,13 @@ func (s *Service) RefTrade(uid, market, side string, qty float64) (Trade, error)
 		if aerr != nil {
 			return Trade{}, fmt.Errorf("exchange: 金額格式: %w", aerr)
 		}
-		if err := s.Deposit(uid, base, qAmt, ""); err != nil {
-			return Trade{}, fmt.Errorf("exchange: 兌換入帳失敗: %w", err)
-		}
+		// M153 修復：先扣 USDT（餘額不足直接拒絕），成功後才入帳 base——避免「無資產也能成交」。
 		if err := s.Withdraw(uid, AssetUSDT, uAmt); err != nil {
-			return Trade{}, fmt.Errorf("exchange: 兌換扣款失敗: %w", err)
+			return Trade{}, fmt.Errorf("exchange: 餘額不足（需 USDT %s）: %w", uAmt.String(AssetUSDT), err)
+		}
+		if err := s.Deposit(uid, base, qAmt, ""); err != nil {
+			_ = s.Deposit(uid, AssetUSDT, uAmt, "") // 入帳失敗則回滾 USDT 扣款
+			return Trade{}, fmt.Errorf("exchange: 兌換入帳失敗: %w", err)
 		}
 	case "sell":
 		proceeds := qty * rm.Price
@@ -330,11 +332,13 @@ func (s *Service) RefTrade(uid, market, side string, qty float64) (Trade, error)
 		if aerr != nil {
 			return Trade{}, fmt.Errorf("exchange: 數量格式: %w", aerr)
 		}
-		if err := s.Deposit(uid, AssetUSDT, uAmt, ""); err != nil {
-			return Trade{}, fmt.Errorf("exchange: 兌換入帳失敗: %w", err)
-		}
+		// M153 修復：先扣 base（持倉不足直接拒絕），成功後才入帳 USDT——避免「無持倉也能賣出」。
 		if err := s.Withdraw(uid, base, qAmt); err != nil {
-			return Trade{}, fmt.Errorf("exchange: 兌換扣款失敗: %w", err)
+			return Trade{}, fmt.Errorf("exchange: 持倉不足（需 %s %s）: %w", qAmt.String(base), base, err)
+		}
+		if err := s.Deposit(uid, AssetUSDT, uAmt, ""); err != nil {
+			_ = s.Deposit(uid, base, qAmt, "") // 入帳失敗則回滾 base 扣款
+			return Trade{}, fmt.Errorf("exchange: 兌換入帳失敗: %w", err)
 		}
 	default:
 		return Trade{}, fmt.Errorf("exchange: side 需為 buy|sell")

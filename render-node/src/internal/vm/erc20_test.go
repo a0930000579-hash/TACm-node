@@ -200,9 +200,10 @@ func deployErc20WithMeta(t *testing.T, supply int64, name, symbol string) (*Worl
 	if len(res.ReturnData) == 0 {
 		t.Fatal("部署未回傳 runtime")
 	}
-	// 部署回傳的 runtime 必須與 Erc20Runtime() 完全一致（CODECOPY src 正確）。
-	if string(res.ReturnData) != string(Erc20Runtime()) {
-		t.Fatal("部署回傳 runtime 與 Erc20Runtime() 不一致")
+	// 部署回傳的 runtime 必須與含 permit 的 Erc20RuntimePermit() 完全一致
+	// （CODECOPY src 正確；Erc20InitWithMeta 自 v26 起內建 EIP-2612 permit）。
+	if string(res.ReturnData) != string(Erc20RuntimePermit(BytesToInt(Keccak256([]byte(name))))) {
+		t.Fatal("部署回傳 runtime 與 Erc20RuntimePermit() 不一致")
 	}
 	return world, res.ReturnData, creator
 }

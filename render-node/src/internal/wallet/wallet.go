@@ -9,13 +9,21 @@ import (
 // Service 為錢包高層操作：多資產轉帳（含手續費）、TiUSD 發行/銷毀、
 // 充值/提現/獎勵入帳。所有操作走單一事務 + 雙分錄審計。
 type Service struct {
-	st            *Store
-	mu            sync.Mutex
-	tacmMaxSupply float64 // M35：TACm 總供應上限（TiUSD 錨定基準）
+	st             *Store
+	mu             sync.Mutex
+	tacmMaxSupply  float64 // M35：TACm 總供應上限（TiUSD 錨定基準）
+	treasuryFeeBps int     // M151c-v2：手續費入治理金庫比例（萬分比；0=關閉）
 }
 
 // NewService 創建錢包服務。
 func NewService(st *Store) *Service { return &Service{st: st} }
+
+// SetTreasuryFeeBps 設定手續費入治理金庫比例（由節點治理參數驅動，Goroutine 安全）。
+func (s *Service) SetTreasuryFeeBps(bps int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.treasuryFeeBps = bps
+}
 
 // Store 返回底層帳本（供節點掛鉤/測試）。
 func (s *Service) Store() *Store { return s.st }

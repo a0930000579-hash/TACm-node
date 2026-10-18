@@ -95,6 +95,40 @@ CREATE TABLE IF NOT EXISTS mempool (
     received_at INTEGER,
     fee TEXT
 );
+CREATE TABLE IF NOT EXISTS pos_bootstraps (
+    address TEXT PRIMARY KEY,
+    ts INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS node_registry (
+    address TEXT PRIMARY KEY,
+    pubkey TEXT NOT NULL,
+    first_seen INTEGER NOT NULL,
+    last_active INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS pos_validators (
+    address TEXT PRIMARY KEY,
+    total_stake REAL DEFAULT 0,
+    pubkey TEXT,
+    status TEXT DEFAULT 'active',
+    first_seen INTEGER NOT NULL,
+    last_active INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS delegations (
+    delegator TEXT NOT NULL,
+    validator TEXT NOT NULL,
+    amount REAL DEFAULT 0,
+    ts INTEGER NOT NULL,
+    PRIMARY KEY (delegator, validator)
+);
+CREATE TABLE IF NOT EXISTS unbondings (
+    delegator TEXT NOT NULL,
+    validator TEXT NOT NULL,
+    amount REAL DEFAULT 0,
+    height INTEGER NOT NULL,
+    complete_height INTEGER NOT NULL,
+    status TEXT DEFAULT 'pending',
+    PRIMARY KEY (delegator, validator, height)
+);
 CREATE TABLE IF NOT EXISTS peers (
     node_id TEXT PRIMARY KEY,
     rpc_url TEXT,
@@ -301,4 +335,22 @@ func collectBlocks(rows *sql.Rows) ([]*Block, error) {
 		out = append(out, b)
 	}
 	return out, rows.Err()
+}
+
+// CountAllTransactions 統計全鏈交易筆數（索引 API 用）。
+func (c *ChainDB) CountAllTransactions() (int64, error) {
+	var n int64
+	if err := c.db.QueryRow("SELECT COUNT(*) FROM transactions").Scan(&n); err != nil {
+		return 0, fmt.Errorf("chaindb: 統計交易失敗: %w", err)
+	}
+	return n, nil
+}
+
+// CountAccounts 統計鏈上帳戶總數（索引 API 用）。
+func (c *ChainDB) CountAccounts() (int64, error) {
+	var n int64
+	if err := c.db.QueryRow("SELECT COUNT(*) FROM accounts").Scan(&n); err != nil {
+		return 0, fmt.Errorf("chaindb: 統計帳戶失敗: %w", err)
+	}
+	return n, nil
 }

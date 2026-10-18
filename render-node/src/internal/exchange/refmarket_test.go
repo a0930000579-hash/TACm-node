@@ -123,3 +123,49 @@ func TestRefKlinesNoZeroBase(t *testing.T) {
 		}
 	}
 }
+
+// TestRefTradeRequiresBalance M153：驗證「無資產不可交易」——buy 需 USDT、sell 需 base 持倉。
+func TestRefTradeRequiresBalance(t *testing.T) {
+	svc := newSvc(t)
+	const uid = "tx0test1111111111111111111111111111"
+
+	// 1) 完全無資產：buy 應拒絕（餘額不足），且不得入帳任何 base。
+	if _, err := svc.RefTrade(uid, "BTC/USDT", "buy", 0.01); err == nil {
+		t.Fatal("無 USDT 買 BTC 應被拒絕")
+	}
+	// 關鍵：拒絕後 base 不得入帳（舊 bug：先入帳後扣款，白嫖 BTC）。
+	if b, _ := svc.Balances(uid); len(b) != 0 {
+		t.Fatalf("拒絕後不應有任何餘額，got %+v", b)
+	}
+
+	// 2) 完全無持倉：sell 應拒絕。
+	if _, err := svc.RefTrade(uid, "ETH/USDT", "sell", 0.1); err == nil {
+		t.Fatal("無 ETH 賣出應被拒絕")
+	}
+
+	// 3) 入 USDT 後 buy：成功，USDT 扣、BTC 入。
+	if err := svc.Deposit(uid, AssetUSDT, exAmt("10000", AssetUSDT), "seed"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.RefTrade(uid, "BTC/USDT", "buy", 0.01); err != nil {
+		t.Fatalf("有 USDT 買 BTC 應成功: %v", err)
+	}
+	bal, _ := svc.Balances(uid)
+	gotUSDT, gotBTC := false, false
+	for _, b := range bal {
+		if b.Asset == AssetUSDT && b.Avail.Cmp(exAmt("10000", AssetUSDT)) < 0 {
+			gotUSDT = true // USDT 已扣款
+		}
+		if b.Asset == Asset("BTC") && b.Avail.Cmp(Amount{}) > 0 {
+			gotBTC = true // BTC 已入帳
+		}
+	}
+	if !gotUSDT || !gotBTC {
+		t.Fatalf("buy 成功後應扣 USDT 入 BTC，got %+v", bal)
+	}
+
+	// 4) 有 BTC 後 sell：成功。
+	if _, err := svc.RefTrade(uid, "BTC/USDT", "sell", 0.005); err != nil {
+		t.Fatalf("有持倉賣出應成功: %v", err)
+	}
+}

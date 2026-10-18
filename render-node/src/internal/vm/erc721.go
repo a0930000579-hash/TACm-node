@@ -29,23 +29,34 @@ import "math/big"
 
 // ERC-721 標準 function selector（4-byte）。
 var (
-	Selector721BalanceOf   = []byte{0x70, 0xa0, 0x82, 0x31} // balanceOf(address)
-	Selector721OwnerOf     = []byte{0x63, 0x52, 0x21, 0x1e} // ownerOf(uint256)
-	Selector721TransferFrom = []byte{0x23, 0xb8, 0x72, 0xdd} // transferFrom(address,address,uint256)
-	Selector721Mint        = []byte{0x40, 0xc1, 0x0f, 0x19} // mint(address,uint256)
-	Selector721TokenURI    = []byte{0xc8, 0x7b, 0x56, 0xdd} // tokenURI(uint256)
-	Selector721TotalSupply = []byte{0x18, 0x16, 0x0d, 0xdd} // totalSupply()
-	Selector721Name        = []byte{0x06, 0xfd, 0xde, 0x03} // name()
-	Selector721Symbol      = []byte{0x95, 0xd8, 0x9b, 0x41} // symbol()
-	Selector721Approve          = []byte{0x09, 0x5e, 0xa7, 0xb3} // approve(address,uint256)（與 ERC-20 approve 同簽名）
+	Selector721BalanceOf         = []byte{0x70, 0xa0, 0x82, 0x31} // balanceOf(address)
+	Selector721OwnerOf           = []byte{0x63, 0x52, 0x21, 0x1e} // ownerOf(uint256)
+	Selector721TransferFrom      = []byte{0x23, 0xb8, 0x72, 0xdd} // transferFrom(address,address,uint256)
+	Selector721Mint              = []byte{0x40, 0xc1, 0x0f, 0x19} // mint(address,uint256)
+	Selector721TokenURI          = []byte{0xc8, 0x7b, 0x56, 0xdd} // tokenURI(uint256)
+	Selector721TotalSupply       = []byte{0x18, 0x16, 0x0d, 0xdd} // totalSupply()
+	Selector721Name              = []byte{0x06, 0xfd, 0xde, 0x03} // name()
+	Selector721Symbol            = []byte{0x95, 0xd8, 0x9b, 0x41} // symbol()
+	Selector721Approve           = []byte{0x09, 0x5e, 0xa7, 0xb3} // approve(address,uint256)（與 ERC-20 approve 同簽名）
 	Selector721SetApprovalForAll = []byte{0xa2, 0x2c, 0xb4, 0x65} // setApprovalForAll(address,bool)
 	Selector721GetApproved       = []byte{0x08, 0x18, 0x12, 0xfc} // getApproved(uint256)
 	Selector721IsApprovedForAll  = []byte{0xe9, 0x85, 0xe9, 0xc5} // isApprovedForAll(address,address)
+	Selector721RoyaltyInfo       = []byte{0x2a, 0x55, 0x20, 0x5a} // royaltyInfo(uint256,uint256)（ERC-2981）
+	Selector721SupportsInterface = []byte{0x01, 0xff, 0xc9, 0xa7} // supportsInterface(bytes4)（ERC-165）
+	Selector721SetRoyaltyInfo    = []byte{0xe2, 0xe7, 0x84, 0xd5} // setRoyaltyInfo(address,uint256)（自訂管理介面）
 	// ERC-721 的 Transfer 事件 topic0 與 ERC-20 相同（Transfer(address,address,uint256)）。
 	Topic721Transfer = TopicTransfer
 	// ERC-721 標準事件 topic0（keccak 計算，與乙太坊主網一致）。
-	Topic721Approval     = []byte{0x8c, 0x5b, 0xe1, 0xe5, 0xeb, 0xec, 0x7d, 0x5b, 0xd1, 0x4f, 0x71, 0x42, 0x7d, 0x1e, 0x84, 0xf3, 0xdd, 0x03, 0x14, 0xc0, 0xf7, 0xb2, 0x29, 0x1e, 0x5b, 0x20, 0x0a, 0xc8, 0xc7, 0xc3, 0xb9, 0x25}
+	Topic721Approval       = []byte{0x8c, 0x5b, 0xe1, 0xe5, 0xeb, 0xec, 0x7d, 0x5b, 0xd1, 0x4f, 0x71, 0x42, 0x7d, 0x1e, 0x84, 0xf3, 0xdd, 0x03, 0x14, 0xc0, 0xf7, 0xb2, 0x29, 0x1e, 0x5b, 0x20, 0x0a, 0xc8, 0xc7, 0xc3, 0xb9, 0x25}
 	Topic721ApprovalForAll = []byte{0x17, 0x30, 0x7e, 0xab, 0x39, 0xab, 0x61, 0x07, 0xe8, 0x89, 0x98, 0x45, 0xad, 0x3d, 0x59, 0xbd, 0x96, 0x53, 0xf2, 0x00, 0xf2, 0x20, 0x92, 0x04, 0x89, 0xca, 0x2b, 0x59, 0x37, 0x69, 0x6c, 0x31}
+)
+
+// ERC-165 / ERC-2981 介面識別碼（supportsInterface 比對用）。
+var (
+	Interface165         = []byte{0x01, 0xff, 0xc9, 0xa7} // ERC-165
+	Interface721         = []byte{0x80, 0xac, 0x58, 0xcd} // ERC-721
+	Interface721Metadata = []byte{0x5b, 0x5e, 0x13, 0x9f} // ERC-721 Metadata
+	Interface2981        = []byte{0x2a, 0x55, 0x20, 0x5a} // ERC-2981
 )
 
 // mapSlotCode 產生「計算 mapping slot（keccak(key ‖ base)）」的 bytecode 片段：
@@ -59,12 +70,12 @@ var codeLog2Tail = []byte{0x60, 0x20, 0x60, 0x00, 0xA2}
 func nestedSlotCode(key1Code, key2Code []byte, base byte) []byte {
 	var b []byte
 	b = append(b, key1Code...)
-	b = append(b, 0x60, 0x00, 0x52)              // MSTORE(0, key1)
+	b = append(b, 0x60, 0x00, 0x52)             // MSTORE(0, key1)
 	b = append(b, 0x60, base, 0x60, 0x20, 0x52) // MSTORE(32, base)
 	b = append(b, 0x60, 0x40, 0x60, 0x00, 0x20) // SHA3(0,64) → inner
 	b = append(b, key2Code...)
-	b = append(b, 0x60, 0x00, 0x52)              // MSTORE(0, key2)
-	b = append(b, 0x60, 0x20, 0x52)              // MSTORE(32, inner)
+	b = append(b, 0x60, 0x00, 0x52)             // MSTORE(0, key2)
+	b = append(b, 0x60, 0x20, 0x52)             // MSTORE(32, inner)
 	b = append(b, 0x60, 0x40, 0x60, 0x00, 0x20) // SHA3(0,64) → keccak(key2 ‖ inner)
 	return b
 }
@@ -72,9 +83,9 @@ func nestedSlotCode(key1Code, key2Code []byte, base byte) []byte {
 func mapSlotCode(keyCode []byte, base byte) []byte {
 	var b []byte
 	b = append(b, keyCode...)
-	b = append(b, 0x60, 0x00, 0x52)                 // MSTORE(0, key)
-	b = append(b, 0x60, base, 0x60, 0x20, 0x52)    // MSTORE(32, base)
-	b = append(b, 0x60, 0x40, 0x60, 0x00, 0x20)    // SHA3(0,64) → slot
+	b = append(b, 0x60, 0x00, 0x52)             // MSTORE(0, key)
+	b = append(b, 0x60, base, 0x60, 0x20, 0x52) // MSTORE(32, base)
+	b = append(b, 0x60, 0x40, 0x60, 0x00, 0x20) // SHA3(0,64) → slot
 	return b
 }
 
@@ -87,6 +98,7 @@ func Erc721Runtime() []byte {
 		Selector721TransferFrom, Selector721TokenURI,
 		Selector721Approve, Selector721SetApprovalForAll,
 		Selector721GetApproved, Selector721IsApprovedForAll,
+		Selector721RoyaltyInfo, Selector721SupportsInterface, Selector721SetRoyaltyInfo,
 	}
 	header := []byte{0x60, 0x00, 0x35} // CALLDATALOAD(0)
 	header = append(header, push32(new(big.Int).Lsh(big.NewInt(1), 224))...)
@@ -108,6 +120,7 @@ func Erc721Runtime() []byte {
 		erc721SegTransferFrom(), erc721SegTokenURI(),
 		erc721SegApprove(), erc721SegSetApprovalForAll(),
 		erc721SegGetApproved(), erc721SegIsApprovedForAll(),
+		erc721SegRoyaltyInfo(), erc721SegSupportsInterface(), erc721SegSetRoyaltyInfo(),
 	}
 	labs := make([]int, len(segs))
 	off := len(d)
@@ -172,37 +185,37 @@ func erc721SegSymbol() builtSeg {
 func erc721SegMint() builtSeg {
 	var b []byte
 	var jumps []segJump
-	b = append(b, 0x5B) // JUMPDEST
+	b = append(b, 0x5B)                              // JUMPDEST
 	b = append(b, mapSlotCode(codeCalldata24, 3)...) // ownerSlot（tokenId=calldata[36]）
-	b = append(b, 0x80) // DUP1
-	b = append(b, 0x54) // owner
-	b = append(b, 0x15) // ISZERO（owner==0 才可 mint）
+	b = append(b, 0x80)                              // DUP1
+	b = append(b, 0x54)                              // owner
+	b = append(b, 0x15)                              // ISZERO（owner==0 才可 mint）
 	okPos := len(b) + 1
 	b = append(b, 0x61, 0x00, 0x00, 0x57) // JUMPI ok
 	jumps = append(jumps, segJump{pos: okPos, target: okPos + 8})
 	b = append(b, 0x60, 0x00, 0x60, 0x00, 0xFD) // REVERT
-	b = append(b, 0x5B)                       // ok: [ownerSlot]
+	b = append(b, 0x5B)                         // ok: [ownerSlot]
 	// ownerOf[tokenId]=to（SWAP1 後 ownerSlot 回棧頂當 key）
-	b = append(b, codeCalldata4...)           // to
-	b = append(b, 0x90)                       // SWAP1 → [ownerSlot, to]
-	b = append(b, 0x55)                       // SSTORE ownerOf[tokenId]=to
+	b = append(b, codeCalldata4...) // to
+	b = append(b, 0x90)             // SWAP1 → [ownerSlot, to]
+	b = append(b, 0x55)             // SSTORE ownerOf[tokenId]=to
 	// balance[to]++：balSlot=map(to,4)，DUP1 SLOAD +1，SSTORE（balSlot 棧頂）
 	b = append(b, mapSlotCode(codeCalldata4, 4)...)
-	b = append(b, 0x80)                       // DUP1
-	b = append(b, 0x54)                       // bal
-	b = append(b, 0x60, 0x01, 0x01)           // bal+1（ADD：1 頂、bal 次）
-	b = append(b, 0x90)                       // SWAP1 → [bal+1, balSlot]（key 回頂）
-	b = append(b, 0x55)                       // SSTORE bal[to]=bal+1
+	b = append(b, 0x80)             // DUP1
+	b = append(b, 0x54)             // bal
+	b = append(b, 0x60, 0x01, 0x01) // bal+1（ADD：1 頂、bal 次）
+	b = append(b, 0x90)             // SWAP1 → [bal+1, balSlot]（key 回頂）
+	b = append(b, 0x55)             // SSTORE bal[to]=bal+1
 	// totalSupply++
-	b = append(b, 0x60, 0x00, 0x54)           // supply
-	b = append(b, 0x60, 0x01, 0x01)           // supply+1
-	b = append(b, 0x60, 0x00, 0x55)           // SSTORE slot0
+	b = append(b, 0x60, 0x00, 0x54) // supply
+	b = append(b, 0x60, 0x01, 0x01) // supply+1
+	b = append(b, 0x60, 0x00, 0x55) // SSTORE slot0
 	// LOG3(Transfer, 0, to, tokenId)
-	b = append(b, codeCalldata24...)          // tokenId（data）
-	b = append(b, 0x60, 0x00, 0x52)           // mem[0]=tokenId
+	b = append(b, codeCalldata24...) // tokenId（data）
+	b = append(b, 0x60, 0x00, 0x52)  // mem[0]=tokenId
 	b = append(b, push32(selNum(Topic721Transfer))...)
-	b = append(b, 0x60, 0x00)                 // topic2=0（from=ZeroAddress）
-	b = append(b, codeCalldata4...)           // to（topic3）
+	b = append(b, 0x60, 0x00)       // topic2=0（from=ZeroAddress）
+	b = append(b, codeCalldata4...) // to（topic3）
 	b = append(b, codeLog3Tail...)
 	b = append(b, codeReturnTrue...)
 	b = append(b, RET32...)
@@ -216,79 +229,79 @@ func erc721SegTransferFrom() builtSeg {
 	var b []byte
 	var jumps []segJump
 	// 1) owner 檢查：ownerOf(tokenId)==from
-	b = append(b, 0x5B) // JUMPDEST
+	b = append(b, 0x5B)                              // JUMPDEST
 	b = append(b, mapSlotCode(codeCalldata68, 3)...) // ownerSlot（tokenId=calldata[68]）
-	b = append(b, 0x80) // DUP1
-	b = append(b, 0x54) // owner
-	b = append(b, codeCalldata4...) // from
-	b = append(b, 0x14) // EQ（pop from、owner → from==owner）
+	b = append(b, 0x80)                              // DUP1
+	b = append(b, 0x54)                              // owner
+	b = append(b, codeCalldata4...)                  // from
+	b = append(b, 0x14)                              // EQ（pop from、owner → from==owner）
 	ok1Pos := len(b) + 1
 	b = append(b, 0x61, 0x00, 0x00, 0x57) // JUMPI ok1
 	jumps = append(jumps, segJump{pos: ok1Pos, target: ok1Pos + 8})
 	b = append(b, 0x60, 0x00, 0x60, 0x00, 0xFD) // REVERT
-	b = append(b, 0x5B)                       // ok1: [ownerSlot]
+	b = append(b, 0x5B)                         // ok1: [ownerSlot]
 	// 2) 授權檢查（M75-1）：caller==from 或 getApproved(tokenId)==caller 或 approvalForAll[from][caller]!=0
 	// 分支 A：caller==from → ok3
 	var authJumps []segJump
-	b = append(b, codeCalldata4...)           // from
-	b = append(b, codeCaller...)               // caller
-	b = append(b, 0x14)                       // EQ
+	b = append(b, codeCalldata4...) // from
+	b = append(b, codeCaller...)    // caller
+	b = append(b, 0x14)             // EQ
 	aPos := len(b) + 1
-	b = append(b, 0x61, 0x00, 0x00, 0x57)     // JUMPI ok3
+	b = append(b, 0x61, 0x00, 0x00, 0x57) // JUMPI ok3
 	authJumps = append(authJumps, segJump{pos: aPos, target: 0})
 	// 分支 B：getApproved(tokenId)==caller → ok3
 	b = append(b, mapSlotCode(codeCalldata68, 7)...) // keccak(tokenId‖7)
-	b = append(b, 0x54)                       // approved
-	b = append(b, codeCaller...)               // caller
-	b = append(b, 0x14)                       // EQ
+	b = append(b, 0x54)                              // approved
+	b = append(b, codeCaller...)                     // caller
+	b = append(b, 0x14)                              // EQ
 	bPos := len(b) + 1
-	b = append(b, 0x61, 0x00, 0x00, 0x57)     // JUMPI ok3
+	b = append(b, 0x61, 0x00, 0x00, 0x57) // JUMPI ok3
 	authJumps = append(authJumps, segJump{pos: bPos, target: 0})
 	// 分支 C：approvalForAll[from][caller]!=0 → ok3
 	// slot = keccak(caller ‖ keccak(from ‖ 6))（與 nestedSlotCode 順序一致）
-	b = append(b, codeCalldata4...)           // from
-	b = append(b, 0x60, 0x00, 0x52)           // mem[0]=from
+	b = append(b, codeCalldata4...)             // from
+	b = append(b, 0x60, 0x00, 0x52)             // mem[0]=from
 	b = append(b, 0x60, 0x06, 0x60, 0x20, 0x52) // mem[32]=6
 	b = append(b, 0x60, 0x40, 0x60, 0x00, 0x20) // SHA3 → inner
-	b = append(b, codeCaller...)               // caller
-	b = append(b, 0x60, 0x00, 0x52)           // mem[0]=caller
-	b = append(b, 0x60, 0x20, 0x52)           // mem[32]=inner
+	b = append(b, codeCaller...)                // caller
+	b = append(b, 0x60, 0x00, 0x52)             // mem[0]=caller
+	b = append(b, 0x60, 0x20, 0x52)             // mem[32]=inner
 	b = append(b, 0x60, 0x40, 0x60, 0x00, 0x20) // SHA3 → keccak(caller ‖ inner)
-	b = append(b, 0x54)                       // approvedAll
+	b = append(b, 0x54)                         // approvedAll
 	cPos := len(b) + 1
-	b = append(b, 0x61, 0x00, 0x00, 0x57)     // JUMPI ok3（approvedAll!=0）
+	b = append(b, 0x61, 0x00, 0x00, 0x57) // JUMPI ok3（approvedAll!=0）
 	authJumps = append(authJumps, segJump{pos: cPos, target: 0})
 	b = append(b, 0x60, 0x00, 0x60, 0x00, 0xFD) // REVERT
 	ok3Idx := len(b)
-	b = append(b, 0x5B)                       // ok3: [ownerSlot]
+	b = append(b, 0x5B) // ok3: [ownerSlot]
 	for i := range authJumps {
 		authJumps[i].target = ok3Idx
 	}
 	jumps = append(jumps, authJumps...)
 	// 3) ownerOf[tokenId]=to（SWAP1 後 ownerSlot 回棧頂當 key）
-	b = append(b, codeCalldata24...)          // to
-	b = append(b, 0x90)                       // SWAP1 → [ownerSlot, to]
-	b = append(b, 0x55)                       // SSTORE ownerOf[tokenId]=to
+	b = append(b, codeCalldata24...) // to
+	b = append(b, 0x90)              // SWAP1 → [ownerSlot, to]
+	b = append(b, 0x55)              // SSTORE ownerOf[tokenId]=to
 	// 4) balance[from]--：balSlot=map(from,4)，DUP1 SLOAD -1，SSTORE
 	b = append(b, mapSlotCode(codeCalldata4, 4)...)
-	b = append(b, 0x80)                       // DUP1
-	b = append(b, 0x54)                       // bal
-	b = append(b, 0x60, 0x01, 0x03)           // bal-1（SUB：1 頂、bal 次）
-	b = append(b, 0x90)                       // SWAP1 → [bal-1, balSlot]（key 回頂）
-	b = append(b, 0x55)                       // SSTORE bal[from]=bal-1
+	b = append(b, 0x80)             // DUP1
+	b = append(b, 0x54)             // bal
+	b = append(b, 0x60, 0x01, 0x03) // bal-1（SUB：1 頂、bal 次）
+	b = append(b, 0x90)             // SWAP1 → [bal-1, balSlot]（key 回頂）
+	b = append(b, 0x55)             // SSTORE bal[from]=bal-1
 	// 5) balance[to]++：balSlot=map(to,4)
 	b = append(b, mapSlotCode(codeCalldata24, 4)...)
-	b = append(b, 0x80)                       // DUP1
-	b = append(b, 0x54)                       // bal
-	b = append(b, 0x60, 0x01, 0x01)           // bal+1
-	b = append(b, 0x90)                       // SWAP1 → [bal+1, balSlot]（key 回頂）
-	b = append(b, 0x55)                       // SSTORE bal[to]=bal+1
+	b = append(b, 0x80)             // DUP1
+	b = append(b, 0x54)             // bal
+	b = append(b, 0x60, 0x01, 0x01) // bal+1
+	b = append(b, 0x90)             // SWAP1 → [bal+1, balSlot]（key 回頂）
+	b = append(b, 0x55)             // SSTORE bal[to]=bal+1
 	// 6) LOG3(Transfer, from, to, tokenId)
-	b = append(b, codeCalldata68...)          // tokenId（data）
-	b = append(b, 0x60, 0x00, 0x52)           // mem[0]=tokenId
+	b = append(b, codeCalldata68...) // tokenId（data）
+	b = append(b, 0x60, 0x00, 0x52)  // mem[0]=tokenId
 	b = append(b, push32(selNum(Topic721Transfer))...)
-	b = append(b, codeCalldata4...)           // from（topic2）
-	b = append(b, codeCalldata24...)          // to（topic3）
+	b = append(b, codeCalldata4...)  // from（topic2）
+	b = append(b, codeCalldata24...) // to（topic3）
 	b = append(b, codeLog3Tail...)
 	b = append(b, codeReturnTrue...)
 	b = append(b, RET32...)
@@ -310,28 +323,28 @@ func erc721SegApprove() builtSeg {
 	var b []byte
 	var jumps []segJump
 	// 1) owner 檢查：ownerOf(tokenId)==caller 或 approvalForAll[owner][caller]
-	b = append(b, 0x5B) // JUMPDEST
+	b = append(b, 0x5B)                              // JUMPDEST
 	b = append(b, mapSlotCode(codeCalldata24, 3)...) // ownerSlot（tokenId=calldata[36]）
-	b = append(b, 0x80) // DUP1
-	b = append(b, 0x54) // owner
+	b = append(b, 0x80)                              // DUP1
+	b = append(b, 0x54)                              // owner
 	b = append(b, codeCaller...)
 	b = append(b, 0x14) // EQ
 	aPos := len(b) + 1
 	b = append(b, 0x61, 0x00, 0x00, 0x57) // JUMPI ok
 	jumps = append(jumps, segJump{pos: aPos, target: 0})
 	// 分支 B：approvalForAll[owner][caller]!=0（棧頂 ownerSlot）
-	b = append(b, 0x80) // DUP1
-	b = append(b, 0x54) // owner
-	b = append(b, 0x60, 0x00, 0x52)           // mem[0]=owner
+	b = append(b, 0x80)                         // DUP1
+	b = append(b, 0x54)                         // owner
+	b = append(b, 0x60, 0x00, 0x52)             // mem[0]=owner
 	b = append(b, 0x60, 0x06, 0x60, 0x20, 0x52) // mem[32]=6
 	b = append(b, 0x60, 0x40, 0x60, 0x00, 0x20) // SHA3 → inner
-	b = append(b, 0x60, 0x00, 0x52)           // mem[0]=inner
+	b = append(b, 0x60, 0x00, 0x52)             // mem[0]=inner
 	b = append(b, codeCaller...)
-	b = append(b, 0x60, 0x20, 0x52)           // mem[32]=caller
+	b = append(b, 0x60, 0x20, 0x52)             // mem[32]=caller
 	b = append(b, 0x60, 0x40, 0x60, 0x00, 0x20) // SHA3 → slot
-	b = append(b, 0x54)                       // approved
+	b = append(b, 0x54)                         // approved
 	bPos := len(b) + 1
-	b = append(b, 0x61, 0x00, 0x00, 0x57)     // JUMPI ok（approved!=0）
+	b = append(b, 0x61, 0x00, 0x00, 0x57) // JUMPI ok（approved!=0）
 	jumps = append(jumps, segJump{pos: bPos, target: 0})
 	b = append(b, 0x60, 0x00, 0x60, 0x00, 0xFD) // REVERT
 	okIdx := len(b)
@@ -341,14 +354,14 @@ func erc721SegApprove() builtSeg {
 	}
 	// 2) getApproved[tokenId]=to
 	b = append(b, mapSlotCode(codeCalldata24, 7)...) // keccak(tokenId‖7)
-	b = append(b, codeCalldata4...) // to
-	b = append(b, 0x90) // SWAP1 → [to, slot]
-	b = append(b, 0x55) // SSTORE
+	b = append(b, codeCalldata4...)                  // to
+	b = append(b, 0x90)                              // SWAP1 → [to, slot]
+	b = append(b, 0x55)                              // SSTORE
 	// 3) LOG3(Approval, caller, to, tokenId)
 	b = append(b, codeCalldata24...) // tokenId（data）
 	b = append(b, 0x60, 0x00, 0x52)  // mem[0]=tokenId
 	b = append(b, push32(selNum(Topic721Approval))...)
-	b = append(b, codeCaller...) // topic2=caller
+	b = append(b, codeCaller...)    // topic2=caller
 	b = append(b, codeCalldata4...) // topic3=to
 	b = append(b, codeLog3Tail...)
 	b = append(b, codeReturnTrue...)
@@ -360,16 +373,16 @@ func erc721SegApprove() builtSeg {
 // approvalForAll[caller][operator]=approved、LOG2(ApprovalForAll, caller, operator)、回傳 1（M75-1）。
 func erc721SegSetApprovalForAll() builtSeg {
 	var b []byte
-	b = append(b, 0x5B) // JUMPDEST
+	b = append(b, 0x5B)                                            // JUMPDEST
 	b = append(b, nestedSlotCode(codeCaller, codeCalldata4, 6)...) // approvalForAll[caller][operator]
-	b = append(b, codeCalldata24...) // approved
-	b = append(b, 0x90) // SWAP1 → [approved, slot]
-	b = append(b, 0x55) // SSTORE
+	b = append(b, codeCalldata24...)                               // approved
+	b = append(b, 0x90)                                            // SWAP1 → [approved, slot]
+	b = append(b, 0x55)                                            // SSTORE
 	// LOG2(ApprovalForAll, caller, operator)
 	b = append(b, codeCalldata24...) // approved（data）
 	b = append(b, 0x60, 0x00, 0x52)  // mem[0]=approved
 	b = append(b, push32(selNum(Topic721ApprovalForAll))...)
-	b = append(b, codeCaller...) // topic2=owner（caller）
+	b = append(b, codeCaller...)    // topic2=owner（caller）
 	b = append(b, codeCalldata4...) // topic3=operator
 	b = append(b, codeLog3Tail...)
 	b = append(b, codeReturnTrue...)
@@ -400,6 +413,10 @@ func erc721SegIsApprovedForAll() builtSeg {
 func Erc721InitWithMeta(name, symbol []byte) []byte {
 	runtime := Erc721Runtime()
 	var b []byte
+	// 記錄部署者到 slot10（ERC-2981 setRoyaltyInfo 權限用）。
+	b = append(b, codeCaller...) // CALLER（部署者）
+	b = append(b, 0x60, 0x0A)    // key 10
+	b = append(b, 0x55)          // SSTORE slot10=部署者
 	b = append(b, push32(new(big.Int).SetBytes(name))...)
 	b = append(b, 0x60, 0x01) // key 1
 	b = append(b, 0x55)       // SSTORE
@@ -494,4 +511,100 @@ func Erc721IsApprovedForAllCalldata(owner0x, operator0x string) []byte {
 	out := append([]byte{}, Selector721IsApprovedForAll...)
 	out = append(out, IntToBytes(addrToInt(owner0x), 32)...)
 	return append(out, IntToBytes(addrToInt(operator0x), 32)...)
+}
+
+// erc721SegRoyaltyInfo: royaltyInfo(tokenId, salePrice)——全域 royalty
+// receiver 存 slot8、bps 存 slot9（右對齊）→ 回傳 (receiver, salePrice*bps/10000)。
+func erc721SegRoyaltyInfo() builtSeg {
+	b := []byte{0x5B}                           // JUMPDEST
+	b = append(b, 0x60, 0x08, 0x54)             // receiver = SLOAD(slot8)
+	b = append(b, 0x60, 0x00, 0x52)             // mem[0]=receiver
+	b = append(b, codeCalldata36...)            // salePrice = CALLDATALOAD(36)
+	b = append(b, 0x60, 0x09, 0x54)             // bps = SLOAD(slot9)
+	b = append(b, 0x02)                         // MUL（salePrice*bps）
+	b = append(b, 0x61, 0x27, 0x10)             // PUSH2 10000
+	b = append(b, 0x04)                         // DIV（/10000）
+	b = append(b, 0x60, 0x20, 0x52)             // mem[32]=amount
+	b = append(b, 0x60, 0x40, 0x60, 0x00, 0xF3) // RETURN(0,64)
+	return builtSeg{code: b}
+}
+
+// erc721SegSupportsInterface: supportsInterface(bytes4)——比對
+// ERC-165/721/721Metadata/2981 四個 interfaceId，任一相等回傳 1，否則 0。
+func erc721SegSupportsInterface() builtSeg {
+	var b []byte
+	var jumps []segJump
+	b = append(b, 0x5B)             // JUMPDEST
+	b = append(b, codeCalldata4...) // iface
+	for _, id := range [][]byte{Interface165, Interface721, Interface721Metadata, Interface2981} {
+		b = append(b, 0x80)                  // DUP1
+		b = append(b, push32(selNum(id))...) // PUSH32 id（右對齊，與 CALLDATALOAD 一致）
+		b = append(b, 0x14)                  // EQ
+		p := len(b) + 1
+		b = append(b, 0x61, 0x00, 0x00, 0x57) // JUMPI ok
+		jumps = append(jumps, segJump{pos: p, target: 0})
+	}
+	b = append(b, 0x50)       // POP（清 iface）
+	b = append(b, 0x60, 0x00) // PUSH1 0（回傳 0）
+	b = append(b, RET32...)
+	okIdx := len(b)
+	b = append(b, 0x5B)       // ok
+	b = append(b, 0x50)       // POP（清 iface）
+	b = append(b, 0x60, 0x01) // PUSH1 1（回傳 1）
+	b = append(b, RET32...)
+	for i := range jumps {
+		jumps[i].target = okIdx
+	}
+	return builtSeg{code: b, jumps: jumps}
+}
+
+// erc721SegSetRoyaltyInfo: setRoyaltyInfo(receiver, bps)——僅部署者
+// （slot10）可呼叫，寫 slot8=receiver、slot9=bps、回傳 1。
+func erc721SegSetRoyaltyInfo() builtSeg {
+	var b []byte
+	var jumps []segJump
+	b = append(b, 0x5B)             // JUMPDEST
+	b = append(b, 0x60, 0x0A, 0x54) // owner = SLOAD(slot10)
+	b = append(b, codeCaller...)    // caller
+	b = append(b, 0x14)             // EQ（caller==部署者）
+	p := len(b) + 1
+	b = append(b, 0x61, 0x00, 0x00, 0x57) // JUMPI ok
+	jumps = append(jumps, segJump{pos: p, target: 0})
+	b = append(b, 0x60, 0x00, 0x60, 0x00, 0xFD) // REVERT
+	okIdx := len(b)
+	b = append(b, 0x5B) // ok
+	for i := range jumps {
+		jumps[i].target = okIdx
+	}
+	// SSTORE slot8=receiver（calldata[4]）
+	b = append(b, codeCalldata4...) // value=receiver
+	b = append(b, 0x60, 0x08)       // key=8（棧頂）
+	b = append(b, 0x55)             // SSTORE
+	// SSTORE slot9=bps（calldata[36]）
+	b = append(b, codeCalldata36...) // value=bps
+	b = append(b, 0x60, 0x09)        // key=9（棧頂）
+	b = append(b, 0x55)              // SSTORE
+	b = append(b, codeReturnTrue...) // PUSH1 1
+	b = append(b, RET32...)
+	return builtSeg{code: b, jumps: jumps}
+}
+
+// Erc721RoyaltyInfoCalldata 組裝 royaltyInfo(uint256,uint256) calldata。
+func Erc721RoyaltyInfoCalldata(tokenID, salePrice *big.Int) []byte {
+	out := append([]byte{}, Selector721RoyaltyInfo...)
+	out = append(out, IntToBytes(tokenID, 32)...)
+	return append(out, IntToBytes(salePrice, 32)...)
+}
+
+// Erc721SupportsInterfaceCalldata 組裝 supportsInterface(bytes4) calldata。
+func Erc721SupportsInterfaceCalldata(interfaceID []byte) []byte {
+	out := append([]byte{}, Selector721SupportsInterface...)
+	return append(out, IntToBytes(new(big.Int).SetBytes(interfaceID), 32)...)
+}
+
+// Erc721SetRoyaltyInfoCalldata 組裝 setRoyaltyInfo(address,uint256) calldata。
+func Erc721SetRoyaltyInfoCalldata(receiver0x string, bps *big.Int) []byte {
+	out := append([]byte{}, Selector721SetRoyaltyInfo...)
+	out = append(out, IntToBytes(addrToInt(receiver0x), 32)...)
+	return append(out, IntToBytes(bps, 32)...)
 }

@@ -28,6 +28,8 @@ import (
 	"tacm/internal/dex"
 	"tacm/internal/exchange"
 	"tacm/internal/governance"
+	"tacm/internal/aa"
+	"tacm/internal/oracle"
 	"tacm/internal/p2p"
 	"tacm/internal/rollup"
 	"tacm/internal/vm"
@@ -57,6 +59,19 @@ type Node struct {
 	// heartbeatInterval 礦工鏈上心跳續命間隔（M61：所有啟動模式皆跑 minerHeartbeatLoop；
 	// 預設 hbRefresh，測試可注入較短間隔以快速驗證自動續命）。
 	heartbeatInterval time.Duration
+
+	// tacnsAddr P1-① TAC-ENS：本節點部署的 TACNames 註冊表地址（0x 格式，記憶體記錄）。
+	tacnsAddr string
+
+	// tacwalletAddr P1-② 多簽合約錢包：本節點部署的 TACWallet 地址（0x 格式，記憶體記錄）。
+	tacwalletAddr string
+	// tacgovAddr P1-③ 鏈上治理：本節點部署的 TACGovernor 地址（0x 格式，記憶體記錄）。
+	tacgovAddr string
+	// govProposalCount 記憶體記錄已 propose 的提案數（供 status 展示下一個 pid）。
+	govProposalCount int64
+	// walletOwners 記憶體記錄已 addOwner 的 owner（0x 格式，供 Explorer 面板展示；
+	// 重啟後以鏈上 ownerCount/isOwner 為準）。
+	walletOwners []string
 
 	mu       sync.Mutex // 保護以下共識狀態
 	baseDiff int
@@ -111,6 +126,12 @@ type Node struct {
 	posStore     *pos.Store
 	slashTracker *bft.SlashingTracker
 
+	// M152 鏈上預言機：節點級喂價服務（外部行情源 + 手動覆寫 + 歷史）。
+	oracleSvc *oracle.Oracle
+
+	// M154 帳戶抽象（EIP-4337）：離線 EntryPoint/Bundler——驗證 UserOperation 授權後代執行。
+	aaSvc *aa.AA
+
 	// 官方代簽的 mempool pending nonce（同 from 連續多筆合約交易佔用 nonce；
 	// 入塊後 db.GetNonce 已含全部，resetPendingTx 清空）。
 	txNonceMu      sync.Mutex
@@ -126,8 +147,8 @@ type Node struct {
 
 	// 跨鏈橋（可選；nil=不啟用）
 	bridge          *bridgepkg.Bridge
-	bscRelay        *bridgepkg.Relayer
-	bscRelayCancel  context.CancelFunc
+	relays          map[string]*bridgepkg.Relayer      // M150h：多鏈中繼實例（chainName→Relayer；bsc 向後相容）
+	relayCancels    map[string]context.CancelFunc      // M150h：多鏈中繼取消（chainName→CancelFunc）
 	bridgeNetworked bool // 已配置守衛網絡（跨鏈提案經 P2P 傳播聚合多簽）
 }
 
@@ -206,6 +227,10 @@ func New(cfg *config.Config, nodeID string, baseDifficulty int) (*Node, error) {
 	}
 	gs.SetApplyFunc(n.applyGovernanceParam)
 	n.gov = gs
+	// M151c-v2：重啟後套用既有治理參數——手續費預留同步至錢包帳本。
+	if n.walletSvc != nil {
+		n.walletSvc.SetTreasuryFeeBps(int(gs.Config().TreasuryFeeBps))
+	}
 
 	// DeFi（流動性挖礦＋借貸市場）：defi.db，資產對接 wallet 帳本。
 	ds, err := defi.Open(dataDir)
@@ -471,6 +496,44 @@ func (n *Node) applyGovernanceParam(key, value string) error {
 	case "tx_fee_bps", "tiusd_floor_bps":
 		// 已通過參數：儲存於治理庫，API 可查詢；重啟後由節點讀取套用。
 		return nil
+	case "gov_quorum_pct", "gov_timelock_blocks", "gov_proposer_min", "gov_total_supply", "treasury_fee_bps":
+		// M151a：治理參數熱更新（透過鏈上提案修改，去中心化治理）。
+		if v < 0 {
+			return fmt.Errorf("node: %s 不能為負", key)
+		}
+		g := n.gov
+		if g == nil {
+			return errors.New("node: governance disabled")
+		}
+		cur := g.Config()
+		switch key {
+		case "gov_quorum_pct":
+			if v > 100 {
+				return errors.New("node: gov_quorum_pct 超出允許範圍")
+			}
+			cur.QuorumPct = v
+		case "gov_timelock_blocks":
+			if v > 1000000 {
+				return errors.New("node: gov_timelock_blocks 超出允許範圍")
+			}
+			cur.TimelockBlocks = int64(v)
+		case "gov_proposer_min":
+			if v > 100 {
+				return errors.New("node: gov_proposer_min 超出允許範圍")
+			}
+			cur.ProposerMin = v
+		case "gov_total_supply":
+			cur.TotalSupply = v
+		case "treasury_fee_bps":
+			if v > 10000 {
+				return errors.New("node: treasury_fee_bps 超出允許範圍")
+			}
+			cur.TreasuryFeeBps = int64(v)
+		}
+		if key == "treasury_fee_bps" && n.walletSvc != nil {
+			n.walletSvc.SetTreasuryFeeBps(int(v))
+		}
+		return g.SetConfig(cur)
 	default:
 		return fmt.Errorf("node: 未知治理參數 %q", key)
 	}
@@ -504,6 +567,13 @@ func (n *Node) Start() {
 	go n.minerHeartbeatLoop()
 	n.StartDynamicValidators() // M87：動態驗證人集週期重建（內部自行 wg.Add(1)）
 	go n.healWalletSync()      // M103：錢包帳本/chain_stats 自癒（落後補同步＋產出計數修正）
+	// M152：鏈上預言機——背景 goroutine 每 60s 刷新喂價快照。
+	n.oracleSvc = oracle.New()
+	n.oracleSvc.Start(context.Background(), 60*time.Second)
+	// M154：帳戶抽象（EIP-4337）——以節點金鑰位址作為 Bundler 代執行者。
+	if addr, aerr := n.keypair.Address(); aerr == nil {
+		n.aaSvc = aa.New(addr)
+	}
 }
 
 // minerHeartbeatLoop M60：伺服器端礦機排程——每 30s 對所有已「開機」的礦工續發
@@ -526,6 +596,21 @@ func (n *Node) minerHeartbeatLoop() {
 			n.submitActiveHeartbeats()
 		}
 	}
+}
+
+// M149m-8：本節點是否已鏈上質押成為驗證人（PoS 出塊資格）。
+// 去中心化判定：質押中的節點應以分布式 BFT 啟動參與輪值出塊，而非純跟隨。
+func (n *Node) IsValidator() bool {
+	vals, err := n.db.GetPosValidators()
+	if err != nil {
+		return false
+	}
+	for _, v := range vals {
+		if v.Address == n.nodeAddress && v.Status == "active" {
+			return true
+		}
+	}
+	return false
 }
 
 // StartAsFollower 以跟隨/全節點模式啟動：不主動 PoW 出塊，
@@ -592,7 +677,7 @@ func (n *Node) Close() error {
 		if n.bridge != nil {
 			_ = n.bridge.Close()
 		}
-		n.stopBSCRelay()
+		n.stopAllRelays()
 		if n.walletSvc != nil {
 			_ = n.walletSvc.Store().Close()
 		}
@@ -620,7 +705,7 @@ func (n *Node) Close() error {
 	if n.bridge != nil {
 		_ = n.bridge.Close()
 	}
-	n.stopBSCRelay()
+	n.stopAllRelays()
 	if n.walletSvc != nil {
 		_ = n.walletSvc.Store().Close()
 	}
@@ -856,13 +941,14 @@ func (n *Node) produceBlock() error {
 
 	// coinbase 增發交易置於首位（height>0），其哈希進入 Merkle 根。
 	// 供應模型：TACM_MAX_SUPPLY 設定後依年衰減發行（上限 52,003,300）；未設定維持減半模式。
-	// M58：coinbase 瓜分明細（礦工按算力 + 獎勵池 12%）寫入區塊 → 全網節點照單執行，帳本一致。
+	// M58：coinbase 瓜分明細（礦工按算力 + 獎勵池 15%）寫入區塊 → 全網節點照單執行，帳本一致。
 	if height > 0 {
 		reward := chaindb.BlockReward(height)
 		if cfg, err := chaindb.LoadEmission(int64(n.cfg.BlockTime)); err == nil && cfg.Model == "annual_decay" {
 			reward = chaindb.EmissionAmount(height, int64(n.cfg.BlockTime))
 		}
 		var splits []chaindb.CoinbaseSplit
+		var onlineNodes []string // M149m-7：鏈上在線節點集（含 0 算力），瓜分 45% 節點獎勵
 		if n.walletSvc != nil {
 			// M60：瓜分明細以「鏈上 heartbeat 視角」為準（取代各節點本地 SQL OnlineMinerSplits）：
 			// 任何節點開機的礦工 hb:on 上鏈後，全網出塊者都把它算入瓜分；hb:off/過期即停。
@@ -872,12 +958,128 @@ func (n *Node) produceBlock() error {
 					if hr > 0 {
 						splits = append(splits, chaindb.CoinbaseSplit{Address: addr, Share: hr})
 					}
+					onlineNodes = append(onlineNodes, addr) // 含 0 算力節點：在線即有 PoT 節點獎勵
 				}
 			}
 		}
-		for _, cb := range chaindb.BuildCoinbaseTxs(height, n.nodeAddress, ts, splits, reward) {
+		// M157：委託獎勵分潤——節點 45% 獎勵中，委託占比（委託額/總權重）部分
+		// 按委託人拆分發 coinbase:deleg；計算僅依賴 delegations＋pos_validators 表
+		// （全網同步同鏈一致）→ 任何節點構建區塊得到相同拆分，恆等式不破。
+		delegRewards := make(map[string][]chaindb.DelegationReward)
+		if len(onlineNodes) > 0 {
+			nodeShare := reward * float64(chaindb.NodeShareBps) / 10000
+			per := nodeShare / float64(len(onlineNodes))
+			if per > 1e-9 {
+				vs, verr := n.db.GetPosValidators()
+				if verr == nil {
+					stakeByAddr := make(map[string]float64, len(vs))
+					for _, v := range vs {
+						stakeByAddr[v.Address] = v.TotalStake
+					}
+					for _, addr := range onlineNodes {
+						dels, derr := n.db.GetValidatorDelegations(addr)
+						if derr != nil || len(dels) == 0 {
+							continue
+						}
+						totalDeleg := 0.0
+						for _, d := range dels {
+							totalDeleg += d.Amount
+						}
+						totalStake := stakeByAddr[addr]
+						if totalDeleg <= 0 || totalStake <= 0 || totalDeleg >= totalStake-1e-9 {
+							continue // 無委託或權重異常：不拆分
+						}
+						var list []chaindb.DelegationReward
+						acc := 0.0
+						for i, d := range dels {
+							var amt float64
+							if i == len(dels)-1 {
+								amt = per*totalDeleg/totalStake - acc
+							} else {
+								amt = per * d.Amount / totalStake
+								acc += amt
+							}
+							if amt > 1e-9 {
+								list = append(list, chaindb.DelegationReward{Delegator: d.Delegator, Amount: amt})
+							}
+						}
+						if len(list) > 0 {
+							delegRewards[addr] = list
+						}
+					}
+				}
+			}
+		}
+		for _, cb := range chaindb.BuildCoinbaseTxsWithDelegRewards(height, n.nodeAddress, ts, splits, reward, delegRewards, onlineNodes...) {
 			txs = append(txs, cb)
 			txHashes = append(txHashes, cb.TxHash)
+		}
+
+		// M159：委託解綁期滿自動返還——依 unbondings pending 且 complete_height≤height
+		// 構造 pos:unbond_pay（from 空、無簽名，coinbase 同款）；全節點由同表算出
+		// 相同交易 → 區塊一致，返還金額即質押池鎖倉資產（非增發）。
+		if ubs, uerr := n.db.ListPendingUnbondings(height); uerr == nil {
+			for _, u := range ubs {
+				ubTx := chaindb.Transaction{
+					TxHash:   chaindb.CoinbaseSplitTxHash(height, len(txs), u.Delegator, u.Amount, ts),
+					FromAddr: "", ToAddr: u.Delegator,
+					Amount: chaindb.FormatFloat(u.Amount), Fee: "0", Nonce: 0, Ts: ts,
+					Memo: chaindb.UnbondingMemo + ":" + u.Delegator + ":" + u.Validator,
+					Status: "confirmed",
+				}
+				txs = append(txs, ubTx)
+				txHashes = append(txHashes, ubTx.TxHash)
+			}
+		}
+
+		// M151c：treasury 撥款——已到期且通過的 treasury 提案由出塊引擎轉帳。
+		// M151c-v2（白皮書合規）：資金來源＝治理金庫（treasury_pool，手續費預留）優先，
+		// 不足時以創世社群基金（community_pool）補足；獎勵池恢復純做市用途、不再撥款。
+		// 餘額不足時保留 queued，下個區塊重試（不硬執行、不超額）；全節點照單執行帳本一致。
+		if n.walletSvc != nil && n.gov != nil {
+			if pendings, perr := n.gov.PendingTreasury(height); perr == nil {
+				for _, te := range pendings {
+					amt, aerr := strconv.ParseFloat(te.Amount, 64)
+					if aerr != nil || amt <= 0 {
+						continue
+					}
+					src := wallet.TreasuryAddr
+					bal, berr := n.walletSvc.Balance(wallet.TreasuryAddr)
+					if berr != nil || bal.TACmBalance == nil {
+						continue
+					}
+					balF, _ := strconv.ParseFloat(bal.TACmBalance.String(), 64)
+					balF /= 1e18 // raw → TACM（與提案金額同尺度比較）
+					if balF+1e-9 < amt {
+						poolAddr, perr2 := n.CommunityPoolAddress()
+						if perr2 != nil {
+							continue
+						}
+						src = poolAddr
+						bal2, berr2 := n.walletSvc.Balance(poolAddr)
+						if berr2 != nil || bal2.TACmBalance == nil {
+							continue
+						}
+						balF, _ = strconv.ParseFloat(bal2.TACmBalance.String(), 64)
+						balF /= 1e18 // raw → TACM
+						if balF+1e-9 < amt {
+							continue // 餘額不足：保留 queued 重試
+						}
+					}
+					gt := chaindb.Transaction{
+						TxHash:   chaindb.GovTreasuryTxHash(height, te.ProposalID, te.To, amt, ts),
+						FromAddr: src,
+						ToAddr:   te.To,
+						Amount:   chaindb.FormatFloat(amt),
+						Fee:      "0", Nonce: 0, Ts: ts,
+						Memo:   fmt.Sprintf("gov:treasury:%d", te.ProposalID),
+						Status: "confirmed",
+					}
+					txs = append(txs, gt)
+					txHashes = append(txHashes, gt.TxHash)
+					_ = n.gov.MarkTreasuryExecuted(te.ProposalID)
+				}
+			}
 		}
 	}
 
@@ -1008,8 +1210,10 @@ func (n *Node) produceBlock() error {
 	}
 
 	// M40 鏈上治理：每個新區塊驅動到期提案統計與參數執行。
+	// M151：時間鎖提案由 ExecuteDue 於延遲屆滿後執行。
 	if n.gov != nil {
 		n.gov.TallyAndExecute(height)
+		n.gov.ExecuteDue(height)
 	}
 	return nil
 }

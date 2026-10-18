@@ -128,6 +128,28 @@ func (s *RPCServer) dispatchEthRPC(req ethRPCRequest) ethRPCResponse {
 		}
 	case "eth_blobBaseFee":
 		result = "0x0" // 本鏈無 blob 支援，回 0（EIP-4844 相容）
+	case "web3_sha3":
+		out, err := s.web3Sha3(req.Params)
+		if err != nil {
+			rpcErr = ethError(-32602, err.Error())
+		} else {
+			result = out
+		}
+	case "eth_createAccessList": // EIP-2930：主流錢包（viem/ethers）發送前會呼叫
+		out, err := s.ethCreateAccessList(req.Params)
+		if err != nil {
+			rpcErr = ethError(-32602, err.Error())
+		} else {
+			result = out
+		}
+	case "eth_mining":
+		result = false // 本鏈挖礦由礦機經 /api/miner/* 回報，節點本身不挖
+	case "eth_hashrate":
+		result = "0x0"
+	case "eth_submitWork":
+		result = false // 不接收外部 PoW work
+	case "eth_submitHashrate":
+		result = false
 	case "eth_blockNumber":
 		b, err := s.node.db.GetLatestBlock()
 		if err != nil {
@@ -339,6 +361,10 @@ func (s *RPCServer) dispatchEthRPC(req ethRPCRequest) ethRPCResponse {
 		}
 	case "eth_accounts":
 		result = s.ethAccounts()
+	case "eth_requestAccounts":
+		// P0-③ MetaMask/Web3 直連：EIP-1193 request({method:'eth_requestAccounts'})。
+		// 節點為無狀態金鑰管理——回報節點管理的帳戶（與 eth_accounts 同源）。
+		result = s.ethAccounts()
 	case "eth_maxPriorityFeePerGas":
 		result = s.ethMaxPriorityFeePerGas()
 	case "eth_getUncleByBlockHashAndIndex":
@@ -363,6 +389,13 @@ func (s *RPCServer) dispatchEthRPC(req ethRPCRequest) ethRPCResponse {
 		}
 	case "debug_traceTransaction":
 		out, err := s.debugTraceTransaction(req.Params)
+		if err != nil {
+			rpcErr = ethError(-32603, err.Error())
+		} else {
+			result = out
+		}
+	case "debug_traceCall": // M151e：主流調試工具（hardhat/viem/Remix）模擬呼叫追蹤
+		out, err := s.debugTraceCall(req.Params)
 		if err != nil {
 			rpcErr = ethError(-32603, err.Error())
 		} else {
@@ -1105,6 +1138,82 @@ func pad32Hex(v *big.Int) string {
 	out := make([]byte, 32)
 	copy(out[32-len(b):], b)
 	return hex.EncodeToString(out)
+}
+
+// M151d：web3_sha3 —— 主流工具（ethers/viem）常呼叫；keccak256(bytes)。
+func (s *RPCServer) web3Sha3(params []any) (string, error) {
+	data := paramString(params, 0)
+	b, err := hexInput(data)
+	if err != nil {
+		return "", fmt.Errorf("eth: data hex 錯誤: %w", err)
+	}
+	return "0x" + hex.EncodeToString(crypto.Keccak256(b)), nil
+}
+
+// M151d：eth_createAccessList（EIP-2930）——主流錢包發送前會先取 access list。
+// 本鏈 EVM 執行不需預先宣告存取清單，回 from/to 兩項空 storageKeys 並附模擬 gasUsed。
+func (s *RPCServer) ethCreateAccessList(params []any) (any, error) {
+	callObj, ok := params[0].(map[string]any)
+	if !ok {
+		return nil, errors.New("eth: params[0] 需為 call object")
+	}
+	to := getStringFieldAny(callObj, "to")
+	from := getStringFieldAny(callObj, "from")
+	data := getStringFieldAny(callObj, "data")
+
+	toTx0, err := s.node.normalizeEthAddr(to)
+	if err != nil {
+		return nil, err
+	}
+	to0x, err := tx0To0x(toTx0)
+	if err != nil {
+		return nil, err
+	}
+	caller0x := "0x0000000000000000000000000000000000000000"
+	if from != "" {
+		fTx0, ferr := s.node.normalizeEthAddr(from)
+		if ferr != nil {
+			return nil, ferr
+		}
+		caller0x, err = tx0To0x(fTx0)
+		if err != nil {
+			return nil, err
+		}
+	}
+	calldata, err := hexInput(data)
+	if err != nil {
+		return nil, fmt.Errorf("eth: data hex 錯誤: %w", err)
+	}
+	callValue := new(big.Int)
+	if v := getStringFieldAny(callObj, "value"); v != "" {
+		callValue, _ = new(big.Int).SetString(strings.TrimPrefix(v, "0x"), 16)
+		if callValue == nil {
+			return nil, errors.New("eth: value 解析失敗")
+		}
+	}
+	accessList := make([]map[string]any, 0, 2)
+	seen := make(map[string]bool)
+	addEntry := func(addr string) {
+		if addr == "" || seen[addr] {
+			return
+		}
+		seen[addr] = true
+		accessList = append(accessList, map[string]any{
+			"address":     addr,
+			"storageKeys": []string{},
+		})
+	}
+	addEntry(caller0x)
+	addEntry(to0x)
+
+	gasUsed := "0x0"
+	if r, rerr := s.node.contracts.SimulateCallGas(to0x, caller0x, calldata, callValue, s.node.contracts.DefaultGas()); rerr == nil && r.OK && !r.Reverted {
+		gasUsed = "0x" + strconv.FormatUint(r.GasUsed, 16)
+	}
+	return map[string]any{
+		"accessList": accessList,
+		"gasUsed":    gasUsed,
+	}, nil
 }
 
 func (s *RPCServer) ethEstimateGas(params []any) (string, error) {

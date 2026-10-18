@@ -3,10 +3,12 @@ package node
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"strconv"
 
 	"tacm/internal/chaindb"
 	"tacm/internal/crypto"
+	"tacm/internal/wallet"
 )
 
 // ReorgChain 在共同分叉點之後切換到新鏈：驗證結構與累積難度，截斷舊鏈、
@@ -50,7 +52,11 @@ func (h *p2pHost) ReorgChain(forkPoint int64, blocks []chaindb.Block, txs [][]ch
 		if prev != wantPrev {
 			return fmt.Errorf("重組塊 %d prev_hash 不匹配", b.Height)
 		}
-		if err := verifyBlockStructure(b, txs[i], int64(h.n.cfg.BlockTime)); err != nil {
+		cp := ""
+		if addr, cerr := h.n.CommunityPoolAddress(); cerr == nil {
+			cp = addr
+		}
+		if err := verifyBlockStructure(b, txs[i], int64(h.n.cfg.BlockTime), cp); err != nil {
 			return err
 		}
 		newCD += int64(b.Difficulty)
@@ -92,7 +98,7 @@ func (h *p2pHost) ReorgChain(forkPoint int64, blocks []chaindb.Block, txs [][]ch
 
 // verifyBlockStructure 驗證區塊的結構有效性（不依賴賬戶狀態）：
 // coinbase 總額、普通交易簽名、Merkle 根、PoW。
-func verifyBlockStructure(b *chaindb.Block, txs []chaindb.Transaction, blockTimeSec int64) error {
+func verifyBlockStructure(b *chaindb.Block, txs []chaindb.Transaction, blockTimeSec int64, communityPoolAddr string) error {
 	if b.Height == 0 {
 		// 創世為特殊塊（社群基金 + 空 Merkle 根），結構由來源鏈信任承接。
 		return nil
@@ -131,6 +137,25 @@ func verifyBlockStructure(b *chaindb.Block, txs []chaindb.Transaction, blockTime
 
 	for j := i; j < len(txs); j++ {
 		t := txs[j]
+		// M151c：治理 treasury 撥款交易（memo=gov:treasury:N、無簽名）——
+		// 由出塊引擎依治理引擎到期提案建單（語意同 coinbase，全節點照單執行）。
+		// M151c-v2：來源為治理金庫（treasury_pool）或創世社群基金（community_pool）或舊版獎勵池。
+		treasuryFrom := t.FromAddr == chaindb.RewardPoolAddr || t.FromAddr == wallet.TreasuryAddr
+		if !treasuryFrom && strings.HasPrefix(t.Memo, "gov:treasury:") {
+			if communityPoolAddr != "" && t.FromAddr == communityPoolAddr {
+				treasuryFrom = true
+			}
+		}
+		if treasuryFrom && strings.HasPrefix(t.Memo, "gov:treasury:") {
+			gAmt, gerr := parseFloat64(t.Amount)
+			if gerr != nil || gAmt <= 0 {
+				return fmt.Errorf("treasury 撥款金額非法: %s", t.Amount)
+			}
+			if t.ToAddr == "" {
+				return errors.New("treasury 撥款收款人缺失")
+			}
+			continue
+		}
 		m := map[string]any{
 			"from": t.FromAddr, "to": t.ToAddr, "amount": t.Amount, "fee": t.Fee,
 			"memo": t.Memo, "ts": t.Ts, "nonce": t.Nonce, "pubkey": t.Pubkey,

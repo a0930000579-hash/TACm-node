@@ -43,6 +43,23 @@ const VotingWindow = 20
 // PassThreshold 通過門檻：贊成權重佔已投票權重比例。
 const PassThreshold = 0.667
 
+// 狀態常數（M151 新增 queued：通過後等待時間鎖）。
+const (
+	StatusQueued = "queued"
+)
+
+// GovConfig 治理參數（M151：對標主流鏈——法定人數/時間鎖/提案門檻）。
+// 全部欄位 0 值＝維持既有行為（向後相容）。
+type GovConfig struct {
+	VotingWindow   int64   `json:"voting_window"`    // 投票窗口（區塊）
+	PassThreshold  float64 `json:"pass_threshold"`   // 通過門檻（贊成權重比例）
+	QuorumPct      float64 `json:"quorum_pct"`       // 法定人數（總供應權重 %；0=不檢查）
+	TimelockBlocks int64   `json:"timelock_blocks"`  // 通過後執行延遲（區塊；0=立即）
+	ProposerMin    float64 `json:"proposer_min"`     // 提案人最低權重（總供應 %；0=不檢查）
+	TotalSupply    float64 `json:"total_supply"`     // 權重分母（TACM）
+	TreasuryFeeBps int64   `json:"treasury_fee_bps"` // 手續費入治理金庫比例（萬分比；0=關閉）
+}
+
 // Proposal 鏈上治理提案。
 type Proposal struct {
 	ID           int64  `json:"id"`
@@ -89,6 +106,7 @@ type Governance struct {
 	applyFn  ApplyFunc
 	baseVals map[string]string // 參數基線（提案未通過前的現值）
 	paramDef []Param
+	cfg      GovConfig // M151：法定人數/時間鎖/提案門檻（0 值＝既有行為）
 }
 
 // New 建立治理管理器並初始化資料表。
@@ -110,6 +128,12 @@ func New(path string) (*Governance, error) {
 			{Key: "difficulty", Value: "1", Desc: "基礎 PoW 難度"},
 			{Key: "tx_fee_bps", Value: "200", Desc: "TACm 交易手續費基準（萬分比，2%=200）"},
 			{Key: "tiusd_floor_bps", Value: "3300", Desc: "TiUSD 流通下限佔 TACM 總供應比例（萬分比）"},
+			// M151a：治理參數可透過鏈上提案修改（0=關閉/既有行為）；現值由 Params() 動態填入。
+			{Key: "gov_quorum_pct", Value: "0", Desc: "法定人數（總供應權重 %，0=關閉）"},
+			{Key: "gov_timelock_blocks", Value: "0", Desc: "提案通過後執行延遲（區塊，0=立即）"},
+			{Key: "gov_proposer_min", Value: "0", Desc: "提案人最低權重（總供應 %，0=關閉）"},
+			{Key: "gov_total_supply", Value: "0", Desc: "權重分母總供應量（TACM，0=未設定）"},
+			{Key: "treasury_fee_bps", Value: "0", Desc: "手續費入治理金庫比例（萬分比，0=關閉，10000=全額）"},
 		},
 	}
 	if err := g.init(); err != nil {
@@ -147,13 +171,98 @@ func (g *Governance) init() error {
 			tx_hash TEXT NOT NULL DEFAULT '',
 			UNIQUE(proposal_id, voter)
 		)`,
+		`CREATE TABLE IF NOT EXISTS gov_config (
+			id INTEGER PRIMARY KEY CHECK(id=1),
+			voting_window INTEGER NOT NULL DEFAULT 20,
+			pass_threshold REAL NOT NULL DEFAULT 0.667,
+			quorum_pct REAL NOT NULL DEFAULT 0,
+			timelock_blocks INTEGER NOT NULL DEFAULT 0,
+			proposer_min REAL NOT NULL DEFAULT 0,
+			total_supply REAL NOT NULL DEFAULT 0,
+			treasury_fee_bps INTEGER NOT NULL DEFAULT 0
+		)`,
+		// 既有 DB 相容：補 treasury_fee_bps 欄位（新表 CREATE 已含 → duplicate column 忽略）。
+		`ALTER TABLE gov_config ADD COLUMN treasury_fee_bps INTEGER NOT NULL DEFAULT 0`,
+		`INSERT OR IGNORE INTO gov_config (id, voting_window, pass_threshold, quorum_pct, timelock_blocks, proposer_min, total_supply, treasury_fee_bps)
+		 VALUES (1, 20, 0.667, 0, 0, 0, 0, 0)`,
 	}
 	for _, s := range stmts {
 		if _, err := g.db.Exec(s); err != nil {
+			if strings.Contains(err.Error(), "duplicate column") {
+				continue
+			}
 			return fmt.Errorf("governance: 初始化資料表失敗: %w", err)
 		}
 	}
+	// 載入治理參數（M151）。
+	if err := g.loadConfig(); err != nil {
+		return err
+	}
 	return nil
+}
+
+// loadConfig 讀取 gov_config 至記憶體。
+func (g *Governance) loadConfig() error {
+	var cfg GovConfig
+	err := g.db.QueryRow(
+		`SELECT voting_window, pass_threshold, quorum_pct, timelock_blocks, proposer_min, total_supply, treasury_fee_bps
+		 FROM gov_config WHERE id=1`,
+	).Scan(&cfg.VotingWindow, &cfg.PassThreshold, &cfg.QuorumPct,
+		&cfg.TimelockBlocks, &cfg.ProposerMin, &cfg.TotalSupply, &cfg.TreasuryFeeBps)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil
+		}
+		return fmt.Errorf("governance: 讀取參數失敗: %w", err)
+	}
+	if cfg.VotingWindow > 0 {
+		g.cfg = cfg
+	}
+	return nil
+}
+
+// SetConfig 更新治理參數（0 值欄位維持現值；僅 node 管理面呼叫）。
+func (g *Governance) SetConfig(cfg GovConfig) error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	cur := g.cfg
+	if cfg.VotingWindow > 0 {
+		cur.VotingWindow = cfg.VotingWindow
+	}
+	if cfg.PassThreshold > 0 && cfg.PassThreshold <= 1 {
+		cur.PassThreshold = cfg.PassThreshold
+	}
+	if cfg.QuorumPct >= 0 {
+		cur.QuorumPct = cfg.QuorumPct
+	}
+	if cfg.TimelockBlocks >= 0 {
+		cur.TimelockBlocks = cfg.TimelockBlocks
+	}
+	if cfg.ProposerMin >= 0 {
+		cur.ProposerMin = cfg.ProposerMin
+	}
+	if cfg.TotalSupply > 0 {
+		cur.TotalSupply = cfg.TotalSupply
+	}
+	if cfg.TreasuryFeeBps >= 0 {
+		cur.TreasuryFeeBps = cfg.TreasuryFeeBps
+	}
+	if _, err := g.db.Exec(
+		`UPDATE gov_config SET voting_window=?, pass_threshold=?, quorum_pct=?, timelock_blocks=?, proposer_min=?, total_supply=?, treasury_fee_bps=? WHERE id=1`,
+		cur.VotingWindow, cur.PassThreshold, cur.QuorumPct, cur.TimelockBlocks,
+		cur.ProposerMin, cur.TotalSupply, cur.TreasuryFeeBps,
+	); err != nil {
+		return fmt.Errorf("governance: 寫入參數失敗: %w", err)
+	}
+	g.cfg = cur
+	return nil
+}
+
+// Config 回傳治理參數。
+func (g *Governance) Config() GovConfig {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	return g.cfg
 }
 
 // Close 關閉資料庫。
@@ -166,12 +275,26 @@ func (g *Governance) SetApplyFunc(fn ApplyFunc) {
 	g.applyFn = fn
 }
 
-// Params 回傳可治理參數現值。
+// Params 回傳可治理參數現值（gov_* 參數動態填入 GovConfig 現值）。
 func (g *Governance) Params() []Param {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 	out := make([]Param, len(g.paramDef))
 	copy(out, g.paramDef)
+	for i := range out {
+		switch out[i].Key {
+		case "gov_quorum_pct":
+			out[i].Value = strconv.FormatFloat(g.cfg.QuorumPct, 'f', -1, 64)
+		case "gov_timelock_blocks":
+			out[i].Value = strconv.FormatInt(g.cfg.TimelockBlocks, 10)
+		case "gov_proposer_min":
+			out[i].Value = strconv.FormatFloat(g.cfg.ProposerMin, 'f', -1, 64)
+		case "gov_total_supply":
+			out[i].Value = strconv.FormatFloat(g.cfg.TotalSupply, 'f', -1, 64)
+		case "treasury_fee_bps":
+			out[i].Value = strconv.FormatInt(g.cfg.TreasuryFeeBps, 10)
+		}
+	}
 	return out
 }
 
@@ -187,7 +310,8 @@ func (g *Governance) Apply(key, value string) error {
 }
 
 // Propose 發起提案：校驗參數合法性並寫入。
-func (g *Governance) Propose(title, desc, ptype, paramKey, paramValue, proposer string, height int64, txHash string) (int64, error) {
+// proposerPower 為發起人投票權重（M151：達 ProposerMin×TotalSupply 才可提案；0 表示不檢查）。
+func (g *Governance) Propose(title, desc, ptype, paramKey, paramValue, proposer string, proposerPower float64, height int64, txHash string) (int64, error) {
 	title = strings.TrimSpace(title)
 	proposer = strings.TrimSpace(proposer)
 	if title == "" {
@@ -207,13 +331,35 @@ func (g *Governance) Propose(title, desc, ptype, paramKey, paramValue, proposer 
 			return 0, err
 		}
 	}
+	// M151c：treasury 提案驗證——收款地址與正數金額（撥款由出塊引擎自獎勵池執行）。
+	if ptype == TypeTreasury {
+		if strings.TrimSpace(paramKey) == "" {
+			return 0, errors.New("governance: treasury 需填收款地址")
+		}
+		amt, perr := strconv.ParseFloat(strings.TrimSpace(paramValue), 64)
+		if perr != nil || amt <= 0 {
+			return 0, errors.New("governance: treasury 金額需為正數")
+		}
+	}
+	// M151：提案人最低權重門檻。
+	g.mu.RLock()
+	minWeight := g.cfg.TotalSupply * g.cfg.ProposerMin / 100
+	checkMin := g.cfg.ProposerMin > 0 && g.cfg.TotalSupply > 0
+	window := g.cfg.VotingWindow
+	g.mu.RUnlock()
+	if window <= 0 {
+		window = VotingWindow
+	}
+	if checkMin && proposerPower < minWeight {
+		return 0, fmt.Errorf("governance: 提案人權重 %.6f 低於門檻 %.6f", proposerPower, minWeight)
+	}
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	res, err := g.db.Exec(
 		`INSERT INTO proposals (title, description, ptype, param_key, param_value, proposer, status, start_height, end_height, created_at, tx_hash)
 		 VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
 		title, desc, ptype, paramKey, paramValue, proposer,
-		StatusVoting, height, height+VotingWindow, time.Now().Unix(), txHash,
+		StatusVoting, height, height+window, time.Now().Unix(), txHash,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("governance: 建立提案失敗: %w", err)
@@ -225,7 +371,7 @@ func (g *Governance) Propose(title, desc, ptype, paramKey, paramValue, proposer 
 	return id, nil
 }
 
-// validateParam 校驗可治理參數。
+// validateParam 校驗可治理參數（M151a：gov_* 治理參數允許 0＝關閉）。
 func (g *Governance) validateParam(key, value string) error {
 	key = strings.TrimSpace(key)
 	value = strings.TrimSpace(value)
@@ -236,7 +382,9 @@ func (g *Governance) validateParam(key, value string) error {
 	if err != nil {
 		return fmt.Errorf("governance: 參數值必須為數字: %w", err)
 	}
-	if v <= 0 {
+	isGovParam := key == "gov_quorum_pct" || key == "gov_timelock_blocks" ||
+		key == "gov_proposer_min" || key == "gov_total_supply" || key == "treasury_fee_bps"
+	if !isGovParam && v <= 0 {
 		return errors.New("governance: 參數值必須大於 0")
 	}
 	switch key {
@@ -255,6 +403,26 @@ func (g *Governance) validateParam(key, value string) error {
 	case "tiusd_floor_bps":
 		if v < 1000 || v > 5000 {
 			return errors.New("governance: tiusd_floor_bps 需在 1000~5000（10%~50%）之間")
+		}
+	case "gov_quorum_pct":
+		if v < 0 || v > 100 {
+			return errors.New("governance: gov_quorum_pct 需在 0~100 之間")
+		}
+	case "gov_timelock_blocks":
+		if v < 0 || v > 1000000 {
+			return errors.New("governance: gov_timelock_blocks 需在 0~1000000 之間")
+		}
+	case "gov_proposer_min":
+		if v < 0 || v > 100 {
+			return errors.New("governance: gov_proposer_min 需在 0~100 之間")
+		}
+	case "gov_total_supply":
+		if v < 0 {
+			return errors.New("governance: gov_total_supply 不能為負")
+		}
+	case "treasury_fee_bps":
+		if v < 0 || v > 10000 {
+			return errors.New("governance: treasury_fee_bps 需在 0~10000（0%~100%）之間")
 		}
 	default:
 		return fmt.Errorf("governance: 未知治理參數 %q", key)
@@ -335,10 +503,12 @@ func (g *Governance) recount(proposalID int64) error {
 
 // TallyAndExecute 到期統計：區塊高度驅動，每個新區塊呼叫一次。
 // 到期且仍在投票中的提案：統計權重，通過門檻＝贊成權重 ≥ 已投票權重 × 2/3。
-// 兩階段執行：先讀完到期提案（關閉 SELECT），再逐一寫入，避免 SQLite 單連線鎖衝突。
+// 三階段執行：①持鎖讀取到期提案快照並釋鎖 → ②無鎖計算狀態（param 提案的
+// applyFn 於此執行，可安全重入 g.mu——Config/SetConfig 等不再與本函數互鎖）→
+// ③持鎖寫回狀態，僅寫入成功者計入回傳（供出塊引擎後續處理）。
 func (g *Governance) TallyAndExecute(height int64) []*Proposal {
+	// ① 持鎖讀取快照後釋鎖。
 	g.mu.Lock()
-	defer g.mu.Unlock()
 	rows, err := g.db.Query(
 		`SELECT p.id, p.title, p.description, p.ptype, p.param_key, p.param_value, p.proposer, p.status,
 		        p.votes_yes, p.votes_no, p.votes_abstain, p.start_height, p.end_height, p.created_at, p.tx_hash,
@@ -351,6 +521,7 @@ func (g *Governance) TallyAndExecute(height int64) []*Proposal {
 		StatusVoting, height,
 	)
 	if err != nil {
+		g.mu.Unlock()
 		return nil
 	}
 	type tallyRow struct {
@@ -369,32 +540,183 @@ func (g *Governance) TallyAndExecute(height int64) []*Proposal {
 		rows2 = append(rows2, tr)
 	}
 	rows.Close()
-
 	applyFn := g.applyFn
-	var settled []*Proposal
+	timelock := g.cfg.TimelockBlocks
+	quorumPct := g.cfg.QuorumPct
+	totalSupply := g.cfg.TotalSupply
+	g.mu.Unlock()
+
+	// ② 無鎖計算狀態；param 提案的 applyFn 於此執行（鎖已釋放，可安全重入 g.mu）。
+	type settle struct {
+		p      *Proposal
+		status string
+	}
+	var pending []settle
 	for _, tr := range rows2 {
 		p := tr.p
 		total := tr.yesP + tr.noP + tr.abP
 		passed := total > 0 && tr.yesP >= total*PassThreshold
 		newStatus := StatusRejected
 		if passed {
-			newStatus = StatusPassed
-			// 參數提案通過：套用參數（執行回調）。
-			if p.Type == TypeParam && applyFn != nil {
-				if err := applyFn(p.ParamKey, p.ParamValue); err == nil {
+			// M151：法定人數檢查（QuorumPct>0 且 TotalSupply>0 時啟用）。
+			quorumOK := true
+			if quorumPct > 0 && totalSupply > 0 {
+				quorumOK = total >= totalSupply*quorumPct/100
+			}
+			if !quorumOK {
+				newStatus = StatusRejected
+			} else if timelock > 0 || p.Type == TypeTreasury {
+				// 時間鎖或 treasury：一律 queued。
+				// treasury 由出塊引擎檢查獎勵池餘額後撥款並標記 executed；
+				// 餘額不足時保留 queued，供後續區塊重試（不硬執行）。
+				newStatus = StatusQueued
+			} else {
+				newStatus = StatusPassed
+				// 參數提案通過：套用參數（執行回調）。
+				if p.Type == TypeParam && applyFn != nil {
+					if err := applyFn(p.ParamKey, p.ParamValue); err == nil {
+						newStatus = StatusExecuted
+					}
+				} else {
 					newStatus = StatusExecuted
 				}
-			} else {
-				newStatus = StatusExecuted
 			}
 		}
-		if _, err := g.db.Exec(`UPDATE proposals SET status=? WHERE id=?`, newStatus, p.ID); err != nil {
+		p.Status = newStatus
+		pending = append(pending, settle{p, newStatus})
+	}
+
+	// ③ 持鎖寫回狀態；僅寫入成功者計入 settled。
+	g.mu.Lock()
+	var settled []*Proposal
+	for _, s := range pending {
+		if _, err := g.db.Exec(`UPDATE proposals SET status=? WHERE id=? AND status=?`, s.status, s.p.ID, StatusVoting); err != nil {
 			continue
 		}
-		p.Status = newStatus
-		settled = append(settled, p)
+		settled = append(settled, s.p)
 	}
+	g.mu.Unlock()
 	return settled
+}
+
+// ExecuteDue 執行已通過時間鎖的提案（M151；node 每區塊呼叫）。
+// queued 提案在 end_height + timelock_blocks ≤ height 時套用參數並標記 executed；
+// 執行失敗的提案保留 queued 供後續區塊重試。
+// 與 TallyAndExecute 同構：①持鎖讀取→釋鎖 → ②無鎖執行 applyFn → ③持鎖寫回，
+// 避免 applyFn 重入 g.mu 造成互鎖。
+func (g *Governance) ExecuteDue(height int64) []*Proposal {
+	// ① 持鎖讀取快照後釋鎖。
+	g.mu.Lock()
+	timelock := g.cfg.TimelockBlocks
+	if timelock <= 0 {
+		g.mu.Unlock()
+		return nil
+	}
+	rows, err := g.db.Query(
+		`SELECT id, ptype, param_key, param_value FROM proposals
+		 WHERE status=? AND end_height + ? <= ?`,
+		StatusQueued, timelock, height,
+	)
+	if err != nil {
+		g.mu.Unlock()
+		return nil
+	}
+	type dueRow struct {
+		id           int64
+		ptype        string
+		paramKey     string
+		paramValue   string
+	}
+	var dues []dueRow
+	for rows.Next() {
+		var d dueRow
+		if err := rows.Scan(&d.id, &d.ptype, &d.paramKey, &d.paramValue); err != nil {
+			continue
+		}
+		dues = append(dues, d)
+	}
+	rows.Close()
+	applyFn := g.applyFn
+	g.mu.Unlock()
+
+	// ② 無鎖執行 applyFn。
+	type due struct {
+		id         int64
+		ptype      string
+		paramKey   string
+		paramValue string
+		status     string
+	}
+	var pending []due
+	for _, d := range dues {
+		// treasury 由出塊引擎撥款後才標記 executed；此處保留 queued 供 PendingTreasury 掃描。
+		if d.ptype == TypeTreasury {
+			continue
+		}
+		status := StatusExecuted
+		if d.ptype == TypeParam && applyFn != nil {
+			if err := applyFn(d.paramKey, d.paramValue); err != nil {
+				continue // 執行失敗：保留 queued，下個區塊重試
+			}
+		}
+		pending = append(pending, due{d.id, d.ptype, d.paramKey, d.paramValue, status})
+	}
+
+	// ③ 持鎖寫回，僅成功者計入 settled。
+	g.mu.Lock()
+	var settled []*Proposal
+	for _, d := range pending {
+		if _, err := g.db.Exec(`UPDATE proposals SET status=? WHERE id=? AND status=?`, d.status, d.id, StatusQueued); err != nil {
+			continue
+		}
+		settled = append(settled, &Proposal{ID: d.id, Type: d.ptype, Status: d.status,
+			ParamKey: d.paramKey, ParamValue: d.paramValue})
+	}
+	g.mu.Unlock()
+	return settled
+}
+
+// TreasuryExecution 待執行國庫撥款（M151c：獎勵池為資金來源，對標主流鏈 Treasury 架構）。
+type TreasuryExecution struct {
+	ProposalID int64
+	To         string // 收款 tx0 地址
+	Amount     string // TACM 數量
+}
+
+// PendingTreasury 回傳已到期（end_height + timelock_blocks ≤ height）且狀態 queued 的
+// treasury 提案。node 出塊時呼叫：檢查獎勵池餘額足夠即建撥款交易並 MarkTreasuryExecuted。
+func (g *Governance) PendingTreasury(height int64) ([]TreasuryExecution, error) {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	timelock := g.cfg.TimelockBlocks
+	rows, err := g.db.Query(
+		`SELECT id, param_key, param_value FROM proposals
+		 WHERE ptype=? AND status=? AND end_height + ? <= ?`,
+		TypeTreasury, StatusQueued, timelock, height,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("governance: 查詢待撥款失敗: %w", err)
+	}
+	defer rows.Close()
+	out := []TreasuryExecution{}
+	for rows.Next() {
+		var id int64
+		var to, amt string
+		if err := rows.Scan(&id, &to, &amt); err != nil {
+			continue
+		}
+		out = append(out, TreasuryExecution{ProposalID: id, To: to, Amount: amt})
+	}
+	return out, nil
+}
+
+// MarkTreasuryExecuted 標記 treasury 提案已撥款執行（僅 queued → executed）。
+func (g *Governance) MarkTreasuryExecuted(proposalID int64) error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	_, err := g.db.Exec(`UPDATE proposals SET status=? WHERE id=? AND status=?`,
+		StatusExecuted, proposalID, StatusQueued)
+	return err
 }
 
 // List 回傳全部提案（新→舊）。

@@ -101,6 +101,10 @@ func ethSignRawTx(t *testing.T, key *btcec.PrivateKey, nonce, gasPrice, gas, val
 		testRLPBytes(to),
 		testRLPInt(big.NewInt(value)),
 		testRLPBytes(data),
+		// EIP-155 9 欄：簽名 hash 需含 [chainID, 0, 0]。
+		testRLPInt(big.NewInt(chainID)),
+		testRLPInt(big.NewInt(0)),
+		testRLPInt(big.NewInt(0)),
 	)
 	digest := crypto.Keccak256(payload)
 	sig := ecdsa.Sign(key, digest)
@@ -567,4 +571,69 @@ func ethKeyFrom(t *testing.T) (*btcec.PrivateKey, string) {
 	}
 	fromHash := crypto.Hash160(key.PubKey().SerializeCompressed())
 	return key, crypto.Hash160ToAddress(fromHash)
+}
+
+// M151d：主流 EVM RPC 補齊——web3_sha3 / eth_createAccessList / 挖礦狀態方法。
+func TestEthRPCStandardGap(t *testing.T) {
+	_, srv, _ := contractStudioSetup(t)
+
+	// web3_sha3：keccak256("hello") = 0x1c8aff950685c2ed4bc3174f3472287b56d9517b9c948127319a09a7a36deac8。
+	sha3, ok := ethResult(t, srv, "web3_sha3", "0x68656c6c6f").(string)
+	if !ok || sha3 != "0x1c8aff950685c2ed4bc3174f3472287b56d9517b9c948127319a09a7a36deac8" {
+		t.Fatalf("web3_sha3=%v", sha3)
+	}
+
+	// eth_createAccessList（EIP-2930）：回 accessList（含 from/to）＋gasUsed。
+	al, ok := ethResult(t, srv, "eth_createAccessList", map[string]any{
+		"to":   "0x0000000000000000000000000000000000000001",
+		"data": "0x",
+	}).(map[string]any)
+	if !ok {
+		t.Fatalf("eth_createAccessList 型別錯誤: %T", al)
+	}
+	list, _ := al["accessList"].([]any)
+	if len(list) < 1 {
+		t.Fatalf("accessList 應非空: %v", al)
+	}
+	if _, hasGas := al["gasUsed"]; !hasGas {
+		t.Fatalf("accessList 應含 gasUsed: %v", al)
+	}
+
+	// 挖礦狀態方法：相容回應。
+	if ethResult(t, srv, "eth_mining") != false {
+		t.Fatal("eth_mining 應 false")
+	}
+	if ethResult(t, srv, "eth_hashrate") != "0x0" {
+		t.Fatal("eth_hashrate 應 0x0")
+	}
+	if ethResult(t, srv, "eth_submitWork", "0x0", "0x0", "0x0") != false {
+		t.Fatal("eth_submitWork 應 false")
+	}
+	if ethResult(t, srv, "eth_submitHashrate", "0x0", "0x0") != false {
+		t.Fatal("eth_submitHashrate 應 false")
+	}
+}
+
+// M151e：debug_traceCall——模擬呼叫追蹤（主流調試工具必備）。
+func TestEthDebugTraceCall(t *testing.T) {
+	_, srv, _ := contractStudioSetup(t)
+	tr, ok := ethResult(t, srv, "debug_traceCall", map[string]any{
+		"to":   "0x0000000000000000000000000000000000000001",
+		"data": "0x",
+	}).(map[string]any)
+	if !ok {
+		t.Fatalf("debug_traceCall 型別錯誤: %T", tr)
+	}
+	if _, hasGas := tr["gas"]; !hasGas {
+		t.Fatal("trace 應含 gas")
+	}
+	if _, hasUsed := tr["gasUsed"]; !hasUsed {
+		t.Fatal("trace 應含 gasUsed")
+	}
+	if _, hasFailed := tr["failed"]; !hasFailed {
+		t.Fatal("trace 應含 failed")
+	}
+	if _, hasLogs := tr["structLogs"]; !hasLogs {
+		t.Fatal("trace 應含 structLogs")
+	}
 }
