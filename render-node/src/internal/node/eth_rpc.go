@@ -204,7 +204,20 @@ func (s *RPCServer) dispatchEthRPC(req ethRPCRequest) ethRPCResponse {
 	case "eth_sendRawTransaction":
 		out, err := s.node.SubmitEthRawTx(paramString(req.Params, 0))
 		if err != nil {
-			rpcErr = ethError(-32603, err.Error())
+			// M161-RBF：同 nonce 低手續費替換回標準 Ethereum 錯誤碼 -32000。
+			if errors.Is(err, chaindb.ErrMempoolUnderpriced) {
+				rpcErr = ethError(-32000, err.Error())
+			} else {
+				rpcErr = ethError(-32603, err.Error())
+			}
+		} else {
+			result = out
+		}
+	case "eth_sendTransaction":
+		// 節點金鑰代簽（與 geth unlocked account 語義一致：僅限節點自有帳戶）。
+		out, err := s.ethSendTransaction(req.Params)
+		if err != nil {
+			rpcErr = ethError(-32602, err.Error())
 		} else {
 			result = out
 		}
@@ -579,7 +592,19 @@ func (s *RPCServer) ethCall(params []any) (string, error) {
 			return "", errors.New("eth: value 解析失敗")
 		}
 	}
-	r, err := s.node.contracts.SimulateCallGas(to0x, caller0x, calldata, callValue, s.node.contracts.DefaultGas())
+	// eth_call 第三參數：state override（hardhat/Foundry/viem 測試依賴）。
+	var overrides map[string]map[string]any
+	if len(params) > 2 {
+		if ov, ok := params[2].(map[string]any); ok && len(ov) > 0 {
+			overrides = make(map[string]map[string]any, len(ov))
+			for k, v := range ov {
+				if inner, ok := v.(map[string]any); ok {
+					overrides[k] = inner
+				}
+			}
+		}
+	}
+	r, err := s.node.contracts.SimulateCallGasOverrides(to0x, caller0x, calldata, callValue, s.node.contracts.DefaultGas(), overrides)
 	if err != nil {
 		return "", err
 	}
@@ -679,6 +704,10 @@ func (s *RPCServer) ethBlockObject(b *chaindb.Block, fullTx bool) (map[string]an
 		"logsBloom":        "0x" + strings.Repeat("00", 256),
 		"transactionCount": hexBig(int64(b.TxCount)),
 		"transactions":     txArr,
+		// 主流兼容欄位：無 PoS 提款與 blob 交易的鏈回空/0（ethers.js v6 嚴格解析需要欄位存在）。
+		"withdrawals":     []any{},
+		"blobGasUsed":     "0x0",
+		"excessBlobGas":   "0x0",
 	}, nil
 }
 
@@ -694,6 +723,79 @@ func strOrEmpty(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+// ethSendTransaction 節點金鑰代簽發送（eth_sendTransaction 標準方法）：
+// from 僅限節點金鑰地址（與 geth unlocked account 語義一致）；value/data 走
+// 鏈上 vm:call memo；回傳 TACm tx hash（eth_getTransactionByHash 可查）。
+func (s *RPCServer) ethSendTransaction(params []any) (string, error) {
+	txObj, ok := params[0].(map[string]any)
+	if !ok {
+		return "", errors.New("eth: params[0] 需為 transaction object")
+	}
+	kp := s.node.keypair
+	if kp == nil {
+		return "", errors.New("eth: 節點金鑰不可用")
+	}
+	keyAddr, err := kp.Address()
+	if err != nil {
+		return "", err
+	}
+	if f := getStringFieldAny(txObj, "from"); f != "" {
+		fTx0, ferr := s.node.normalizeEthAddr(f)
+		if ferr != nil {
+			return "", ferr
+		}
+		if fTx0 != keyAddr {
+			return "", errors.New("eth: from 非節點金鑰地址（eth_sendTransaction 僅支援節點代簽）")
+		}
+	}
+	to := getStringFieldAny(txObj, "to")
+	if to == "" {
+		return "", errors.New("eth: to 必填（合約建立請用 /contract/deploy）")
+	}
+	toTx0, terr := s.node.normalizeEthAddr(to)
+	if terr != nil {
+		return "", terr
+	}
+	// value（wei 0x hex）→ TACm 十進位。
+	amount := "0"
+	if v := getStringFieldAny(txObj, "value"); v != "" {
+		valWei, ok := new(big.Int).SetString(strings.TrimPrefix(v, "0x"), 16)
+		if !ok || valWei == nil {
+			return "", errors.New("eth: value 解析失敗")
+		}
+		amount = weiToTacmStr(valWei)
+	}
+	nonce := s.node.db.GetNonce(keyAddr) + s.node.pendingTxCount(keyAddr)
+	// data → vm:call memo（gas 取 txObj.gas 或預設）。
+	memo := ""
+	if d := getStringFieldAny(txObj, "data"); d != "" {
+		calldata, derr := hexInput(d)
+		if derr != nil {
+			return "", fmt.Errorf("eth: data hex 錯誤: %w", derr)
+		}
+		gas := int64(chaindb.TxGasBase)
+		if g := getStringFieldAny(txObj, "gas"); g != "" {
+			if gi, gerr := strconv.ParseInt(strings.TrimPrefix(g, "0x"), 16, 64); gerr == nil && gi > 0 {
+				gas = gi
+			}
+		}
+		memo = fmt.Sprintf("vm:call:%d:%s", gas, hex.EncodeToString(calldata))
+	}
+	tx := map[string]any{
+		"from": keyAddr, "to": toTx0,
+		"amount": amount, "fee": "0",
+		"nonce": nonce, "ts": time.Now().Unix(),
+		"pubkey": hex.EncodeToString(kp.PublicKeyCompressed()),
+		"memo":   memo,
+	}
+	sig, serr := crypto.SignTransaction(tx, kp.PrivateKey())
+	if serr != nil {
+		return "", serr
+	}
+	tx["signature"] = sig
+	return s.node.SubmitTransaction(tx)
 }
 
 // SubmitEthRawTx 接收標準以太坊 RLP 交易（EIP-155 類型 0），驗證 EIP-155
@@ -714,10 +816,10 @@ func (n *Node) SubmitEthRawTx(rawHex string) (string, error) {
 	if et.Gas.Int64() > int64(n.contracts.DefaultGas()) {
 		return "", fmt.Errorf("eth: gas %d 超過節點上限 %d", et.Gas.Int64(), n.contracts.DefaultGas())
 	}
-	// 驗證簽名並恢復簽名者：type 2 用 yParity（recid）；type 0 用 EIP-155 v。
+	// 驗證簽名並恢復簽名者：type 1/2 用 yParity（recid）；type 0 用 EIP-155 v。
 	payload := et.Payload()
 	var pub *btcec.PublicKey
-	if et.TxType == 2 {
+	if et.TxType == 1 || et.TxType == 2 {
 		if et.ChainID == nil || et.ChainID.Int64() != crypto.EthChainID {
 			return "", fmt.Errorf("eth: chainId %v 不匹配本鏈 %d", et.ChainID, crypto.EthChainID)
 		}
@@ -734,6 +836,11 @@ func (n *Node) SubmitEthRawTx(rawHex string) (string, error) {
 	}
 	fromHash := crypto.Hash160(pub.SerializeCompressed())
 	from := crypto.Hash160ToAddress(fromHash)
+
+	// EIP-3607：禁止合約地址作為交易簽名者（防碰撞/濫用，與主流節點一致）。
+	if err := n.rejectContractSender(from); err != nil {
+		return "", err
+	}
 
 	to, err := evmToTx0("0x" + hex.EncodeToString(et.To))
 	if err != nil {
@@ -788,7 +895,7 @@ func (n *Node) SubmitEthRawTx(rawHex string) (string, error) {
 	et.R.FillBytes(sigBytes[:32])
 	et.S.FillBytes(sigBytes[32:64])
 	var recid byte
-	if et.TxType == 2 {
+	if et.TxType == 1 || et.TxType == 2 {
 		recid = byte(et.V.Int64() & 0x01) // yParity
 	} else if et.V.Int64() >= 35 {
 		recid = byte((et.V.Int64() - 35) & 0x01)
@@ -960,9 +1067,106 @@ func (s *RPCServer) ethGetTransactionByHash(params []any) (any, error) {
 		return nil, err
 	}
 	if tx == nil {
-		return nil, nil // 未找到回 null（以太慣例）
+		// 鏈上未找到 → 查 pending（內存池）：以太坊慣例對已提交未打包交易亦回物件。
+		mp, merr := s.node.db.GetMempoolTx(hash)
+		if merr != nil {
+			return nil, merr
+		}
+		if mp == nil {
+			return nil, nil // 未找到回 null（以太慣例）
+		}
+		var pm map[string]any
+		if err := json.Unmarshal([]byte(mp.Payload), &pm); err != nil {
+			return nil, nil // 損壞 payload 視同未找到
+		}
+		return s.ethPendingTxObject(pm, mp.TxHash), nil
 	}
 	return s.ethTxObject(tx), nil
+}
+
+// ethPendingTxObject 組 pending 交易物件（blockHash/blockNumber/transactionIndex 為 null）。
+// payload 為 SubmitEthRawTx 落池的 tx map（from/to/amount/fee/nonce/memo/pubkey/signature）。
+func (s *RPCServer) ethPendingTxObject(tx map[string]any, txHash string) map[string]any {
+	from0x, _ := tx0To0x(getStringFieldAny(tx, "from"))
+	to0x, _ := tx0To0x(getStringFieldAny(tx, "to"))
+	gas := int64(chaindb.TxGasBase)
+	if gm := memoGas(getStringFieldAny(tx, "memo")); gm > 0 {
+		gas = gm
+	}
+	fee := getStringFieldAny(tx, "fee")
+	gasPrice := "0x0"
+	if fv, ferr := strconv.ParseFloat(fee, 64); ferr == nil {
+		gasPrice = feeToWeiHex(fv)
+	}
+	value := tacmStrToWeiHex(getStringFieldAny(tx, "amount"))
+	input := "0x"
+	if memo := getStringFieldAny(tx, "memo"); strings.HasPrefix(memo, "vm:call:") {
+		if parts := strings.Split(memo, ":"); len(parts) >= 4 {
+			input = "0x" + parts[len(parts)-1]
+		}
+	}
+	txType := "0x0"
+	maxFee, priorityFee := "0x0", "0x0"
+	if getStringFieldAny(tx, "max_fee") != "" {
+		txType = "0x2"
+		if fv, ferr := strconv.ParseFloat(getStringFieldAny(tx, "max_fee"), 64); ferr == nil {
+			maxFee = feeToWeiHex(fv)
+		}
+		if fv, ferr := strconv.ParseFloat(getStringFieldAny(tx, "priority_fee"), 64); ferr == nil {
+			priorityFee = feeToWeiHex(fv)
+		}
+	}
+	// v/r/s 從 signature（eth:r||s||recid）還原。
+	v, r, ss := "0x0", "0x0", "0x0"
+	if sig := getStringFieldAny(tx, "signature"); strings.HasPrefix(sig, "eth:") {
+		if raw, derr := hex.DecodeString(strings.TrimPrefix(sig, "eth:")); derr == nil && len(raw) == 65 {
+			r = "0x" + hex.EncodeToString(raw[:32])
+			ss = "0x" + hex.EncodeToString(raw[32:64])
+			recid := raw[64]
+			if txType == "0x2" {
+				v = hexBig(int64(recid))
+			} else {
+				v = hexBig(int64(recid) + 27)
+			}
+		}
+	}
+	return map[string]any{
+		"hash":                 "0x" + txHash,
+		"blockHash":            nil,
+		"blockNumber":          nil,
+		"transactionIndex":     nil,
+		"from":                 from0x,
+		"to":                   to0x,
+		"value":                value,
+		"gas":                  hexBig(gas),
+		"gasPrice":             gasPrice,
+		"maxFeePerGas":         maxFee,
+		"maxPriorityFeePerGas": priorityFee,
+		"type":                 txType,
+		"chainId":              "0x" + strconv.FormatInt(crypto.EthChainID, 16),
+		"input":                input,
+		"nonce":                hexBig(getInt64(tx, "nonce")),
+		"v":                    v,
+		"r":                    r,
+		"s":                    ss,
+		"yParity":              v,
+	}
+}
+
+// memoGas 從 vm:call:<gas>:<data> memo 取 gas；非該格式回 0。
+func memoGas(memo string) int64 {
+	if !strings.HasPrefix(memo, "vm:call:") {
+		return 0
+	}
+	parts := strings.Split(memo, ":")
+	if len(parts) < 4 {
+		return 0
+	}
+	g, err := strconv.ParseInt(parts[2], 10, 64)
+	if err != nil || g <= 0 {
+		return 0
+	}
+	return g
 }
 
 func (s *RPCServer) ethGetTransactionReceipt(params []any) (any, error) {
@@ -1066,7 +1270,8 @@ func (s *RPCServer) blockByParam(params []any, idx int) (*chaindb.Block, error) 
 		return nil, errors.New("eth: 無區塊")
 	}
 	switch tag {
-	case "", "latest", "pending":
+	case "", "latest", "pending", "safe", "finalized":
+		// safe/finalized：TACm 單鏈 BFT 最終性即時確認，與 latest 同義（主流語義兼容）。
 		return latest, nil
 	case "earliest":
 		return s.node.db.GetBlock(0)

@@ -107,6 +107,12 @@ func (s *WorldState) GetNonce(addr any) uint64 {
 	return 0
 }
 
+// SetNonce 設定帳戶 nonce（state override 用；需先 Ensure 存在）。
+func (s *WorldState) SetNonce(addr any, nonce uint64) {
+	a := s.Ensure(addr)
+	s.accounts[a].Nonce = nonce
+}
+
 func (s *WorldState) IncNonce(addr any) {
 	a := s.Ensure(addr)
 	s.accounts[a].Nonce++

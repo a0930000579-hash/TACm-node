@@ -367,12 +367,72 @@ func (m *ContractManager) SimulateCall(addr0x, caller0x string,
 // SimulateCallGas 同 SimulateCall，但指定 gas 上限（RPC gas_limit 用）。
 func (m *ContractManager) SimulateCallGas(addr0x, caller0x string,
 	calldata []byte, callValue *big.Int, gas uint64) (*CallResult, error) {
+	return m.SimulateCallGasOverrides(addr0x, caller0x, calldata, callValue, gas, nil)
+}
+
+// SimulateCallGasOverrides 同 SimulateCallGas，但支援 eth_call 第三參數 state override
+// （hardhat/Foundry/viem 測試依賴）：對指定地址臨時覆蓋 balance/nonce/code/storage，
+// 模擬結束後一律還原，不影響鏈上狀態。
+// overrides：0x 地址 → {balance?, nonce?, code?, state?, stateDiff?}；state/stateDiff 為
+// key→value 的 0x hex 映射（state 取代、stateDiff 同語義直接設定，與主流節點一致）。
+func (m *ContractManager) SimulateCallGasOverrides(addr0x, caller0x string,
+	calldata []byte, callValue *big.Int, gas uint64, overrides map[string]map[string]any) (*CallResult, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	snap := m.world.Snapshot()
+	defer m.world.Revert(snap)
+	if len(overrides) > 0 {
+		for addr, ov := range overrides {
+			a := m.world.Ensure(addr)
+			if bal, ok := ov["balance"].(string); ok && bal != "" {
+				if bi := hexToBigInt(bal); bi != nil {
+					m.world.SetBalance(a, bi)
+				}
+			}
+			if nc, ok := ov["nonce"].(string); ok && nc != "" {
+				if bi := hexToBigInt(nc); bi != nil && bi.Sign() >= 0 {
+					m.world.SetNonce(a, bi.Uint64())
+				}
+			}
+			if cd, ok := ov["code"].(string); ok && cd != "" {
+				if code, derr := hex.DecodeString(stripHex0x(cd)); derr == nil {
+					m.world.SetCode(a, code)
+				}
+			}
+			for _, sk := range []string{"state", "stateDiff"} {
+				st, ok := ov[sk].(map[string]any)
+				if !ok {
+					continue
+				}
+				for k, v := range st {
+					keyInt := hexToBigInt(k)
+					valInt := hexToBigInt(fmt.Sprint(v))
+					if keyInt != nil && valInt != nil {
+						m.world.SetStorage(a, keyInt, valInt)
+					}
+				}
+			}
+		}
+	}
 	r := m.runCallWithGas(addr0x, caller0x, calldata, callValue, gas)
-	m.world.Revert(snap)
 	return r, nil
+}
+
+// hexToBigInt 解析 0x 前綴或純 hex 字串為 big.Int；失敗回 nil。
+func hexToBigInt(s string) *big.Int {
+	bi, ok := new(big.Int).SetString(stripHex0x(s), 16)
+	if !ok {
+		return nil
+	}
+	return bi
+}
+
+// stripHex0x 去除 0x/0X 前綴（供 VM 內部 hex 解析）。
+func stripHex0x(s string) string {
+	if len(s) >= 2 && (s[0] == '0' && (s[1] == 'x' || s[1] == 'X')) {
+		return s[2:]
+	}
+	return s
 }
 
 // GetCode 返回合約代碼 bytes；不存在回 nil（eth_getCode 用）。

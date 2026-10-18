@@ -293,3 +293,70 @@ func TestManagerCallVRFPrecompileDirect(t *testing.T) {
 		t.Fatalf("0x0a 無 code 應 contract not deployed: %+v", cr2)
 	}
 }
+
+// TestSimulateCallGasOverrides：eth_call state override——storage/balance/nonce 臨時覆蓋
+// 影響模擬結果，模擬結束後一律還原（hardhat/Foundry 依賴語義）。
+func TestSimulateCallGasOverrides(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "tac_evm.db")
+	m, err := NewContractManager(dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer m.Close()
+
+	creator := "0x00000000000000000000000000000000000000a0"
+	m.SyncAccount(creator, big.NewInt(1000), 0)
+	// 部署「讀 storage[calldata[4..36]]」合約（erc20BalanceOfCode 模式）。
+	addr := CreateAddress(creator, 0)
+	if dr, err := m.ApplyDeploy(addr, creator, initFor(erc20BalanceOfCode), big.NewInt(0)); err != nil || !dr.OK {
+		t.Fatalf("部署失敗: %+v err=%v", dr, err)
+	}
+	slotKey := big.NewInt(5)
+	calldata := make([]byte, 36)
+	slotKey.FillBytes(calldata[4:])
+
+	// 無 override：storage[5] = 0。
+	cr, err := m.SimulateCallGasOverrides(addr, creator, calldata, big.NewInt(0), m.DefaultGas(), nil)
+	if err != nil || !cr.OK {
+		t.Fatalf("正常模擬失敗: %+v err=%v", cr, err)
+	}
+	if v := new(big.Int).SetBytes(mustDecodeHex(t, cr.ReturnData)); v.Cmp(big.NewInt(0)) != 0 {
+		t.Fatalf("無 override 期望 0, got %v", v)
+	}
+
+	// override：balance/nonce/state（slot5=0x2a）。
+	overrides := map[string]map[string]any{
+		addr: {
+			"balance": "0x10",
+			"nonce":   "0x1",
+			"state":   map[string]any{"0x5": "0x2a"},
+		},
+	}
+	cr2, err := m.SimulateCallGasOverrides(addr, creator, calldata, big.NewInt(0), m.DefaultGas(), overrides)
+	if err != nil || !cr2.OK {
+		t.Fatalf("override 模擬失敗: %+v err=%v", cr2, err)
+	}
+	if v := new(big.Int).SetBytes(mustDecodeHex(t, cr2.ReturnData)); v.Cmp(big.NewInt(0x2a)) != 0 {
+		t.Fatalf("override 未生效, got %v", v)
+	}
+
+	// 模擬結束後狀態還原（storage/balance 均回原值）。
+	if m.world.GetStorage(addr, slotKey).Cmp(big.NewInt(0)) != 0 {
+		t.Fatal("storage override 未還原")
+	}
+	if m.world.GetBalance(addr).Cmp(big.NewInt(0)) != 0 {
+		t.Fatal("balance override 未還原")
+	}
+	if m.world.GetNonce(addr) != 0 {
+		t.Fatal("nonce override 未還原")
+	}
+}
+
+func mustDecodeHex(t *testing.T, s string) []byte {
+	t.Helper()
+	b, err := hex.DecodeString(s)
+	if err != nil {
+		t.Fatalf("hex 解碼失敗 %q: %v", s, err)
+	}
+	return b
+}
