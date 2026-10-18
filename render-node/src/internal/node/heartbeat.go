@@ -102,20 +102,26 @@ func (n *Node) StartNodeHeartbeat(interval time.Duration, stop <-chan struct{}) 
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
 		// M149m-9：節點啟動自動 PoT 公鑰註冊（免費、冪等——已註冊則跳過）。
-		if regs, err := n.db.GetNodeRegistry(); err == nil {
-			found := false
+		// v51：註冊失敗不再只試一次——每個心跳週期檢查，未註冊即重試，
+		// 直到成功（避免節點啟動時主鏈/mempool 未就緒導致永久無法註冊）。
+		ensureRegistered := func() bool {
+			regs, err := n.db.GetNodeRegistry()
+			if err != nil {
+				return false
+			}
 			for i := range regs {
 				if regs[i].Address == n.nodeAddress {
-					found = true
-					break
+					return true
 				}
 			}
-			if !found {
-				if _, err := n.RegisterAsPotNode(); err != nil {
-					log.Printf("[node-hb] PoT 節點註冊失敗: %v", err)
-				}
+			if _, err := n.RegisterAsPotNode(); err != nil {
+				log.Printf("[node-hb] PoT 節點註冊失敗（將重試）: %v", err)
+				return false
 			}
+			log.Printf("[node-hb] PoT 節點註冊交易已提交")
+			return true
 		}
+		ensureRegistered()
 		if _, err := n.SubmitHeartbeat(n.nodeAddress, true, 0); err != nil {
 			log.Printf("[node-hb] 初始心跳失敗: %v", err)
 		}
@@ -124,6 +130,11 @@ func (n *Node) StartNodeHeartbeat(interval time.Duration, stop <-chan struct{}) 
 			case <-stop:
 				return
 			case <-ticker.C:
+				if !ensureRegistered() {
+					// 註冊未成功時不續發心跳——心跳沒有註冊就沒有獎勵意義，
+					// 且註冊失敗多半伴隨交易通道異常，避免重複卡 nonce。
+					continue
+				}
 				if _, err := n.SubmitHeartbeat(n.nodeAddress, true, 0); err != nil {
 					log.Printf("[node-hb] 心跳失敗: %v", err)
 				}
