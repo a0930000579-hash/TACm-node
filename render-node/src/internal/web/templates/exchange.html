@@ -166,15 +166,15 @@
       <div class="box">
         <h3>訂單簿 <span id="mkTitle" class="chip">TACM/USDT</span></h3>
         <div class="book-ratio" id="bookRatio"><div class="br-b"><span>—</span><i></i></div><div class="br-a"><span>—</span><i></i></div></div>
-        <table><thead><tr><th>價格(USDT)</th><th>數量(TACM)</th><th>總額</th></tr></thead>
+        <div class="table-wrap"><table><thead><tr><th>價格(USDT)</th><th>數量(TACM)</th><th>總額</th></tr></thead>
         <tbody id="asksBody"></tbody>
         <tbody id="spreadRow"></tbody>
-        <tbody id="bidsBody"></tbody></table>
+        <tbody id="bidsBody"></tbody></table></div>
       </div>
       <div class="box">
         <h3>交易市場</h3>
-        <table><thead><tr><th>交易對</th><th>最新</th><th>手續費(taker)</th></tr></thead>
-        <tbody id="marketsBody"></tbody></table>
+        <div class="table-wrap"><table><thead><tr><th>交易對</th><th>最新</th><th>手續費(taker)</th></tr></thead>
+        <tbody id="marketsBody"></tbody></table></div>
         <div class="mini">下單</div>
         <form class="bn-form" id="orderForm">
           <input id="oUid" placeholder="account (tx0...)" autocomplete="off">
@@ -200,8 +200,8 @@
       </div>
       <div class="box">
         <h3>最近成交</h3>
-        <table><thead><tr><th>價格</th><th>數量</th><th>時間</th></tr></thead>
-        <tbody id="tradesBody"></tbody></table>
+        <div class="table-wrap"><table><thead><tr><th>價格</th><th>數量</th><th>時間</th></tr></thead>
+        <tbody id="tradesBody"></tbody></table></div>
       </div>
     </div>
   </div>
@@ -217,8 +217,8 @@
         <div class="flow"><div class="f"><input id="bUid" placeholder="tx0..." autocomplete="off"></div>
         <button class="bn-btn" onclick="loadBalances()">查詢</button></div>
       </div>
-      <table><thead><tr><th>資產</th><th>可用</th><th>鎖定</th></tr></thead>
-      <tbody id="balBody"></tbody></table>
+      <div class="table-wrap"><table><thead><tr><th>資產</th><th>可用</th><th>鎖定</th></tr></thead>
+      <tbody id="balBody"></tbody></table></div>
       <div class="bn-msg" id="bMsg"></div>
       <div class="mini">入金：扣鏈上錢包（含鏈上轉帳費）後存入交易所帳戶</div>
       <div class="bn-form">
@@ -274,8 +274,8 @@
         <button class="bn-btn" onclick="startBot()">啟動機器人</button>
         <div class="bn-msg" id="btMsg"></div>
       </div>
-      <table style="margin-top:12px;"><thead><tr><th>ID</th><th>市場</th><th>狀態</th><th>掛單</th><th>成交</th><th></th></tr></thead>
-      <tbody id="botBody"></tbody></table>
+      <div class="table-wrap"><table style="margin-top:12px;"><thead><tr><th>ID</th><th>市場</th><th>狀態</th><th>掛單</th><th>成交</th><th></th></tr></thead>
+      <tbody id="botBody"></tbody></table></div>
     </div>
   </div>
 
@@ -290,8 +290,8 @@
         <div class="flow"><div class="f"><input id="orUid" placeholder="tx0..." autocomplete="off"></div>
         <button class="bn-btn" onclick="loadOrders()">查詢</button></div>
       </div>
-      <table><thead><tr><th>ID</th><th>市場</th><th>方向</th><th>價格</th><th>數量</th><th>已成交</th><th>狀態</th><th>操作</th></tr></thead>
-      <tbody id="orBody"></tbody></table>
+      <div class="table-wrap"><table><thead><tr><th>ID</th><th>市場</th><th>方向</th><th>價格</th><th>數量</th><th>已成交</th><th>狀態</th><th>操作</th></tr></thead>
+      <tbody id="orBody"></tbody></table></div>
       <div class="bn-msg" id="orMsg"></div>
     </div>
   </div>

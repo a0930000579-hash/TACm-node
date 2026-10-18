@@ -35,6 +35,18 @@
 </section>
 
 <script>
+  // M161：自動帶入我的錢包——登入會員優先，否則訪客地址（與全站 ensureGuestAddr 同源）。
+  (function () {
+    function afill(ids) {
+      function fill(a) { if (!a) return; ids.forEach(function (id) { var el = document.getElementById(id); if (el && !el.value.trim()) el.value = a; }); }
+      fetch('/api/auth/me', { cache: 'no-store' }).then(function (r) { return r.json().catch(function () { return null; }); }).then(function (j) {
+        if (j && j.ok && j.logged_in && j.user && j.user.wallet_addr) { fill(j.user.wallet_addr); return; }
+        if (window.ensureGuestAddr) { ensureGuestAddr().then(fill).catch(function () {}); }
+      }).catch(function () { if (window.ensureGuestAddr) { ensureGuestAddr().then(fill).catch(function () {}); } });
+    }
+    afill(['fcAddr']);
+  })();
+
 (function () {
   var form = document.getElementById('faucetForm');
   var btn = document.getElementById('fcBtn');

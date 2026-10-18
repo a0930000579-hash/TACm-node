@@ -78,6 +78,18 @@
   </div>
 </section>
 <script>
+  // M161：自動帶入我的錢包——登入會員優先，否則訪客地址（與全站 ensureGuestAddr 同源）。
+  (function () {
+    function afill(ids) {
+      function fill(a) { if (!a) return; ids.forEach(function (id) { var el = document.getElementById(id); if (el && !el.value.trim()) el.value = a; }); }
+      fetch('/api/auth/me', { cache: 'no-store' }).then(function (r) { return r.json().catch(function () { return null; }); }).then(function (j) {
+        if (j && j.ok && j.logged_in && j.user && j.user.wallet_addr) { fill(j.user.wallet_addr); return; }
+        if (window.ensureGuestAddr) { ensureGuestAddr().then(fill).catch(function () {}); }
+      }).catch(function () { if (window.ensureGuestAddr) { ensureGuestAddr().then(fill).catch(function () {}); } });
+    }
+    afill(['lkSrc']);
+  })();
+
   (function () {
     'use strict';
     var api = location.origin;
@@ -194,7 +206,7 @@
             rows.push(t);
           }
           if (rows.length === 0) { el.innerHTML = '<div class="br-empty">' + esc(L('此鏈無跨鏈交易', 'No bridge transactions for this chain')) + '</div>'; return; }
-          var h = '<table class="br-table"><tr><th>Time</th><th>Route</th><th>Token</th><th>Amount</th><th>Status</th><th>ID</th></tr>';
+          var h = '<div class="table-wrap"><table class="br-table" style="min-width:560px"><tr><th>Time</th><th>Route</th><th>Token</th><th>Amount</th><th>Status</th><th>ID</th></tr>';
           for (var j = 0; j < rows.length; j++) {
             var t2 = rows[j];
             var st = t2.status || '-';

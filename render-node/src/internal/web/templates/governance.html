@@ -47,6 +47,9 @@
   .gov-bar .a{background:#5d6778}
   .gov-votes{display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap}
   .gov-votes b{font-size:11px;color:#5d6778;font-weight:600}
+  .gov-tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+  .gov-tab{background:#f2f4f9;border:1px solid #e2e6ee;border-radius:999px;padding:8px 18px;font-size:13px;font-weight:700;color:#5d6778;cursor:pointer}
+  .gov-tab.gov-tab-on{background:#68BE8D;border-color:#68BE8D;color:#f7f8fb}
   .gov-empty{text-align:center;color:#5e6673;padding:30px 0;font-size:13px}
   .gov-param-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid #e2e6ee;font-size:13px}
   .gov-param-row:last-child{border-bottom:none}
@@ -71,6 +74,34 @@
     </div>
   </div>
 
+  <div class="gov-tabs">
+    <button class="gov-tab gov-tab-on" id="tabParam" onclick="switchTab('param')" data-i18n="gov.paramTab">參數治理</button>
+    <button class="gov-tab" id="tabDao" onclick="switchTab('dao')" data-i18n="gov.daoTab">合約 DAO</button>
+  </div>
+  <script>
+  // M161：自動帶入我的錢包——登入會員優先，否則訪客地址（與全站 ensureGuestAddr 同源）。
+  (function () {
+    function afill(ids) {
+      function fill(a) { if (!a) return; ids.forEach(function (id) { var el = document.getElementById(id); if (el && !el.value.trim()) el.value = a; }); }
+      fetch('/api/auth/me', { cache: 'no-store' }).then(function (r) { return r.json().catch(function () { return null; }); }).then(function (j) {
+        if (j && j.ok && j.logged_in && j.user && j.user.wallet_addr) { fill(j.user.wallet_addr); return; }
+        if (window.ensureGuestAddr) { ensureGuestAddr().then(fill).catch(function () {}); }
+      }).catch(function () { if (window.ensureGuestAddr) { ensureGuestAddr().then(fill).catch(function () {}); } });
+    }
+    afill(['pAddr']);
+  })();
+
+  function switchTab(v){
+    var p = document.getElementById('viewParam');
+    var d = document.getElementById('viewDao');
+    var t1 = document.getElementById('tabParam');
+    var t2 = document.getElementById('tabDao');
+    if (!p || !d) return;
+    if (v === 'dao') { p.style.display = 'none'; d.style.display = ''; t1.classList.remove('gov-tab-on'); t2.classList.add('gov-tab-on'); }
+    else { d.style.display = 'none'; p.style.display = ''; t2.classList.remove('gov-tab-on'); t1.classList.add('gov-tab-on'); }
+  }
+  </script>
+  <div id="viewParam">
   <div class="gov-grid">
     <div>
       <div class="gov-card">
@@ -115,6 +146,7 @@
     <div class="gov-card">
       <h3 data-i18n="gov.proposals">全部提案</h3>
       <div id="proposalsList"><div class="gov-empty" data-i18n="common.loading">載入中…</div></div>
+    </div>
     </div>
   </div>
 </div>
@@ -265,4 +297,141 @@
   setInterval(load, 8000);
 })();
 </script>
+
+<div id="viewDao" style="display:none">
+<!-- M151：鏈上治理 DAO（TACGovernor：propose / vote / execute，自 Explorer 面板遷移） -->
+<div class="gov-card">
+  <h3><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8L12 3z"/><path d="M18 14l1 2.4 2.4 1-2.4 1L18 21l-1-2.4-2.4-1 2.4-1 1-2.4z"/></svg> <span data-i18n="gov.daoTitle">鏈上治理（DAO）</span></h3>
+  <p style="font-size:12px;color:#5d6778;margin:0 0 12px;" data-i18n="gov.intro">去中心化 DAO——任何帳戶可提案、一人一票投票、多數決後執行資金轉帳。</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+    <span class="gov-stats" style="margin:0;"><span data-i18n="gov.status">合約狀態</span><b class="mono" id="gvStatus">-</b></span>
+    <span class="gov-stats" style="margin:0;"><span data-i18n="gov.contract">合約地址</span><b class="mono" id="gvAddr">-</b></span>
+    <span class="gov-stats" style="margin:0;"><span data-i18n="gov.nextPid">下一個提案 ID</span><b class="mono" id="gvNext">-</b></span>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+    <button class="gov-btn sm" id="gvDeploy" data-i18n="gov.deploy">部署治理合約</button>
+    <span class="gov-msg" id="gvDeployResult" style="display:inline;"></span>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+    <div>
+      <label style="font-size:12px;color:#5d6778;" data-i18n="gov.proposeTitle">發起提案</label>
+      <input id="gvTarget" data-i18n-placeholder="gov.targetPh" placeholder="目標地址（0x…）" style="width:100%;box-sizing:border-box;background:#f2f4f9;border:1px solid #e2e6ee;border-radius:10px;color:#14161a;padding:8px 10px;font-size:13px;font-family:ui-monospace,monospace;margin:6px 0;">
+      <input id="gvValue" data-i18n-placeholder="gov.valuePh" placeholder="金額（TACm）" style="width:100%;box-sizing:border-box;background:#f2f4f9;border:1px solid #e2e6ee;border-radius:10px;color:#14161a;padding:8px 10px;font-size:13px;font-family:ui-monospace,monospace;margin-bottom:6px;">
+      <button class="gov-btn sm" id="gvPropose" data-i18n="gov.propose">發起提案</button>
+      <div class="gov-msg" id="gvProposeResult"></div>
+    </div>
+    <div>
+      <label style="font-size:12px;color:#5d6778;" data-i18n="gov.voteTitle">投票（節點代簽，一人一票）</label>
+      <div style="display:flex;gap:8px;align-items:center;margin:6px 0;">
+        <input id="gvVotePid" data-i18n-placeholder="gov.pidPh" placeholder="提案 ID" type="number" min="1" style="flex:1;min-width:0;background:#f2f4f9;border:1px solid #e2e6ee;border-radius:10px;color:#14161a;padding:8px 10px;font-size:13px;">
+        <button class="gov-btn sm v-yes" id="gvVoteFor" data-i18n="gov.support">贊成</button>
+        <button class="gov-btn sm v-no" id="gvVoteAgainst" data-i18n="gov.against">反對</button>
+      </div>
+      <div class="gov-msg" id="gvVoteResult"></div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:10px;">
+    <div>
+      <label style="font-size:12px;color:#5d6778;" data-i18n="gov.executeTitle">執行提案（多數決後）</label>
+      <div style="display:flex;gap:8px;align-items:center;margin:6px 0;">
+        <input id="gvExecPid" data-i18n-placeholder="gov.pidPh" placeholder="提案 ID" type="number" min="1" style="flex:1;min-width:0;background:#f2f4f9;border:1px solid #e2e6ee;border-radius:10px;color:#14161a;padding:8px 10px;font-size:13px;">
+        <button class="gov-btn sm" id="gvExecute" data-i18n="gov.execute">執行</button>
+      </div>
+      <div class="gov-msg" id="gvExecuteResult"></div>
+    </div>
+    <div>
+      <label style="font-size:12px;color:#5d6778;" data-i18n="gov.queryTitle">查詢提案</label>
+      <div style="display:flex;gap:8px;align-items:center;margin:6px 0;">
+        <input id="gvQueryPid" data-i18n-placeholder="gov.pidPh" placeholder="提案 ID" type="number" min="1" style="flex:1;min-width:0;background:#f2f4f9;border:1px solid #e2e6ee;border-radius:10px;color:#14161a;padding:8px 10px;font-size:13px;">
+        <button class="gov-btn sm" id="gvQuery" data-i18n="gov.query">查詢</button>
+      </div>
+      <div class="gov-msg mono" id="gvQueryResult" style="white-space:pre-wrap;"></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+  // M151：TACGovernor DAO 前端操作（自 Explorer 遷移，gov 風格）
+  (function () {
+    var api2 = location.protocol + '//' + location.host;
+    function gpost(path, body) {
+      return fetch(api2 + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+        .then(function (r) { return r.json(); });
+    }
+    function gget(path) {
+      return fetch(api2 + path, { cache: 'no-store' }).then(function (r) { return r.json(); });
+    }
+    var statusEl = document.getElementById('gvStatus'), addrEl = document.getElementById('gvAddr'), nextEl = document.getElementById('gvNext');
+    function loadGv() {
+      if (!statusEl) return;
+      gget('/tacgov/status').then(function (d) {
+        if (!d || !d.ok) return;
+        statusEl.textContent = d.deployed ? 'Deployed' : 'Not deployed';
+        addrEl.textContent = d.contract_address || '-';
+        nextEl.textContent = d.next_proposal_id != null ? d.next_proposal_id : '-';
+      }).catch(function () {});
+    }
+    var depBtn = document.getElementById('gvDeploy'), depRes = document.getElementById('gvDeployResult');
+    if (depBtn) depBtn.addEventListener('click', function () {
+      depRes.textContent = '...';
+      gpost('/tacgov/deploy', {}).then(function (d) {
+        depRes.className = 'gov-msg' + (d.ok ? ' ok' : ' err');
+        depRes.textContent = d.ok ? ('Deployed ' + (d.contract_address || '')) : (d.error || 'failed');
+        loadGv();
+      }).catch(function () { depRes.className = 'gov-msg err'; depRes.textContent = 'failed'; });
+    });
+    var proBtn = document.getElementById('gvPropose'), proRes = document.getElementById('gvProposeResult');
+    if (proBtn) proBtn.addEventListener('click', function () {
+      var target = document.getElementById('gvTarget').value.trim();
+      var value = document.getElementById('gvValue').value.trim();
+      if (!target) { proRes.className = 'gov-msg err'; proRes.textContent = 'Enter target address'; return; }
+      proRes.className = 'gov-msg'; proRes.textContent = '...';
+      gpost('/tacgov/propose', { target: target, value: value || '0' }).then(function (d) {
+        proRes.className = 'gov-msg' + (d.ok ? ' ok' : ' err');
+        proRes.textContent = d.ok ? ('Proposal #' + (d.proposal_id != null ? d.proposal_id : '?') + ' submitted') : (d.error || 'failed');
+        loadGv();
+      }).catch(function () { proRes.className = 'gov-msg err'; proRes.textContent = 'failed'; });
+    });
+    function bindVote(choice) {
+      var btn = document.getElementById(choice === 1 ? 'gvVoteFor' : 'gvVoteAgainst');
+      if (!btn) return;
+      btn.addEventListener('click', function () {
+        var pid = document.getElementById('gvVotePid').value.trim();
+        var res = document.getElementById('gvVoteResult');
+        if (!pid) { res.className = 'gov-msg err'; res.textContent = 'Enter proposal ID'; return; }
+        res.className = 'gov-msg'; res.textContent = '...';
+        gpost('/tacgov/vote', { proposal_id: pid, choice: choice }).then(function (d) {
+          res.className = 'gov-msg' + (d.ok ? ' ok' : ' err');
+          res.textContent = d.ok ? 'Vote recorded' : (d.error || 'failed');
+        }).catch(function () { res.className = 'gov-msg err'; res.textContent = 'failed'; });
+      });
+    }
+    bindVote(1); bindVote(0);
+    var exBtn = document.getElementById('gvExecute'), exRes = document.getElementById('gvExecuteResult');
+    if (exBtn) exBtn.addEventListener('click', function () {
+      var pid = document.getElementById('gvExecPid').value.trim();
+      if (!pid) { exRes.className = 'gov-msg err'; exRes.textContent = 'Enter proposal ID'; return; }
+      exRes.className = 'gov-msg'; exRes.textContent = '...';
+      gpost('/tacgov/execute', { proposal_id: pid }).then(function (d) {
+        exRes.className = 'gov-msg' + (d.ok ? ' ok' : ' err');
+        exRes.textContent = d.ok ? 'Executed' : (d.error || 'failed');
+      }).catch(function () { exRes.className = 'gov-msg err'; exRes.textContent = 'failed'; });
+    });
+    var qBtn = document.getElementById('gvQuery');
+    if (qBtn) qBtn.addEventListener('click', function () {
+      var pid = document.getElementById('gvQueryPid').value.trim();
+      var res = document.getElementById('gvQueryResult');
+      if (!pid) { res.className = 'gov-msg err'; res.textContent = 'Enter proposal ID'; return; }
+      gget('/tacgov/query?op=info&pid=' + encodeURIComponent(pid)).then(function (d) {
+        res.className = 'gov-msg' + (d.ok ? ' ok' : ' err');
+        if (!d.ok) { res.textContent = d.error || 'failed'; return; }
+        var p = d.proposal || {};
+        res.textContent = 'creator=' + (p.creator || '-') + '\nsupport=' + (p.support != null ? p.support : '-') + ' oppose=' + (p.oppose != null ? p.oppose : '-') + '\nexecuted=' + (p.executed ? 'yes' : 'no') + '\ntarget=' + (p.target || '-') + ' value=' + (p.value != null ? p.value : '-') + '\nstatus=' + (p.status || '-');
+      }).catch(function () { res.className = 'gov-msg err'; res.textContent = 'failed'; });
+    });
+    loadGv();
+  })();
+</script>
+
 {% endblock %}

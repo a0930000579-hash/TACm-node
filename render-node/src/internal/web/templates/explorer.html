@@ -51,32 +51,17 @@
   <div class="search-tip muted" id="searchTip"></div>
 </section>
 
-<!-- M76：主流錢包接入（MetaMask / Trust 自訂 RPC） -->
+<!-- M151：鏈上服務入口 —— 操作型 DApp 各自獨立頁面，瀏覽器僅保留鏈上檢視 -->
 <section class="panel">
-  <div class="panel-head"><h2 data-i18n="wallet.title">錢包接入</h2></div>
-  <p class="muted" data-i18n="wallet.intro">透過自訂 RPC 將 TACm 主網加入 MetaMask / Trust Wallet —— 完整支援 EIP-1559（Type 2）交易、事件日誌與交易收據。</p>
-  <div class="wallet-grid">
-    <div class="wg">
-      <small data-i18n="wallet.rpc">RPC URL</small>
-      <b class="mono" id="wRpc">{{ rpcURL }}</b>
-    </div>
-    <div class="wg">
-      <small data-i18n="wallet.chainId">Chain ID</small>
-      <b class="mono">1337 (0x539)</b>
-    </div>
-    <div class="wg">
-      <small data-i18n="wallet.symbol">代幣符號</small>
-      <b class="mono">TACM</b>
-    </div>
-    <div class="wg">
-      <small data-i18n="wallet.decimals">小數位</small>
-      <b class="mono">18</b>
-    </div>
-  </div>
+  <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v16"/></svg> <span data-i18n="svc.title">鏈上服務 / On-chain Services</span></h2></div>
   <div class="wallet-actions">
-    <button class="search-btn" id="wAddMeta" data-i18n="wallet.add">加到 MetaMask</button>
-    <button class="search-btn" id="wVerify" data-i18n="wallet.verify">驗證連線</button>
-    <span class="muted" id="wResult"></span>
+    <a class="search-btn" href="/wallet" style="text-decoration:none" data-i18n="svc.wallet">TAC 錢包（資產＋多簽）</a>
+    <a class="search-btn" href="/tacns" style="text-decoration:none" data-i18n="svc.ns">命名服務 .tac</a>
+    <a class="search-btn" href="/governance" style="text-decoration:none" data-i18n="svc.gov">鏈上治理（DAO）</a>
+    <a class="search-btn" href="/oracle" style="text-decoration:none" data-i18n="oracle.title">鏈上預言機（Oracle）</a>
+    <a class="search-btn" href="/aa" style="text-decoration:none" data-i18n="aa.title">帳戶抽象（Account Abstraction）</a>
+    <a class="search-btn" href="/api-docs" style="text-decoration:none" data-i18n="api.title">Indexer API</a>
+    <a class="search-btn" href="/stake" style="text-decoration:none" data-i18n="st.title">質押委託（Staking）</a>
   </div>
 </section>
 
@@ -187,62 +172,11 @@
   })();
 </script>
 
-<script>
-  // M76：主流錢包接入 —— 顯示 RPC URL、Add to MetaMask（wallet_addEthereumChain）、驗證連線。
-  (function () {
-    var rpcEl = document.getElementById('wRpc');
-    var addBtn = document.getElementById('wAddMeta');
-    var verBtn = document.getElementById('wVerify');
-    var resEl = document.getElementById('wResult');
-    if (rpcEl) { rpcEl.textContent = location.protocol + '//' + location.host; }
-    var chainParams = {
-      chainId: '0x539',
-      chainName: 'TACm Mainnet',
-      nativeCurrency: { name: 'TACM', symbol: 'TACM', decimals: 18 },
-      rpcUrls: [location.protocol + '//' + location.host],
-      blockExplorerUrls: [location.origin + '/explorer']
-    };
-    if (addBtn) {
-      addBtn.addEventListener('click', function () {
-        if (!window.ethereum) {
-          if (resEl) resEl.textContent = '請先安裝 MetaMask 後重試';
-          return;
-        }
-        window.ethereum.request({ method: 'wallet_addEthereumChain', params: [chainParams] })
-          .then(function () {
-            if (resEl) resEl.textContent = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M4 12l5 5L20 7"/></svg> 已加入網路';
-          })
-          .catch(function (e) {
-            if (resEl) resEl.textContent = (e && e.message) || '加入網路失敗';
-          });
-      });
-    }
-    if (verBtn) {
-      verBtn.addEventListener('click', function () {
-        if (resEl) resEl.textContent = '檢查中…';
-        fetch('/eth', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_chainId', params: [] })
-        })
-          .then(function (r) { return r.json(); })
-          .then(function (j) {
-            if (resEl) {
-              var okSvg = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M4 12l5 5L20 7"/></svg>';
-              var errSvg = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></svg>';
-              resEl.innerHTML = '';
-              if (j && j.result === '0x539') {
-                resEl.innerHTML = okSvg + ' <span>連線正常 (0x539)</span>';
-              } else {
-                resEl.innerHTML = errSvg;
-                resEl.appendChild(document.createTextNode(' 異常: ' + JSON.stringify(j || {})));
-              }
-            }
-          })
-          .catch(function () { if (resEl) resEl.textContent = '驗證失敗'; });
-      });
-    }
-  })();
-</script>
+
+
+
+
+
 
 <script>
   // M124：Explorer 首頁 10 秒輪詢 —— 統計卡＋最新區塊/交易即時更新（/api/explorer/stats）。

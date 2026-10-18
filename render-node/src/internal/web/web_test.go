@@ -124,6 +124,8 @@ func TestServerPages(t *testing.T) {
 		{"/tx/txhash1", http.StatusOK, "txhash1"},
 		{"/wallet", http.StatusOK, "Web3 錢包"},
 		{"/wallet?address=tx0proposeraddr", http.StatusOK, "1250000000000000000"},
+		{"/tacns", http.StatusOK, "tacns.title"},   // M151：TAC-ENS 獨立頁
+		{"/governance", http.StatusOK, "viewParam"}, // M151：治理整合 tab（參數治理 / 合約 DAO）
 		{"/bridge", http.StatusOK, "Bridge"}, // M149w：跨鏈橋操作頁
 		{"/static/css/style.css", http.StatusOK, "var(--bg)"},
 	}
@@ -496,5 +498,159 @@ func TestMnemonicAPI(t *testing.T) {
 	_ = json.Unmarshal(rr3.Body.Bytes(), &errResp)
 	if errResp.Error == "" {
 		t.Fatal("壞助記詞應回 error")
+	}
+}
+
+// M151：TAC-ENS 獨立頁渲染必須含命名服務區塊（模板語法與 i18n 掛載驗證）。
+func TestExplorerTACNSRender(t *testing.T) {
+	ds := &fakeDS{
+		st:        StatusView{Height: 1, MempoolSize: 0},
+		blockList: []BlockView{},
+		txList:    []TxView{},
+	}
+	srv, err := NewWithNetworkMode(ds, "mainnet", true, 1)
+	if err != nil {
+		t.Fatalf("建立 server 失敗: %v", err)
+	}
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/tacns", nil)
+	srv.handleTacns(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("tacns 渲染失敗 code=%d body=%s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "nsStatus") || !strings.Contains(body, "tacns") {
+		t.Fatal("tacns 未包含 TAC-ENS 面板（nsStatus/tacns）")
+	}
+	if !strings.Contains(body, "tacns.title") {
+		t.Fatal("tacns 未包含 i18n key tacns.title")
+	}
+}
+
+func TestOracleRender(t *testing.T) {
+	ds := &fakeDS{
+		st:        StatusView{Height: 1, MempoolSize: 0},
+		blockList: []BlockView{},
+		txList:    []TxView{},
+	}
+	srv, err := NewWithNetworkMode(ds, "mainnet", true, 1)
+	if err != nil {
+		t.Fatalf("建立 server 失敗: %v", err)
+	}
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/oracle", nil)
+	srv.handleOracle(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("oracle 渲染失敗 code=%d body=%s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "oc-table") || !strings.Contains(body, "ocBody") {
+		t.Fatal("oracle 未包含喂價表格（oc-table/ocBody）")
+	}
+	if !strings.Contains(body, "oracle.title") {
+		t.Fatal("oracle 未包含 i18n key oracle.title")
+	}
+}
+
+func TestStakeRender(t *testing.T) {
+	ds := &fakeDS{
+		st:        StatusView{Height: 1, MempoolSize: 0},
+		blockList: []BlockView{},
+		txList:    []TxView{},
+	}
+	srv, err := NewWithNetworkMode(ds, "mainnet", true, 1)
+	if err != nil {
+		t.Fatalf("建立 server 失敗: %v", err)
+	}
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/stake", nil)
+	srv.mux.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("/stake 應 200，got %d", rr.Code)
+	}
+	body := rr.Body.String()
+	if !strings.Contains(body, "Staking Delegation") && !strings.Contains(body, "stake") {
+		t.Fatal("/stake 頁缺少委託內容")
+	}
+}
+
+func TestAPIDocsRender(t *testing.T) {
+	ds := &fakeDS{
+		st:        StatusView{Height: 1, MempoolSize: 0},
+		blockList: []BlockView{},
+		txList:    []TxView{},
+	}
+	srv, err := NewWithNetworkMode(ds, "mainnet", true, 1)
+	if err != nil {
+		t.Fatalf("建立 server 失敗: %v", err)
+	}
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/api-docs", nil)
+	srv.handleAPIDocs(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET /api-docs 應 200，got %d", rec.Code)
+	}
+	body := rec.Body.String()
+	for _, want := range []string{"api/v1/stats", "api/v1/blocks", "api/v1/block/", "api/v1/tx/", "api/v1/txs", "api/v1/address/"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("頁面應含 %s", want)
+		}
+	}
+	// i18n keys 存在（data-i18n 精確替換目標）。
+	for _, k := range []string{"api.title", "api.intro", "api.endpoints", "api.usage"} {
+		if !strings.Contains(body, k) {
+			t.Fatalf("頁面應含 data-i18n key %s", k)
+		}
+	}
+}
+
+func TestAARender(t *testing.T) {
+	ds := &fakeDS{
+		st:        StatusView{Height: 1, MempoolSize: 0},
+		blockList: []BlockView{},
+		txList:    []TxView{},
+	}
+	srv, err := NewWithNetworkMode(ds, "mainnet", true, 1)
+	if err != nil {
+		t.Fatalf("建立 server 失敗: %v", err)
+	}
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/aa", nil)
+	srv.handleAA(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("aa 渲染失敗 code=%d body=%s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "aaOpsBody") || !strings.Contains(body, "aaSender") {
+		t.Fatal("aa 未包含操作面板（aaOpsBody/aaSender）")
+	}
+	if !strings.Contains(body, "aa.title") {
+		t.Fatal("aa 未包含 i18n key aa.title")
+	}
+}
+
+func TestExplorerTACWalletRender(t *testing.T) {
+	ds := &fakeDS{
+		st:           StatusView{Height: 1, MempoolSize: 0},
+		blockList:    []BlockView{},
+		txList:       []TxView{},
+		walletResult: &WalletView{Address: "tx0proposeraddr", TACm: "100"},
+	}
+	srv, err := NewWithNetworkMode(ds, "mainnet", true, 1)
+	if err != nil {
+		t.Fatalf("建立 server 失敗: %v", err)
+	}
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/wallet", nil)
+	srv.handleWallet(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("wallet 渲染失敗 code=%d body=%s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "wlDeploy") || !strings.Contains(body, "wallet.multiTitle") {
+		t.Fatal("wallet 未包含多簽錢包面板（wlDeploy/wallet.multiTitle）")
+	}
+	if strings.Contains(body, "wAddMeta") || strings.Contains(body, "wVerify") {
+		t.Fatal("wallet 不應包含 MetaMask 綁定操作（已移除）")
 	}
 }

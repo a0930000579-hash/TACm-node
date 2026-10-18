@@ -16,7 +16,22 @@
 </head>
 <body>
 <!-- M83：強制亮色防禦（任何內嵌樣式都蓋不掉） -->
-<style>html{background:#f7f8fb !important} body{background:#f7f8fb !important;color-scheme:light}</style>
+<style>html{background:#f7f8fb !important} body{background:#f7f8fb !important;color-scheme:light}
+/* M151-2：全設備統一 —— 禁反白（user-select none）＋點擊高亮消除；輸入框保持可編輯/可選 */
+*{-webkit-tap-highlight-color:transparent}
+body{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+input,textarea,[contenteditable]{-webkit-user-select:auto;user-select:auto}
+/* M151-3：全站視覺統一美化（僅補強，不覆蓋既有規則）——卡片統一圓角與微陰影、hover 微升、按鈕過渡 */
+.panel,.gov-card,.bn-panel,.join-cmd,.dex-card,.market-card,.stat-cards .card{border-radius:16px;box-shadow:0 1px 2px rgba(16,24,40,.05)}
+@media (hover:hover){
+  .panel,.gov-card,.bn-panel,.dex-card,.market-card,.stat-cards .card{transition:box-shadow .18s ease,transform .18s ease}
+  .panel:hover,.gov-card:hover,.bn-panel:hover,.dex-card:hover,.market-card:hover,.stat-cards .card:hover{box-shadow:0 8px 24px rgba(16,24,40,.10);transform:translateY(-1px)}
+  .btn,.bn-copy,.gov-tab,.search-btn,.pill{transition:transform .14s ease,box-shadow .14s ease}
+  .btn:hover,.bn-copy:hover,.gov-tab:hover,.search-btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(16,24,40,.08)}
+  .pill:hover{opacity:.9}
+}
+.btn,.bn-copy,.search-btn,.gov-btn{border-radius:10px}
+</style>
 <!-- M84：深色自癒——若被舊 Service Worker 快取餵到舊版深色頁面，自動強制重載＋更新 SW，無需手動清緩存 -->
 <script>
 (function () {

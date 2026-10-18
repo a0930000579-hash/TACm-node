@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}Oracle · Price Feeds{% endblock %}
+{% block content %}
+<style>
+  .oc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:12px 0}
+  .oc-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}
+  table.oc-table{width:100%;border-collapse:collapse;margin-top:10px}
+  .oc-table th,.oc-table td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line,#e8ecf1);font-size:13px}
+  .oc-table th{color:var(--muted,#667085);font-weight:600}
+  .live-dot,.static-dot,.manual-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:1px}
+  .live-dot{background:#22c55e}.static-dot{background:#f59e0b}.manual-dot{background:#8b5cf6}
+</style>
+<section class="pg-banner">
+  <div class="pg-txt"><h1 data-i18n="oracle.title">鏈上預言機（Oracle）</h1><p data-i18n="oracle.intro">主流幣即時喂價——DeFi 借貸、衍生品與開發者的可靠價格來源。</p></div>
+  <svg viewBox="0 0 40 40" class="pg-art"><path d="M8 26l8-10 6 6 10-12" fill="none" stroke="#68BE8D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="32" cy="10" r="2.2" fill="#68BE8D"/></svg>
+</section>
+<!-- M152：鏈上預言機（節點級喂價服務，前端直讀節點 RPC） -->
+<section class="panel">
+  <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M4 17l6-6 4 4 6-8"/><path d="M14 7h6v6"/></svg> <span data-i18n="oracle.feeds">價格喂價</span></h2><span class="muted" id="ocUptime"></span></div>
+  <div class="oc-grid" id="ocCards"></div>
+  <div class="table-wrap"><table class="oc-table" style="min-width:520px">
+    <thead><tr><th data-i18n="oracle.symbol">市場</th><th data-i18n="oracle.price">價格（USDT）</th><th data-i18n="oracle.chg">24h</th><th data-i18n="oracle.source">來源</th><th data-i18n="oracle.updated">更新時間</th></tr></thead>
+    <tbody id="ocBody"><tr><td colspan="5" class="muted">-</td></tr></tbody>
+  </table></div>
+</section>
+<section class="panel">
+  <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg> <span data-i18n="oracle.query">查詢與覆寫</span></h2></div>
+  <div class="oc-actions">
+    <input class="search-input" id="ocQSymbol" placeholder="BTC/USDT" style="max-width:200px;min-width:0">
+    <button class="search-btn" id="ocLookup" data-i18n="oracle.lookupBtn">查詢</button>
+    <span class="muted" id="ocLookupResult"></span>
+  </div>
+  <div class="oc-actions" style="margin-top:10px">
+    <small data-i18n="oracle.feedHint" style="color:var(--muted)">手動覆寫喂價（節點操作）</small>
+    <input class="search-input" id="ocFSymbol" placeholder="BTC/USDT" style="max-width:150px;min-width:0">
+    <input class="search-input" id="ocFPrice" type="number" step="any" placeholder="0.00" style="max-width:120px;min-width:0">
+    <button class="search-btn" id="ocFeed" data-i18n="oracle.feedBtn">覆寫</button>
+    <span class="muted" id="ocFeedResult"></span>
+  </div>
+  <div class="oc-actions" style="margin-top:10px">
+    <small data-i18n="oracle.historyHint" style="color:var(--muted)">歷史喂價</small>
+    <input class="search-input" id="ocHSymbol" placeholder="BTC/USDT" style="max-width:150px;min-width:0">
+    <button class="search-btn" id="ocHistory" data-i18n="oracle.historyBtn">檢視</button>
+    <span class="muted" id="ocHistoryResult"></span>
+  </div>
+</section>
+<script>
+  // M152：Oracle 前端（/oracle/* 節點 RPC）
+  (function () {
+    var base = location.protocol + '//' + location.host;
+    function get(path) { return fetch(base + path, { cache: 'no-store' }).then(function (r) { return r.json(); }); }
+    function post(path, body) {
+      return fetch(base + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+        .then(function (r) { return r.json(); });
+    }
+    function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+    function fmt(n) {
+      if (n == null) return '-';
+      var v = parseFloat(n);
+      if (isNaN(v)) return '-';
+      return v >= 1000 ? v.toLocaleString('en-US', { maximumFractionDigits: 2 }) : String(Math.round(v * 1e8) / 1e8);
+    }
+    function dotSrc(s) { return '<span class="' + s + '-dot"></span>'; }
+    function renderPrices(px, uptime) {
+      var body = document.getElementById('ocBody');
+      var cards = document.getElementById('ocCards');
+      var up = document.getElementById('ocUptime');
+      if (up && uptime != null) { up.textContent = 'uptime ' + uptime + 's'; }
+      if (!px || !px.length) { body.innerHTML = '<tr><td colspan="5" class="muted">-</td></tr>'; return; }
+      var rows = '', cs = '';
+      px.forEach(function (p) {
+        var src = p.source || 'static';
+        var srcTxt = src === 'manual' ? 'manual' : (p.live ? 'live' : 'static');
+        var t = new Date((p.updated_at || 0) * 1000).toLocaleTimeString();
+        rows += '<tr><td class="mono">' + esc(p.symbol) + '</td><td class="mono"><b>' + fmt(p.price) + '</b></td><td>' +
+          (p.chg24h != null ? fmt(p.chg24h) + '%' : '-') + '</td><td>' + dotSrc(src) + esc(srcTxt) + '</td><td class="muted">' + t + '</td></tr>';
+        cs += '<div class="wg"><small class="muted">' + esc(p.symbol) + '</small><b class="mono">' + fmt(p.price) + '</b></div>';
+      });
+      body.innerHTML = rows;
+      cards.innerHTML = cs;
+    }
+    function loadAll() {
+      get('/oracle/prices').then(function (d) {
+        if (!d.ok) { document.getElementById('ocBody').innerHTML = '<tr><td colspan="5" class="muted">' + esc(d.error || 'error') + '</td></tr>'; return; }
+        renderPrices(d.prices, d.uptime);
+      }).catch(function () { document.getElementById('ocBody').innerHTML = '<tr><td colspan="5" class="muted">oracle unavailable</td></tr>'; });
+    }
+    loadAll();
+    setInterval(loadAll, 5000);
+
+    document.getElementById('ocLookup').addEventListener('click', function () {
+      var sym = document.getElementById('ocQSymbol').value.trim();
+      var out = document.getElementById('ocLookupResult');
+      if (!sym) { out.textContent = 'symbol required'; return; }
+      get('/oracle/price?symbol=' + encodeURIComponent(sym)).then(function (d) {
+        if (!d.ok) { out.textContent = d.error || 'not found'; return; }
+        out.textContent = d.price.symbol + ' = ' + fmt(d.price.price) + ' USDT (' + d.price.source + ')';
+      });
+    });
+    document.getElementById('ocFeed').addEventListener('click', function () {
+      var sym = document.getElementById('ocFSymbol').value.trim();
+      var pr = parseFloat(document.getElementById('ocFPrice').value);
+      var out = document.getElementById('ocFeedResult');
+      if (!sym || isNaN(pr)) { out.textContent = 'symbol & price required'; return; }
+      post('/oracle/feed', { symbol: sym, price: pr }).then(function (d) {
+        out.textContent = d.ok ? ('fed ' + d.fed + ' = ' + pr) : (d.error || 'failed');
+        if (d.ok) loadAll();
+      });
+    });
+    document.getElementById('ocHistory').addEventListener('click', function () {
+      var sym = document.getElementById('ocHSymbol').value.trim();
+      var out = document.getElementById('ocHistoryResult');
+      if (!sym) { out.textContent = 'symbol required'; return; }
+      get('/oracle/history?symbol=' + encodeURIComponent(sym)).then(function (d) {
+        if (!d.ok || !d.history.length) { out.textContent = 'no history'; return; }
+        var s = d.history.slice(0, 5).map(function (p) { return fmt(p.price); }).join(' ← ');
+        out.textContent = d.history.length + ' entries: ' + s;
+      });
+    });
+  })();
+</script>
+{% endblock %}

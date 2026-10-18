@@ -664,4 +664,105 @@ function loadMeAssets(addr){
 }
 
 </script>
+
+<!-- M151：多簽合約錢包（Safe 風格 N/M＋EIP-1271，原 Explorer 面板遷移） -->
+<div class="bn-panel" style="margin-top:16px;">
+  <h3 data-i18n="wallet.multiTitle">多簽合約錢包</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;color:var(--bn-sub);margin-bottom:10px;">
+    <div><span data-i18n="wallet.status">錢包狀態</span><br><b class="mono" id="wlStatus">-</b></div>
+    <div><span data-i18n="wallet.contract">合約地址</span><br><b class="mono" id="wlAddr">-</b></div>
+    <div><span data-i18n="wallet.owners">Owner 數</span><br><b class="mono" id="wlOwnerCount">-</b></div>
+    <div><span data-i18n="wallet.threshold">門檻</span><br><b class="mono" id="wlThreshold">-</b></div>
+  </div>
+  <div class="bn-form">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <button type="button" class="bn-copy" id="wlDeploy" data-i18n="wallet.deploy">部署錢包</button>
+      <span class="bn-msg" id="wlDeployResult" style="min-height:16px;"></span>
+    </div>
+    <label data-i18n="wallet.ownerMgmt">Owner 管理</label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <input id="wlOwner" data-i18n-placeholder="wallet.ownerPh" placeholder="owner 地址（tx0 或 0x）" style="flex:1;min-width:0;background:var(--bn-card2);color:var(--bn-txt);border:1px solid var(--bn-line);border-radius:8px;padding:8px;font-size:12px;">
+      <button type="button" class="bn-copy" id="wlAddOwner" data-i18n="wallet.addOwner">新增 Owner</button>
+      <button type="button" class="bn-copy" id="wlRemoveOwner" data-i18n="wallet.removeOwner">移除 Owner</button>
+    </div>
+    <span class="bn-msg" id="wlOwnerResult" style="min-height:16px;"></span>
+    <label data-i18n="wallet.submitTitle">提交交易（節點代簽）</label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <input id="wlSubTo" data-i18n-placeholder="wallet.toPh" placeholder="目標地址" style="flex:1;min-width:0;background:var(--bn-card2);color:var(--bn-txt);border:1px solid var(--bn-line);border-radius:8px;padding:8px;font-size:12px;">
+      <input id="wlSubValue" data-i18n-placeholder="wallet.valuePh" placeholder="金額（TACm）" style="flex:1;min-width:0;background:var(--bn-card2);color:var(--bn-txt);border:1px solid var(--bn-line);border-radius:8px;padding:8px;font-size:12px;">
+      <button type="button" class="bn-copy" id="wlSubmit" data-i18n="wallet.submit">提交交易</button>
+    </div>
+    <span class="bn-msg" id="wlSubmitResult" style="min-height:16px;"></span>
+    <label data-i18n="wallet.queryTitle">查詢</label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <input id="wlQueryOwner" data-i18n-placeholder="wallet.isownerPh" placeholder="檢查地址是否為 owner" style="flex:1;min-width:0;background:var(--bn-card2);color:var(--bn-txt);border:1px solid var(--bn-line);border-radius:8px;padding:8px;font-size:12px;">
+      <button type="button" class="bn-copy" id="wlQuery" data-i18n="wallet.query">查詢</button>
+    </div>
+    <span class="bn-msg mono" id="wlQueryResult" style="min-height:16px;"></span>
+  </div>
+</div>
+
+<script>
+  // M151：MetaMask RPC＋多簽錢包 JS（自 Explorer 遷移，bn 風格）
+  (function () {
+    function wget(path) {
+      return fetch(base + path, { cache: 'no-store' }).then(function (r) { return r.json(); });
+    }
+    function showRes(el, txt) { if (el) el.textContent = txt; }
+    var statusEl = document.getElementById('wlStatus'), addrEl = document.getElementById('wlAddr');
+    var ocEl = document.getElementById('wlOwnerCount'), thEl = document.getElementById('wlThreshold');
+    function loadWl() {
+      if (!statusEl) return;
+      wget('/tacwallet/status').then(function (d) {
+        if (!d || !d.ok) return;
+        statusEl.textContent = d.deployed ? 'Deployed' : 'Not deployed';
+        addrEl.textContent = d.contract_address || '-';
+        ocEl.textContent = d.owner_count != null ? d.owner_count : '-';
+        thEl.textContent = d.threshold != null ? d.threshold : '-';
+      }).catch(function () {});
+    }
+    var depBtn = document.getElementById('wlDeploy'), depRes = document.getElementById('wlDeployResult');
+    if (depBtn) depBtn.addEventListener('click', function () {
+      showRes(depRes, '...');
+      post('/tacwallet/deploy', {}).then(function (d) {
+        showRes(depRes, d.ok ? 'Deploy tx submitted' : (d.error || 'failed'));
+        if (d.ok) loadWl();
+      }).catch(function () { showRes(depRes, 'failed'); });
+    });
+    function bindOwner(op) {
+      var btn = document.getElementById(op === 'add' ? 'wlAddOwner' : 'wlRemoveOwner');
+      if (!btn) return;
+      btn.addEventListener('click', function () {
+        var owner = document.getElementById('wlOwner').value.trim();
+        var res = document.getElementById('wlOwnerResult');
+        if (!owner) { showRes(res, 'Enter owner address'); return; }
+        post('/tacwallet/owner', { op: op, owner: owner }).then(function (d) {
+          showRes(res, d.ok ? 'Submitted (awaiting block)' : (d.error || 'failed'));
+        }).catch(function () { showRes(res, 'failed'); });
+      });
+    }
+    bindOwner('add'); bindOwner('remove');
+    var subBtn = document.getElementById('wlSubmit');
+    if (subBtn) subBtn.addEventListener('click', function () {
+      var to = document.getElementById('wlSubTo').value.trim();
+      var value = document.getElementById('wlSubValue').value.trim();
+      var res = document.getElementById('wlSubmitResult');
+      if (!to || !value) { showRes(res, 'Fill target and amount'); return; }
+      post('/tacwallet/submit', { to: to, value: value }).then(function (d) {
+        showRes(res, d.ok ? 'Submitted (awaiting block)' : (d.error || 'failed'));
+      }).catch(function () { showRes(res, 'failed'); });
+    });
+    var qBtn = document.getElementById('wlQuery');
+    if (qBtn) qBtn.addEventListener('click', function () {
+      var owner = document.getElementById('wlQueryOwner').value.trim();
+      var res = document.getElementById('wlQueryResult');
+      if (!owner) { showRes(res, 'Enter address'); return; }
+      wget('/tacwallet/query?op=isowner&owner=' + encodeURIComponent(owner)).then(function (d) {
+        showRes(res, d.ok ? (d.is_owner ? 'Yes' : 'No') : (d.error || 'failed'));
+      }).catch(function () { showRes(res, 'failed'); });
+    });
+    loadWl();
+  })();
+</script>
+
 {% endblock %}

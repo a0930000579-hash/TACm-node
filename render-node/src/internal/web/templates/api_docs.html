@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Indexer API Docs{% endblock %}
+{% block content %}
+<style>
+  .api-ep{background:var(--card,#fff);border:1px solid var(--border,#e8ecf1);border-radius:12px;padding:14px 16px;margin:10px 0}
+  .api-method{display:inline-block;background:#68BE8D;color:#f7f8fb;font-weight:700;font-size:12px;border-radius:6px;padding:3px 8px;margin-right:8px;font-family:ui-monospace,Menlo,Consolas,monospace}
+  .api-path{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:14px;font-weight:600;word-break:break-all}
+  .api-desc{font-size:13px;color:var(--muted,#667085);margin-top:4px}
+  .api-params{margin-top:8px;font-size:13px}
+  .api-params code,.api-ex{background:rgba(104,190,141,.08);border:1px solid rgba(104,190,141,.2);border-radius:6px;padding:1px 6px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;word-break:break-all}
+  .api-ex{display:block;margin-top:8px;padding:8px 10px;color:#16a34a;white-space:pre-wrap}
+  .api-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:12px 0}
+  .api-note{font-size:13px;color:var(--muted,#667085)}
+</style>
+<section class="pg-banner">
+  <div class="pg-txt"><h1 data-i18n="api.title">Indexer API</h1><p data-i18n="api.intro">公共只讀查詢面（Etherscan 風）——區塊、交易、地址與鏈統計，供開發者與工具整合。全部端點回傳 JSON。</p></div>
+  <svg viewBox="0 0 40 40" class="pg-art"><path d="M14 10h14v5H14zM10 17h20v5H10zM14 24h14v5H14z" fill="none" stroke="#68BE8D" stroke-width="2"/><circle cx="8" cy="12.5" r="1.6" fill="#68BE8D"/><circle cx="8" cy="19.5" r="1.6" fill="#68BE8D"/><circle cx="8" cy="26.5" r="1.6" fill="#68BE8D"/></svg>
+</section>
+<section class="panel">
+  <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg> <span data-i18n="api.endpoints">端點 / Endpoints</span></h2></div>
+  <div class="api-note" data-i18n="api.base">Base URL：<code>/api/v1</code></div>
+
+  <div class="api-ep">
+    <span class="api-method">GET</span><span class="api-path">/api/v1/stats</span>
+    <div class="api-desc" data-i18n="api.statsDesc">鏈統計：高度、區塊數、交易數、帳戶數、Mempool 大小。</div>
+    <code class="api-ex">curl http://localhost:8080/api/v1/stats</code>
+  </div>
+
+  <div class="api-ep">
+    <span class="api-method">GET</span><span class="api-path">/api/v1/blocks?limit=&amp;offset=</span>
+    <div class="api-desc" data-i18n="api.blocksDesc">區塊列表（高度降序）。limit 預設 20、上限 100。</div>
+    <code class="api-ex">curl "http://localhost:8080/api/v1/blocks?limit=10&amp;offset=0"</code>
+  </div>
+
+  <div class="api-ep">
+    <span class="api-method">GET</span><span class="api-path">/api/v1/block/{id}</span>
+    <div class="api-desc" data-i18n="api.blockDesc">單一區塊（高度或區塊哈希）＋區塊內交易。</div>
+    <code class="api-ex">curl http://localhost:8080/api/v1/block/1000</code>
+  </div>
+
+  <div class="api-ep">
+    <span class="api-method">GET</span><span class="api-path">/api/v1/tx/{hash}</span>
+    <div class="api-desc" data-i18n="api.txDesc">單一交易（64 位 hex 哈希）。</div>
+    <code class="api-ex">curl http://localhost:8080/api/v1/tx/&lt;tx_hash&gt;</code>
+  </div>
+
+  <div class="api-ep">
+    <span class="api-method">GET</span><span class="api-path">/api/v1/txs?address=&amp;limit=&amp;offset=&amp;dir=</span>
+    <div class="api-desc" data-i18n="api.txsDesc">地址交易歷史。dir 可選 in / out（僅收/僅發）。</div>
+    <code class="api-ex">curl "http://localhost:8080/api/v1/txs?address=tx01...&amp;dir=out&amp;limit=20"</code>
+  </div>
+
+  <div class="api-ep">
+    <span class="api-method">GET</span><span class="api-path">/api/v1/address/{addr}</span>
+    <div class="api-desc" data-i18n="api.addrDesc">地址帳戶：餘額、Nonce、首末活躍時間與交易總數。</div>
+    <code class="api-ex">curl http://localhost:8080/api/v1/address/tx01...</code>
+  </div>
+
+  <div class="api-ep">
+    <span class="api-method">GET</span><span class="api-path">/api/v1/delegations?limit=&amp;offset=</span>
+    <div class="api-desc" data-i18n="api.delegDesc">質押委託分頁：全鏈委託紀錄（委託額降序，含委託人／驗證人／金額／時間）。</div>
+    <code class="api-ex">curl "http://localhost:8080/api/v1/delegations?limit=20"</code>
+  </div>
+
+  <div class="api-ep">
+    <span class="api-method">GET</span><span class="api-path">/api/v1/delegations/{delegator}</span>
+    <div class="api-desc" data-i18n="api.delegatorDesc">委託人視角：全部委託明細＋累計委託獎勵（coinbase:deleg 鏈上入賬）。</div>
+    <code class="api-ex">curl http://localhost:8080/api/v1/delegations/tx01...</code>
+  </div>
+
+  <div class="api-ep">
+    <span class="api-method">GET</span><span class="api-path">/api/v1/validators</span>
+    <div class="api-desc" data-i18n="api.validatorsDesc">驗證人排名：權重（自有＋委託）／委託總額／委託人數／狀態，權重降序。</div>
+    <code class="api-ex">curl http://localhost:8080/api/v1/validators</code>
+  </div>
+</section>
+<section class="panel">
+  <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M12 3l8 4v6c0 4.4-3.4 7.4-8 9-4.6-1.6-8-4.6-8-9V7z"/></svg> <span data-i18n="api.usage">使用規範 / Usage</span></h2></div>
+  <div class="api-note">
+    <ul style="margin:8px 0;padding-left:18px">
+      <li data-i18n="api.usage1">全部端點為只讀，不消耗 Gas、不需簽名。</li>
+      <li data-i18n="api.usage2">分頁上限：limit ≤ 100；超大 offset 請配合時間篩選（後續版本）。</li>
+      <li data-i18n="api.usage3">錯誤回傳：<code>404 not found</code>（不存在）／<code>400 invalid</code>（參數/地址/哈希格式錯誤）／<code>500</code>（內部錯誤）。</li>
+      <li data-i18n="api.usage4">與 eth_* JSON-RPC 並存：RPC 面供錢包/合約，Indexer 面供瀏覽器與分析工具。</li>
+    </ul>
+  </div>
+</section>
+{% endblock %}
