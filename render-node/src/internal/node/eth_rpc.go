@@ -242,6 +242,27 @@ func (s *RPCServer) dispatchEthRPC(req ethRPCRequest) ethRPCResponse {
 		} else {
 			result = out
 		}
+	case "debug_getRawTransaction":
+		out, err := s.debugGetRawTransaction(req.Params)
+		if err != nil {
+			rpcErr = ethError(-32603, err.Error())
+		} else {
+			result = out
+		}
+	case "debug_getRawBlock":
+		out, err := s.debugGetRawBlock(req.Params)
+		if err != nil {
+			rpcErr = ethError(-32603, err.Error())
+		} else {
+			result = out
+		}
+	case "admin_peers":
+		out, err := s.adminPeers(req.Params)
+		if err != nil {
+			rpcErr = ethError(-32603, err.Error())
+		} else {
+			result = out
+		}
 	case "eth_getBlockByHash":
 		out, err := s.ethGetBlockByHash(req.Params)
 		if err != nil {
@@ -741,12 +762,19 @@ func (s *RPCServer) ethSendTransaction(params []any) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	// eth_accounts 回 keccak 以太地址；from 檢查必須與 eth_accounts 一致：
+	// 0x 輸入比對 EthAddress（keccak）、tx0 輸入比對 TACm Address。
+	ethAddr, err := kp.EthAddress()
+	if err != nil {
+		return "", err
+	}
 	if f := getStringFieldAny(txObj, "from"); f != "" {
-		fTx0, ferr := s.node.normalizeEthAddr(f)
-		if ferr != nil {
-			return "", ferr
-		}
-		if fTx0 != keyAddr {
+		fTrim := strings.TrimSpace(f)
+		if strings.HasPrefix(fTrim, "0x") || strings.HasPrefix(fTrim, "0X") {
+			if !strings.EqualFold(fTrim, ethAddr) {
+				return "", errors.New("eth: from 非節點金鑰地址（eth_sendTransaction 僅支援節點代簽）")
+			}
+		} else if fTrim != keyAddr {
 			return "", errors.New("eth: from 非節點金鑰地址（eth_sendTransaction 僅支援節點代簽）")
 		}
 	}
@@ -1549,6 +1577,114 @@ func (s *RPCServer) ethGetLogs(params []any) (any, error) {
 	out := make([]any, 0, len(logs))
 	for i := range logs {
 		out = append(out, ethLogObject(&logs[i]))
+	}
+	return out, nil
+}
+
+// debugGetRawTransaction（debug 面）：回指定交易哈希的原始交易 JSON（含簽名/公鑰/memo）。
+// 主流 debug_getRawTransaction 回 RLP hex；TACm 交易為自訂 schema（無 RLP），
+// 回原始 JSON 字串（瀏覽器/除錯工具可直接檢視完整欄位）。
+func (s *RPCServer) debugGetRawTransaction(params []any) (any, error) {
+	hash := strip0x(paramString(params, 0))
+	if hash == "" {
+		return nil, errors.New("debug: 缺少交易哈希")
+	}
+	tx, err := s.node.db.GetTransaction(hash)
+	if err != nil {
+		return nil, err
+	}
+	if tx == nil {
+		// pending（內存池）亦回原始交易——與 eth_getTransactionByHash 一致。
+		// mempool 以 payload（交易本體 JSON string）包裝，直接回本體使欄位與鏈上一致。
+		mp, merr := s.node.db.GetMempoolTx(hash)
+		if merr != nil {
+			return nil, merr
+		}
+		if mp == nil {
+			return nil, errors.New("debug: 交易不存在: " + hash)
+		}
+		if mp.Payload != "" {
+			return mp.Payload, nil
+		}
+		raw, jerr := json.Marshal(mp)
+		if jerr != nil {
+			return nil, jerr
+		}
+		return string(raw), nil
+	}
+	raw, jerr := json.Marshal(tx)
+	if jerr != nil {
+		return nil, jerr
+	}
+	return string(raw), nil
+}
+
+// debugGetRawBlock（debug 面）：回指定區塊（latest/pending/hex 高度/哈希）的原始區塊 JSON，
+// 含完整交易陣列（與 eth_getBlockByNumber fullTx=true 同資料源，保留鏈上原始欄位）。
+func (s *RPCServer) debugGetRawBlock(params []any) (any, error) {
+	tag := paramString(params, 0)
+	if tag == "" {
+		return nil, errors.New("debug: 缺少區塊參數")
+	}
+	var b *chaindb.Block
+	if strings.HasPrefix(tag, "0x") && len(tag) == 66 {
+		// 64-hex 哈希 → 按哈希查。
+		bb, err := s.node.db.GetBlockByHash(strip0x(tag))
+		if err != nil || bb == nil {
+			return nil, errors.New("debug: 區塊不存在: " + tag)
+		}
+		b = bb
+	} else {
+		latest, err := s.node.db.GetLatestBlock()
+		if err != nil || latest == nil {
+			return nil, errors.New("debug: 無區塊")
+		}
+		if tag == "latest" || tag == "pending" || tag == "" {
+			b = latest
+		} else if h := parseEthBlock(tag, latest.Height); h >= 0 {
+			bb, berr := s.node.db.GetBlock(h)
+			if berr != nil || bb == nil {
+				return nil, errors.New("debug: 區塊不存在: " + tag)
+			}
+			b = bb
+		} else {
+			return nil, errors.New("debug: 區塊參數無法解析: " + tag)
+		}
+	}
+	txs, err := s.node.db.GetTransactionsByBlock(b.Height)
+	if err != nil {
+		return nil, err
+	}
+	blk := struct {
+		*chaindb.Block
+		Transactions []*chaindb.Transaction `json:"transactions"`
+	}{Block: b, Transactions: txs}
+	raw, jerr := json.Marshal(blk)
+	if jerr != nil {
+		return nil, jerr
+	}
+	return string(raw), nil
+}
+
+// adminPeers（admin 面）：回 P2P 對等節點列表（節點運維/健康度檢視）。
+// 欄位與 p2p.Peer 一致：node_id/base_url/owner/height/finalized_height/online/last_seen。
+func (s *RPCServer) adminPeers(params []any) (any, error) {
+	if s.node.p2pNet == nil {
+		return []any{}, nil
+	}
+	peers := s.node.p2pNet.PeerSnapshot()
+	out := make([]map[string]any, 0, len(peers))
+	for i := range peers {
+		p := peers[i]
+		out = append(out, map[string]any{
+			"id":               p.NodeID,
+			"base_url":         p.BaseURL,
+			"owner":            p.Owner,
+			"height":           p.Height,
+			"finalized_height": p.Finalized,
+			"online":           p.Online,
+			"last_seen":        p.LastSeen.Format(time.RFC3339),
+		})
 	}
 	return out, nil
 }
