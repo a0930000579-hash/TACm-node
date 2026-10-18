@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+{% block title %}節點監控 · TAC Network{% endblock %}
+{% block content %}
+<section class="panel">
+  <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg> 節點監控（全網統一視界）</h2></div>
+  <p class="muted" id="netTip">正在探測全網節點…</p>
+</section>
+
+<!-- M64：本節點狀態 -->
+<section class="panel">
+  <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M2 12a15 15 0 0 1 20 0"/><path d="M5 15a10 10 0 0 1 14 0"/><circle cx="12" cy="19" r="1.5"/></svg> 本節點</h2></div>
+  <div class="chain-grid">
+    <div class="cg"><small>節點 ID</small><b id="nSelfId">—</b></div>
+    <div class="cg"><small>節點位址</small><b class="mono" id="nSelfAddr">—</b></div>
+    <div class="cg"><small>鏈高</small><b id="nSelfH">—</b></div>
+    <div class="cg"><small>最終化</small><b id="nSelfF">—</b></div>
+    <div class="cg"><small>難度</small><b id="nSelfD">—</b></div>
+    <div class="cg"><small>共識</small><b id="nSelfC">—</b></div>
+    <div class="cg"><small>運行</small><b id="nSelfU">—</b></div>
+    <div class="cg"><small>待打包</small><b id="nSelfM">—</b></div>
+  </div>
+</section>
+
+<!-- M64：seed 節點健康表 + 全網一致性 -->
+<section class="panel">
+  <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg> 全網節點</h2></div>
+  <div class="consist" id="consistBox">
+    <div class="consist-line" id="consistLine">—</div>
+  </div>
+  <div class="table-wrap">
+  <table class="data-table">
+    <thead>
+      <tr><th>節點</th><th>URL</th><th>角色</th><th>狀態</th><th>鏈高</th><th>最終化</th><th>難度</th><th>運行</th></tr>
+    </thead>
+    <tbody id="netRows">
+      <tr><td colspan="8" class="muted center">載入中…</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- M67/M71：鏈上審計——全鏈供應/獎勵一致性＋交易與合約層賬本重放的公開證明 -->
+<section class="panel">
+  <div class="panel-head"><h2 data-i18n="net.audit"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg> 鏈上審計（區塊 · 交易 · 合約）</h2></div>
+  <p class="muted" id="audTip" data-i18n="net.auditTip">正在驗證最近 100 塊＋全鏈賬本重放…</p>
+  <div class="consist" id="audBox">
+    <div class="consist-line" id="audLine">—</div>
+    <div class="consist-line" id="audTxLine" style="margin-top:6px">—</div>
+  </div>
+  <div class="chain-grid">
+    <div class="cg"><small data-i18n="net.auditBlocks">審計塊數</small><b id="audBlocks">—</b></div>
+    <div class="cg"><small data-i18n="net.auditCoin">coinbase==獎勵</small><b id="audCoin">—</b></div>
+    <div class="cg"><small data-i18n="net.auditPool">pool 15%</small><b id="audPool">—</b></div>
+    <div class="cg"><small data-i18n="net.auditSplit">node 45% · miner 40%</small><b id="audSplit">—</b></div>
+    <div class="cg"><small data-i18n="net.auditMined">全鏈總產出</small><b id="audMined">—</b></div>
+    <div class="cg"><small data-i18n="net.auditPoolBal">獎勵池餘額</small><b id="audPoolBal">—</b></div>
+    <div class="cg"><small data-i18n="net.auditPoolShare">Pool 挹注（鏈上）</small><b id="audPoolShare">—</b></div>
+    <div class="cg"><small data-i18n="net.auditMiners">鏈上在線礦工</small><b id="audMiners">—</b></div>
+    <div class="cg"><small data-i18n="net.txChecked">交易筆數（重放）</small><b id="audTx">—</b></div>
+    <div class="cg"><small data-i18n="net.txSig">簽名 / nonce / 餘額</small><b id="audTxDetail">—</b></div>
+    <div class="cg"><small data-i18n="net.txContract">合約交易</small><b id="audTxContract">—</b></div>
+    <div class="cg"><small data-i18n="net.ledger">賬本守恆</small><b id="audLedger">—</b></div>
+  </div>
+  <div id="audIssues" class="muted" style="margin-top:10px"></div>
+</section>
+
+<!-- M69：鏈上在線礦工（與挖礦頁同源：onChainMinerSplits(60)，任何節點同鏈結果一致） -->
+<section class="panel">
+  <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.5-6 8-6s8 2 8 6"/></svg>‍<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M5 15c-1 1-1.5 4-1.5 4s3-.5 4-1.5"/><path d="M9 17c2-5 6-9 10-10 0 4-4 8-9 10"/><circle cx="14" cy="10" r="1.4"/></svg> 鏈上在線礦工（<span id="onMinerN">—</span> 台 · 算力瓜分視角）</h2></div>
+  <div id="onMinerList" class="muted" style="margin-top:8px">載入中…</div>
+</section>
+
+<style>
+  .chain-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+  .cg{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px}
+  .cg small{font-size:11px;color:var(--muted);display:block;margin-bottom:4px}
+  .cg b{font-size:13px;color:var(--text);font-variant-numeric:tabular-nums;word-break:break-all}
+  .consist{border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px}
+  .consist-line{font-size:14px;color:var(--text)}
+  .dot-ok{color:#0ecb81;font-weight:700}
+  .dot-bad{color:#f6465d;font-weight:700}
+  .dot-warn{color:#68BE8D;font-weight:700}
+  .hbar{height:8px;border-radius:4px;background:rgba(255,255,255,.06);margin:4px 0 10px;overflow:hidden}
+  .hbar i{display:block;height:100%;border-radius:4px;background:#68BE8D}
+</style>
+
+<script>
+  // M64：每 10s 拉取 /api/network 渲染全網節點健康度與鏈高一致性。
+  (function () {
+    var tip = document.getElementById('netTip');
+    var rows = document.getElementById('netRows');
+    var consistLine = document.getElementById('consistLine');
+    var lastOk = false;
+    function render(d) {
+      if (!d || !d.ok) {
+        if (tip) tip.textContent = lastOk ? (TAC_I18N&&TAC_I18N.cur()==='en'?'Refresh failed — showing last data':'更新失敗——顯示上次數據') : '無法取得全網狀態';
+        return;
+      }
+      lastOk = true;
+      if (tip) tip.textContent = TAC_TE('更新於 ') + new Date().toLocaleTimeString() + TAC_TE('（每 10 秒自動刷新）');
+      // 本節點
+      var st = d.self || {};
+      setT('nSelfId', st.node_id); setT('nSelfAddr', (st.address || '').length > 14 ? st.address.slice(0,6)+'…'+st.address.slice(-4) : st.address || '—');
+      setT('nSelfH', st.height != null ? st.height : '—');
+      setT('nSelfF', st.finalized_height != null ? st.finalized_height : '—');
+      setT('nSelfD', st.difficulty != null ? st.difficulty : '—');
+      setT('nSelfC', st.consensus || '—'); setT('nSelfU', (st.uptime_sec||0)+'s'); setT('nSelfM', st.mempool_size != null ? st.mempool_size : '—');
+      // seed 表
+      var html = ''; var maxH = (st.height || 0);
+      var all = [{node_id: 'self', url: location.origin, role: 'self', st: st}];
+      (d.seeds || []).forEach(function (s) {
+        all.push(s);
+        if (s.status && s.status.block_height > maxH) maxH = s.status.block_height;
+      });
+      all.forEach(function (s) {
+        var ok = s.st || s.status;
+        if (s.node_id === 'self' && !ok) return;
+        var reach = s.node_id === 'self' ? true : !!s.reachable;
+        var cls = reach ? 'dot-ok' : 'dot-bad';
+        var state = reach ? '● 在線' : '○ 離線';
+        var h = ok ? (ok.block_height != null ? ok.block_height : (ok.height != null ? ok.height : '—')) : '—';
+        var f = ok ? (ok.final_block_height != null ? ok.final_block_height : (ok.finalized_height != null ? ok.finalized_height : '—')) : '—';
+        var dd = ok ? (ok.effective_difficulty != null ? ok.effective_difficulty : (ok.difficulty != null ? ok.difficulty : '—')) : '—';
+        var u = ok && ok.uptime_sec != null ? ok.uptime_sec + 's' : '—';
+        var role = s.role || '—';
+        var roleZh = role === 'self' ? (TAC_I18N&&TAC_I18N.cur()==='en'?'Self':'本節點') : (role === 'seed' ? (TAC_I18N&&TAC_I18N.cur()==='en'?'Seed':'種子') : role);
+        var pct = (typeof h === 'number' && maxH > 0) ? Math.max(2, Math.round(h / maxH * 100)) : 2;
+        html += '<tr><td class="mono">' + esc(s.node_id) + '</td><td class="mono">' + esc(s.url || '') + '</td><td>' + roleZh + '</td>' +
+          '<td class="' + cls + '">' + state + '</td><td class="mono">' + h + '</td><td class="mono">' + f + '</td><td>' + dd + '</td><td>' + u + '</td></tr>';
+        html += '<tr><td colspan="8" class="hbar-cell"><div class="hbar"><i style="width:' + pct + '%"></i></div></td></tr>';
+      });
+      rows.innerHTML = html;
+      // 一致性判定：全網（含 seed）鏈高一致 → 同步 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M4 12l5 5L20 7"/></svg>；否則標出差異。
+      var hs = all.map(function (s) { return s.status ? s.status.block_height : (s.st ? s.st.height : null); }).filter(function (v) { return v !== null && v !== undefined; });
+      var uniq = {}; hs.forEach(function (h) { uniq[h] = 1; });
+      var keys = Object.keys(uniq);
+      // 出塊瞬間節點間差 1 塊屬正常節奏（探測時刻不同）；僅當差距 > 1 才標不一致。
+      var maxH = Math.max.apply(null, hs), minH = Math.min.apply(null, hs);
+      var consist = keys.length <= 1 || (maxH - minH <= 1);
+      if (consist) { consistLine.innerHTML = '<span class="dot-ok"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M4 12l5 5L20 7"/></svg> ' + TAC_TE('全網同步') + '</span> — ' + TAC_TE('所有節點鏈高一致（#') + hs[0] + '）'; }
+      else { consistLine.innerHTML = '<span class="dot-bad"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></svg> ' + TAC_TE('鏈高不一致') + '</span> — ' + TAC_TE('各節點：') + '#' + hs.join(' / #') + TAC_TE('（等待同步或檢查節點）'); }
+    }
+    function setT(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; }
+    function setTHtml(id, v) { var el = document.getElementById(id); if (el) el.innerHTML = v; } // M71 SVG 卡片需原樣渲染
+    function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+    // M67：鏈上審計——驗證最近 100 塊 coinbase 不變式，任何入口同鏈結果一致。
+    // M71：交易與合約層審計——全鏈賬本重放（簽名/nonce/餘額/合約格式/守恆）。
+    var audTip = document.getElementById('audTip');
+    var audLine = document.getElementById('audLine');
+    var audTxLine = document.getElementById('audTxLine');
+    function renderAudit(a) {
+      // v55：僅請求失敗（無回應）才顯示「審計暫不可用」；ok=false 仍渲染全部數據，
+      // 由下方 consistent/ledger/異常清單分支各自標示異常（不再整頁無數據）。
+      if (!a) { if (audTip) audTip.textContent = TAC_T ? TAC_T('net.auditNA') : '審計暫不可用'; if (audLine) audLine.innerHTML = '<span class="dot-bad"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></svg> ' + (TAC_T ? TAC_T('net.auditNA2') : '無法驗證') + '</span>'; return; }
+      setT('audBlocks', a.checked_blocks);
+      setT('audCoin', a.coinbase_pass + ' / ' + a.coinbase_fail + (a.coinbase_fail > 0 ? (TAC_T ? TAC_T('net.bad') : ' 異常') : (TAC_T ? TAC_T('net.good') : ' 正常')));
+      setT('audPool', a.pool_pass + ' / ' + a.pool_fail + (a.pool_fail > 0 ? (TAC_T ? TAC_T('net.bad') : ' 異常') : (TAC_T ? TAC_T('net.good') : ' 正常')));
+      setT('audSplit', a.split_pass + ' / ' + a.split_fail + (a.split_fail > 0 ? (TAC_T ? TAC_T('net.bad') : ' 異常') : (TAC_T ? TAC_T('net.good') : ' 正常')));
+      setT('audMined', a.total_mined_tacm);
+      setT('audPoolBal', a.reward_pool_tacm);
+      setT('audPoolShare', a.on_chain_pool_share_tacm);
+      setT('audMiners', a.online_miners);
+      // M71 交易層。
+      setT('audTx', a.tx_checked || 0);
+      setTHtml('audTxDetail', '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M4 12l5 5L20 7"/></svg> ' + a.tx_sig_pass + ' / <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M4 12l5 5L20 7"/></svg> ' + a.tx_nonce_pass + ' / <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M4 12l5 5L20 7"/></svg> ' + a.tx_balance_pass + (a.tx_sig_fail ? ' <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>' + a.tx_sig_fail : '') + (a.tx_nonce_fail ? ' <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>' + a.tx_nonce_fail : '') + (a.tx_balance_fail ? ' <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>' + a.tx_balance_fail : ''));
+      setTHtml('audTxContract', '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M4 12l5 5L20 7"/></svg> ' + (a.contract_pass || 0) + (a.contract_fail ? ' <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>' + a.contract_fail : ''));
+      setTHtml('audLedger', a.ledger_ok ? '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M4 12l5 5L20 7"/></svg>' : '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>');
+      if (audTxLine) {
+        if (a.ledger_ok && a.tx_sig_fail === 0 && a.tx_nonce_fail === 0 && a.tx_balance_fail === 0 && a.contract_fail === 0) {
+          audTxLine.innerHTML = '<span class="dot-ok"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M4 12l5 5L20 7"/></svg> ' + (TAC_T ? TAC_T('net.ledgerOK') : '全鏈賬本一致') + '</span> — ' + (TAC_T ? TAC_T('net.ledgerOKDesc') : '每筆交易簽名/nonce/餘額全過，合約格式合法，總餘額 == coinbase 增發');
+        } else {
+          audTxLine.innerHTML = '<span class="dot-bad"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg> ' + (TAC_T ? TAC_T('net.ledgerBAD') : '賬本異常') + '</span> — ' + (TAC_T ? TAC_T('net.ledgerBADDesc') : '交易/合約層發現異常，需立即檢查');
+        }
+      }
+      if (a.consistent) {
+        audLine.innerHTML = '<span class="dot-ok"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M4 12l5 5L20 7"/></svg> ' + (TAC_T ? TAC_T('net.onchainOK') : '鏈上一致') + '</span> — ' + (TAC_T ? TAC_T('net.onchainOKDesc') : '每塊 coinbase 總額嚴格等於出塊獎勵（節點 45% / pool 15% / miner 40%），無超發/少發，供應與獎勵代表鏈上真實');
+      } else {
+        audLine.innerHTML = '<span class="dot-bad"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg> ' + (TAC_T ? TAC_T('net.onchainBAD') : '發現異常') + '</span> — ' + (TAC_T ? TAC_T('net.onchainBADDesc') : '鏈上獎勵不一致，需立即檢查');
+      }
+      var iss = document.getElementById('audIssues');
+      if (iss && a.issues && a.issues.length) {
+        iss.textContent = (TAC_T ? TAC_T('net.issueList') : '異常清單：') + a.issues.join('；');
+        iss.style.color = '#f6465d';
+      } else if (iss) {
+        iss.textContent = '';
+      }
+    }
+    function freshAudit() {
+      fetch('/api/audit?blocks=100', { cache: 'no-store' }).then(function (r) { return r.json().catch(function () { return null; }); })
+        .then(renderAudit).catch(function () { if (audTip) audTip.textContent = '無法取得審計結果'; });
+    }
+    freshAudit();
+    function freshMiners(){
+      fetch('/api/miners', {cache:'no-store'}).then(function(r){ return r.json(); }).then(function(j){
+        var splits = (j && j.splits) || [];
+        setT('onMinerN', splits.length);
+        var rows = '';
+        (splits||[]).forEach(function(s,i){
+          var a = s.address || '—';
+          var addr = a.length > 16 ? a.slice(0,10) + '…' + a.slice(-6) : a;
+          var share = parseFloat(s.share) || 0;
+          rows += '<div class="rank-row"><div class="rk">'+(i+1)+'</div><div class="rkbody"><div class="ra mono">'+addr+'</div><div class="rb">算力瓜分份額 '+share.toFixed(4)+'</div></div></div>';
+        });
+        document.getElementById('onMinerList').innerHTML = rows || '<div class="muted">' + TAC_TE('目前無在線礦工（鏈上瓜分視角，最近 60 塊）') + '</div>';
+      }).catch(function(){ setT('onMinerN', '—'); });
+    }
+    freshMiners();
+    setInterval(freshMiners, 10000);
+    setInterval(freshAudit, 10000);
+    function fresh() {
+      fetch('/api/network', { cache: 'no-store' }).then(function (r) { return r.json().catch(function () { return null; }); })
+        .then(render).catch(function () { if (tip) tip.textContent = lastOk ? (TAC_I18N&&TAC_I18N.cur()==='en'?'Refresh failed — showing last data':'更新失敗——顯示上次數據') : '無法取得全網狀態'; });
+    }
+    fresh();
+    setInterval(fresh, 10000);
+  })();
+</script>
+{% endblock %}
