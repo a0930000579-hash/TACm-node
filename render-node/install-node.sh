@@ -1,14 +1,11 @@
 #!/bin/bash
 # ============================================================
-# TACm Node 一鍵安裝腳本（v69）
+# TACm Node 一鍵安裝/更新腳本（v74）
 # 用法（架設者任選其一）：
-#   bash <(curl -fsSL http://<主鏈>/downloads/install-node.sh)
-#   curl -fsSL -o /tmp/install-node.sh http://<主鏈>/downloads/install-node.sh && bash /tmp/install-node.sh
-# 參數（可省略，有預設）：
-#   $1 = 下載來源 DL   （預設 http://2.28.201.174:8080/downloads）
-#   $2 = 種子節點 SEED（預設 http://2.28.201.174:8080）
-#   $3 = Web 埠       （預設 8081）
-#   $4 = 資料目錄     （預設 /var/tac/data）
+#   bash <(curl -fsSL http://<主鏈>/downloads/install-node.sh)            # 一鍵安裝
+#   bash <(curl -fsSL http://<主鏈>/downloads/install-node.sh) update      # 一鍵更新到最新版
+#   參數：$1=update（更新模式）或 下載來源 DL；$2=種子節點；$3=Web 埠；$4=資料目錄
+#   更新模式：自動備份目前 nodeweb → 下載最新（主鏈/Render 多來源）→ 覆蓋 → 重啟 tacnode
 # ============================================================
 set -euo pipefail
 
@@ -39,6 +36,29 @@ fetch() {
   echo "  請確認網路可達主鏈/Render，或手動下載 nodeweb 後放置到 /usr/local/bin/。"
   return 1
 }
+
+# v74：一鍵更新模式——備份→下載最新 nodeweb（多來源）→覆蓋→重啟。
+if [ "${1:-}" = "update" ]; then
+  echo "→ TACm 節點一鍵更新："
+  fetch nodeweb /tmp/tacm-nodeweb.new || exit 1
+  BIN=/usr/local/bin/nodeweb
+  if [ ! -f "$BIN" ]; then
+    echo "✗ 未找到 $BIN（此機尚未安裝節點）。請先執行一鍵安裝。"
+    exit 1
+  fi
+  BAK="$BIN.bak.$(date +%Y%m%d%H%M%S)"
+  $SUDO cp "$BIN" "$BAK" && echo "→ 已備份：$BAK"
+  $SUDO mv /tmp/tacm-nodeweb.new "$BIN"
+  $SUDO chmod +x "$BIN"
+  echo "→ 新版本：$(ls -la "$BIN" | awk '{print $5}') bytes"
+  if systemctl list-unit-files 2>/dev/null | grep -q tacnode; then
+    $SUDO systemctl restart tacnode && echo "✅ tacnode 已重啟"
+  else
+    echo "→ 未找到 tacnode.service；請手動重啟你的節點服務。"
+  fi
+  echo "✅ 更新完成。檢查：systemctl status tacnode"
+  exit 0
+fi
 
 echo "→ 從 $DL 下載 nodeweb ..."
 fetch "$DL/nodeweb" /usr/local/bin/nodeweb
