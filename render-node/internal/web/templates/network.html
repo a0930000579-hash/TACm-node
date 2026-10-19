@@ -62,6 +62,7 @@
     <div class="cg"><small data-i18n="net.ledger">賬本守恆</small><b id="audLedger">—</b></div>
   </div>
   <div id="audIssues" class="muted" style="margin-top:10px"></div>
+  <style>#audIssues .aud-issue-head{font-weight:600;margin-bottom:2px}#audIssues .aud-issue{font-size:12px;line-height:1.5;word-break:break-all}</style>
 </section>
 
 <!-- M69：鏈上在線礦工（與挖礦頁同源：onChainMinerSplits(60)，任何節點同鏈結果一致） -->
@@ -179,7 +180,11 @@
       }
       var iss = document.getElementById('audIssues');
       if (iss && a.issues && a.issues.length) {
-        iss.textContent = (TAC_T ? TAC_T('net.issueList') : '異常清單：') + a.issues.join('；');
+        // v57：異常清單逐條渲染（每條獨立行、紅標），取代單行 join——異常可讀、可追蹤。
+        var items = a.issues.map(function (it) {
+          return '<div class="aud-issue">· ' + esc(it) + '</div>';
+        }).join('');
+        iss.innerHTML = '<div class="aud-issue-head">' + (TAC_T ? TAC_T('net.issueList') : '異常清單：') + '</div>' + items;
         iss.style.color = '#f6465d';
       } else if (iss) {
         iss.textContent = '';
