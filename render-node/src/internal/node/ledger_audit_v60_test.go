@@ -166,3 +166,55 @@ func TestAuditCheckpointCorruptFallsBackToFull(t *testing.T) {
 		t.Fatalf("好鏈應全過: %+v", res)
 	}
 }
+
+// TestAuditCheckpointStoresRawPrecision v60.1 回歸：基線必須存原始（未 round）精度。
+// 舊版存 roundCoinbase（1e-4）值，增量/直取路徑守恆檢查混入 round 誤差（主鏈
+// 7.5 萬塊實測 ledger_ok=false 誤報）；本測試確保 checkpointFromResult 存原始值、
+// 直取路徑守恆用原始值仍過。
+func TestAuditCheckpointStoresRawPrecision(t *testing.T) {
+	raw := 213580.38150001 // 原始累加值（round 後顯示 213580.3815，兩者差 1e-8 > 0）
+	res := LedgerAuditResult{
+		TipHeight:         100,
+		CoinbaseTotal:     roundCoinbase(raw), // 顯示值（round 到 1e-4）
+		BalancesTotal:     roundCoinbase(raw),
+		coinbaseTotalRaw:  raw,
+		burnedTotalRaw:    0,
+		balances:          map[string]float64{"addr1": raw},
+		nonces:            map[string]int64{},
+		TxSigFail:         0,
+		TxNonceFail:       0,
+		TxBalanceFail:     0,
+		ContractFail:      0,
+		LedgerOK:          true,
+	}
+	cp := checkpointFromResult(res)
+	if cp.V != 1 {
+		t.Fatalf("基線版本應為 1，實際 %d", cp.V)
+	}
+	if cp.CoinbaseTotal != raw {
+		t.Fatalf("基線應存原始精度 %v，實際 %v（round 值）", raw, cp.CoinbaseTotal)
+	}
+	// 直取路徑（基線高度==鏈頂）：守恆必須用原始值，不得因 round 誤報失敗。
+	out := auditResultFromCheckpoint(cp, 100)
+	if !out.LedgerOK {
+		t.Fatalf("直取路徑守恆應通過（原始值一致），實際 ledger_ok=false")
+	}
+	if out.CoinbaseTotal != roundCoinbase(raw) {
+		t.Fatalf("顯示值應為 round 後的 %v，實際 %v", roundCoinbase(raw), out.CoinbaseTotal)
+	}
+	// 舊格式基線（無 V 欄位）應被視為無效 → 全量重建。
+	old := AuditCheckpoint{
+		Height:        100,
+		CoinbaseTotal: roundCoinbase(raw), // 舊版存 round 值
+		BurnedTotal:   0,
+		Balances:      map[string]float64{"addr1": raw},
+		Nonces:        map[string]int64{},
+	}
+	p := filepath.Join(t.TempDir(), "audit_checkpoint.json")
+	if err := saveAuditCheckpoint(p, &old); err != nil {
+		t.Fatal(err)
+	}
+	if cp2 := loadAuditCheckpoint(p); cp2 != nil {
+		t.Fatal("無版本欄位的舊基線應被視為無效（強制全量重建）")
+	}
+}

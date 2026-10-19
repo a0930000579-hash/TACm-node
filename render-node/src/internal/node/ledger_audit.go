@@ -59,12 +59,21 @@ type LedgerAuditResult struct {
 	// 非序列化：重放狀態快照（供 checkpointFromResult 持久化基線）。
 	balances map[string]float64
 	nonces   map[string]int64
+	// 非序列化：原始（未 round）累加值。基線必須存原始精度——roundCoinbase
+	// 收斂到 1e-4，若基線存 round 值，增量/直取路徑守恆檢查混入 1e-4 級誤差
+	// 會誤報 ledger_ok=false（v60.1 修正：主鏈 7.5 萬塊實測觸發）。
+	coinbaseTotalRaw float64
+	burnedTotalRaw   float64
 }
 
 // AuditCheckpoint v60：審計增量基線（僅在重放無任何異常時持久化）。
 // 鏈為 append-only，基線高度後的區塊可安全增量重放；偵測到鏈回滾
 // （tip < Height）或檔案損壞時自動退回全量重放。
 type AuditCheckpoint struct {
+	// V 基線格式版本。=1 表示 CoinbaseTotal/BurnedTotal 為原始（未 round）精度；
+	// 舊版（v60.0，無 V，存 1e-4 round 值）載入時被視為無效 → 強制全量重建，
+	// 避免守恆檢查混入 round 誤差。
+	V int `json:"v"`
 	Height        int64              `json:"height"`
 	CoinbaseTx    int                `json:"coinbase_tx"`
 	TxChecked     int                `json:"tx_checked"`
@@ -97,7 +106,7 @@ func loadAuditCheckpoint(path string) *AuditCheckpoint {
 	if err := json.Unmarshal(raw, &cp); err != nil {
 		return nil
 	}
-	if cp.Height < 0 || cp.Balances == nil || cp.Nonces == nil {
+	if cp.V != 1 || cp.Height < 0 || cp.Balances == nil || cp.Nonces == nil {
 		return nil
 	}
 	return &cp
@@ -181,9 +190,11 @@ func (n *Node) VerifyLedgerOnChain() (LedgerAuditResult, error) {
 	return res, nil
 }
 
-// checkpointFromResult 由無異常審計結果生成基線。
+// checkpointFromResult 由無異常審計結果生成基線（CoinbaseTotal/BurnedTotal 存原始精度，
+// 守恆檢查與重放全程一致；round 僅用於顯示）。
 func checkpointFromResult(r LedgerAuditResult) *AuditCheckpoint {
 	return &AuditCheckpoint{
+		V:             1,
 		Height:        r.TipHeight,
 		CoinbaseTx:    r.CoinbaseTx,
 		TxChecked:     r.TxChecked,
@@ -195,8 +206,8 @@ func checkpointFromResult(r LedgerAuditResult) *AuditCheckpoint {
 		TxBalanceFail: r.TxBalanceFail,
 		ContractPass:  r.ContractPass,
 		ContractFail:  r.ContractFail,
-		CoinbaseTotal: r.CoinbaseTotal,
-		BurnedTotal:   r.BurnedTotal,
+		CoinbaseTotal: r.coinbaseTotalRaw,
+		BurnedTotal:   r.burnedTotalRaw,
 		Balances:      r.balances,
 		Nonces:        r.nonces,
 	}
@@ -406,9 +417,11 @@ func (n *Node) auditReplay(start int64, cp *AuditCheckpoint, tip int64) LedgerAu
 
 	out.OK = out.TxSigFail == 0 && out.TxNonceFail == 0 &&
 		out.TxBalanceFail == 0 && out.ContractFail == 0 && out.LedgerOK
-	// 回填重放狀態，供 checkpointFromResult 持久化。
+	// 回填重放狀態（含原始累加值），供 checkpointFromResult 持久化基線。
 	out.balances = balances
 	out.nonces = nonces
+	out.coinbaseTotalRaw = coinbaseTotal
+	out.burnedTotalRaw = burnedTotal
 	return out
 }
 
