@@ -12,8 +12,11 @@ package node
 // 任何節點只要同步同一條鏈，重放結果完全一致——鏈上事實，與 M68/M70 同源口徑。
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -48,6 +51,65 @@ type LedgerAuditResult struct {
 	BalancesTotal float64  `json:"balances_total_tacm"` // 重放後全部地址餘額總和
 	BurnedTotal   float64  `json:"burned_total_tacm"`   // 全鏈 EIP-1559 銷毀總額（通縮）
 	Issues        []string `json:"issues"`
+	// v60：增量審計。Incremental=true 表示本次僅重放自 FromHeight+1 起的區塊
+	// （基線取自已持久化的 audit_checkpoint.json），與全量重放結果一致。
+	Incremental bool  `json:"incremental"`
+	FromHeight  int64 `json:"from_height"`
+
+	// 非序列化：重放狀態快照（供 checkpointFromResult 持久化基線）。
+	balances map[string]float64
+	nonces   map[string]int64
+}
+
+// AuditCheckpoint v60：審計增量基線（僅在重放無任何異常時持久化）。
+// 鏈為 append-only，基線高度後的區塊可安全增量重放；偵測到鏈回滾
+// （tip < Height）或檔案損壞時自動退回全量重放。
+type AuditCheckpoint struct {
+	Height        int64              `json:"height"`
+	CoinbaseTx    int                `json:"coinbase_tx"`
+	TxChecked     int                `json:"tx_checked"`
+	TxSigPass     int                `json:"tx_sig_pass"`
+	TxSigFail     int                `json:"tx_sig_fail"`
+	TxNoncePass   int                `json:"tx_nonce_pass"`
+	TxNonceFail   int                `json:"tx_nonce_fail"`
+	TxBalancePass int                `json:"tx_balance_pass"`
+	TxBalanceFail int                `json:"tx_balance_fail"`
+	ContractPass  int                `json:"contract_pass"`
+	ContractFail  int                `json:"contract_fail"`
+	CoinbaseTotal float64            `json:"coinbase_total"`
+	BurnedTotal   float64            `json:"burned_total"`
+	Balances      map[string]float64 `json:"balances"`
+	Nonces        map[string]int64   `json:"nonces"`
+}
+
+// auditCheckpointPath 審計基線檔路徑（節點資料目錄）。
+func (n *Node) auditCheckpointPath() string {
+	return filepath.Join(n.DataDir(), "audit_checkpoint.json")
+}
+
+// loadAuditCheckpoint 讀取審計基線；檔案不存在或損壞回傳 nil（→全量重放）。
+func loadAuditCheckpoint(path string) *AuditCheckpoint {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil
+	}
+	var cp AuditCheckpoint
+	if err := json.Unmarshal(raw, &cp); err != nil {
+		return nil
+	}
+	if cp.Height < 0 || cp.Balances == nil || cp.Nonces == nil {
+		return nil
+	}
+	return &cp
+}
+
+// saveAuditCheckpoint 持久化審計基線（僅在重放無異常時呼叫）。
+func saveAuditCheckpoint(path string, cp *AuditCheckpoint) error {
+	raw, err := json.Marshal(cp)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, raw, 0o600)
 }
 
 // txToSignMap 把鏈上交易還原為簽名驗證所需的規範 map（與 crypto.TxSighash 字段一致）。
@@ -65,26 +127,135 @@ func txToSignMap(t *chaindb.Transaction) map[string]any {
 	}
 }
 
-// VerifyLedgerOnChain 全鏈賬本重放審計（M71）。O(鏈長)，任何節點同鏈結果一致。
+// contractMemoHasGas 判斷合約 memo 是否為「帶 gas 段」的新格式（<gas>:<hex>）。
+// 舊格式（vm:deploy:<hex> / vm:call:<hex>）無 gas 段，gas 天然為 0，
+// 屬早期合法格式（v55：審計不再將其標為「合約 gas 為 0」）。
+func contractMemoHasGas(memo string) bool {
+	rest := memo
+	switch {
+	case strings.HasPrefix(memo, vmDeployPrefix):
+		rest = memo[len(vmDeployPrefix):]
+	case strings.HasPrefix(memo, vmCallPrefix):
+		rest = memo[len(vmCallPrefix):]
+	default:
+		return false
+	}
+	return strings.Contains(rest, ":")
+}
+
+// VerifyLedgerOnChain 鏈上審計（M71）。v60 起支援增量重放：
+// 已持久化無異常基線（audit_checkpoint.json）時只重放自基線高度起的區塊，
+// 結果與全量重放一致（append-only 鏈，基線後區塊不影響基線狀態）。
+// 鏈回滾或基線缺失/損壞時自動退回全量重放。
 func (n *Node) VerifyLedgerOnChain() (LedgerAuditResult, error) {
-	out := LedgerAuditResult{Issues: []string{}}
 	tip := n.db.GetTipHeight()
-	out.TipHeight = tip
 	if tip < 0 {
-		out.LedgerOK = true
-		out.OK = true
+		out := LedgerAuditResult{Issues: []string{}, TipHeight: tip, LedgerOK: true, OK: true}
 		return out, nil
 	}
+	cp := loadAuditCheckpoint(n.auditCheckpointPath())
+	if cp == nil || cp.Height > tip {
+		// 無基線（首次/損壞）或鏈回滾：全量重放，成功後建立基線。
+		res := n.auditReplay(0, nil, tip)
+		if res.TxSigFail == 0 && res.TxNonceFail == 0 && res.TxBalanceFail == 0 &&
+			res.ContractFail == 0 && res.LedgerOK {
+			_ = saveAuditCheckpoint(n.auditCheckpointPath(), checkpointFromResult(res))
+		}
+		return res, nil
+	}
+	if cp.Height == tip {
+		// 基線已達鏈頂：直接由基線組結果（零重放）。
+		res := auditResultFromCheckpoint(cp, tip)
+		res.Incremental = true
+		res.FromHeight = cp.Height
+		return res, nil
+	}
+	// 增量重放自基線高度+1 起的區塊。
+	res := n.auditReplay(cp.Height+1, cp, tip)
+	res.Incremental = true
+	res.FromHeight = cp.Height
+	if res.TxSigFail == 0 && res.TxNonceFail == 0 && res.TxBalanceFail == 0 &&
+		res.ContractFail == 0 && res.LedgerOK {
+		_ = saveAuditCheckpoint(n.auditCheckpointPath(), checkpointFromResult(res))
+	}
+	return res, nil
+}
 
-	balances := map[string]float64{} // 地址 → 重放餘額（與鏈上 updateBalance 同規則）
-	nonces := map[string]int64{}     // 地址 → 已見 nonce（下一筆期望值，從 0 起）
-	var coinbaseTotal float64
-	var burnedTotal float64 // M74-3：全鏈 EIP-1559 銷毀總額（通縮）
+// checkpointFromResult 由無異常審計結果生成基線。
+func checkpointFromResult(r LedgerAuditResult) *AuditCheckpoint {
+	return &AuditCheckpoint{
+		Height:        r.TipHeight,
+		CoinbaseTx:    r.CoinbaseTx,
+		TxChecked:     r.TxChecked,
+		TxSigPass:     r.TxSigPass,
+		TxSigFail:     r.TxSigFail,
+		TxNoncePass:   r.TxNoncePass,
+		TxNonceFail:   r.TxNonceFail,
+		TxBalancePass: r.TxBalancePass,
+		TxBalanceFail: r.TxBalanceFail,
+		ContractPass:  r.ContractPass,
+		ContractFail:  r.ContractFail,
+		CoinbaseTotal: r.CoinbaseTotal,
+		BurnedTotal:   r.BurnedTotal,
+		Balances:      r.balances,
+		Nonces:        r.nonces,
+	}
+}
 
-	// 全鏈守恆：sum(balances) 必須 == coinbase 增發總額（誤差容許內）。
-	// 重放同時獨立驗證簽名 / nonce / 餘額 / 合約格式——與鏈上 accounts 表無關，
-	// 因此能發現「鏈上已接受但實際非法」的交易。
-	for h := int64(0); h <= tip; h++ {
+// auditResultFromCheckpoint 由基線直接組審計結果（基線高度==鏈頂時）。
+func auditResultFromCheckpoint(cp *AuditCheckpoint, tip int64) LedgerAuditResult {
+	out := LedgerAuditResult{Issues: []string{}, TipHeight: tip}
+	out.CoinbaseTx = cp.CoinbaseTx
+	out.TxChecked = cp.TxChecked
+	out.TxSigPass = cp.TxSigPass
+	out.TxSigFail = cp.TxSigFail
+	out.TxNoncePass = cp.TxNoncePass
+	out.TxNonceFail = cp.TxNonceFail
+	out.TxBalancePass = cp.TxBalancePass
+	out.TxBalanceFail = cp.TxBalanceFail
+	out.ContractPass = cp.ContractPass
+	out.ContractFail = cp.ContractFail
+	out.CoinbaseTotal = roundCoinbase(cp.CoinbaseTotal)
+	out.BurnedTotal = roundCoinbase(cp.BurnedTotal)
+	var balTotal float64
+	for _, b := range cp.Balances {
+		balTotal += b
+	}
+	out.BalancesTotal = roundCoinbase(balTotal)
+	out.LedgerOK = math.Abs(balTotal+cp.BurnedTotal-cp.CoinbaseTotal) <= ledgerAuditEps
+	out.OK = out.TxSigFail == 0 && out.TxNonceFail == 0 &&
+		out.TxBalanceFail == 0 && out.ContractFail == 0 && out.LedgerOK
+	return out
+}
+
+// auditReplay 重放 [start, tip] 區塊（start=0 且 cp=nil 即全量）。基線狀態由 cp 提供；
+// 收尾做賬本守恆並把重放狀態回填到結果（供 checkpointFromResult 使用）。
+func (n *Node) auditReplay(start int64, cp *AuditCheckpoint, tip int64) LedgerAuditResult {
+	out := LedgerAuditResult{Issues: []string{}, TipHeight: tip}
+	balances := map[string]float64{}
+	nonces := map[string]int64{}
+	if cp != nil {
+		for k, v := range cp.Balances {
+			balances[k] = v
+		}
+		for k, v := range cp.Nonces {
+			nonces[k] = v
+		}
+		out.CoinbaseTx = cp.CoinbaseTx
+		out.TxChecked = cp.TxChecked
+		out.TxSigPass = cp.TxSigPass
+		out.TxSigFail = cp.TxSigFail
+		out.TxNoncePass = cp.TxNoncePass
+		out.TxNonceFail = cp.TxNonceFail
+		out.TxBalancePass = cp.TxBalancePass
+		out.TxBalanceFail = cp.TxBalanceFail
+		out.ContractPass = cp.ContractPass
+		out.ContractFail = cp.ContractFail
+	}
+	var coinbaseTotal = cpCoinbaseTotal(cp)
+	var burnedTotal = cpBurnedTotal(cp)
+
+	for h := start; h <= tip; h++ {
 		bd, err := n.GetBlockDetail(h)
 		if err != nil {
 			out.Issues = append(out.Issues,
@@ -137,7 +308,12 @@ func (n *Node) VerifyLedgerOnChain() (LedgerAuditResult, error) {
 			}
 
 			// ① 簽名驗證：pubkey 派生地址 == from 且簽名匹配。
-			if t.Pubkey != "" &&
+			// 治理系統交易（memo=gov:treasury:N，由出塊引擎依治理決議自動建單、
+			// 無簽名）語意同 coinbase，全節點照單執行——不適用用戶簽名驗證
+			// （v55：修正審計誤報，治理撥款不再被標為「簽名驗證失敗」）。
+			if strings.HasPrefix(t.Memo, "gov:") {
+				out.TxSigPass++
+			} else if t.Pubkey != "" &&
 				crypto.VerifyTransactionSignature(txToSignMap(t), t.Signature, t.FromAddr) {
 				out.TxSigPass++
 			} else {
@@ -180,7 +356,7 @@ func (n *Node) VerifyLedgerOnChain() (LedgerAuditResult, error) {
 					out.ContractFail++
 					out.Issues = append(out.Issues, "h="+strconv.FormatInt(h, 10)+
 						" tx["+strconv.Itoa(t.TxIndex)+"] 合約 payload hex 非法")
-				} else if gas == 0 {
+				} else if gas == 0 && contractMemoHasGas(t.Memo) {
 					out.ContractFail++
 					out.Issues = append(out.Issues, "h="+strconv.FormatInt(h, 10)+
 						" tx["+strconv.Itoa(t.TxIndex)+"] 合約 gas 為 0（無資源治理）")
@@ -211,7 +387,7 @@ func (n *Node) VerifyLedgerOnChain() (LedgerAuditResult, error) {
 		}
 	}
 
-	// ⑤ 賬本守恆：總餘額 == coinbase 增發總額。
+	// ⑤ 賬本守恆：總餘額 + 銷毀 == coinbase 增發總額。
 	var balTotal float64
 	for _, b := range balances {
 		balTotal += b
@@ -219,7 +395,6 @@ func (n *Node) VerifyLedgerOnChain() (LedgerAuditResult, error) {
 	out.CoinbaseTotal = roundCoinbase(coinbaseTotal)
 	out.BalancesTotal = roundCoinbase(balTotal)
 	out.BurnedTotal = roundCoinbase(burnedTotal)
-	// M74-3：守恆恆等式 = 總餘額 + 全鏈銷毀 == coinbase 增發（銷毀是通縮，非漏洞）。
 	out.LedgerOK = math.Abs(balTotal+burnedTotal-coinbaseTotal) <= ledgerAuditEps
 	if !out.LedgerOK {
 		out.Issues = append(out.Issues, fmt.Sprintf(
@@ -231,5 +406,23 @@ func (n *Node) VerifyLedgerOnChain() (LedgerAuditResult, error) {
 
 	out.OK = out.TxSigFail == 0 && out.TxNonceFail == 0 &&
 		out.TxBalanceFail == 0 && out.ContractFail == 0 && out.LedgerOK
-	return out, nil
+	// 回填重放狀態，供 checkpointFromResult 持久化。
+	out.balances = balances
+	out.nonces = nonces
+	return out
+}
+
+// cpCoinbaseTotal / cpBurnedTotal 取基線累計值（無基線時為 0）。
+func cpCoinbaseTotal(cp *AuditCheckpoint) float64 {
+	if cp == nil {
+		return 0
+	}
+	return cp.CoinbaseTotal
+}
+
+func cpBurnedTotal(cp *AuditCheckpoint) float64 {
+	if cp == nil {
+		return 0
+	}
+	return cp.BurnedTotal
 }
