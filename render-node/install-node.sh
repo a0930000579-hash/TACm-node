@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-# TACm Node 一鍵安裝/更新腳本（v74）
+# TACm Node 一鍵安裝/更新腳本（v119）
 # 用法（架設者任選其一）：
 #   bash <(curl -fsSL http://<主鏈>/downloads/install-node.sh)            # 一鍵安裝
 #   bash <(curl -fsSL http://<主鏈>/downloads/install-node.sh) update      # 一鍵更新到最新版
@@ -18,7 +18,7 @@ DATA_DIR="${4:-/var/tac/data}"
 SUDO=""
 command -v sudo >/dev/null 2>&1 && SUDO="sudo"
 
-# v71：多來源 fallback——DL 可為逗號分隔（主鏈→Render），依序嘗試直到成功，
+# v119：多來源 fallback——DL 可為逗號分隔（主鏈→Render），依序嘗試直到成功，
 # 避免主鏈外部 502 時架設者下載不到。
 fetch() {
   local IFS=','
