@@ -1,0 +1,437 @@
+{% extends "base.html" %}
+{% block title %}TAC Governance{% endblock %}
+{% block content %}
+<style>
+  body { background: var(--bg, #f7f8fb) !important; }
+  .gov-wrap{max-width:1100px;margin:0 auto}
+  .gov-head{background:linear-gradient(135deg,#f7f8fb,#f2f4f9);border:1px solid #e2e6ee;border-radius:16px;padding:18px 20px;color:#14161a;display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+  .gov-head .logo{width:48px;height:48px;border-radius:12px;background:#68BE8D;color:#f7f8fb;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;flex:none}
+  .gov-head h2{margin:0;font-size:20px;font-weight:800;color:#68BE8D}
+  .gov-head .sub{font-size:12px;opacity:.8;margin-top:2px}
+  .gov-stats{display:flex;gap:10px;flex-wrap:wrap;margin-left:auto}
+  .gov-stats span{background:rgba(104,190,141,.12);border:1px solid rgba(104,190,141,.35);border-radius:999px;padding:6px 14px;font-size:12px;font-weight:700;color:#68BE8D}
+  .gov-grid{display:grid;grid-template-columns:360px 1fr;gap:14px;align-items:start}
+  @media (max-width:900px){.gov-grid{grid-template-columns:1fr}}
+  .gov-card{background:#f7f8fb;border:1px solid #e2e6ee;border-radius:14px;padding:16px;margin-bottom:14px}
+  .gov-card h3{margin:0 0 12px;font-size:14px;color:#68BE8D;font-weight:800;display:flex;align-items:center;gap:8px}
+  .gov-field{margin-bottom:10px}
+  .gov-field label{display:block;font-size:12px;color:#5d6778;margin-bottom:4px}
+  .gov-field input,.gov-field select,.gov-field textarea{width:100%;box-sizing:border-box;background:#f2f4f9;border:1px solid #e2e6ee;border-radius:10px;color:#14161a;padding:10px 12px;font-size:13px;font-family:ui-monospace,monospace}
+  .gov-field textarea{min-height:64px;resize:vertical}
+  .gov-btn{width:100%;background:#68BE8D;color:#f7f8fb;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:800;cursor:pointer}
+  .gov-btn.ghost{background:transparent;border:1px solid #e2e6ee;color:#14161a;font-weight:700}
+  .gov-btn.sm{width:auto;padding:6px 14px;font-size:12px;border-radius:8px}
+  .gov-btn.v-yes{background:rgba(14,203,129,.15);color:#0ecb81;border:1px solid rgba(14,203,129,.4)}
+  .gov-btn.v-no{background:rgba(246,70,93,.15);color:#f6465d;border:1px solid rgba(246,70,93,.4)}
+  .gov-msg{margin-top:10px;font-size:12px;color:#5d6778;min-height:16px;word-break:break-all}
+  .gov-msg.ok{color:#0ecb81}
+  .gov-msg.err{color:#f6465d}
+  .gov-item{border-bottom:1px solid #e2e6ee;padding:14px 0}
+  .gov-item:last-child{border-bottom:none}
+  .gov-item .top{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap}
+  .gov-item .title{font-size:14px;font-weight:700;color:#14161a;flex:1;min-width:0}
+  .gov-item .desc{font-size:12px;color:#5d6778;margin-top:4px;word-break:break-word}
+  .gov-tag{display:inline-block;font-size:11px;font-weight:700;border-radius:6px;padding:3px 8px;flex:none}
+  .gov-tag.st-voting{background:rgba(104,190,141,.15);color:#68BE8D}
+  .gov-tag.st-passed{background:rgba(14,203,129,.15);color:#0ecb81}
+  .gov-tag.st-rejected{background:rgba(246,70,93,.15);color:#f6465d}
+  .gov-tag.st-executed{background:rgba(71,139,255,.15);color:#478bff}
+  .gov-tag.st-queued{background:rgba(240,185,11,.15);color:#f0b90b}
+  .gov-tag.tp-param{background:#e2e6ee;color:#5d6778}
+  .gov-tag.tp-treasury{background:rgba(104,190,141,.15);color:#68BE8D}
+  .gov-tag.tp-meta{background:rgba(14,203,129,.15);color:#0ecb81}
+  .gov-meta{font-size:11px;color:#5d6778;margin-top:6px;word-break:break-all}
+  .gov-bar{display:flex;height:8px;border-radius:6px;overflow:hidden;margin:10px 0 4px;background:#e2e6ee}
+  .gov-bar .y{background:#0ecb81}
+  .gov-bar .n{background:#f6465d}
+  .gov-bar .a{background:#5d6778}
+  .gov-votes{display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap}
+  .gov-votes b{font-size:11px;color:#5d6778;font-weight:600}
+  .gov-tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+  .gov-tab{background:#f2f4f9;border:1px solid #e2e6ee;border-radius:999px;padding:8px 18px;font-size:13px;font-weight:700;color:#5d6778;cursor:pointer}
+  .gov-tab.gov-tab-on{background:#68BE8D;border-color:#68BE8D;color:#f7f8fb}
+  .gov-empty{text-align:center;color:#5e6673;padding:30px 0;font-size:13px}
+  .gov-param-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid #e2e6ee;font-size:13px}
+  .gov-param-row:last-child{border-bottom:none}
+  .gov-param-row .k{color:#14161a;font-weight:600;font-family:ui-monospace,monospace}
+  .gov-param-row .v{color:#68BE8D;font-weight:800}
+  .gov-param-row .d{display:block;font-size:11px;color:#5d6778;font-weight:400}
+</style>
+
+<div class="gov-wrap">
+  <div class="gov-head">
+    <div class="logo"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M12 4v16M8 20h8"/><path d="M5 8l-3 6h6l-3-6z"/><path d="M19 8l-3 6h6l-3-6z"/></svg></div>
+    <div>
+      <h2 data-i18n="gov.title">鏈上治理</h2>
+      <div class="sub" data-i18n="gov.sub">On-chain proposals · weighted voting · auto-execution</div>
+    </div>
+    <div class="gov-stats">
+      <span id="govCount">0</span>
+      <span data-i18n="gov.window">投票窗口</span><span id="govWindow">20</span>
+      <span data-i18n="gov.threshold">通過門檻</span><span id="govThres">2/3</span>
+      <span data-i18n="gov.quorum">法定人數</span><span id="govQuorum">—</span>
+      <span data-i18n="gov.timelock">時間鎖</span><span id="govTimelock">—</span>
+    </div>
+  </div>
+
+  <div class="gov-tabs">
+    <button class="gov-tab gov-tab-on" id="tabParam" onclick="switchTab('param')" data-i18n="gov.paramTab">參數治理</button>
+    <button class="gov-tab" id="tabDao" onclick="switchTab('dao')" data-i18n="gov.daoTab">合約 DAO</button>
+  </div>
+  <script>
+  // M161：自動帶入我的錢包——登入會員優先，否則訪客地址（與全站 ensureGuestAddr 同源）。
+  (function () {
+    function afill(ids) {
+      function fill(a) { if (!a) return; ids.forEach(function (id) { var el = document.getElementById(id); if (el && !el.value.trim()) el.value = a; }); }
+      fetch('/api/auth/me', { cache: 'no-store' }).then(function (r) { return r.json().catch(function () { return null; }); }).then(function (j) {
+        if (j && j.ok && j.logged_in && j.user && j.user.wallet_addr) { fill(j.user.wallet_addr); return; }
+        if (window.ensureGuestAddr) { ensureGuestAddr().then(fill).catch(function () {}); }
+      }).catch(function () { if (window.ensureGuestAddr) { ensureGuestAddr().then(fill).catch(function () {}); } });
+    }
+    afill(['pAddr']);
+  })();
+
+  function switchTab(v){
+    var p = document.getElementById('viewParam');
+    var d = document.getElementById('viewDao');
+    var t1 = document.getElementById('tabParam');
+    var t2 = document.getElementById('tabDao');
+    if (!p || !d) return;
+    if (v === 'dao') { p.style.display = 'none'; d.style.display = ''; t1.classList.remove('gov-tab-on'); t2.classList.add('gov-tab-on'); }
+    else { d.style.display = 'none'; p.style.display = ''; t2.classList.remove('gov-tab-on'); t1.classList.add('gov-tab-on'); }
+  }
+  </script>
+  <div id="viewParam">
+  <div class="gov-grid">
+    <div>
+      <div class="gov-card">
+        <h3 data-i18n="gov.propose">發起提案</h3>
+        <div class="gov-field"><label data-i18n="gov.title_f">標題</label><input id="pTitle" placeholder="e.g. Adjust block time to 3s"></div>
+        <div class="gov-field"><label data-i18n="gov.desc">描述</label><textarea id="pDesc"></textarea></div>
+        <div class="gov-field"><label data-i18n="gov.type">類型</label>
+          <select id="pType">
+            <option value="param" data-i18n="gov.tp_param">參數調整</option>
+            <option value="treasury" data-i18n="gov.tp_treasury">國庫支出</option>
+            <option value="meta" data-i18n="gov.tp_meta">治理決議</option>
+          </select>
+        </div>
+        <div class="gov-field" id="paramRow"><label data-i18n="gov.param">參數</label>
+          <select id="pKey">
+            <option value="block_time" data-i18n="gov.pk_bt">出塊時間 (block_time)</option>
+            <option value="difficulty" data-i18n="gov.pk_d">基礎難度 (difficulty)</option>
+            <option value="tx_fee_bps" data-i18n="gov.pk_f">手續費基準 (tx_fee_bps)</option>
+            <option value="tiusd_floor_bps" data-i18n="gov.pk_t">TiUSD 下限 (tiusd_floor_bps)</option>
+            <option value="gov_quorum_pct" data-i18n="gov.pk_q">法定人數 (gov_quorum_pct)</option>
+            <option value="gov_timelock_blocks" data-i18n="gov.pk_tl">時間鎖 (gov_timelock_blocks)</option>
+            <option value="gov_proposer_min" data-i18n="gov.pk_pm">提案門檻 (gov_proposer_min)</option>
+            <option value="gov_total_supply" data-i18n="gov.pk_ts">權重總供應 (gov_total_supply)</option>
+          </select>
+        </div>
+        <div class="gov-field" id="valueRow"><label data-i18n="gov.value">數值</label><input id="pValue" placeholder="e.g. 3"></div>
+        <div class="gov-field" id="treasuryRow" style="display:none">
+          <label data-i18n="gov.address">收款地址</label><input id="pTAddr" placeholder="tx0...">
+          <label data-i18n="gov.amount">金額 (TACm)</label><input id="pTAmount" placeholder="e.g. 100">
+        </div>
+        <div class="gov-field"><label data-i18n="gov.address">你的地址</label><input id="pAddr" placeholder="tx0..."></div>
+        <button class="gov-btn" onclick="govCreate()" data-i18n="gov.create">提交提案</button>
+        <div class="gov-msg" id="pMsg"></div>
+      </div>
+
+      <div class="gov-card">
+        <h3 data-i18n="gov.params">可治理參數</h3>
+        <div id="paramsList"><div class="gov-empty" data-i18n="common.loading">載入中…</div></div>
+      </div>
+    </div>
+
+    <div class="gov-card">
+      <h3 data-i18n="gov.proposals">全部提案</h3>
+      <div id="proposalsList"><div class="gov-empty" data-i18n="common.loading">載入中…</div></div>
+    </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var api = window.TAC_RPC || '';
+  var state = { proposals: [], params: [], config: null };
+  function $(id) { return document.getElementById(id); }
+
+  function stTag(st) {
+    var map = { voting: 'st-voting', passed: 'st-passed', rejected: 'st-rejected', executed: 'st-executed', queued: 'st-queued' };
+    return '<span class="gov-tag ' + (map[st] || 'st-voting') + '">' + st.toUpperCase() + '</span>';
+  }
+  function tpTag(tp) {
+    var map = { param: 'tp-param', treasury: 'tp-treasury', meta: 'tp-meta' };
+    return '<span class="gov-tag ' + (map[tp] || 'tp-param') + '">' + tp.toUpperCase() + '</span>';
+  }
+
+  function renderParams() {
+    var el = $('paramsList');
+    if (!state.params || !state.params.length) { el.innerHTML = '<div class="gov-empty">—</div>'; return; }
+    el.innerHTML = state.params.map(function (p) {
+      return '<div class="gov-param-row"><div><span class="k">' + p.key + '</span><span class="d">' + TAC_TE(p.desc || '') + '</span></div><span class="v">' + p.value + '</span></div>';
+    }).join('');
+  }
+
+  function renderProposals() {
+    var el = $('proposalsList');
+    $('govCount').textContent = state.proposals.length;
+    if (!state.proposals.length) { el.innerHTML = '<div class="gov-empty" data-i18n="gov.none">尚無提案</div>'; return; }
+    el.innerHTML = state.proposals.map(function (p) {
+      var total = (p.votes_yes || 0) + (p.votes_no || 0) + (p.votes_abstain || 0);
+      var yw = total ? (p.votes_yes / total * 100) : 0;
+      var nw = total ? (p.votes_no / total * 100) : 0;
+      var aw = total ? (p.votes_abstain / total * 100) : 0;
+      var left = Math.max(0, p.end_height - (window.TAC_TIP || 0));
+      var paramTxt = (p.type === 'param' || p.type === 'treasury') ? ('<div class="gov-meta">' + p.param_key + ' → ' + p.param_value + '</div>') : '';
+      var queueTxt = p.status === 'queued' ? ('<div class="gov-meta">Execute at H' + (p.end_height + (state.config ? state.config.timelock_blocks : 0)) + '</div>') : '';
+      var voteBtns = p.status === 'voting' ? (
+        '<div class="gov-votes">' +
+        '<button class="gov-btn sm v-yes" onclick="govVote(' + p.id + ',\'yes\')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M4 12l5 5L20 7"/></svg> YES</button>' +
+        '<button class="gov-btn sm v-no" onclick="govVote(' + p.id + ',\'no\')"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg> NO</button>' +
+        '<b>' + left + ' blocks left</b></div>'
+      ) : '';
+      return '<div class="gov-item">' +
+        '<div class="top">' + stTag(p.status) + tpTag(p.type) + '<span class="title">' + escapeHtml(p.title) + '</span></div>' +
+        (p.desc ? '<div class="desc">' + escapeHtml(p.desc) + '</div>' : '') +
+        paramTxt +
+        queueTxt +
+        '<div class="gov-bar"><div class="y" style="width:' + yw + '%"></div><div class="n" style="width:' + nw + '%"></div><div class="a" style="width:' + aw + '%"></div></div>' +
+        '<div class="gov-votes"><b>YES ' + (p.votes_yes || 0) + '</b><b>NO ' + (p.votes_no || 0) + '</b><b>ABSTAIN ' + (p.votes_abstain || 0) + '</b></div>' +
+        '<div class="gov-meta">#' + p.id + ' · ' + (p.proposer || '') + ' · H' + p.start_height + '→H' + p.end_height + '</div>' +
+        voteBtns + '</div>';
+    }).join('');
+  }
+
+  function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function load() {
+    fetch(api + '/api/governance/proposals').then(function (r) { return r.json(); }).then(function (d) {
+      if (d && d.ok) {
+        state.proposals = d.proposals || [];
+        state.params = d.params || [];
+        renderParams();
+        renderProposals();
+      }
+    }).catch(function () { /* 忽略 */ });
+    fetch(api + '/api/governance/config').then(function (r) { return r.json(); }).then(function (d) {
+      if (d && d.ok && d.config) {
+        state.config = d.config;
+        $('govWindow').textContent = d.config.voting_window || '—';
+        $('govThres').textContent = d.config.pass_threshold ? (d.config.pass_threshold * 100).toFixed(0) + '%' : '2/3';
+        $('govQuorum').textContent = d.config.quorum_pct ? d.config.quorum_pct + '%' : '—';
+        $('govTimelock').textContent = d.config.timelock_blocks ? d.config.timelock_blocks + ' blk' : '0';
+        renderProposals();
+      }
+    }).catch(function () { /* 忽略 */ });
+    fetch(api + '/api/status').then(function (r) { return r.json(); }).then(function (d) {
+      if (d && d.ok) { window.TAC_TIP = d.chain_height || 0; renderProposals(); }
+    }).catch(function () { /* 忽略 */ });
+  }
+
+  window.govCreate = function () {
+    var isParam = $('pType').value === 'param';
+    var isTreasury = $('pType').value === 'treasury';
+    var body = {
+      title: $('pTitle').value.trim(),
+      desc: $('pDesc').value.trim(),
+      ptype: $('pType').value,
+      param_key: isParam ? $('pKey').value : (isTreasury ? $('pTAddr').value.trim() : ''),
+      param_value: isParam ? $('pValue').value.trim() : (isTreasury ? $('pTAmount').value.trim() : ''),
+      address: $('pAddr').value.trim()
+    };
+    var msg = $('pMsg');
+    msg.className = 'gov-msg';
+    msg.textContent = '...';
+    fetch(api + '/api/governance/propose', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d && d.ok) {
+        msg.className = 'gov-msg ok';
+        msg.textContent = 'Proposal #' + d.proposal_id + ' created';
+        $('pTitle').value = ''; $('pDesc').value = ''; $('pValue').value = '';
+        load();
+      } else {
+        msg.className = 'gov-msg err';
+        msg.textContent = (d && d.error) || 'failed';
+      }
+    }).catch(function () { msg.className = 'gov-msg err'; msg.textContent = 'network error'; });
+  };
+
+  window.govVote = function (id, choice) {
+    var addr = window.prompt(TAC_TE('Your address (tx0...):'));
+    if (!addr || !addr.trim()) return;
+    var msg = $('pMsg');
+    msg.className = 'gov-msg';
+    msg.textContent = '...';
+    fetch(api + '/api/governance/vote', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ proposal_id: id, choice: choice, address: addr.trim() })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d && d.ok) {
+        msg.className = 'gov-msg ok';
+        msg.textContent = 'Vote recorded (power ' + d.power + ')';
+        load();
+      } else {
+        msg.className = 'gov-msg err';
+        msg.textContent = (d && d.error) || 'failed';
+      }
+    }).catch(function () { msg.className = 'gov-msg err'; msg.textContent = 'network error'; });
+  };
+
+  $('pType').addEventListener('change', function () {
+    var isParam = this.value === 'param';
+    var isTreasury = this.value === 'treasury';
+    $('paramRow').style.display = isParam ? '' : 'none';
+    $('valueRow').style.display = isParam ? '' : 'none';
+    $('treasuryRow').style.display = isTreasury ? '' : 'none';
+  });
+
+  load();
+  setInterval(load, 8000);
+})();
+</script>
+
+<div id="viewDao" style="display:none">
+<!-- M151：鏈上治理 DAO（TACGovernor：propose / vote / execute，自 Explorer 面板遷移） -->
+<div class="gov-card">
+  <h3><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8L12 3z"/><path d="M18 14l1 2.4 2.4 1-2.4 1L18 21l-1-2.4-2.4-1 2.4-1 1-2.4z"/></svg> <span data-i18n="gov.daoTitle">鏈上治理（DAO）</span></h3>
+  <p style="font-size:12px;color:#5d6778;margin:0 0 12px;" data-i18n="gov.intro">去中心化 DAO——任何帳戶可提案、一人一票投票、多數決後執行資金轉帳。</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+    <span class="gov-stats" style="margin:0;"><span data-i18n="gov.status">合約狀態</span><b class="mono" id="gvStatus">-</b></span>
+    <span class="gov-stats" style="margin:0;"><span data-i18n="gov.contract">合約地址</span><b class="mono" id="gvAddr">-</b></span>
+    <span class="gov-stats" style="margin:0;"><span data-i18n="gov.nextPid">下一個提案 ID</span><b class="mono" id="gvNext">-</b></span>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+    <button class="gov-btn sm" id="gvDeploy" data-i18n="gov.deploy">部署治理合約</button>
+    <span class="gov-msg" id="gvDeployResult" style="display:inline;"></span>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+    <div>
+      <label style="font-size:12px;color:#5d6778;" data-i18n="gov.proposeTitle">發起提案</label>
+      <input id="gvTarget" data-i18n-placeholder="gov.targetPh" placeholder="目標地址（0x…）" style="width:100%;box-sizing:border-box;background:#f2f4f9;border:1px solid #e2e6ee;border-radius:10px;color:#14161a;padding:8px 10px;font-size:13px;font-family:ui-monospace,monospace;margin:6px 0;">
+      <input id="gvValue" data-i18n-placeholder="gov.valuePh" placeholder="金額（TACm）" style="width:100%;box-sizing:border-box;background:#f2f4f9;border:1px solid #e2e6ee;border-radius:10px;color:#14161a;padding:8px 10px;font-size:13px;font-family:ui-monospace,monospace;margin-bottom:6px;">
+      <button class="gov-btn sm" id="gvPropose" data-i18n="gov.propose">發起提案</button>
+      <div class="gov-msg" id="gvProposeResult"></div>
+    </div>
+    <div>
+      <label style="font-size:12px;color:#5d6778;" data-i18n="gov.voteTitle">投票（節點代簽，一人一票）</label>
+      <div style="display:flex;gap:8px;align-items:center;margin:6px 0;">
+        <input id="gvVotePid" data-i18n-placeholder="gov.pidPh" placeholder="提案 ID" type="number" min="1" style="flex:1;min-width:0;background:#f2f4f9;border:1px solid #e2e6ee;border-radius:10px;color:#14161a;padding:8px 10px;font-size:13px;">
+        <button class="gov-btn sm v-yes" id="gvVoteFor" data-i18n="gov.support">贊成</button>
+        <button class="gov-btn sm v-no" id="gvVoteAgainst" data-i18n="gov.against">反對</button>
+      </div>
+      <div class="gov-msg" id="gvVoteResult"></div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:10px;">
+    <div>
+      <label style="font-size:12px;color:#5d6778;" data-i18n="gov.executeTitle">執行提案（多數決後）</label>
+      <div style="display:flex;gap:8px;align-items:center;margin:6px 0;">
+        <input id="gvExecPid" data-i18n-placeholder="gov.pidPh" placeholder="提案 ID" type="number" min="1" style="flex:1;min-width:0;background:#f2f4f9;border:1px solid #e2e6ee;border-radius:10px;color:#14161a;padding:8px 10px;font-size:13px;">
+        <button class="gov-btn sm" id="gvExecute" data-i18n="gov.execute">執行</button>
+      </div>
+      <div class="gov-msg" id="gvExecuteResult"></div>
+    </div>
+    <div>
+      <label style="font-size:12px;color:#5d6778;" data-i18n="gov.queryTitle">查詢提案</label>
+      <div style="display:flex;gap:8px;align-items:center;margin:6px 0;">
+        <input id="gvQueryPid" data-i18n-placeholder="gov.pidPh" placeholder="提案 ID" type="number" min="1" style="flex:1;min-width:0;background:#f2f4f9;border:1px solid #e2e6ee;border-radius:10px;color:#14161a;padding:8px 10px;font-size:13px;">
+        <button class="gov-btn sm" id="gvQuery" data-i18n="gov.query">查詢</button>
+      </div>
+      <div class="gov-msg mono" id="gvQueryResult" style="white-space:pre-wrap;"></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+  // M151：TACGovernor DAO 前端操作（自 Explorer 遷移，gov 風格）
+  (function () {
+    var api2 = location.protocol + '//' + location.host;
+    function gpost(path, body) {
+      return fetch(api2 + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+        .then(function (r) { return r.json(); });
+    }
+    function gget(path) {
+      return fetch(api2 + path, { cache: 'no-store' }).then(function (r) { return r.json(); });
+    }
+    var statusEl = document.getElementById('gvStatus'), addrEl = document.getElementById('gvAddr'), nextEl = document.getElementById('gvNext');
+    function loadGv() {
+      if (!statusEl) return;
+      gget('/tacgov/status').then(function (d) {
+        if (!d || !d.ok) return;
+        statusEl.textContent = d.deployed ? 'Deployed' : 'Not deployed';
+        addrEl.textContent = d.contract_address || '-';
+        nextEl.textContent = d.next_proposal_id != null ? d.next_proposal_id : '-';
+      }).catch(function () {});
+    }
+    var depBtn = document.getElementById('gvDeploy'), depRes = document.getElementById('gvDeployResult');
+    if (depBtn) depBtn.addEventListener('click', function () {
+      depRes.textContent = '...';
+      gpost('/tacgov/deploy', {}).then(function (d) {
+        depRes.className = 'gov-msg' + (d.ok ? ' ok' : ' err');
+        depRes.textContent = d.ok ? ('Deployed ' + (d.contract_address || '')) : (d.error || 'failed');
+        loadGv();
+      }).catch(function () { depRes.className = 'gov-msg err'; depRes.textContent = 'failed'; });
+    });
+    var proBtn = document.getElementById('gvPropose'), proRes = document.getElementById('gvProposeResult');
+    if (proBtn) proBtn.addEventListener('click', function () {
+      var target = document.getElementById('gvTarget').value.trim();
+      var value = document.getElementById('gvValue').value.trim();
+      if (!target) { proRes.className = 'gov-msg err'; proRes.textContent = 'Enter target address'; return; }
+      proRes.className = 'gov-msg'; proRes.textContent = '...';
+      gpost('/tacgov/propose', { target: target, value: value || '0' }).then(function (d) {
+        proRes.className = 'gov-msg' + (d.ok ? ' ok' : ' err');
+        proRes.textContent = d.ok ? ('Proposal #' + (d.proposal_id != null ? d.proposal_id : '?') + ' submitted') : (d.error || 'failed');
+        loadGv();
+      }).catch(function () { proRes.className = 'gov-msg err'; proRes.textContent = 'failed'; });
+    });
+    function bindVote(choice) {
+      var btn = document.getElementById(choice === 1 ? 'gvVoteFor' : 'gvVoteAgainst');
+      if (!btn) return;
+      btn.addEventListener('click', function () {
+        var pid = document.getElementById('gvVotePid').value.trim();
+        var res = document.getElementById('gvVoteResult');
+        if (!pid) { res.className = 'gov-msg err'; res.textContent = 'Enter proposal ID'; return; }
+        res.className = 'gov-msg'; res.textContent = '...';
+        gpost('/tacgov/vote', { proposal_id: pid, choice: choice }).then(function (d) {
+          res.className = 'gov-msg' + (d.ok ? ' ok' : ' err');
+          res.textContent = d.ok ? 'Vote recorded' : (d.error || 'failed');
+        }).catch(function () { res.className = 'gov-msg err'; res.textContent = 'failed'; });
+      });
+    }
+    bindVote(1); bindVote(0);
+    var exBtn = document.getElementById('gvExecute'), exRes = document.getElementById('gvExecuteResult');
+    if (exBtn) exBtn.addEventListener('click', function () {
+      var pid = document.getElementById('gvExecPid').value.trim();
+      if (!pid) { exRes.className = 'gov-msg err'; exRes.textContent = 'Enter proposal ID'; return; }
+      exRes.className = 'gov-msg'; exRes.textContent = '...';
+      gpost('/tacgov/execute', { proposal_id: pid }).then(function (d) {
+        exRes.className = 'gov-msg' + (d.ok ? ' ok' : ' err');
+        exRes.textContent = d.ok ? 'Executed' : (d.error || 'failed');
+      }).catch(function () { exRes.className = 'gov-msg err'; exRes.textContent = 'failed'; });
+    });
+    var qBtn = document.getElementById('gvQuery');
+    if (qBtn) qBtn.addEventListener('click', function () {
+      var pid = document.getElementById('gvQueryPid').value.trim();
+      var res = document.getElementById('gvQueryResult');
+      if (!pid) { res.className = 'gov-msg err'; res.textContent = 'Enter proposal ID'; return; }
+      gget('/tacgov/query?op=info&pid=' + encodeURIComponent(pid)).then(function (d) {
+        res.className = 'gov-msg' + (d.ok ? ' ok' : ' err');
+        if (!d.ok) { res.textContent = d.error || 'failed'; return; }
+        var p = d.proposal || {};
+        res.textContent = 'creator=' + (p.creator || '-') + '\nsupport=' + (p.support != null ? p.support : '-') + ' oppose=' + (p.oppose != null ? p.oppose : '-') + '\nexecuted=' + (p.executed ? 'yes' : 'no') + '\ntarget=' + (p.target || '-') + ' value=' + (p.value != null ? p.value : '-') + '\nstatus=' + (p.status || '-');
+      }).catch(function () { res.className = 'gov-msg err'; res.textContent = 'failed'; });
+    });
+    loadGv();
+  })();
+</script>
+
+{% endblock %}

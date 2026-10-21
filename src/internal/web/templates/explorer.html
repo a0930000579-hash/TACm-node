@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+{% block title %}TAC Explorer · 區塊瀏覽器{% endblock %}
+{% block content %}
+<section class="pg-banner">
+  <div class="pg-txt"><h1 data-i18n="bn.explorer">區塊瀏覽</h1><p data-i18n="bn.explorerSub">鏈上搜尋</p></div>
+  <svg viewBox="0 0 40 40" class="pg-art"><circle cx="17" cy="17" r="10" fill="none" stroke="#68BE8D" stroke-width="2.4"/><path d="M25 25 L34 34" stroke="#68BE8D" stroke-width="2.8" stroke-linecap="round"/><path d="M17 12 v10 M12 17 h10" stroke="#68BE8D" stroke-width="1.6"/></svg>
+</section>
+<section class="stat-cards">
+  <div class="card">
+    <div class="card-label">鏈頂高度</div>
+    <div class="card-value" id="eHeight">{{ status.Height }}</div>
+  </div>
+  <div class="card">
+    <div class="card-label">最終化高度</div>
+    <div class="card-value final" id="eFinal">{{ status.FinalizedHeight }}</div>
+  </div>
+  <div class="card">
+    <div class="card-label">當前難度</div>
+    <div class="card-value" id="eDiff">{{ status.Difficulty }}</div>
+  </div>
+  <div class="card">
+    <div class="card-label">待打包交易</div>
+    <div class="card-value" id="eMempool">{{ status.MempoolSize }}</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Base Fee (TACm/gas)</div>
+    <div class="card-value mono" id="eBaseFee">{{ self.BaseFee|fee8 }}</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Gas Price (建議)</div>
+    <div class="card-value mono" id="eGasPrice">{{ self.GasPrice|fee8 }}</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Block Gas Limit</div>
+    <div class="card-value mono" id="eGasLimit">{{ self.BlockGasLimit }}</div>
+  </div>
+  <div class="card">
+    <div class="card-label">已銷毀 (Burned TACm)</div>
+    <div class="card-value mono" id="eBurned">{{ self.BurnedTotal|fee8 }}</div>
+  </div>
+</section>
+
+<!-- M62：搜尋框 —— 支援區塊高度 / 交易哈希 / 地址 -->
+<section class="panel">
+  <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg> 鏈上搜尋</h2></div>
+  <form class="search-bar" id="searchForm" action="javascript:void(0)">
+    <input class="search-input" id="searchQ" type="text" inputmode="search"
+           placeholder="Enter block height, tx hash or tx0 address…" data-i18n-placeholder="explorer.searchPh" autocomplete="off">
+    <button class="search-btn" type="submit">搜尋</button>
+  </form>
+  <div class="search-tip muted" id="searchTip"></div>
+</section>
+
+<!-- M151：鏈上服務入口 —— 操作型 DApp 各自獨立頁面，瀏覽器僅保留鏈上檢視 -->
+<section class="panel">
+  <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v16"/></svg> <span data-i18n="svc.title">鏈上服務 / On-chain Services</span></h2></div>
+  <div class="wallet-actions">
+    <a class="search-btn" href="/wallet" style="text-decoration:none" data-i18n="svc.wallet">TAC 錢包（資產＋多簽）</a>
+    <a class="search-btn" href="/tacns" style="text-decoration:none" data-i18n="svc.ns">命名服務 .tac</a>
+    <a class="search-btn" href="/governance" style="text-decoration:none" data-i18n="svc.gov">鏈上治理（DAO）</a>
+    <a class="search-btn" href="/oracle" style="text-decoration:none" data-i18n="oracle.title">鏈上預言機（Oracle）</a>
+    <a class="search-btn" href="/aa" style="text-decoration:none" data-i18n="aa.title">帳戶抽象（Account Abstraction）</a>
+    <a class="search-btn" href="/api-docs" style="text-decoration:none" data-i18n="api.title">Indexer API</a>
+    <a class="search-btn" href="/stake" style="text-decoration:none" data-i18n="st.title">質押委託（Staking）</a>
+  </div>
+</section>
+
+<!-- M62：全鏈統計 -->
+<section class="panel">
+  <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg> 全鏈統計</h2></div>
+  <div class="chain-grid">
+    <div class="cg"><small>共識</small><b>{{ status.Consensus }}</b></div>
+    <div class="cg"><small>節點位址</small><b class="mono">{{ status.Address|shortaddr }}</b></div>
+    <div class="cg"><small>在線礦工</small><b>{{ chain.OnlineMiners }}</b></div>
+    <div class="cg"><small>全網算力</small><b>{{ chain.TotalHashrate }}</b></div>
+    <div class="cg"><small>全鏈總產出 TACm</small><b>{{ chain.TotalMinedTacm }}</b></div>
+    <div class="cg"><small>獎勵池</small><b>{{ chain.RewardPool }}</b></div>
+    <div class="cg"><small>TiUSD 總流通</small><b>{{ chain.TiUSDSupply }}</b></div>
+    <div class="cg"><small>運行時間</small><b>{{ status.UptimeSec }}s</b></div>
+  </div>
+</section>
+
+<style>
+  .search-bar{display:flex;gap:8px;flex-wrap:wrap}
+  .search-input{flex:1;min-width:200px;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:15px;padding:12px 14px;outline:none}
+  .search-input:focus{border-color:#68BE8D}
+  .search-btn{background:#68BE8D;color:#f7f8fb;font-weight:700;border:0;border-radius:10px;padding:0 20px;font-size:15px;cursor:pointer}
+  .search-tip{font-size:13px;margin-top:8px;min-height:18px}
+  .wallet-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:12px 0}
+  .wg{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px}
+  .wg small{font-size:11px;color:var(--muted);display:block;margin-bottom:4px}
+  .wg b{font-size:14px;color:var(--text);font-variant-numeric:tabular-nums;word-break:break-all}
+  .wallet-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}
+  .chain-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+  .cg{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px}
+  .cg small{font-size:11px;color:var(--muted);display:block;margin-bottom:4px}
+  .cg b{font-size:14px;color:var(--text);font-variant-numeric:tabular-nums;word-break:break-all}
+</style>
+
+<section class="panel">
+  <div class="panel-head"><h2>最新區塊</h2></div>
+  <div class="table-wrap">
+  <table class="data-table">
+    <thead>
+      <tr><th>高度</th><th>區塊哈希</th><th>提議者</th><th>交易數</th><th>時間</th></tr>
+    </thead>
+    <tbody id="latestBlocks">
+    {% for b in blocks %}
+      <tr>
+        <td><a class="mono strong" href="/block/{{ b.Height }}">{{ b.Height }}</a></td>
+        <td class="mono"><a href="/block/{{ b.Height }}">{{ b.Hash|shortaddr }}</a></td>
+        <td class="mono"><a href="/address/{{ b.ProposerAddress }}">{{ b.ProposerAddress|shortaddr }}</a></td>
+        <td>{{ b.TxCount }}</td>
+        <td class="nowrap muted">{{ b.Ts|timefmt }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="5" class="muted center">尚無區塊</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-head"><h2>最新交易</h2></div>
+  <div class="table-wrap">
+  <table class="data-table">
+    <thead>
+      <tr><th>哈希</th><th>區塊</th><th>來源</th><th>目標</th><th>金額 TACm</th><th>備註</th></tr>
+    </thead>
+    <tbody id="latestTxs">
+    {% for t in txs %}
+      <tr>
+        <td class="mono"><a href="/tx/{{ t.Hash }}">{{ t.Hash|shortaddr }}</a></td>
+        <td><a class="mono strong" href="/block/{{ t.BlockHeight }}">{{ t.BlockHeight }}</a></td>
+        <td class="mono"><a href="/address/{{ t.From }}">{{ t.From|shortaddr }}</a></td>
+        <td class="mono"><a href="/address/{{ t.To }}">{{ t.To|shortaddr }}</a></td>
+        <td class="nowrap">{{ t.Amount|fmtamt }}</td>
+        <td class="muted">{{ t.Memo|trunc40 }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6" class="muted center">尚無交易</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<script>
+  // M62：搜尋跳轉 —— /api/search 判定類型後導向對應詳情頁；未命中顯示提示。
+  (function () {
+    var form = document.getElementById('searchForm');
+    var input = document.getElementById('searchQ');
+    var tip = document.getElementById('searchTip');
+    if (!form || !input) return;
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var q = (input.value || '').trim();
+      if (!q) return;
+      if (tip) tip.textContent = '';
+      fetch('/api/search?q=' + encodeURIComponent(q), { cache: 'no-store' })
+        .then(function (r) { return r.json().catch(function () { return null; }); })
+        .then(function (j) {
+          if (!j) { if (tip) tip.textContent = '搜尋服務暫時不可用'; return; }
+          if (j.type === 'block') { location.href = '/block/' + j.height; return; }
+          if (j.type === 'address') { location.href = '/address/' + j.address; return; }
+          if (j.type === 'tx') { location.href = '/tx/' + j.hash; return; }
+          if (tip) tip.textContent = '未找到：' + q + '（不是有效高度、交易哈希或地址）';
+        })
+        .catch(function () { if (tip) tip.textContent = '搜尋失敗，請稍後再試'; });
+    });
+  })();
+</script>
+
+
+
+
+
+
+
+<script>
+  // M124：Explorer 首頁 10 秒輪詢 —— 統計卡＋最新區塊/交易即時更新（/api/explorer/stats）。
+  (function(){
+    function short(h){ return h ? (h.slice(0,6) + '…' + h.slice(-4)) : '-'; }
+    function timefmt(ts){
+      if (!ts) return '-';
+      var d = new Date(ts * 1000);
+      function p2(n){ return (n<10?'0':'')+n; }
+      return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())+' '+p2(d.getHours())+':'+p2(d.getMinutes());
+    }
+    function set(id, txt){ var el = document.getElementById(id); if (el) el.textContent = txt; }
+    function renderBlocks(list){
+      var tb = document.getElementById('latestBlocks'); if (!tb) return;
+      if (!list || !list.length) { tb.innerHTML = '<tr><td colspan="5" class="muted center">尚無區塊</td></tr>'; return; }
+      var html = '';
+      list.forEach(function(b){
+        html += '<tr><td><a class="mono strong" href="/block/' + b.height + '">' + b.height + '</a></td>' +
+          '<td class="mono"><a href="/block/' + b.height + '">' + short(b.hash) + '</a></td>' +
+          '<td class="mono"><a href="/address/' + b.proposer_address + '">' + short(b.proposer_address) + '</a></td>' +
+          '<td>' + b.tx_count + '</td><td class="nowrap muted">' + timefmt(b.ts) + '</td></tr>';
+      });
+      tb.innerHTML = html;
+    }
+    function renderTxs(list){
+      var tb = document.getElementById('latestTxs'); if (!tb) return;
+      if (!list || !list.length) { tb.innerHTML = '<tr><td colspan="6" class="muted center">尚無交易</td></tr>'; return; }
+      var html = '';
+      list.forEach(function(t){
+        var memo = (t.memo || '').slice(0, 40);
+        html += '<tr><td class="mono"><a href="/tx/' + t.hash + '">' + short(t.hash) + '</a></td>' +
+          '<td><a class="mono strong" href="/block/' + t.block_height + '">' + t.block_height + '</a></td>' +
+          '<td class="mono"><a href="/address/' + (t.from || '-') + '">' + short(t.from || '-') + '</a></td>' +
+          '<td class="mono"><a href="/address/' + (t.to || '-') + '">' + short(t.to || '-') + '</a></td>' +
+          '<td class="nowrap">' + (t.amount || '0') + '</td><td class="muted">' + memo + '</td></tr>';
+      });
+      tb.innerHTML = html;
+    }
+    function refresh(){
+      fetch('/api/explorer/stats', { cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(d){
+        if (!d || !d.ok || !d.status) return;
+        var st = d.status;
+        set('eHeight', st.height);
+        set('eFinal', st.finalized_height);
+        set('eDiff', st.difficulty);
+        set('eMempool', st.mempool_size);
+        set('eBaseFee', st.base_fee.toFixed(8));
+        set('eGasPrice', st.gas_price.toFixed(8));
+        set('eGasLimit', st.block_gas_limit);
+        set('eBurned', st.burned_total_tacm.toFixed(8));
+        renderBlocks(d.blocks);
+        renderTxs(d.txs);
+      }).catch(function(){});
+    }
+    setInterval(refresh, 10000);
+  })();
+</script>
+{% endblock %}

@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}TAC Community · Friends{% endblock %}
+{% block content %}
+<style>
+  /* M95：好友頁（FB 風：你的朋友／追蹤你的人／建議，全亮色） */
+  body{background:#f0f2f5;color:#1c1e21;margin:0}
+  .topbar,.footer,.bottom-nav{display:none!important}
+  .fr-wrap{max-width:480px;margin:0 auto;padding:0 0 72px}
+  .fr-top{position:sticky;top:0;z-index:40;background:rgba(255,255,255,.97);border-bottom:1px solid #dddfe2;display:flex;align-items:center;gap:10px;padding:10px 14px}
+  .fr-top button{background:none;border:none;padding:6px;border-radius:50%;cursor:pointer}
+  .fr-top button svg{width:22px;height:22px;stroke:#1c1e21;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .fr-top .t{font-weight:800;font-size:16px}
+  .fr-sec{margin:12px}
+  .fr-sec h3{display:flex;align-items:center;gap:8px;font-size:14px;margin:0 0 10px;color:#1c1e21}
+  .fr-sec h3 svg{width:18px;height:18px;stroke:#1877f2;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .fr-card{background:#fff;border:1px solid #dddfe2;border-radius:12px;padding:10px;margin-bottom:8px;display:flex;align-items:center;gap:10px}
+  .fr-ava{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#1877f2,#68BE8D);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;flex:none}
+  .fr-meta{flex:1;min-width:0}
+  .fr-meta .nm{font-weight:700;font-size:14px;word-break:break-all}
+  .fr-meta .sub{font-size:12px;color:#65676b}
+  .fr-btn{border:none;border-radius:999px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;flex:none}
+  .fr-btn.add{background:#1877f2;color:#fff}
+  .fr-btn.following{background:#e4e6eb;color:#1c1e21}
+  .fr-online{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #dddfe2;border-radius:12px;padding:10px 14px;margin:12px;font-size:13px;color:#1c1e21}
+  .fr-online i{width:9px;height:9px;border-radius:50%;background:#31a24c;display:inline-block}
+  .fr-id{display:flex;gap:8px;margin:12px}
+  .fr-id input{flex:1;border:1px solid #dddfe2;border-radius:999px;padding:10px 14px;font-size:14px;outline:none}
+  .fr-id button{background:#1877f2;color:#fff;border:none;border-radius:999px;padding:10px 16px;font-weight:700;font-size:13px}
+  .fr-empty{color:#65676b;font-size:13px;padding:8px 2px}
+  .fr-bottom{position:fixed;left:0;right:0;bottom:0;z-index:60;background:rgba(255,255,255,.97);border-top:1px solid #dddfe2;display:flex;justify-content:space-around;padding:6px 2px calc(6px + env(safe-area-inset-bottom))}
+  .fr-bottom a{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;color:#65676b;text-decoration:none}
+  .fr-bottom a svg{width:22px;height:22px;stroke:#65676b;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .fr-bottom a.on{color:#1877f2}
+  .fr-bottom a.on svg{stroke:#1877f2}
+</style>
+
+<div class="fr-wrap">
+  <div class="fr-top">
+    <button onclick="location='/community'"><svg viewBox="0 0 24 24"><path d="M19 12 H6 M11 6 L5 12 L11 18"/></svg></button>
+    <div class="t"><svg viewBox="0 0 28 28" style="width:20px;height:20px;vertical-align:-4px;stroke:#1877f2;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;margin-right:6px"><path d="M14 4 C8 4 5 9 5 14 c0 4 2 7 4 9 v2 h10 v-2 c2-2 4-5 4-9 C23 9 20 4 14 4 Z"/><circle cx="14" cy="13" r="3.4"/><path d="M10.5 21.5 h7"/></svg><span data-i18n="cm.brand">TAC 社群</span></div>
+    <div style="margin-left:auto;display:flex;gap:6px">
+      <button onclick="location='/community/ads'"><svg viewBox="0 0 24 24"><path d="M3 11 V15 H5 L9 19 V7 L5 11 Z"/><path d="M13 8 C15 9.5 15 14.5 13 16"/><path d="M17 5 C20.5 8 20.5 16 17 19"/></svg></button>
+      <button onclick="TAC_I18N.toggle()">EN</button>
+    </div>
+  </div>
+
+  <div class="fr-id">
+    <input id="myAddr" placeholder="enter wallet address (tx0)…" value="">
+    <button onclick="setMe()" data-i18n="cm.switch">切換</button>
+  </div>
+  <div class="fr-online"><i></i><span><b id="onlineN">0</b> <span data-i18n="cm.online">人在線</span></span></div>
+
+  <div class="fr-sec">
+    <h3><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20 C2.5 15.5 5 13 9 13 C13 13 15.5 15.5 15.5 20"/><path d="M17 9 C18.5 8.5 19.5 8.6 20.3 9.5"/></svg><span data-i18n="cm.myFriends">你的朋友</span></h3>
+    <div id="frFollowing"></div>
+  </div>
+  <div class="fr-sec">
+    <h3><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20 C5 16 8 14 12 14 C16 14 19 16 19 20"/><path d="M2.5 12.5 C3.5 13 4.5 13.2 5.4 13 M21.5 12.5 C20.5 13 19.5 13.2 18.6 13"/></svg><span data-i18n="cm.followersYou">追蹤你的人</span></h3>
+    <div id="frFollowers"></div>
+  </div>
+  <div class="fr-sec">
+    <h3><svg viewBox="0 0 24 24"><path d="M12 3 L14.2 8.6 L20 9 L15.6 12.7 L17.2 18.6 L12 15.4 L6.8 18.6 L8.4 12.7 L4 9 L9.8 8.6 Z"/></svg><span data-i18n="cm.suggest">建議（可能認識）</span></h3>
+    <div id="frSuggest"></div>
+  </div>
+</div>
+
+<nav class="fr-bottom">
+  <a href="/community"><svg viewBox="0 0 24 24"><path d="M3 10 L12 3 L21 10 V21 H15 V14 H9 V21 H3 Z"/></svg><span data-i18n="cm.home">首頁</span></a>
+  <a href="/community/videos"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 11 L21 7.5 V16.5 L16 13"/></svg><span data-i18n="cm.video">影片</span></a>
+  <a href="/community/friends" class="on"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20 C2.5 15.5 5 13 9 13 C13 13 15.5 15.5 15.5 20"/><circle cx="17" cy="9" r="2.8"/><path d="M16 13.5 C19 13.5 21.5 15.5 21.5 19"/></svg><span data-i18n="cm.friends">好友</span></a>
+  <a href="/community/market"><svg viewBox="0 0 24 24"><path d="M4 7 H20 L18.5 16 H5.5 Z"/><circle cx="9" cy="20" r="1.6"/><circle cx="15.5" cy="20" r="1.6"/><path d="M7 10 V6 C7 3.8 8.8 2.5 10.5 2.5 C12 2.5 13 3.6 13 5"/></svg><span data-i18n="cm.market">市集</span></a>
+  <a href="/community/notifications"><svg viewBox="0 0 24 24"><path d="M12 3 C8 3 6 6 6 9.5 V15 L4 17 H20 L18 15 V9.5 C18 6 16 3 12 3 Z"/><path d="M9.5 20 C10 21.5 11 22 12 22 C13 22 14 21.5 14.5 20"/></svg><span data-i18n="cm.notify">通知</span></a>
+  <a href="/community/profile"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21 C4 16 7.5 13.5 12 13.5 C16.5 13.5 20 16 20 21"/></svg><span data-i18n="cm.me">個人</span></a>
+</nav>
+
+<script>
+function get(p){ return fetch(p).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); }); }
+function post(p,b){ return fetch(p, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(b||{})}).then(function(r){ if(!r.ok) return r.json().then(function(j){throw new Error(j.error||r.status)}); return r.json(); }); }
+var me = (localStorage.getItem('cm_id')||'');
+function shortAddr(a){ if(!a) return '—'; if(a.length<=16) return a; return a.slice(0,10)+'…'+a.slice(-6); }
+function setMe(){ me = document.getElementById('myAddr').value.trim(); localStorage.setItem('cm_id', me); load(); }
+document.getElementById('myAddr').value = me;
+
+function card(addr, sub, isFollowing){
+  return '<div class="fr-card"><div class="fr-ava">'+(addr||'?').slice(0,1).toUpperCase()+'</div>'+
+    '<div class="fr-meta"><div class="nm">'+shortAddr(addr)+'</div><div class="sub">'+sub+'</div></div>'+
+    '<button class="fr-btn '+(isFollowing?'following':'add')+'" onclick="toggleFollow(\''+addr+'\', this)">'+(isFollowing?TAC_TE('追蹤中'):TAC_TE('新增朋友'))+'</button></div>';
+}
+function toggleFollow(addr, btn){
+  if(!me){ alert(TAC_TE('請先輸入你的錢包地址（tx0 開頭）')); return; }
+  var following = btn.classList.contains('following');
+  var req = following ? fetch('/api/community/follow', {method:'DELETE', headers:{'Content-Type':'application/json'}, body: JSON.stringify({follower:me, followee:addr})}) : post('/api/community/follow', {follower:me, followee:addr});
+  req.then(function(d){ load(); }).catch(function(e){ alert('失敗：'+e); });
+}
+function load(){
+  if(!me){ ['frFollowing','frFollowers','frSuggest'].forEach(function(id){ document.getElementById(id).innerHTML='<div class="fr-empty">'+TAC_TE('請先輸入你的錢包地址（tx0 開頭）')+'</div>'; }); return; }
+  Promise.all([
+    get('/api/community/following?address='+encodeURIComponent(me)),
+    get('/api/community/followers?address='+encodeURIComponent(me)),
+    get('/api/community/feed?limit=200')
+  ]).then(function(res){
+    var following = res[0].items||[], followers = res[1].items||[];
+    var active = {};
+    (res[2].items||[]).forEach(function(p){ if(p.address && p.address!==me) active[p.address]=1; });
+    var onlineN = Object.keys(active).length;
+    document.getElementById('onlineN').textContent = onlineN;
+    var sug = Object.keys(active).filter(function(a){ return following.indexOf(a)<0 && a!==me; }).slice(0,20);
+    var elF = document.getElementById('frFollowing');
+    elF.innerHTML = following.length ? following.map(function(a){ return card(a, TAC_TE('追蹤中'), true); }).join('') : '<div class="fr-empty">'+TAC_TE('尚未追蹤任何人')+'</div>';
+    var elR = document.getElementById('frFollowers');
+    elR.innerHTML = followers.length ? followers.map(function(a){ return card(a, TAC_TE('追蹤你的人'), false); }).join('') : '<div class="fr-empty">'+TAC_TE('尚無人追蹤你')+'</div>';
+    var elS = document.getElementById('frSuggest');
+    elS.innerHTML = sug.length ? sug.map(function(a){ return card(a, TAC_TE('可能認識的朋友'), false); }).join('') : '<div class="fr-empty">'+TAC_TE('暫無建議')+'</div>';
+  }).catch(function(e){ alert('載入失敗：'+e); });
+}
+window.addEventListener('DOMContentLoaded', load);
+</script>
+{% endblock %}

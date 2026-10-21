@@ -1,0 +1,969 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="pg-banner">
+  <div class="pg-txt"><h1 data-i18n="bn.exchange">交易所</h1><p data-i18n="bn.exchangeSub">閃兌與訂單</p></div>
+  <svg viewBox="0 0 40 40" class="pg-art"><path d="M6 30 h28 M6 30 l6 4 M6 30 l6 -4" fill="none" stroke="#68BE8D" stroke-width="2.2" stroke-linecap="round"/><path d="M10 24 V14 h8 V24 Z" fill="rgba(104,190,141,.25)" stroke="#68BE8D" stroke-width="1.6"/><path d="M22 24 V8 h8 V24 Z" fill="rgba(104,190,141,.45)" stroke="#68BE8D" stroke-width="1.6"/><path d="M34 30 L34 26 M30 30 L30 26 M26 30 L26 26" stroke="#68BE8D" stroke-width="1.6"/></svg>
+</section>
+<style>
+  :root { --bn-bg:#f7f8fb; --bn-card:#ffffff; --bn-card2:#f2f4f9; --bn-line:#e2e6ee;
+          --bn-txt:#14161a; --bn-sub:#5d6778; --bn-yellow:#fcd535; --bn-green:#0ecb81;
+          --bn-red:#f6465d; }
+  * { box-sizing:border-box; }
+  body { background:var(--bn-bg); color:var(--bn-txt); margin:0; font-family:-apple-system,"PingFang TC","Noto Sans TC",sans-serif; }
+  .bn-top { display:flex; align-items:center; gap:12px; padding:14px 16px; border-bottom:1px solid var(--bn-line); position:sticky; top:0; background:var(--bn-bg); z-index:5; flex-wrap:wrap; }
+  .bn-logo { font-weight:800; font-size:20px; letter-spacing:.5px; }
+  .bn-logo b { color:var(--bn-yellow); }
+  .bn-nav { display:flex; gap:8px; flex-wrap:wrap; }
+  .bn-nav a { color:var(--bn-sub); text-decoration:none; font-size:13px; padding:6px 12px; border-radius:8px; }
+  .bn-nav a:hover { color:var(--bn-txt); background:var(--bn-card); }
+  /* M127：交易所門戶——生態導航＋功能卡片（幣安式） */
+  .ec-nav { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+  .ec-nav a { display:inline-flex; align-items:center; padding:8px 14px; border-radius:999px; background:var(--bn-card); color:var(--bn-sub); font-size:13px; font-weight:600; text-decoration:none; border:1px solid var(--bn-line); transition:all .15s; }
+  .ec-nav a:hover { color:var(--bn-txt); border-color:var(--bn-yellow); transform:translateY(-1px); }
+  .ec-nav a.on { background:var(--bn-yellow); color:#f7f8fb; border-color:var(--bn-yellow); box-shadow:0 3px 10px rgba(252,213,53,.25); }
+  .ec-nav .ic { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; background:rgba(255,255,255,.10); margin-right:7px; flex:0 0 22px; }
+  .ec-nav a.on .ic { background:rgba(255,255,255,.22); }
+  .ec-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(158px,1fr)); gap:10px; margin-bottom:16px; }
+  .ec-card { display:flex; align-items:center; gap:11px; padding:13px 14px; border-radius:14px; background:var(--bn-card); color:var(--bn-txt); text-decoration:none; border:1px solid var(--bn-line); font-size:13px; font-weight:600; transition:all .15s; }
+  .ec-card:hover { transform:translateY(-2px); border-color:var(--bn-yellow); box-shadow:0 4px 14px rgba(0,0,0,.10); }
+  .ec-card .ic { width:38px; height:38px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex:0 0 38px; background:rgba(252,213,53,.14); color:var(--bn-yellow); }
+  .ec-card.on { background:var(--bn-yellow); color:#f7f8fb; border-color:var(--bn-yellow); box-shadow:0 4px 14px rgba(252,213,53,.30); }
+  .ec-card.on .ic { background:rgba(255,255,255,.22); color:#f7f8fb; }
+  .bn-addr { font-size:12px; color:var(--bn-sub); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:180px; }
+  main { max-width:1080px; margin:0 auto; padding:14px; }
+  .tabs { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+  /* M104：幣種選擇器（各幣種獨立交易頁） */
+  .mkt-picker { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+  .mkt-tab { padding:7px 14px; border-radius:999px; background:var(--bn-card); color:var(--bn-sub); font-size:13px; text-decoration:none; border:1px solid var(--bn-line); transition:all .15s; }
+  .mkt-tab:hover { color:var(--bn-txt); border-color:var(--bn-yellow); transform:translateY(-1px); }
+  .mkt-tab.on { background:var(--bn-yellow); color:#f7f8fb; font-weight:700; border-color:var(--bn-yellow); box-shadow:0 2px 8px rgba(252,213,53,.25); }
+  .tabs { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 14px; }
+  .tab { display:inline-flex; align-items:center; gap:6px; padding:9px 15px; border-radius:999px; background:var(--bn-card); color:var(--bn-sub); font-size:13px; font-weight:600; cursor:pointer; border:1px solid var(--bn-line); text-decoration:none; transition:all .15s; }
+  .tab:hover { color:var(--bn-txt); border-color:var(--bn-yellow); transform:translateY(-1px); }
+  .tab.on { background:var(--bn-yellow); color:#f7f8fb; font-weight:700; border-color:var(--bn-yellow); box-shadow:0 3px 10px rgba(252,213,53,.25); }
+  .panel { display:none; }
+  .panel.on { display:block; }
+  .ex-grid { display:grid; grid-template-columns:1.2fr 1fr 1fr; gap:12px; }
+  @media (max-width:900px){ .ex-grid{ grid-template-columns:1fr; } }
+  .box { background:var(--bn-card); border:1px solid var(--bn-line); border-radius:12px; padding:14px; }
+  .box h3 { margin:0 0 12px; font-size:14px; font-weight:600; display:flex; justify-content:space-between; align-items:center; }
+  .ticker { display:flex; gap:16px; align-items:center; padding:12px 14px; background:var(--bn-card); border:1px solid var(--bn-line); border-radius:12px; margin-bottom:12px; flex-wrap:wrap; }
+  /* M102：Canvas 固定高度防撐爆（K 線/深度圖不再無限往下延長） */
+  .o-pwrap{position:relative;}
+  .o-pwrap input{padding-right:52px;}
+  .o-best{position:absolute;right:4px;top:50%;transform:translateY(-50%);background:#fcd535;color:#0b0e11;border:none;border-radius:6px;font-size:11px;font-weight:700;padding:5px 10px;cursor:pointer;}
+  .o-best:active{opacity:.8;}
+  .chart-box canvas { display:block; width:100%; }
+  #kc { height:250px; } #dc { height:200px; }
+  .ticker { align-items:flex-start; }
+  .ticker .sym { font-size:16px; font-weight:800; }
+  .ticker .price { font-size:24px; font-weight:800; letter-spacing:.3px; }
+  .ticker .chg24 { font-size:13px; font-weight:700; margin-top:2px; }
+  .ticker .st24 { margin-left:auto; display:flex; flex-direction:column; gap:4px; text-align:right; }
+  .ticker .sub { font-size:12px; color:var(--bn-sub); }
+  .bn-form input[data-bound="1"] { border-color:var(--bn-green); }
+  .o-total { font-size:12px; color:var(--bn-sub); text-align:right; margin:-2px 0 8px; font-family:ui-monospace,Menlo,monospace; }
+  .up { color:var(--bn-green); } .down { color:var(--bn-red); }
+  .charts { display:grid; grid-template-columns:1.4fr 1fr; gap:12px; margin-bottom:12px; }
+  @media (max-width:900px){ .charts{ grid-template-columns:1fr; } }
+  .chart-box { background:var(--bn-card); border:1px solid var(--bn-line); border-radius:12px; padding:10px 12px; }
+  .chart-box h3 { margin:0 0 8px; font-size:13px; font-weight:600; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; }
+  .ivs { display:flex; gap:4px; }
+  .iv { font-size:11px; padding:2px 8px; border-radius:8px; border:1px solid var(--bn-line); color:var(--bn-sub); cursor:pointer; background:var(--bn-card); }
+  .iv.on { background:var(--bn-yellow); color:#f7f8fb; border-color:var(--bn-yellow); font-weight:700; }
+  canvas { display:block; width:100%; }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  th { color:var(--bn-sub); text-align:left; padding:6px; border-bottom:1px solid var(--bn-line); font-weight:500; }
+  td { padding:6px; border-bottom:1px solid var(--bn-line); }
+  .bn-form { display:grid; gap:9px; }
+  .bn-form label { font-size:12px; color:var(--bn-sub); }
+  .bn-form input, .bn-form select { background:var(--bn-card2); border:1px solid var(--bn-line); color:var(--bn-txt); border-radius:8px; padding:9px 11px; font-size:14px; outline:none; width:100%; }
+  /* M104-2：買入/賣出分頁（幣安式） */
+  .bs-tabs { display:flex; gap:0; border:1px solid var(--bn-line); border-radius:8px; overflow:hidden; }
+  .bs-tab { flex:1; padding:9px; font-size:13px; font-weight:700; cursor:pointer; border:none; background:var(--bn-card2); color:var(--bn-sub); }
+  .bs-tab.buy.on { background:var(--bn-green); color:#fff; }
+  .bs-tab.sell.on { background:var(--bn-red); color:#fff; }
+  .buy-btn { background:var(--bn-green); color:#fff; border:none; border-radius:8px; padding:11px; font-size:14px; font-weight:700; cursor:pointer; }
+  .sell-btn { background:var(--bn-red); color:#fff; border:none; border-radius:8px; padding:11px; font-size:14px; font-weight:700; cursor:pointer; }
+  .sell-btn { background:var(--bn-red); color:#fff; border:none; border-radius:8px; padding:11px; font-size:14px; font-weight:700; cursor:pointer; }
+  .bn-btn { background:var(--bn-yellow); color:#f7f8fb; border:none; border-radius:8px; padding:11px; font-size:14px; font-weight:700; cursor:pointer; }
+  .bn-btn:disabled { opacity:.5; cursor:not-allowed; }
+  .bn-msg { margin-top:8px; font-size:12px; min-height:16px; word-break:break-all; }
+  .ok { color:var(--bn-green); } .err { color:var(--bn-red); }
+  .mono { font-family:ui-monospace,Menlo,monospace; font-size:11px; color:var(--bn-sub); }
+  .book-ratio { display:flex; gap:0; margin:0 0 8px; border:1px solid var(--bn-line); border-radius:8px; overflow:hidden; font-size:10px; font-weight:700; }
+  .book-ratio .br-b, .book-ratio .br-a { position:relative; flex:1; display:flex; align-items:center; padding:5px 8px; overflow:hidden; }
+  .book-ratio .br-b { background:rgba(14,203,129,.08); color:var(--bn-green); }
+  .book-ratio .br-a { background:rgba(246,70,93,.08); color:var(--bn-red); }
+  .book-ratio .br-b i, .book-ratio .br-a i { position:absolute; left:0; top:0; bottom:0; opacity:.18; z-index:0; }
+  .book-ratio .br-b i { background:var(--bn-green); }
+  .book-ratio .br-a i { right:0; left:auto; background:var(--bn-red); }
+  .book-ratio span { position:relative; z-index:1; }
+  .chip { display:inline-block; font-size:11px; padding:2px 8px; border-radius:10px; background:var(--bn-card2); color:var(--bn-yellow); }
+  .mini { font-size:12px; color:var(--bn-sub); margin:10px 0 4px; font-weight:600; }
+  a { color:var(--bn-yellow); text-decoration:none; }
+  .flow { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+  .flow .f { flex:1; min-width:160px; }
+</style>
+
+<div class="bn-top">
+  <div class="bn-logo"><b>TAC</b> EXCHANGE</div>
+  <div class="bn-nav">
+    <a href="/">區塊瀏覽器</a>
+    <a href="/wallet">錢包</a>
+    <a href="/exchange" style="color:var(--bn-yellow);">交易所</a>
+  </div>
+  <div class="bn-addr mono">節點 {{ exchange.NodeAddress }}</div>
+</div>
+
+<main>
+  <div class="ec-nav">
+    <a href="/exchange" class="on"><span class="ic"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 17l5-5 4 3 6-7"/><path d="M14 8h4v4"/></svg></span>現貨交易</a>
+    <a href="/dex"><span class="ic"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 4v13M7 4L3 8M7 4l4 4"/><path d="M17 20V7M17 20l-4-4M17 20l4-4"/></svg></span>DEX 兌換</a>
+    <a href="/defi"><span class="ic"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 9l9-5 9 5"/><path d="M4 10h16v3H4z"/></svg></span>DeFi</a>
+    <a href="/nfts"><span class="ic"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1.6"/><path d="M5 17l5-5 3 3 4-4 2 2"/></svg></span>NFT 市場</a>
+    <a href="/tokens"><span class="ic"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 9.5c0-1.4 1.3-2 3-2s3 .6 3 2-1.2 1.6-3 2c-2 .5-3 1-3 2.5s1.3 2 3 2 3-.6 3-2"/></svg></span>代幣工作室</a>
+  </div>
+  <div class="ec-grid">
+    <a class="ec-card{% if page == 'trade' %} on{% endif %}" href="/exchange/trade"><span class="ic"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 17l5-5 4 3 6-7"/><path d="M14 8h4v4"/></svg></span>現貨交易</a>
+    <a class="ec-card{% if page == 'assets' %} on{% endif %}" href="/exchange/assets"><span class="ic"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h3M16 14h1"/></svg></span>資產餘額</a>
+    <a class="ec-card{% if page == 'swap' %} on{% endif %}" href="/exchange/swap"><span class="ic"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 4v13M7 4L3 8M7 4l4 4"/><path d="M17 20V7M17 20l-4-4M17 20l4-4"/></svg></span>閃兌</a>
+    <a class="ec-card{% if page == 'bot' %} on{% endif %}" href="/exchange/bot"><span class="ic"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="9" width="14" height="9" rx="2"/><path d="M9 5h6M12 5v4M9 13h.01M15 13h.01"/></svg></span>自動交易</a>
+    <a class="ec-card{% if page == 'orders' %} on{% endif %}" href="/exchange/orders"><span class="ic"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span>我的訂單</a>
+    <a class="ec-card{% if page == 'pool' %} on{% endif %}" href="/exchange/pool"><span class="ic"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 9l9-5 9 5"/><path d="M4 10h16v3H4z"/><path d="M6 13v6M10 13v6M14 13v6M18 13v6M3 19h18"/></svg></span>資金池</a>
+  </div>
+
+  <!-- 交易 -->
+  {% if page == 'trade' %}
+  <div class="panel on" id="p-trade">
+    <!-- M104：幣種選擇器——點選任一市場即進入該幣種獨立交易頁 -->
+    <div class="mkt-picker" id="mktPicker"></div>
+    <div class="ticker" id="ticker">
+      <div>
+        <div class="sym">TACM/USDT</div>
+        <div class="price" id="lastPrice">—</div>
+        <div class="chg24" id="chg24">—</div>
+      </div>
+      <div class="st24" id="st24"><span class="sub">taker 1.25% · maker 0.625%</span><span class="sub">TiUSD 報價更優惠：taker 0.5%</span></div>
+    </div>
+    <div class="charts">
+      <div class="chart-box">
+        <h3><span>K 線 <span id="kTitle" class="chip">TACM/USDT</span></span>
+          <span class="ivs" id="ivs">
+            <span class="iv" data-iv="60">1m</span><span class="iv on" data-iv="300">5m</span>
+            <span class="iv" data-iv="900">15m</span><span class="iv" data-iv="3600">1h</span><span class="iv" data-iv="86400">1d</span>
+          </span>
+        </h3>
+        <canvas id="kc" height="230"></canvas>
+        <div class="mini" id="kStats">—</div>
+      </div>
+      <div class="chart-box">
+        <h3><span>深度圖</span><span id="dStats" class="chip">—</span></h3>
+        <canvas id="dc" height="210"></canvas>
+      </div>
+    </div>
+    <div class="ex-grid">
+      <div class="box">
+        <h3>訂單簿 <span id="mkTitle" class="chip">TACM/USDT</span></h3>
+        <div class="book-ratio" id="bookRatio"><div class="br-b"><span>—</span><i></i></div><div class="br-a"><span>—</span><i></i></div></div>
+        <div class="table-wrap"><table><thead><tr><th>價格(USDT)</th><th>數量(TACM)</th><th>總額</th></tr></thead>
+        <tbody id="asksBody"></tbody>
+        <tbody id="spreadRow"></tbody>
+        <tbody id="bidsBody"></tbody></table></div>
+      </div>
+      <div class="box">
+        <h3>交易市場</h3>
+        <div class="table-wrap"><table><thead><tr><th>交易對</th><th>最新</th><th>手續費(taker)</th></tr></thead>
+        <tbody id="marketsBody"></tbody></table></div>
+        <div class="mini">下單</div>
+        <form class="bn-form" id="orderForm">
+          <input id="oUid" placeholder="account (tx0...)" autocomplete="off">
+          <select id="oMarket" onchange="setMarket(this.value)">
+            <option>TACM/USDT</option><option>TACM/TiUSD</option><option>TiUSD/USDT</option>
+            <option>BTC/USDT</option><option>ETH/USDT</option><option>BNB/USDT</option>
+            <option>SOL/USDT</option><option>ADA/USDT</option>
+          </select>
+          <div class="bs-tabs" id="bsTabs">
+            <button type="button" class="bs-tab buy on" id="bsBuy" onclick="setBS('buy')">買入</button>
+            <button type="button" class="bs-tab sell" id="bsSell" onclick="setBS('sell')">賣出</button>
+          </div>
+          <select id="oType"><option value="limit">限價</option><option value="market">市價</option></select>
+          <div class="o-pwrap">
+            <input id="oPrice" placeholder="price (blank = market)">
+            <button type="button" class="o-best" data-i18n="ex.best" onclick="fillBestPrice()" title="按當前市場買賣價填入">最優</button>
+          </div>
+          <input id="oQty" placeholder="amount">
+          <div class="o-total" id="oTotal">≈ — USDT</div>
+          <button class="buy-btn" type="submit" id="oBtn">買入</button>
+          <div class="bn-msg" id="oMsg"></div>
+        </form>
+      </div>
+      <div class="box">
+        <h3>最近成交</h3>
+        <div class="table-wrap"><table><thead><tr><th>價格</th><th>數量</th><th>時間</th></tr></thead>
+        <tbody id="tradesBody"></tbody></table></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 資產餘額 -->
+  {% endif %}
+  {% if page == 'assets' %}
+  <div class="panel on" id="p-balances">
+    <div class="box">
+      <h3>交易所資產餘額</h3>
+      <div class="bn-form" style="margin-bottom:10px;">
+        <label>查詢帳號</label>
+        <div class="flow"><div class="f"><input id="bUid" placeholder="tx0..." autocomplete="off"></div>
+        <button class="bn-btn" onclick="loadBalances()">查詢</button></div>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>資產</th><th>可用</th><th>鎖定</th></tr></thead>
+      <tbody id="balBody"></tbody></table></div>
+      <div class="bn-msg" id="bMsg"></div>
+      <div class="mini">入金：扣鏈上錢包（含鏈上轉帳費）後存入交易所帳戶</div>
+      <div class="bn-form">
+        <input id="dUid" placeholder="account (tx0...)" autocomplete="off">
+        <select id="dAsset"><option>TACm</option><option>TiUSD</option><option>USDT</option></select>
+        <input id="dAmt" placeholder="amount">
+        <button class="bn-btn" onclick="deposit()">入金（鏈上→交易所）</button>
+        <div class="bn-msg" id="dMsg"></div>
+      </div>
+      <div class="mini">提現：扣交易所餘額後轉回鏈上錢包（轉帳費由託管帳戶承擔）</div>
+      <div class="bn-form">
+        <input id="wUid" placeholder="account (tx0...)" autocomplete="off">
+        <select id="wAsset"><option>TACm</option><option>TiUSD</option><option>USDT</option></select>
+        <input id="wAmt" placeholder="amount">
+        <button class="bn-btn" onclick="withdraw()">提現（交易所→鏈上）</button>
+        <div class="bn-msg" id="wMsg"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 閃兌 -->
+  {% endif %}
+  {% if page == 'swap' %}
+  <div class="panel on" id="p-flash">
+    <div class="box">
+      <h3>閃兌 · 快速兌換</h3>
+      <div class="bn-form">
+        <input id="fUid" placeholder="account (tx0...)" autocomplete="off">
+        <div class="flow">
+          <div class="f"><label>從</label><select id="fFrom"><option>TACm</option><option>TiUSD</option><option>USDT</option></select></div>
+          <div class="f"><label>到</label><select id="fTo"><option>USDT</option><option>TiUSD</option><option>TACm</option></select></div>
+        </div>
+        <input id="fAmt" placeholder="amount">
+        <button class="bn-btn" onclick="flashSwap()">兌換</button>
+        <div class="bn-msg" id="fMsg"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 自動交易機器人 -->
+  {% endif %}
+  {% if page == 'bot' %}
+  <div class="panel on" id="p-bot">
+    <div class="box">
+      <h3>自動交易機器人 <span class="chip" id="botCount">—</span></h3>
+      <div class="bn-form">
+        <input id="btUid" placeholder="account (tx0...)" autocomplete="off">
+        <select id="btMarket"><option>TACM/USDT</option><option>TACM/TiUSD</option><option>TiUSD/USDT</option></select>
+        <input id="btMid" placeholder="base price (e.g. 500)">
+        <input id="btSpread" placeholder="spread bps (e.g. 20)">
+        <input id="btQty" placeholder="qty per side">
+        <input id="btInterval" placeholder="refresh sec (e.g. 10)">
+        <button class="bn-btn" onclick="startBot()">啟動機器人</button>
+        <div class="bn-msg" id="btMsg"></div>
+      </div>
+      <div class="table-wrap"><table style="margin-top:12px;"><thead><tr><th>ID</th><th>市場</th><th>狀態</th><th>掛單</th><th>成交</th><th></th></tr></thead>
+      <tbody id="botBody"></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- 我的訂單 -->
+  {% endif %}
+  {% if page == 'orders' %}
+  <div class="panel on" id="p-orders">
+    <div class="box">
+      <h3>我的訂單</h3>
+      <div class="bn-form" style="margin-bottom:10px;">
+        <label>查詢帳號</label>
+        <div class="flow"><div class="f"><input id="orUid" placeholder="tx0..." autocomplete="off"></div>
+        <button class="bn-btn" onclick="loadOrders()">查詢</button></div>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>ID</th><th>市場</th><th>方向</th><th>價格</th><th>數量</th><th>已成交</th><th>狀態</th><th>操作</th></tr></thead>
+      <tbody id="orBody"></tbody></table></div>
+      <div class="bn-msg" id="orMsg"></div>
+    </div>
+  </div>
+
+  <!-- 資金池（獎勵池＝交易所資金池） -->
+  {% endif %}
+  {% if page == 'pool' %}
+  <div class="panel on" id="p-pool">
+    <div class="box" style="margin-bottom:12px">
+      <h3><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M3 9l9-5 9 5"/><path d="M4 10h16v3H4z"/><path d="M6 13v6M10 13v6M14 13v6M18 13v6M3 19h18"/></svg> 交易所資金池（獎勵池） <span class="chip">coinbase 15% 自動挹注</span></h3>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+        <div style="flex:2;min-width:200px">
+          <div style="font-size:26px;font-weight:800;color:var(--bn-yellow);" id="poolBal">—</div>
+          <div class="mini">池內可用資金（TACm，作交易所運營/流動性用途）</div>
+        </div>
+        <div style="flex:1;min-width:140px">
+          <div class="mini">累計注入</div>
+          <div style="font-size:17px;font-weight:700" id="poolIn">—</div>
+        </div>
+        <div style="flex:1;min-width:140px">
+          <div class="mini">累計領用</div>
+          <div style="font-size:17px;font-weight:700" id="poolOut">—</div>
+        </div>
+      </div>
+      <div class="mini" style="margin-top:10px;color:var(--bn-sub);line-height:1.6" id="poolNote">—</div>
+    </div>
+    <div class="box">
+      <h3>資金流入／用途說明</h3>
+      <table>
+        <tr><th>來源</th><th>機制</th></tr>
+        <tr><td>區塊 coinbase</td><td>每出 1 塊，補貼 10 TACm 的 15% 自動挹注本池</td></tr>
+        <tr><td>交易所手續費</td><td>撮合／閃兌手續費結算入池（/api/rewardpool/topup）</td></tr>
+        <tr><td>資金用途</td><td>交易所流動性／閃兌備付／營運資金，可 withdraw 至指定地址</td></tr>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+</main>
+
+<script>
+  // M31：RPC 預設同源（同埠合併模式 RPC 即 web 埠）；仍可用 ?rpc=端口 覆蓋。
+  var RPC = (new URLSearchParams(location.search)).get('rpc') || location.port;
+  var base = location.protocol + '//' + location.hostname + (RPC ? ':' + RPC : '');
+  var PAGE = "{{ page }}"; var CUR = (new URLSearchParams(location.search)).get('m') || 'TACM/USDT';
+  // M104：主流幣參考市場（估值兌換，無真實訂單簿）。
+  var REF = {'BTC/USDT':1,'ETH/USDT':1,'BNB/USDT':1,'SOL/USDT':1,'ADA/USDT':1};
+  function get(path){ return fetch(base + path).then(function(r){ return r.json(); }); }
+  function post(path, body){
+    return fetch(base + path, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)})
+      .then(function(r){ return r.json().then(function(j){ return {st:r.status, j:j}; }); });
+  }
+  function show(id, cls, msg){ var el=document.getElementById(id); el.className='bn-msg '+cls; el.textContent=msg; }
+  function q(id){ return document.getElementById(id).value.trim(); }
+
+  // M102：子頁獨立化，不再用頁籤切換（各 panel 依 PAGE 條件渲染）。
+  // 訂單簿
+  function fmtN(n){
+    n = Number(n);
+    if (!isFinite(n)) return '—';
+    if (n === 0) return '0.00';
+    var max = (n >= 100) ? 2 : (n >= 1 ? 4 : (n >= 0.01 ? 6 : 8));
+    return n.toLocaleString(undefined, {minimumFractionDigits:max, maximumFractionDigits:max});
+  }
+  function fmtPct(n){
+    n = Number(n);
+    if (!isFinite(n)) return '0.00%';
+    return n.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) + '%';
+  }
+  function loadBook(){
+    if (REF[CUR]){ renderRefBook(); return; }
+    get('/api/exchange/book?market=' + CUR + '&depth=12').then(function(d){
+      if (!d.ok) return;
+      var a='', b='';
+      (d.asks || []).slice(0,12).reverse().forEach(function(x){
+        a += '<tr><td class="down">'+fmtN(x.price)+'</td><td>'+fmtN(x.qty)+'</td><td>'+fmtN(Number(x.price)*Number(x.qty))+'</td></tr>';
+      });
+      (d.bids || []).slice(0,12).forEach(function(x){
+        b += '<tr><td class="up">'+fmtN(x.price)+'</td><td>'+fmtN(x.qty)+'</td><td>'+fmtN(Number(x.price)*Number(x.qty))+'</td></tr>';
+      });
+      document.getElementById('asksBody').innerHTML = a;
+      document.getElementById('spreadRow').innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--bn-sub);">— 點差 —</td></tr>';
+      document.getElementById('bidsBody').innerHTML = b;
+      // 買/賣比例條
+      var bt=0, at=0;
+      (d.bids||[]).forEach(function(x){ bt += Number(x.qty); });
+      (d.asks||[]).forEach(function(x){ at += Number(x.qty); });
+      var tot = bt+at || 1, bp = (bt/tot*100).toFixed(1), ap = (at/tot*100).toFixed(1);
+      document.getElementById('bookRatio').innerHTML = '<div class="br-b"><span>'+bp+'% 買</span><i style="width:'+bp+'%"></i></div><div class="br-a"><span>'+ap+'% 賣</span><i style="width:'+ap+'%"></i></div>';
+      if (d.bids && d.bids.length) BEST.bid = d.bids[0].price;
+      if (d.asks && d.asks.length) BEST.ask = d.asks[0].price;
+      window.__book = d; drawDepth();
+      var oP = document.getElementById('oPrice');
+      if (oP && !oP.value) fillBestPrice();
+      if (d.bids && d.bids.length && d.asks && d.asks.length){
+        var last = (Number(d.asks[0].price) + Number(d.bids[0].price))/2;
+        document.getElementById('lastPrice').textContent = fmtN(last);
+      }
+      if (d.recent_trades && d.recent_trades.length) renderTradesData(d.recent_trades);
+    });
+  }
+  // M115：WebSocket depth 推送——直接渲染訂單簿＋深度圖（與 loadBook 共用邏輯）
+  function renderDepthData(d){
+    if (!d || !d.bids || !d.asks) return;
+    // M126：REF 參考市場（無真實訂單簿）不渲染合成掛單列表——保留乾淨盤口（深度圖仍更新）。
+    if (!d.ref){
+      var a='', b='';
+      (d.asks || []).slice(0,12).reverse().forEach(function(x){
+        a += '<tr><td class="down">'+fmtN(x.price)+'</td><td>'+fmtN(x.qty)+'</td><td>'+fmtN(Number(x.price)*Number(x.qty))+'</td></tr>';
+      });
+      (d.bids || []).slice(0,12).forEach(function(x){
+        b += '<tr><td class="up">'+fmtN(x.price)+'</td><td>'+fmtN(x.qty)+'</td><td>'+fmtN(Number(x.price)*Number(x.qty))+'</td></tr>';
+      });
+      document.getElementById('asksBody').innerHTML = a;
+      document.getElementById('bidsBody').innerHTML = b;
+      document.getElementById('spreadRow').innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--bn-sub);">— 點差 —</td></tr>';
+      var bt=0, at=0;
+      (d.bids||[]).forEach(function(x){ bt += Number(x.qty); });
+      (d.asks||[]).forEach(function(x){ at += Number(x.qty); });
+      var tot = bt+at || 1, bp = (bt/tot*100).toFixed(1), ap = (at/tot*100).toFixed(1);
+      document.getElementById('bookRatio').innerHTML = '<div class="br-b"><span>'+bp+'% 買</span><i style="width:'+bp+'%"></i></div><div class="br-a"><span>'+ap+'% 賣</span><i style="width:'+ap+'%"></i></div>';
+    }
+    window.__book = {bids: d.bids, asks: d.asks, ref: !!d.ref};
+    if (d.bids && d.bids.length) BEST.bid = d.bids[0].price;
+    if (d.asks && d.asks.length) BEST.ask = d.asks[0].price;
+    drawDepth();
+    var oP = document.getElementById('oPrice');
+    if (oP && !oP.value) fillBestPrice();
+    if (d.ref && d.bids && d.bids.length){
+      document.getElementById('lastPrice').textContent = fmtN(d.bids[0].price);
+      var sub = document.getElementById('ticker').querySelector('.sub');
+      if (sub) sub.textContent = TAC_T('ex.refSwap')+' 50bp';
+    }
+  }
+  // M115：WebSocket trades 推送——最近成交（價格/數量/時間，方向著色）
+  function renderTradesData(trades){
+    if (!trades || !trades.length) return;
+    var h = '';
+    trades.slice(0,8).forEach(function(t){
+      var buy = t.taker_side === 'buy';
+      h += '<tr><td class="'+(buy?'up':'down')+'">'+fmtN(t.price)+'</td><td>'+fmtN(t.qty)+'</td>'
+        + '<td>'+new Date(Number(t.ts)*1000).toLocaleTimeString()+'</td></tr>';
+    });
+    document.getElementById('tradesBody').innerHTML = h;
+  }
+  // M104：主流幣參考市場盤口——顯示參考價（估值對映），無真實掛單。
+  function renderRefBook(){
+    get('/api/exchange/markets').then(function(d){
+      var m = null;
+      (d.markets||[]).forEach(function(x){ if (x.market === CUR) m = x; });
+      document.getElementById('asksBody').innerHTML = '';
+      document.getElementById('spreadRow').innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--bn-sub);">'+TAC_T(m && m.live ? 'ex.liveBook' : 'ex.refBook')+'</td></tr>';
+      document.getElementById('bidsBody').innerHTML = m
+        ? '<tr><td colspan="3" style="text-align:center;color:var(--bn-txt);font-weight:700;">'+fmtN(m.price)+' USDT</td></tr>'
+        : '';
+      document.getElementById('lastPrice').textContent = m ? fmtN(m.price) : '—';
+      var sub = document.getElementById('ticker').querySelector('.sub');
+      if (sub && m) sub.textContent = TAC_T('ex.refSwap')+' '+m.fee_bps+'bp';
+      // 參考市場合成深度：基於參考價 ±0.06%/檔 生成階梯訂單簿，深度圖有資料
+      if (m){
+        var px = Number(m.price);
+        var sb = [], sa = [];
+        for (var si=0; si<14; si++){
+          sb.push({price:(px*(1-0.0006*(si+1))).toFixed(6), qty:((12+si*8)*100).toFixed(4)});
+          sa.push({price:(px*(1+0.0006*(si+1))).toFixed(6), qty:((12+si*8)*100).toFixed(4)});
+        }
+        window.__book = {bids: sb, asks: sa, ref: true};
+        BEST.bid = px; BEST.ask = px; BEST.mid = px;
+        document.getElementById('dStats').textContent = TAC_T('ex.refDepth')+' · '+fmtN(px)+' USDT';
+        var oP = document.getElementById('oPrice');
+        if (oP && !oP.value) fillBestPrice();
+      } else {
+        window.__book = null;
+        document.getElementById('dStats').textContent = TAC_T('ex.refDepth');
+      }
+      drawDepth();
+    }).catch(function(){});
+  }
+
+  // ---------- M101：K 線 + 深度圖（Canvas 自繪，無外部庫） ----------
+  var IV = 300, KL = [];
+  function setupCanvas(cv){
+    var last = cv.__size || null;
+    var dpr = window.devicePixelRatio || 1;
+    var w = cv.clientWidth || (last ? last.w : 300);
+    var h = cv.clientHeight || parseInt(cv.getAttribute('height'), 10) || (last ? last.h : 230);
+    if (w <= 0) w = last ? last.w : 300;
+    if (h < 40) h = last ? last.h : 230;
+    // 僅在尺寸/DPR 真的變化時重設（避免每次重繪清空畫布造成閃爍/空白）
+    if (!last || last.w !== w || last.h !== h || last.dpr !== dpr){
+      cv.width = w * dpr; cv.height = h * dpr;
+      cv.__size = {w:w, h:h, dpr:dpr};
+    }
+    var ctx = cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+    return {ctx:ctx, w:w, h:h};
+  }
+  function drawKlines(){
+    try { drawKlinesInner(); } catch(e){ console.error('kline draw', e); }
+  }
+  function drawKlinesInner(){
+    var cv = document.getElementById('kc'); if (!cv) return;
+    var g = setupCanvas(cv), ctx = g.ctx, w = g.w, h = g.h;
+    ctx.clearRect(0,0,w,h);
+    ctx.font = '10px sans-serif'; ctx.fillStyle = '#5d6778';
+    if (!KL.length){ ctx.fillText('尚無成交數據', w/2-40, h/2); return; }
+    var padT = 18, padB = 30, padL = 4, padR = 54;
+    var plotH = h - padT - padB - 40; // 主圖 + 成交量副圖
+    if (plotH < 40) plotH = 40;
+    var volH = 30;
+    // 幣安式穩定視窗：Y 軸以「已收盤蠟燭」為基準（排除最後一根尚未收盤的即時蠟燭），
+    // 最新價僅在超出範圍時擴展、不縮回——圖表不再隨最後一根上下縮放造成晃動。
+    var kDone = KL.length > 2 ? KL.slice(0, KL.length - 1) : KL;
+    var lo = Math.min.apply(null, kDone.map(function(k){ return k.low; }));
+    var hi = Math.max.apply(null, kDone.map(function(k){ return k.high; }));
+    var lc = KL[KL.length - 1].close;
+    if (lc > hi) hi = lc; if (lc < lo) lo = lc;
+    var range = (hi - lo) || 1;
+    hi = hi + range * 0.05; lo = lo - range * 0.05; range = (hi - lo) || 1;
+    var x = function(i){ return padL + i * (w - padL - padR) / KL.length; };
+    var y = function(p){ return padT + (hi - p) / range * plotH; };
+    // 格線 + 右側價格刻度（幣安式）
+    ctx.strokeStyle = '#e2e6ee'; ctx.lineWidth = 1;
+    for (var gy = 0; gy <= 4; gy++){
+      var yy = padT + gy * plotH / 4;
+      ctx.beginPath(); ctx.moveTo(padL, yy); ctx.lineTo(w - padR, yy); ctx.stroke();
+      var pv = (hi - gy * range / 4).toFixed(2);
+      ctx.fillStyle = '#8b949e';
+      ctx.fillText(pv, w - padR + 5, yy + 3);
+    }
+    // 蠟燭（幣安式：寬度足、紅綠分明）
+    var bw = Math.max(5, Math.min(22, (w - padL - padR) / KL.length * 1.0));
+    var lastClose = KL[KL.length-1].close;
+    // MA 均線（幣安式 MA7/25/99）
+    function calcMA(arr, n){
+      var out = new Array(arr.length).fill(null), sum = 0;
+      for (var i=0;i<arr.length;i++){
+        sum += arr[i].close;
+        if (i >= n) sum -= arr[i-n].close;
+        if (i >= n-1) out[i] = sum / n;
+      }
+      return out;
+    }
+    [[7,'#f0b90b'],[25,'#e6e8ea'],[99,'#a26af2']].forEach(function(pair){
+      var n = pair[0], ma = calcMA(KL, n), started = false;
+      ctx.strokeStyle = pair[1]; ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      for (var i=0;i<ma.length;i++){
+        if (ma[i] === null) continue;
+        if (!started){ ctx.moveTo(x(i), y(ma[i])); started = true; }
+        else ctx.lineTo(x(i), y(ma[i]));
+      }
+      ctx.stroke();
+    });
+    KL.forEach(function(k, i){
+      var cxx = x(i) + bw/2;
+      var up = k.close >= k.open;
+      ctx.strokeStyle = up ? '#0ecb81' : '#f6465d'; ctx.fillStyle = up ? '#0ecb81' : '#f6465d';
+      // 影線
+      ctx.beginPath(); ctx.moveTo(cxx, y(k.high)); ctx.lineTo(cxx, y(k.low)); ctx.stroke();
+      // 實體
+      var yO = y(k.open), yC = y(k.close);
+      ctx.fillRect(cxx - bw/2, Math.min(yO,yC), bw, Math.max(1, Math.abs(yC-yO)));
+      ctx.lineWidth = 0.6;
+      ctx.strokeRect(cxx - bw/2, Math.min(yO,yC), bw, Math.max(1, Math.abs(yC-yO)));
+      // 成交量
+      var vMax = Math.max.apply(null, KL.map(function(z){ return z.volume; })) || 1;
+      var vh = k.volume / vMax * volH;
+      ctx.fillStyle = up ? 'rgba(14,203,129,.35)' : 'rgba(246,70,93,.35)';
+      ctx.fillRect(cxx - bw/2, h - padB - vh, bw, vh);
+    });
+    // 最新價虛線（幣安式）+ 右側價格標籤
+    var ly = y(lastClose);
+    ctx.strokeStyle = '#fcd535'; ctx.setLineDash([4,3]); ctx.lineWidth = 1.1;
+    ctx.beginPath(); ctx.moveTo(padL, ly); ctx.lineTo(w-padR, ly); ctx.stroke();
+    ctx.setLineDash([]);
+    var lb = lastClose.toFixed(2);
+    ctx.fillStyle = '#fcd535';
+    ctx.fillRect(w-padR+2, ly-9, 50, 13);
+    ctx.fillStyle = '#14161a'; ctx.fillText(lb, w-padR+4, ly+2);
+    // X 軸時間標籤
+    var step = Math.max(1, Math.floor(KL.length / 5));
+    for (var ti = 0; ti < KL.length; ti += step){
+      var d = new Date(KL[ti].ts * 1000);
+      ctx.fillText((d.getMonth()+1)+'/'+d.getDate()+' '+d.getHours()+':'+(d.getMinutes()<10?'0':'')+d.getMinutes(), x(ti), h - padB + 14);
+    }
+    var prevC = KL[KL.length-2] ? KL[KL.length-2].close : 0;
+    var chg = (prevC > 0) ? (lastClose - prevC) / prevC * 100 : 0;
+    if (!isFinite(chg)) chg = 0;
+    var lastK = KL[KL.length-1];
+    var maxH = 0, minL = 0;
+    KL.forEach(function(k){ if (k.high > maxH) maxH = k.high; if (!minL || k.low < minL) minL = k.low; });
+    var ma7 = calcMA(KL,7)[KL.length-1], ma25 = calcMA(KL,25)[KL.length-1], ma99 = calcMA(KL,99)[KL.length-1];
+    document.getElementById('kStats').innerHTML = 'O '+(lastK.open||0).toFixed(4)+' · H '+maxH.toFixed(4)+' · L '+minL.toFixed(4)+' · C '+(lastClose||0).toFixed(4)+' · <span style="color:'+(chg>=0?'#0ecb81':'#f6465d')+'">'+(chg>=0?'+':'')+chg.toFixed(2)+'%</span>'
+      + (ma7? ' · <span style="color:#f0b90b">MA7 '+ma7.toFixed(4)+'</span>':'') + (ma25? ' · <span style="color:#e6e8ea">MA25 '+ma25.toFixed(4)+'</span>':'') + (ma99? ' · <span style="color:#a26af2">MA99 '+ma99.toFixed(4)+'</span>':'');
+  }
+  function drawDepth(){
+    try { drawDepthInner(); } catch(e){ console.error('depth draw', e); }
+  }
+  function drawDepthInner(){
+    var cv = document.getElementById('dc'); if (!cv) return;
+    var g = setupCanvas(cv), ctx = g.ctx, w = g.w, h = g.h;
+    ctx.clearRect(0,0,w,h);
+    ctx.font = '10px sans-serif';
+    if (!window.__book){ ctx.fillStyle='#5d6778'; ctx.fillText('尚無訂單數據', w/2-50, h/2); document.getElementById('dStats').textContent='—'; return; }
+    var b = window.__book, bids = b.bids||[], asks = b.asks||[];
+    if (!bids.length && !asks.length){ ctx.fillStyle='#5d6778'; ctx.fillText('尚無訂單數據', w/2-50, h/2); document.getElementById('dStats').textContent='—'; return; }
+    var padL = 8, padR = 8, padT = 8, padB = 18;
+    var pw = w - padL - padR, ph = h - padT - padB;
+    // 價格範圍（bids 最低 ~ asks 最高）
+    var lo = bids.length ? Number(bids[bids.length-1].price) : Number(asks[0].price);
+    var hi = asks.length ? Number(asks[asks.length-1].price) : Number(bids[0].price);
+    var range = (hi - lo) || 1;
+    var px = function(p){ return padL + (p - lo) / range * pw; };
+    // bids：由最高買價向左累積
+    var acc = 0, maxAcc = 0;
+    var bl = bids.map(function(x){ acc += Number(x.qty); maxAcc = Math.max(maxAcc, acc); return {x:px(Number(x.price)), y:acc}; });
+    acc = 0;
+    var al = asks.map(function(x){ acc += Number(x.qty); maxAcc = Math.max(maxAcc, acc); return {x:px(Number(x.price)), y:acc}; });
+    var qy = function(v){ return padT + ph - v / maxAcc * ph; };
+    // 幣安式階梯曲線：每檔水平線段 + 垂直跳變
+    function stepLine(list, startX, startY){
+      ctx.beginPath(); ctx.moveTo(startX, startY);
+      var prev = list[0];
+      list.forEach(function(p){
+        ctx.lineTo(p.x, qy(prev.y));   // 水平到該檔 x
+        ctx.lineTo(p.x, qy(p.y));      // 垂直跳到累積量
+        prev = p;
+      });
+      return list[list.length-1];
+    }
+    // asks（紅，左→右累積）
+    if (al.length){
+      ctx.fillStyle = 'rgba(246,70,93,.12)';
+      ctx.beginPath(); ctx.moveTo(al[0].x, padT+ph);
+      var py0 = padT+ph;
+      al.forEach(function(p){ ctx.lineTo(p.x, qy(py0)); ctx.lineTo(p.x, qy(p.y)); py0 = p.y; });
+      ctx.lineTo(al[al.length-1].x, padT+ph); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#f6465d'; ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      var py = padT+ph;
+      al.forEach(function(p){ ctx.lineTo(p.x, qy(py)); ctx.lineTo(p.x, qy(p.y)); py = p.y; });
+      ctx.stroke();
+    }
+    // bids（綠，右→左累積）
+    if (bl.length){
+      ctx.fillStyle = 'rgba(14,203,129,.12)';
+      ctx.beginPath(); ctx.moveTo(bl[0].x, padT+ph);
+      var py2 = padT+ph;
+      bl.forEach(function(p){ ctx.lineTo(p.x, qy(py2)); ctx.lineTo(p.x, qy(p.y)); py2 = p.y; });
+      ctx.lineTo(bl[bl.length-1].x, padT+ph); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#0ecb81'; ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      py2 = padT+ph;
+      bl.forEach(function(p){ ctx.lineTo(p.x, qy(py2)); ctx.lineTo(p.x, qy(p.y)); py2 = p.y; });
+      ctx.stroke();
+    }
+    // 買/賣總量統計（單邊也顯示）
+    var bt=0, at=0;
+    bids.forEach(function(x){ bt += Number(x.qty); }); asks.forEach(function(x){ at += Number(x.qty); });
+    // 最佳價中線
+    if (bids.length && asks.length){
+      var mid = (Number(bids[0].price) + Number(asks[0].price))/2;
+      ctx.strokeStyle = '#fcd535'; ctx.setLineDash([4,4]);
+      ctx.beginPath(); ctx.moveTo(px(mid), padT); ctx.lineTo(px(mid), padT+ph); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#fcd535'; ctx.fillText(fmtN(mid), px(mid)+3, padT+10);
+      document.getElementById('dStats').textContent = '買 '+fmtN(bt)+' · 賣 '+fmtN(at)+' · 最佳 '+fmtN(mid);
+    } else {
+      document.getElementById('dStats').textContent = '買 '+fmtN(bt)+' · 賣 '+fmtN(at);
+    }
+
+  }
+  function loadCharts(){
+    get('/api/exchange/klines?market='+CUR+'&interval='+IV+'&limit=40').then(function(d){
+      if (d.ok && d.klines && d.klines.length){ KL = d.klines; drawKlines(); }
+    }).catch(function(){});
+    if (REF[CUR]){ renderRefBook(); return; }
+    get('/api/exchange/book?market='+CUR+'&depth=16').then(function(d){
+      if (d.ok){ window.__book = d; drawDepth(); }
+    }).catch(function(){});
+  }
+  var ivsEl = document.getElementById('ivs'); if (ivsEl) ivsEl.addEventListener('click', function(e){
+    var el = e.target;
+    if (!el || !el.dataset || !el.dataset.iv) return;
+    document.querySelectorAll('.iv').forEach(function(x){ x.classList.remove('on'); });
+    el.classList.add('on'); IV = parseInt(el.dataset.iv);
+    // 切換立即反饋：先用既有 K 線重繪（毫秒級），背景載入新週期數據後自動覆蓋
+    drawKlines(); drawDepth();
+    loadCharts();
+  });
+  window.addEventListener('resize', function(){ drawKlines(); drawDepth(); });
+
+  // 市場列表（M104：/api/exchange/markets——鏈上＋主流幣，點選即跳該幣種獨立交易頁）
+  function loadMarkets(){
+    get('/api/exchange/markets').then(function(d){
+      if (!d.ok || !d.markets) return;
+      var html = '', picker = '';
+      d.markets.forEach(function(m){
+        var up = m.chg24h >= 0;
+        html += '<tr><td><a href="/exchange/trade?m='+encodeURIComponent(m.market)+'">'+m.market+'</a>'+(m.ref?' <span class="mk-tag">'+TAC_T(m.live?'ex.live':'ex.ref')+'</span>':'')+'</td>'
+          + '<td class="'+(up?'up':'down')+'">'+fmtN(m.price)+'</td><td>'+m.fee_bps+'bp</td></tr>';
+        picker += '<a class="mkt-tab'+(CUR===m.market?' on':'')+'" href="/exchange/trade?m='+encodeURIComponent(m.market)+'">'+m.market+'</a>';
+      });
+      document.getElementById('marketsBody').innerHTML = html;
+      document.getElementById('mktPicker').innerHTML = picker;
+      // M105：ticker 同步 24h 統計（幣安式）
+      var cur = null;
+      d.markets.forEach(function(x){ if (x.market === CUR) cur = x; });
+      if (cur){
+        var up = cur.chg24h >= 0, cEl = document.getElementById('chg24');
+        cEl.textContent = (up?'+':'')+fmtPct(cur.chg24h);
+        cEl.className = 'chg24 ' + (up?'up':'down');
+        document.getElementById('lastPrice').textContent = fmtN(cur.price);
+        var sEl = document.getElementById('st24');
+        if (sEl) sEl.innerHTML = '<span class="sub">'+TAC_T('ex.fee')+' '+cur.fee_bps+'bp</span><span class="sub">24h '+TAC_T((cur.live?'ex.live':'ex.ref'))+'</span>';
+        BEST.mid = cur.price;
+      }
+    }).catch(function(){});
+  }
+  // M114：WebSocket 即時行情——價格/24h/K線最後一根 500ms 推送，斷線自動重連（輪詢保留為 fallback）
+  var WS = null, WS_SUB = null;
+  function wsSub(m){
+    if (!WS || WS.readyState !== 1) return;
+    if (WS_SUB){ try{ WS.send(JSON.stringify({jsonrpc:'2.0', id:2, method:'market_unsubscribe', params:[WS_SUB]})); }catch(e){} WS_SUB = null; }
+    try{ WS.send(JSON.stringify({jsonrpc:'2.0', id:1, method:'market_subscribe', params:[m]})); }catch(e){}
+  }
+  function connectWS(){
+    if (!window.WebSocket) return;
+    var proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
+    var w;
+    try { w = new WebSocket(proto + location.host + '/ws'); } catch(e){ return; }
+    WS = w;
+    w.onopen = function(){ wsSub(CUR); };
+    w.onmessage = function(ev){
+      var m; try{ m = JSON.parse(ev.data); }catch(e){ return; }
+      if (m.id === 1 && m.result){ WS_SUB = m.result; return; }
+      if (m.method === 'market_update'){
+        var p = m.params, r = p && p.result;
+        if (!r || r.market !== CUR) return;
+        if (r.type === 'depth'){ renderDepthData(r.data); return; }
+        if (r.type === 'trades'){ renderTradesData(r.data && r.data.trades); return; }
+        if (r.type !== 'ticker' || !r.data || !r.data.price) return;
+        var d = r.data, up = d.chg24h >= 0;
+        var cEl = document.getElementById('chg24');
+        if (cEl){ cEl.textContent = (up?'+':'')+fmtPct(d.chg24h); cEl.className = 'chg24 '+(up?'up':'down'); }
+        var lpEl = document.getElementById('lastPrice');
+        if (lpEl) lpEl.textContent = fmtN(d.price);
+        BEST.mid = d.price;
+        // K 線最後一根即時更新（幣安式即時蠟燭）
+        if (KL && KL.length){
+          var last = KL[KL.length-1];
+          last.close = d.price;
+          if (d.price > last.high) last.high = d.price;
+          if (d.price < last.low) last.low = d.price;
+          drawKlines();
+        }
+      }
+    };
+    w.onclose = function(){ WS = null; setTimeout(function(){ connectWS(); }, 3000); };
+    w.onerror = function(){ try{ w.close(); }catch(e){} };
+  }
+  // M125：REF 主流幣參考行情 5 秒輪詢——價格/24h/盤口/K線最後一根即時更新（幣安式即時感）。
+  function refTick(){
+    if (!REF[CUR]) return;
+    get('/api/exchange/markets').then(function(d){
+      var m = null;
+      (d.markets||[]).forEach(function(x){ if (x.market === CUR) m = x; });
+      if (!m) return;
+      var up = m.chg24h >= 0;
+      var cEl = document.getElementById('chg24');
+      if (cEl){ cEl.textContent = (up?'+':'') + fmtPct(m.chg24h); cEl.className = 'chg24 ' + (up?'up':'down'); }
+      var lpEl = document.getElementById('lastPrice');
+      if (lpEl) lpEl.textContent = fmtN(m.price);
+      BEST.mid = m.price; BEST.bid = m.price; BEST.ask = m.price;
+      if (KL && KL.length){
+        var last = KL[KL.length-1];
+        last.close = m.price;
+        if (m.price > last.high) last.high = m.price;
+        if (m.price < last.low) last.low = m.price;
+        drawKlines();
+      }
+    }).catch(function(){});
+  }
+  setInterval(refTick, 5000);
+
+  function setMarket(m){ CUR=m; document.getElementById('mkTitle').textContent=m;
+    document.getElementById('kTitle').textContent=m;
+    var om = document.getElementById('oMarket');
+    for (var i=0;i<om.options.length;i++){ if (om.options[i].value===m){ om.selectedIndex=i; break; } }
+    document.getElementById('ticker').querySelector('.sym').textContent=m;
+    if (WS && WS.readyState === 1){ wsSub(m); }
+    loadBook(); loadCharts(); }
+  // M104-2：買入/賣出分頁切換
+  var SIDE = 'buy';
+  function setBS(v){
+    SIDE = v;
+    document.getElementById('bsBuy').className = 'bs-tab buy' + (v==='buy' ? ' on' : '');
+    document.getElementById('bsSell').className = 'bs-tab sell' + (v==='sell' ? ' on' : '');
+    var btn = document.getElementById('oBtn');
+    btn.textContent = v==='buy' ? '買入' : '賣出';
+    btn.className = v==='buy' ? 'buy-btn' : 'sell-btn';
+    fillBestPrice();
+  }
+  // M113：推薦價格（幣安最優價）——買入用最佳賣價、賣出用最佳買價
+  var BEST = {bid:null, ask:null, mid:null};
+  function fillBestPrice(){
+    var el = document.getElementById('oPrice'); if (!el) return;
+    var v = (SIDE==='buy') ? (BEST.ask || BEST.mid || BEST.bid) : (BEST.bid || BEST.mid || BEST.ask);
+    if (v){ el.value = v; calcTotal(); }
+  }
+
+  // 下單總額自動計算（幣安式）
+  function calcTotal(){
+    var el = document.getElementById('oTotal'); if (!el) return;
+    var p = parseFloat(q('oPrice')), n = parseFloat(q('oQty'));
+    el.textContent = (p > 0 && n > 0) ? '≈ ' + fmtN(p * n) + ' USDT' : '≈ — USDT';
+  }
+  ['oPrice','oQty'].forEach(function(id){ var el = document.getElementById(id); if (el) el.addEventListener('input', calcTotal); });
+  // 下單
+  var orderFormEl = document.getElementById('orderForm'); if (orderFormEl) orderFormEl.addEventListener('submit', function(e){
+    e.preventDefault();
+    var side = (typeof SIDE !== 'undefined') ? SIDE : 'buy', type = q('oType');
+    var price = type==='market' ? '0' : q('oPrice');
+    if (!q('oUid')) { show('oMsg','err','請填寫帳號與數量'); return; }
+    if (!q('oQty')) { show('oMsg','err','請填寫數量'); return; }
+    var mkt = q('oMarket');
+    if (REF[mkt]){
+      // M104：主流幣估值兌換
+      var qn = parseFloat(q('oQty'));
+      if (!(qn>0)) { show('oMsg','err','數量須大於 0'); return; }
+      post('/api/exchange/ref/trade', {uid:q('oUid'), market:mkt, side:side, qty:qn})
+        .then(function(r){
+          if (r.j.ok){
+            show('oMsg','ok',TAC_T('ex.tradeOk')+': '+(side==='buy'?'買入':'賣出')+' '+r.j.trade.qty+' '+mkt.split('/')[0]+' @ '+r.j.trade.price);
+            loadBook();
+          } else { show('oMsg','err',r.j.error||'兌換失敗'); }
+        }).catch(function(){ show('oMsg','err','連線失敗'); });
+      return;
+    }
+    post('/api/exchange/order', {uid:q('oUid'), market:mkt, side:side, type:type, price:price, qty:q('oQty')})
+      .then(function(r){
+        if (r.j.ok){
+          show('oMsg','ok','訂單 #'+r.j.order_id+' '+r.j.status+' 成交 '+r.j.filled_qty);
+          loadBook();
+        } else { show('oMsg','err',r.j.error||'下單失敗'); }
+      }).catch(function(){ show('oMsg','err','連線失敗'); });
+  });
+
+  // 餘額
+  function loadPool(){
+    get('/api/exchange/pool').then(function(d){
+      if (!d.ok) { document.getElementById('poolBal').textContent='—'; return; }
+      var WEI=1000000000000000000;
+      var assets=d.assets||[];
+      var tacm=null, other=[];
+      assets.forEach(function(a){ if(a.asset==='TACm') tacm=a; else other.push(a); });
+      var main=tacm||assets[0];
+      if(!main){ document.getElementById('poolBal').textContent='0 TACm'; return; }
+      document.getElementById('poolBal').textContent=(parseFloat(main.balance)/WEI).toLocaleString('en-US',{maximumFractionDigits:4})+' '+main.asset;
+      document.getElementById('poolIn').textContent=(parseFloat(main.total_injected)/WEI).toLocaleString('en-US',{maximumFractionDigits:4})+' '+main.asset;
+      document.getElementById('poolOut').textContent=(parseFloat(main.total_claimed)/WEI).toLocaleString('en-US',{maximumFractionDigits:4})+' '+main.asset;
+      if(other.length){ document.getElementById('poolNote').textContent=d.note+'（其他資產：'+other.map(function(o){return o.asset+' '+ (parseFloat(o.balance)/WEI).toLocaleString('en-US',{maximumFractionDigits:4});}).join('、')+'）'; }
+      else { document.getElementById('poolNote').textContent=d.note; }
+    }).catch(function(){ document.getElementById('poolBal').textContent='—'; });
+  }
+  function loadBalances(){
+    var uid = q('bUid') || q('dUid');
+    if (!uid) { show('bMsg','err','請輸入帳號'); return; }
+    get('/api/exchange/balances?uid='+uid).then(function(d){
+      if (!d.ok) { show('bMsg','err',d.error); return; }
+      var h='';
+      (d.balances||[]).forEach(function(x){
+        h += '<tr><td class="tacm">'+x.asset+'</td><td>'+fmtN(x.avail)+'</td><td>'+fmtN(x.locked)+'</td></tr>';
+      });
+      document.getElementById('balBody').innerHTML = h || '<tr><td colspan="3" style="color:var(--bn-sub);">尚無資產</td></tr>';
+      show('bMsg','ok','');
+    });
+  }
+  function deposit(){
+    if (!q('dUid') || !q('dAmt')) { show('dMsg','err','請填寫帳號與金額'); return; }
+    post('/api/exchange/deposit_from_wallet', {uid:q('dUid'), asset:q('dAsset'), amount:q('dAmt')})
+      .then(function(r){ if (r.j.ok){ show('dMsg','ok','入金成功（鏈上手續費 '+r.j.chain_fee+'）'); loadBalances(); } else { show('dMsg','err',r.j.error); } });
+  }
+  function withdraw(){
+    if (!q('wUid') || !q('wAmt')) { show('wMsg','err','請填寫帳號與金額'); return; }
+    post('/api/exchange/withdraw_to_wallet', {uid:q('wUid'), asset:q('wAsset'), amount:q('wAmt')})
+      .then(function(r){ if (r.j.ok){ show('wMsg','ok','提現成功（鏈上手續費 '+r.j.chain_fee+'）'); loadBalances(); } else { show('wMsg','err',r.j.error); } });
+  }
+
+  // 閃兌
+  function flashSwap(){
+    if (!q('fUid') || !q('fAmt')) { show('fMsg','err','請填寫帳號與數量'); return; }
+    post('/api/exchange/flash', {uid:q('fUid'), from:q('fFrom'), to:q('fTo'), amount:q('fAmt')})
+      .then(function(r){
+        if (r.j.ok){ show('fMsg','ok','兌換成功：'+r.j.to+'（費用 '+r.j.fee+'）'); loadBalances(); }
+        else { show('fMsg','err',r.j.error); }
+      });
+  }
+
+  // 機器人
+  function listBots(){
+    get('/api/exchange/bots').then(function(d){
+      if (!d.ok) return;
+      document.getElementById('botCount').textContent = d.bots.length + ' 個';
+      var h='';
+      d.bots.forEach(function(b){
+        h += '<tr><td class="mono">'+b.id+'</td><td>'+b.market+'</td><td>'+(b.status==='running'?'<span class="up">運行中</span>':'<span class="down">已停止</span>')+'</td><td>'+(b.order_ids||[]).length+'</td><td>'+b.trades+'</td><td><button class="bn-btn" onclick="stopBot(\''+b.id+'\')">停止</button></td></tr>';
+      });
+      document.getElementById('botBody').innerHTML = h || '<tr><td colspan="6" style="color:var(--bn-sub);">尚無機器人</td></tr>';
+    });
+  }
+  function startBot(){
+    if (!q('btUid') || !q('btMid') || !q('btQty')) { show('btMsg','err','請填寫帳號、基準價與數量'); return; }
+    post('/api/exchange/bot/start', {
+      uid:q('btUid'), market:q('btMarket'), mid_price:q('btMid'),
+      spread_pct: Number(q('btSpread'))||20, qty:q('btQty'),
+      interval_sec: Number(q('btInterval'))||10, cancel_on_refresh:true
+    }).then(function(r){
+      if (r.j.ok){ show('btMsg','ok','機器人 '+r.j.bot_id+' 已啟動'); listBots(); }
+      else { show('btMsg','err',r.j.error); }
+    });
+  }
+  function stopBot(id){
+    post('/api/exchange/bot/stop', {id:id}).then(function(r){
+      if (r.j.ok){ show('btMsg','ok','已停止'); listBots(); } else { show('btMsg','err',r.j.error); }
+    });
+  }
+
+  // 我的訂單
+  function loadOrders(){
+    var uid = q('orUid');
+    if (!uid) { show('orMsg','err','請輸入帳號'); return; }
+    get('/api/exchange/orders?uid='+uid).then(function(d){
+      if (!d.ok) { show('orMsg','err',d.error); return; }
+      var h='';
+      d.orders.forEach(function(o){
+        h += '<tr><td>'+o.id+'</td><td>'+o.market+'</td><td>'+(o.side==='buy'?'<span class="up">買</span>':'<span class="down">賣</span>')+'</td><td>'+fmtN(o.price)+'</td><td>'+fmtN(o.qty)+'</td><td>'+fmtN(o.filled)+'</td><td>'+o.status+'</td><td><button class="bn-btn" onclick="cancelOrder('+o.id+',\''+uid+'\')">撤單</button></td></tr>';
+      });
+      document.getElementById('orBody').innerHTML = h || '<tr><td colspan="8" style="color:var(--bn-sub);">尚無訂單</td></tr>';
+      show('orMsg','ok','');
+    });
+  }
+  function cancelOrder(id, uid){
+    post('/api/exchange/cancel', {uid:uid, order_id:id}).then(function(r){
+      if (r.j.ok){ show('orMsg','ok','已撤單'); loadOrders(); loadBook(); } else { show('orMsg','err',r.j.error); }
+    });
+  }
+
+  // M105：登入會員自動綁定鏈上地址至各帳號輸入框（未登入保持手動）
+  function autoBind(){
+    function fill(a){
+      if (!a) return;
+      ['oUid','dUid','wUid','fUid','btUid','orUid','bUid'].forEach(function(id){
+        var el = document.getElementById(id);
+        if (el && !el.value.trim()){ el.value = a; }
+      });
+      var oUid = document.getElementById('oUid');
+      if (oUid){ oUid.setAttribute('data-bound','1'); oUid.readOnly = true; }
+    }
+    get('/api/auth/me').then(function(j){
+      if (j && j.ok && j.logged_in && j.user && j.user.wallet_addr){ fill(j.user.wallet_addr); return; }
+      // 訪客：自動取得獨立地址並綁定（與礦機/錢包同源）
+      if (window.ensureGuestAddr){ ensureGuestAddr().then(fill).catch(function(){}); }
+    }).catch(function(){
+      if (window.ensureGuestAddr){ ensureGuestAddr().then(fill).catch(function(){}); }
+    });
+  }
+  autoBind();
+  if (PAGE === 'trade'){ setMarket(CUR); loadMarkets(); connectWS(); setInterval(loadBook, 1000); setInterval(loadCharts, 3000); }
+  if (PAGE === 'assets') loadBalances();
+  if (PAGE === 'pool') loadPool();
+  if (PAGE === 'bot') listBots();
+  if (PAGE === 'orders') loadOrders();
+</script>
+{% endblock %}

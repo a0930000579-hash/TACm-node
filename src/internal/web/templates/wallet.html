@@ -1,0 +1,768 @@
+{% extends "base.html" %}
+{% block content %}
+<!-- M104：刪除錢包最上方無用標題區塊（與下方 Web3 錢包卡重複） -->
+<section class="pg-banner" style="display:none;"></section>
+<style>
+  :root { --bn-bg:#f7f8fb; --bn-card:#ffffff; --bn-card2:#f2f4f9; --bn-line:#e2e6ee;
+          --bn-txt:#14161a; --bn-sub:#5d6778; --bn-yellow:#fcd535; --bn-green:#0ecb81;
+          --bn-red:#f6465d; }
+  * { box-sizing:border-box; }
+  body { background:var(--bn-bg); color:var(--bn-txt); margin:0; font-family:-apple-system,"PingFang TC","Noto Sans TC",sans-serif; }
+  .bn-top { display:flex; align-items:center; gap:12px; padding:14px 16px; border-bottom:1px solid var(--bn-line); position:sticky; top:0; background:var(--bn-bg); z-index:5; }
+  .bn-logo { font-weight:800; font-size:20px; letter-spacing:.5px; }
+  .bn-logo b { color:var(--bn-yellow); }
+  .bn-search { flex:1; }
+  .bn-search input { width:100%; background:var(--bn-card); border:1px solid var(--bn-line); color:var(--bn-txt); border-radius:8px; padding:10px 12px; font-size:14px; outline:none; }
+  .bn-addr { font-size:12px; color:var(--bn-sub); display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:center; max-width:100%; }
+  .bn-addr-tag { font-size:10px; color:var(--bn-sub); border:1px solid var(--border); border-radius:999px; padding:1px 8px; white-space:nowrap; }
+  .bn-copy { font-size:11px; color:#68BE8D; background:rgba(104,190,141,.08); border:1px solid rgba(104,190,141,.4); border-radius:999px; padding:2px 10px; cursor:pointer; }
+  .bn-copy:hover { background:rgba(104,190,141,.15); }
+  main { max-width:900px; margin:0 auto; padding:16px; }
+  .bn-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
+  /* M101：MetaMask 風多幣種資產清單 */
+  .al-panel { border:1px solid var(--bn-line); border-radius:12px; padding:14px; margin-top:14px; background:var(--bn-card); }
+  .al-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:6px; }
+  .al-head b { font-size:14px; }
+  .al-total { font-size:12px; color:var(--bn-sub); }
+  .al-total b { color:var(--bn-yellow); font-size:15px; }
+  .al-row { display:flex; justify-content:space-between; align-items:center; padding:9px 6px; border-bottom:1px solid var(--bn-line); }
+  .al-row:last-child { border-bottom:none; }
+  .al-sym { display:flex; align-items:center; gap:10px; }
+  .al-ico { width:34px; height:34px; border-radius:50%; background:var(--bn-card2); border:1px solid var(--bn-line); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px; color:var(--bn-yellow); }
+  .al-sym b { font-size:14px; }
+  .al-name { font-size:11px; color:var(--bn-sub); }
+  .al-bal { text-align:right; }
+  .al-bal b { font-size:14px; }
+  .al-hide { font-size:11px; color:var(--bn-sub); border:1px solid var(--bn-line); background:var(--bn-card); border-radius:8px; padding:2px 8px; margin-left:8px; cursor:pointer; }
+  .al-hide:hover { color:var(--bn-red); border-color:var(--bn-red); }
+  .al-shown { font-size:11px; color:var(--bn-sub); margin-top:8px; }
+  .al-shown a { color:var(--bn-yellow); cursor:pointer; }
+  .asset-card { background:var(--bn-card); border:1px solid var(--bn-line); border-radius:12px; padding:16px; }
+  .asset-card .sym { display:flex; justify-content:space-between; align-items:center; font-size:13px; color:var(--bn-sub); }
+  .asset-card .sym .tag { font-size:11px; padding:2px 8px; border-radius:10px; background:var(--bn-card2); color:var(--bn-yellow); }
+  .asset-card .val { font-size:26px; font-weight:700; margin-top:10px; word-break:break-all; }
+  .asset-card .fees { margin-top:10px; font-size:11px; color:var(--bn-sub); }
+  .bn-row { display:flex; gap:12px; margin-top:16px; flex-wrap:wrap; }
+  .bn-panel { background:var(--bn-card); border:1px solid var(--bn-line); border-radius:12px; padding:16px; flex:1; min-width:280px; }
+  .bn-panel h3 { margin:0 0 12px; font-size:15px; font-weight:600; }
+  .bn-form { display:grid; gap:10px; }
+  .bn-form label { font-size:12px; color:var(--bn-sub); }
+  .bn-form input, .bn-form select { background:var(--bn-card2); border:1px solid var(--bn-line); color:var(--bn-txt); border-radius:8px; padding:10px 12px; font-size:14px; outline:none; }
+  .bn-btn { background:var(--bn-yellow); color:#f7f8fb; border:none; border-radius:8px; padding:11px; font-size:14px; font-weight:700; cursor:pointer; }
+  .bn-btn:disabled { opacity:.5; cursor:not-allowed; }
+  .bn-msg { margin-top:8px; font-size:12px; min-height:16px; }
+  .ok { color:var(--bn-green); } .err { color:var(--bn-red); }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  th { color:var(--bn-sub); text-align:left; padding:8px 6px; border-bottom:1px solid var(--bn-line); font-weight:500; }
+  td { padding:8px 6px; border-bottom:1px solid var(--bn-line); }
+  .pos { color:var(--bn-green); } .neg { color:var(--bn-red); }
+  .mono { font-family:ui-monospace,Menlo,monospace; font-size:11px; color:var(--bn-sub); }
+  .bn-chip { display:inline-block; font-size:11px; padding:2px 8px; border-radius:10px; background:var(--bn-card2); color:var(--bn-sub); }
+  .tacm { color:var(--bn-yellow); font-weight:600; }
+  a { color:var(--bn-yellow); text-decoration:none; }
+  /* M102：虛擬信用卡卡面 */
+  .wc-card { background:linear-gradient(135deg,#171a20 0%,#262b33 55%,#3a3320 100%); border-radius:18px; padding:20px; color:#fff; box-shadow:0 8px 24px rgba(20,22,26,.18); position:relative; overflow:hidden; margin-bottom:14px; }
+  .wc-card::before { content:''; position:absolute; right:-34px; top:-34px; width:150px; height:150px; border-radius:50%; background:radial-gradient(circle,rgba(252,213,53,.2),transparent 70%); }
+  .wc-head { display:flex; justify-content:space-between; align-items:center; font-size:13px; position:relative; z-index:1; }
+  .wc-brand { font-weight:800; letter-spacing:.5px; color:var(--bn-yellow); display:flex; align-items:center; gap:8px; }
+  .wc-tag { font-size:10px; color:rgba(255,255,255,.65); border:1px solid rgba(255,255,255,.25); border-radius:999px; padding:2px 8px; font-weight:500; }
+  .wc-chip { width:38px; height:27px; border-radius:6px; background:linear-gradient(135deg,#fcd535,#e6b91e); margin-top:14px; position:relative; z-index:1; }
+  .wc-chip::after { content:''; position:absolute; inset:4px; border:1px solid rgba(20,22,26,.35); border-radius:4px; }
+  .wc-addr { font-family:ui-monospace,Menlo,monospace; font-size:14px; letter-spacing:.3px; color:#fff; display:flex; align-items:center; gap:10px; margin-top:12px; word-break:break-all; position:relative; z-index:1; }
+  .wc-addr .bn-copy { background:rgba(252,213,53,.15); border-color:rgba(252,213,53,.5); color:var(--bn-yellow); }
+  .wc-bal { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:16px; position:relative; z-index:1; }
+  .wc-bal div { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:10px; }
+  .wc-bal span { font-size:10px; color:rgba(255,255,255,.65); display:block; }
+  .wc-bal b { font-size:17px; color:#fff; display:block; margin-top:2px; word-break:break-all; }
+  .wc-bal b.tacm { color:var(--bn-yellow); }
+  .wc-foot { display:flex; justify-content:space-between; align-items:center; margin-top:14px; font-size:11px; color:rgba(255,255,255,.7); position:relative; z-index:1; }
+  .wc-foot a { color:var(--bn-yellow); text-decoration:none; }
+  .wv-card { background:var(--bn-card); border:1px solid var(--bn-line); border-radius:14px; padding:16px; margin-bottom:14px; }
+  .wv-head { display:flex; justify-content:space-between; align-items:center; font-size:13px; font-weight:700; color:var(--bn-text); margin-bottom:12px; }
+  .wv-total { font-size:11px; color:var(--bn-sub); font-weight:500; }
+  .wv-total b { color:var(--bn-yellow); font-size:13px; margin-left:4px; }
+  .wv-row { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .wv-cell { background:var(--bn-card2); border:1px solid var(--bn-line); border-radius:12px; padding:10px; }
+  .wv-cell span { font-size:11px; color:var(--bn-sub); display:block; }
+  .wv-cell em.tag { font-style:normal; font-size:9px; color:var(--bn-sub); border:1px solid var(--bn-line); border-radius:999px; padding:0 6px; margin-left:4px; }
+  .wv-cell b { font-size:17px; display:block; margin-top:3px; word-break:break-all; color:var(--bn-text); }
+  .wv-cell small { font-size:10px; color:var(--bn-sub); display:block; margin-top:2px; }
+  @media (max-width:520px){ .wv-row{ grid-template-columns:1fr; } }
+</style>
+
+<div class="bn-top">
+  <div class="bn-search" style="flex:1;">
+    <form method="get" action="/wallet" style="display:flex; align-items:center; gap:8px;">
+      <input name="address" value="{{ addrParam }}" placeholder="enter tx0 address to query wallet" autocomplete="off" style="flex:1; min-width:0;">
+    </form>
+  </div>
+</div>
+
+<main>
+  <div class="wc-card">
+    <div class="wc-head">
+      <span class="wc-brand"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="3"/><path d="M16 12h5v2h-5z"/><circle cx="8" cy="12" r="1"/></svg> Web3 錢包</span>
+      <span class="wc-tag">TAC AI Smart Chain</span>
+    </div>
+    <div class="wc-chip"></div>
+    <div class="wc-addr">
+      <span id="myAddrText">{{ wallet.NodeAddress }}</span>
+      <button type="button" class="bn-copy" onclick="copyAddr()">複製</button>
+    </div>
+    <div class="wc-foot">
+      <span>同步區塊 #{{ wallet.SyncedBlock }}</span>
+      <a href="/address/{{ address }}" data-i18n="wallet.onchain">我的鏈上紀錄</a>
+    </div>
+  </div>
+
+  <!-- M38：訪客私鑰備份/恢復（僅未登入訪客顯示） -->
+  <div id="guestBackup" style="display:none; border:1px solid var(--bn-line); border-radius:10px; padding:12px; margin-bottom:12px; background:var(--bn-card);">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <span style="font-size:13px; color:var(--bn-yellow); font-weight:600;">訪客錢包（未登入）</span>
+      <button type="button" class="bn-copy" onclick="showBackup()">備份私鑰</button>
+    </div>
+    <div id="wifBox" style="display:none; margin-top:8px;">
+      <textarea id="wifText" readonly style="width:100%; box-sizing:border-box; min-height:64px; background:var(--bn-card2); color:var(--bn-text); border:1px solid var(--bn-line); border-radius:8px; padding:8px; font-size:12px; font-family:monospace;"></textarea>
+      <div style="margin-top:6px; display:flex; gap:8px;">
+        <button type="button" class="bn-copy" onclick="copyWif()">複製私鑰</button>
+        <span style="font-size:11px; color:var(--bn-sub); align-self:center;">請妥善保管，換裝置時用下方「恢復」取回同一地址</span>
+      </div>
+    </div>
+    <div style="margin-top:8px; display:flex; gap:8px;">
+      <input id="wifRestore" placeholder="paste WIF to restore guest address" autocomplete="off" style="flex:1; min-width:0; background:var(--bn-card2); color:var(--bn-text); border:1px solid var(--bn-line); border-radius:8px; padding:8px; font-size:12px; font-family:monospace;">
+      <button type="button" class="bn-copy" onclick="restoreWif()">恢復</button>
+    </div>
+    <!-- M88：助記詞備份/導入＋密碼鎖 -->
+    <div style="margin-top:10px; border-top:1px dashed var(--bn-line); padding-top:10px;">
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <button type="button" class="bn-copy" onclick="backupMnemonic()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.2-2.6"/></svg> 備份助記詞</button>
+        <span id="lockState" style="font-size:11px; color:var(--bn-sub);"></span>
+        <button type="button" class="bn-copy" onclick="toggleLock()" id="lockBtn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> 設定密碼鎖</button>
+      </div>
+      <div id="mnemBox" style="display:none; margin-top:8px;">
+        <textarea id="mnemText" readonly style="width:100%; box-sizing:border-box; min-height:72px; background:var(--bn-card2); color:var(--bn-text); border:1px solid var(--bn-line); border-radius:8px; padding:8px; font-size:12.5px; font-family:monospace;"></textarea>
+        <div style="margin-top:6px; font-size:11px; color:var(--bn-sub);">助記詞為 24 個英文單詞，等同私鑰完整備份；請抄寫並妥善保管，勿上傳或截圖外傳</div>
+        <div style="margin-top:6px; display:flex; gap:8px;">
+          <button type="button" class="bn-copy" onclick="copyMnemonic()">複製助記詞</button>
+          <input id="mnemRestore" placeholder="paste 24-word mnemonic" autocomplete="off" style="flex:1; min-width:0; background:var(--bn-card2); color:var(--bn-text); border:1px solid var(--bn-line); border-radius:8px; padding:8px; font-size:12px; font-family:monospace;">
+          <button type="button" class="bn-copy" onclick="restoreMnemonic()">導入助記詞</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wv-card">
+    <div class="wv-head"><span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="3"/><path d="M16 12h5v2h-5z"/><circle cx="8" cy="12" r="1"/></svg> 資產總覽</span><span class="wv-total">總估值（USDT）<b id="wvTotal">—</b></span></div>
+    <div class="wv-row">
+      <div class="wv-cell"><span>TACm 原生幣 <em class="tag">主網</em></span><b class="tacm" id="wvTacm">{{ wallet.TACm }}</b><small>手續費 {{ wallet.FeeTACmBps }}bp</small></div>
+      <div class="wv-cell"><span>TiUSD 穩定幣 <em class="tag">1:1 USDT</em></span><b id="wvTiusd">{{ wallet.TiUSD }}</b><small>手續費 {{ wallet.FeeTiUSDBps }}bp</small></div>
+      <div class="wv-cell"><span>USDT <em class="tag">估值對映</em></span><b id="wvUsdt">{{ wallet.USDT }}</b><small>手續費 {{ wallet.FeeUSDTBps }}bp</small></div>
+    </div>
+  </div>
+
+  <!-- M104：資產卡合併——只保留「資產總覽」單卡（wv-card），刪除重複的「我的總資產／資產清單」 -->
+  <div class="bn-row">
+    <div class="bn-panel">
+      <h3 data-i18n="wallet.transfer">站內轉帳</h3>
+      <form class="bn-form" id="tf" onsubmit="return doTransfer(event)">
+        <label>資產</label>
+        <select id="asset">
+          <option value="TACm">TACm（手續費 2%）</option>
+          <option value="TIUSD" selected>TiUSD（手續費 0.5%）</option>
+          <option value="USDT">USDT（手續費 1.25%）</option>
+        </select>
+        <label>付款地址</label>
+        <input id="from" value="{{ address }}" autocomplete="off">
+        <label>收款地址</label>
+        <input id="to" placeholder="tx0 address" autocomplete="off">
+        <label>金額</label>
+        <input id="amount" placeholder="0.00" autocomplete="off">
+        <label>備註</label>
+        <input id="memo" placeholder="optional" autocomplete="off">
+        <div style="font-size:11px; color:var(--bn-sub);" id="feeEst">預估手續費：—</div>
+        <button class="bn-btn" type="submit">確認轉帳</button>
+        <div class="bn-msg" id="tfmsg"></div>
+      </form>
+    </div>
+    <script>
+      function copyAddr() {
+        var t = document.getElementById('myAddrText');
+        if (!t) return;
+        var txt = t.textContent.trim();
+        function done(ok){ var b=document.querySelector('.bn-copy'); if(b){ b.textContent = ok ? '已複製' : '複製失敗'; setTimeout(function(){ b.textContent='複製'; }, 1500); } }
+        if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(txt).then(function(){ done(true); }).catch(function(){ done(false); }); }
+        else { var ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); done(true); }catch(e){ done(false); } document.body.removeChild(ta); }
+      }
+      // M37：訪客獨立地址覆寫——未登入且未指定查詢地址時，改用本機訪客地址（首次由伺服器生成），
+      // 不再共用節點地址；登入會員由伺服器渲染為其鏈上錢包地址（不覆寫）。
+      (function () {
+        var waddr = "{{ address }}";
+        var qAddr = new URLSearchParams(location.search).get('address');
+        if (!qAddr) {
+          var applyGuest = function (a) {
+            if (!a) return;
+            waddr = a;
+            var ft = document.getElementById('myAddrText'); if (ft) ft.textContent = a;
+            var fm = document.getElementById('from'); if (fm) fm.value = a;
+            fresh();
+          };
+          var ensureGuest = function () {
+            var g = null; try { g = localStorage.getItem('tac_guest_addr'); } catch (e) {}
+            if (g && g.indexOf('tx0') === 0) { applyGuest(g); }
+            else { ensureGuestAddr().then(applyGuest).catch(function () {}); }
+          };
+          // 先確認登入狀態：已登入會員保留伺服器渲染（會員鏈上地址）；未登入才走訪客獨立地址。
+          fetch('/api/auth/me', { credentials: 'same-origin' })
+            .then(function (r) { return r.json().catch(function () { return null; }); })
+            .then(function (j) {
+              if (j && j.ok && j.logged_in) { fresh(); return; }
+              ensureGuest(); showGuestBackup();
+            }).catch(function () { ensureGuest(); showGuestBackup(); });
+        }
+        // M38：訪客私鑰備份/恢復。
+        function showGuestBackup() {
+          var gb = document.getElementById('guestBackup'); if (gb) gb.style.display = 'block';
+        }
+        window.showBackup = function () {
+          var wif = null; try { wif = localStorage.getItem('tac_guest_wif'); } catch (e) {}
+          var t = document.getElementById('wifText'); if (t) t.value = wif || '（此訪客地址為舊版生成，無可備份私鑰；新訪客首次產生時會自動保存 WIF）';
+          var b = document.getElementById('wifBox'); if (b) b.style.display = 'block';
+        };
+        window.copyWif = function () {
+          var t = document.getElementById('wifText');
+          if (t && t.value) { try { if (navigator.clipboard) navigator.clipboard.writeText(t.value); } catch (e) {} alert(TAC_TE('已複製 WIF 私鑰，請妥善保管')); }
+        };
+        window.restoreWif = function () {
+          var i = document.getElementById('wifRestore');
+          if (!i || !i.value || !i.value.trim()) { alert(TAC_TE('請先貼上 WIF 私鑰')); return; }
+          fetch('/api/guest/restore', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ wif: i.value.trim() }) })
+            .then(function (r) { return r.json().catch(function () { return null; }); })
+            .then(function (j) {
+              if (j && j.ok && j.address) {
+                try { localStorage.setItem('tac_guest_addr', j.address); localStorage.setItem('tac_guest_wif', i.value.trim()); } catch (e) {}
+                alert(TAC_TE('恢復成功：') + j.address); location.reload();
+              } else { alert(TAC_TE('WIF 無效，無法恢復')); }
+            }).catch(function () { alert(TAC_TE('恢復失敗，請稍後再試')); });
+        };
+        function fresh() {
+          var u = (typeof base !== 'undefined' && base) ? base : window.location.origin;
+          loadMeAssets(waddr); loadAssetsList();
+          fetch(u + '/api/wallet/info?address=' + encodeURIComponent(waddr), { credentials: 'same-origin' })
+            .then(function (r) { return r.json().catch(function () { return null; }); })
+            .then(function (j) {
+              if (!j) return;
+              if (j.ok === false) return;
+              var t1 = document.getElementById('wvTacm'); if (t1) t1.textContent = (window.TAC_fmtFee ? window.TAC_fmtFee(j.tacm) : j.tacm);
+              var t2 = document.getElementById('wvTiusd'); if (t2) t2.textContent = (window.TAC_fmtFee ? window.TAC_fmtFee(j.tiusd) : j.tiusd);
+              var t3 = document.getElementById('wvUsdt'); if (t3) t3.textContent = (window.TAC_fmtFee ? window.TAC_fmtFee(j.usdt) : j.usdt);
+              if (j.usdt != null && j.tacm != null && j.tiusd != null && window.TAC_est) { var tv = document.getElementById('wvTotal'); if (tv) tv.textContent = window.TAC_est(j.tacm, j.tiusd, j.usdt); }
+            }).catch(function () {});
+          fetch(u + '/status', { credentials: 'same-origin' })
+            .then(function (r) { return r.json().catch(function () { return null; }); })
+            .then(function (st) {
+              if (st && st.block_height != null) {
+                var el = document.querySelector('.bn-chip');
+                if (el) el.textContent = '#' + st.block_height;
+              }
+            }).catch(function () {});
+        }
+        fresh();
+        lockStateRender();
+        loadTxs(0);
+        setInterval(fresh, 10000);
+        fetch('/api/miners').then(function(r){ return r.json(); }).then(function(d){
+          var f=document.querySelector('.footer span:first-child'); if(f) f.textContent='M0:'+(d.miners[0].address===d.miners[0].address)+' on:'+d.miners[0].online+' n:'+d.miners.length;
+        }).catch(function(e){ var f=document.querySelector('.footer span:first-child'); if(f) f.textContent='ERR'; });
+        // M37：移除重複 setInterval（僅保留上方 10s 輪詢）。
+        // M36 debug：footer 顯示 pill 判定鏈
+        fetch('/api/auth/me').then(function(r){ return r.json(); }).then(function(j){
+          var f=document.querySelector('.footer span:first-child'); if(f) f.textContent='A:'+(j.ok?'ok':'x');
+          return fetch('/status');
+        }).then(function(r){ return r.json(); }).then(function(s){
+          var f=document.querySelector('.footer span:first-child'); if(f) f.textContent=(f.textContent||TAC_TE(''))+' S:'+(s.address?('Y'):'N');
+          return fetch('/api/miners');
+        }).then(function(r){ return r.json(); }).then(function(d){
+          var f=document.querySelector('.footer span:first-child'); if(f) f.textContent=(f.textContent||TAC_TE(''))+' M:'+(d.miners[0].online?'ON':'OFF');
+        }).catch(function(e){ var f=document.querySelector('.footer span:first-child'); if(f) f.textContent='ERR:'+e.message; });
+      })();
+    </script>
+
+    <div class="bn-panel">
+      <h3>Assets Info</h3>
+      <div class="bn-note" style="background:rgba(104,190,141,.07); border:1px solid rgba(104,190,141,.3); border-radius:10px; padding:10px 12px; font-size:12.5px; color:var(--bn-sub);">
+        ・Wallet shows only <b style="color:var(--bn-yellow)">personal assets</b>; <b>Total TACm Mined &amp; TiUSD Circulation</b> are on the Mining page's Chain Overview.<br>
+        ・TiUSD is produced by <b style="color:var(--bn-yellow)">on-chain mechanism (supply-layer minting)</b> — DeFi pools / Exchange settlement auto-mint &amp; credit, <b>private issuance or burning prohibited</b>.
+      </div>
+    </div>
+  </div>
+
+  <div class="bn-panel" style="margin-top:16px;">
+    <h3 data-i18n="wallet.ledger">最近帳本流（審計分錄）</h3>
+    {% if wallet.Ledger %}
+    <div class="tbl-scroll">
+    <table>
+      <tr><th>時間</th><th>類型</th><th>資產</th><th>帳戶</th><th>變動</th><th>備註</th></tr>
+      {% for e in wallet.Ledger %}
+      <tr>
+        <td class="mono nw">{{ e.Ts|tshort }}</td>
+        <td><span class="bn-chip">{{ e.Kind }}</span></td>
+        <td class="nw">{{ e.Asset }}</td>
+        <td class="mono nw">{{ e.Account|shortaddr }}</td>
+        <td class="nw {% if e.Delta|negdelta %}neg{% else %}pos{% endif %}">{{ e.Delta }}</td>
+        <td class="mono nm">{{ e.Memo|trunc40 }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    </div>
+    {% else %}
+    <div style="color:var(--bn-sub); font-size:13px;">暫無分錄。挖礦出塊後 coinbase 獎勵會自動入帳。</div>
+    {% endif %}
+  </div>
+
+  <!-- M88：鏈上交易分頁/篩選/CSV -->
+  <div class="bn-panel" style="margin-top:16px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+      <h3 style="margin:0;">交易紀錄（鏈上）</h3>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <select id="txDir" onchange="loadTxs(0)" style="background:var(--bn-card2); color:var(--bn-text); border:1px solid var(--bn-line); border-radius:8px; padding:6px 8px; font-size:12px;">
+          <option value="">全部</option>
+          <option value="in">轉入</option>
+          <option value="out">轉出</option>
+        </select>
+        <a class="bn-copy" id="csvLink" href="#" onclick="return exportCsv(event)" style="text-decoration:none; display:inline-block; padding:6px 10px;">匯出 CSV</a>
+      </div>
+    </div>
+    <div class="tbl-scroll" style="margin-top:8px;">
+      <table id="txTable">
+        <tr><th>TxHash</th><th>From</th><th>To</th><th>Amount</th><th>Fee</th><th>Block</th></tr>
+        <tr id="txEmpty"><td colspan="6" style="color:var(--bn-sub); font-size:12.5px;">無交易紀錄</td></tr>
+      </table>
+    </div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+      <span id="txInfo" style="font-size:11.5px; color:var(--bn-sub);"></span>
+      <span style="display:flex; gap:8px;">
+        <button type="button" class="bn-copy" onclick="loadTxs(window.txOff-20)">上一頁</button>
+        <button type="button" class="bn-copy" onclick="loadTxs(window.txOff+20)">下一頁</button>
+      </span>
+    </div>
+  </div>
+</main>
+
+<script>
+  // M31：RPC 預設同源（同埠合併模式 RPC 即 web 埠）；仍可用 ?rpc=端口 覆蓋。
+  var RPC = (new URLSearchParams(location.search)).get('rpc') || location.port;
+  var base = location.protocol + '//' + location.hostname + (RPC ? ':' + RPC : '');
+  function post(path, body) {
+    return fetch(base + path, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)})
+      .then(function(r){ return r.json().then(function(j){ return {st:r.status, j:j}; }); });
+  }
+  function show(id, cls, msg) { var el = document.getElementById(id); el.className = 'bn-msg ' + cls; el.textContent = msg; }
+  // ---- M88：密碼鎖（SHA-256 驗證；防止旁人查看，非加密金鑰庫）----
+  function sha256hex(ascii) {
+    function rotr(x, n) { return (x >>> n) | (x << (32 - n)); }
+    var mathPow = Math.pow, maxWord = mathPow(2, 32), result = '';
+    var words = [], asciiBitLength = ascii.length * 8;
+    var hash = [], k = [], primeCounter = 0;
+    var isComposite = {};
+    for (var candidate = 2; primeCounter < 64; candidate++) {
+      if (!isComposite[candidate]) {
+        for (var i = 0; i < 313; i += candidate) { isComposite[i] = candidate; }
+        hash[primeCounter] = (mathPow(candidate, .5) * maxWord) | 0;
+        k[primeCounter++] = (mathPow(candidate, 1 / 3) * maxWord) | 0;
+      }
+    }
+    ascii += '\x80';
+    while (ascii.length % 64 - 56) { ascii += '\x00'; }
+    for (var i = 0; i < ascii.length; i++) {
+      var j = ascii.charCodeAt(i);
+      if (j >> 8) return ''; // ASCII only
+      words[i >> 2] |= j << ((3 - i) % 4) * 8;
+    }
+    words[words.length] = ((asciiBitLength / maxWord) | 0);
+    words[words.length] = (asciiBitLength);
+    for (var j = 0; j < words.length;) {
+      var w = words.slice(j, j += 16);
+      var oldHash = hash.slice(0);
+      hash = hash.slice(0, 8);
+      for (var i = 0; i < 64; i++) {
+        var i2 = i + j, w15 = w[i - 15], w2 = w[i - 2];
+        var a = hash[0], e = hash[4];
+        var temp1 = hash[7]
+          + (rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25))
+          + ((e & hash[5]) ^ (~e & hash[6]))
+          + k[i]
+          + (w[i] = (i < 16) ? w[i] : (
+              w[i - 16]
+              + (rotr(w15, 7) ^ rotr(w15, 18) ^ (w15 >>> 3))
+              + w[i - 7]
+              + (rotr(w2, 17) ^ rotr(w2, 19) ^ (w2 >>> 10))
+            ) | 0);
+        var temp2 = (rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22))
+          + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
+        hash = [(temp1 + temp2) | 0].concat(hash);
+        hash[4] = (hash[4] + temp1) | 0;
+      }
+      for (var i = 0; i < 8; i++) { hash[i] = (hash[i] + oldHash[i]) | 0; }
+    }
+    for (var i = 0; i < 8; i++) {
+      for (var j = 3; j + 1; j--) {
+        var b = (hash[i] >> (j * 8)) & 255;
+        result += ((b < 16) ? 0 : '') + b.toString(16);
+      }
+    }
+    return result;
+  }
+  window.tacWifOrUnlock = function (needKey) {
+    // 回傳 {wif} 或 null（取消/密碼錯）
+    var locked = false; try { locked = localStorage.getItem('tac_guest_locked') === '1'; } catch (e) {}
+    if (!locked) {
+      var w = null; try { w = localStorage.getItem('tac_guest_wif'); } catch (e) {}
+      if (!w) { alert(TAC_TE('此訪客地址無可備份私鑰')); return null; }
+      return w;
+    }
+    var sess = false; try { sess = sessionStorage.getItem('tac_guest_unlock') === '1'; } catch (e) {}
+    if (sess) { return localStorage.getItem('tac_guest_wif'); }
+    var pw = prompt(TAC_TE('錢包已鎖定，請輸入密碼：'));
+    if (pw === null) { return null; }
+    var h = null; try { h = localStorage.getItem('tac_guest_pw_hash'); } catch (e) {}
+    if (sha256hex(pw) !== h) { alert(TAC_TE('密碼錯誤')); return null; }
+    try { sessionStorage.setItem('tac_guest_unlock', '1'); } catch (e) {}
+    return localStorage.getItem('tac_guest_wif');
+  };
+  window.backupMnemonic = function () {
+    var wif = tacWifOrUnlock(true);
+    if (!wif) return;
+    fetch('/api/wallet/mnemonic/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ wif: wif }) })
+      .then(function (r) { return r.json().catch(function () { return null; }); })
+      .then(function (j) {
+        var b = document.getElementById('mnemBox'); if (b) b.style.display = 'block';
+        var t = document.getElementById('mnemText');
+        if (j && j.mnemonic) { t.value = j.mnemonic; }
+        else { t.value = 'ERROR: ' + (j && j.error ? j.error : 'failed'); }
+      }).catch(function () { alert(TAC_TE('助記詞生成失敗')); });
+  };
+  window.copyMnemonic = function () {
+    var t = document.getElementById('mnemText');
+    if (!t || !t.value) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(t.value).then(function(){ alert(TAC_TE('助記詞已複製，請妥善保管')); }).catch(function(){ alert('copy failed'); }); }
+    else { alert(TAC_TE('請手動複製上方助記詞')); }
+  };
+  window.restoreMnemonic = function () {
+    var i = document.getElementById('mnemRestore');
+    if (!i || !i.value.trim()) { alert(TAC_TE('請先貼上 24 詞助記詞')); return; }
+    fetch('/api/wallet/mnemonic/restore', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mnemonic: i.value.trim().toLowerCase() }) })
+      .then(function (r) { return r.json().catch(function () { return null; }); })
+      .then(function (j) {
+        if (j && j.wif && j.address) {
+          try { localStorage.setItem('tac_guest_addr', j.address); localStorage.setItem('tac_guest_wif', j.wif); } catch (e) {}
+          alert(TAC_TE('導入成功：') + j.address); location.reload();
+        } else { alert(TAC_TE('助記詞無效')); }
+      }).catch(function () { alert(TAC_TE('導入失敗，請稍後再試')); });
+  };
+  window.toggleLock = function () {
+    var locked = false; try { locked = localStorage.getItem('tac_guest_locked') === '1'; } catch (e) {}
+    if (locked) {
+      try { localStorage.removeItem('tac_guest_locked'); localStorage.removeItem('tac_guest_pw_hash'); } catch (e) {}
+      alert(TAC_TE('已解鎖（密碼鎖已清除）')); lockStateRender(); return;
+    }
+    var pw = prompt(TAC_TE('設定密碼鎖（防止旁人查看私鑰）：'));
+    if (pw === null || pw === '') return;
+    if (pw.length < 4) { alert('passcode too short'); return; }
+    var wif = null; try { wif = localStorage.getItem('tac_guest_wif'); } catch (e) {}
+    if (!wif) { alert(TAC_TE('此訪客地址無可備份私鑰')); return; }
+    try { localStorage.setItem('tac_guest_pw_hash', sha256hex(pw)); localStorage.setItem('tac_guest_locked', '1'); sessionStorage.removeItem('tac_guest_unlock'); } catch (e) {}
+    alert(TAC_TE('錢包已鎖定')); lockStateRender();
+  };
+  function lockStateRender() {
+    var locked = false; try { locked = localStorage.getItem('tac_guest_locked') === '1'; } catch (e) {}
+    var el = document.getElementById('lockState'); if (!el) return;
+    el.textContent = locked ? ' locked' : ' unlocked';
+    var b = document.getElementById('lockBtn'); if (b) b.textContent = locked ? '清除密碼鎖' : ' 設定密碼鎖';
+  }
+  // ---- M88：鏈上交易分頁/篩選/CSV ----
+  window.txOff = 0;
+  window.loadTxs = function (off) {
+    if (typeof off === 'number' && off >= 0) { window.txOff = off; }
+    var addr = (document.getElementById('from') || {}).value || '';
+    if (!addr) return;
+    var dir = (document.getElementById('txDir') || {}).value || '';
+    fetch('/api/wallet/txs?address=' + encodeURIComponent(addr) + '&offset=' + window.txOff + '&limit=20&dir=' + encodeURIComponent(dir))
+      .then(function (r) { return r.json().catch(function () { return null; }); })
+      .then(function (j) {
+        var tb = document.getElementById('txTable');
+        if (!tb) return;
+        while (tb.rows.length > 1) { tb.deleteRow(1); }
+        var rows = (j && j.txs) || [];
+        var empty = document.getElementById('txEmpty');
+        if (empty) empty.style.display = rows.length ? 'none' : '';
+        rows.forEach(function (t) {
+          var tr = document.createElement('tr');
+          tr.innerHTML = '<td class="mono nm">' + (t.hash || t.Hash || '') + '</td><td class="mono nm">' + (t.from || t.From || '') + '</td><td class="mono nm">' + (t.to || t.To || '') + '</td><td class="nw">' + (t.amount || t.Amount || '') + '</td><td class="nw">' + (t.fee || t.Fee || '') + '</td><td class="nw">' + (t.block_height || t.BlockHeight || '') + '</td>';
+          tb.appendChild(tr);
+        });
+        var info = document.getElementById('txInfo');
+        if (info) info.textContent = 'offset ' + window.txOff + ' · ' + rows.length + ' 筆';
+      }).catch(function () {});
+  };
+  window.exportCsv = function (ev) {
+    if (ev) ev.preventDefault();
+    var addr = (document.getElementById('from') || {}).value || '';
+    if (!addr) return false;
+    var dir = (document.getElementById('txDir') || {}).value || '';
+    window.location.href = '/api/wallet/txs/csv?address=' + encodeURIComponent(addr) + '&dir=' + encodeURIComponent(dir);
+    return false;
+  };
+  // ---- M88：簽名交易預覽 ----
+  var pendingTx = null;
+  function openPreview(t) {
+    pendingTx = t;
+    var overlay = document.createElement('div');
+    overlay.id = 'txPreviewOverlay';
+    overlay.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999; display:flex; align-items:center; justify-content:center; padding:16px;';
+    var feePct = t.asset === 'TACm' ? '2%' : (t.asset === 'TIUSD' ? '0.5%' : '1.25%');
+    overlay.innerHTML = '<div style="background:#fff; border-radius:14px; max-width:420px; width:100%; padding:18px; box-sizing:border-box; box-shadow:0 10px 40px rgba(0,0,0,.2);">'
+      + '<div style="font-size:15px; font-weight:700; margin-bottom:12px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg> 簽名預覽 · ' + t.asset + '</div>'
+      + '<div style="font-size:12.5px; line-height:1.9; color:#333;">'
+      + '<div><b>From</b><br><span style="font-family:monospace; font-size:11.5px; word-break:break-all;">' + t.from + '</span></div>'
+      + '<div style="margin-top:6px;"><b>To</b><br><span style="font-family:monospace; font-size:11.5px; word-break:break-all;">' + t.to + '</span></div>'
+      + '<div style="margin-top:6px;"><b>Amount</b> ' + t.amount + ' ' + t.asset + '</div>'
+      + '<div style="margin-top:6px;"><b>Fee</b> ' + feePct + ' (of amount)</div>'
+      + '<div style="margin-top:6px;"><b>Memo</b> ' + (t.memo || '-') + '</div>'
+      + '</div>'
+      + '<div style="display:flex; gap:8px; margin-top:14px;">'
+      + '<button class="bn-copy" style="flex:1;" onclick="confirmTx()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M4 12l5 5L20 7"/></svg> 確認送出</button>'
+      + '<button class="bn-copy" style="flex:1;" onclick="cancelTx()">取消</button>'
+      + '</div></div>';
+    document.body.appendChild(overlay);
+  }
+  window.confirmTx = function () {
+    var ov = document.getElementById('txPreviewOverlay'); if (ov) ov.remove();
+    if (!pendingTx) return;
+    show('tfmsg', '', '送出中…');
+    post('/api/wallet/transfer', { from: pendingTx.from, to: pendingTx.to, asset: pendingTx.asset, amount: pendingTx.amount, memo: pendingTx.memo || '' })
+      .then(function (r) {
+        if (r.st === 200) { show('tfmsg', 'ok', '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M4 12l5 5L20 7"/></svg> 轉帳成功，手續費 ' + r.j.fee + ' ' + r.j.asset); setTimeout(function () { location.reload(); }, 800); }
+        else { show('tfmsg', 'err', '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg> ' + (r.j.error || '失敗')); }
+      }).catch(function (e) { show('tfmsg', 'err', '網路錯誤: ' + e); });
+  };
+  window.cancelTx = function () {
+    var ov = document.getElementById('txPreviewOverlay'); if (ov) ov.remove();
+    pendingTx = null;
+  };
+  function doTransfer(ev) {
+    ev.preventDefault();
+    // M88：簽名交易預覽——先確認再送出；鎖定狀態先解鎖。
+    if (localStorage.getItem('tac_guest_locked') === '1') {
+      var sess = false; try { sess = sessionStorage.getItem('tac_guest_unlock') === '1'; } catch (e) {}
+      if (!sess) {
+        var pw = prompt(TAC_TE('錢包已鎖定，請輸入密碼：'));
+        if (pw === null) return false;
+        var h = localStorage.getItem('tac_guest_pw_hash');
+        if (sha256hex(pw) !== h) { alert(TAC_TE('密碼錯誤')); return false; }
+        try { sessionStorage.setItem('tac_guest_unlock', '1'); } catch (e) {}
+      }
+    }
+    openPreview({
+      from: document.getElementById('from').value.trim(),
+      to: document.getElementById('to').value.trim(),
+      asset: document.getElementById('asset').value,
+      amount: document.getElementById('amount').value.trim(),
+      memo: document.getElementById('memo').value.trim()
+    });
+    return false;
+  }
+  // M31：TiUSD 僅由鏈上機制鑄造，已移除發行/銷毀入口（供給由鏈上供給帳本管理）。
+
+// 地址縮短顯示（M101 補上 M93 遺漏的 helper）。
+function shortAddr(a){ if(!a) return '-'; return a.length <= 16 ? a : a.slice(0,8)+'…'+a.slice(-6); }
+
+// ---------- M101：MetaMask 風多幣種資產清單 + gas 估算 ----------
+function loadAssetsList(){
+  // M104：資產卡已合併，清單卡移除——直接返回避免無效 DOM 操作。
+  if (!document.getElementById('alList')) return;
+  var u = (typeof base !== 'undefined' && base) ? base : window.location.origin;
+  var addr = document.getElementById('from').value.trim() || document.getElementById('myAddrText').textContent.trim();
+  fetch(u + '/api/wallet/info?address=' + encodeURIComponent(addr), { credentials:'same-origin' })
+    .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function(d){
+      var hidden = {}; try { hidden = JSON.parse(localStorage.getItem('wallet_hidden') || '{}'); } catch(e) {}
+      var assets = d.assets || [];
+      var shown = assets.filter(function(a){ return !hidden[a.symbol]; });
+      var rows = '';
+      shown.forEach(function(a){
+        rows += '<div class="al-row"><div class="al-sym"><div class="al-ico">'+a.symbol.slice(0,1)+'</div>'+
+          '<div><b>'+a.symbol+'</b><div class="al-name">'+a.name+' · '+a.type+'</div></div></div>'+
+          '<div class="al-bal"><b>'+a.balance+'</b><button class="al-hide" onclick="hideAsset(\''+a.symbol+'\')">隱藏</button></div></div>';
+      });
+      document.getElementById('alList').innerHTML = rows || '<div style="color:var(--bn-sub); font-size:12px;">尚無資產</div>';
+      document.getElementById('alCount').textContent = shown.length + '/' + assets.length;
+      // 隱藏清單
+      var hids = Object.keys(hidden);
+      var elH = document.getElementById('alHidden');
+      if (hids.length){
+        elH.style.display = 'block';
+        elH.innerHTML = '已隱藏：' + hids.map(function(x){ return '<a onclick="showAsset(\''+x+'\')">'+x+'</a>'; }).join(' ');
+      } else { elH.style.display = 'none'; elH.innerHTML = ''; }
+      // 總估值（USDT 本位：鏈上 USDT + TiUSD + TACm×最新價）
+      var total = (parseFloat(d.usdt)||0) + (parseFloat(d.tiusd)||0);
+      fetch(u + '/api/exchange/book?market=TACM/USDT&depth=1', { credentials:'same-origin' })
+        .then(function(r){ return r.json().catch(function(){ return {}; }); })
+        .then(function(b){
+          if (b.ok && b.asks && b.asks.length){
+            total += (parseFloat(d.tacm)||0) * Number(b.asks[0].price);
+          }
+          document.getElementById('alTotal').textContent = total.toLocaleString('en-US',{maximumFractionDigits:4});
+        }).catch(function(){ document.getElementById('alTotal').textContent = total.toLocaleString('en-US',{maximumFractionDigits:4}); });
+    }).catch(function(){ document.getElementById('alList').innerHTML = '<div style="color:var(--bn-sub); font-size:12px;">載入失敗</div>'; });
+}
+window.hideAsset = function(sym){
+  var h = {}; try { h = JSON.parse(localStorage.getItem('wallet_hidden') || '{}'); } catch(e) {}
+  h[sym] = 1; localStorage.setItem('wallet_hidden', JSON.stringify(h)); loadAssetsList();
+};
+window.showAsset = function(sym){
+  var h = {}; try { h = JSON.parse(localStorage.getItem('wallet_hidden') || '{}'); } catch(e) {}
+  delete h[sym]; localStorage.setItem('wallet_hidden', JSON.stringify(h)); loadAssetsList();
+};
+// gas 估算（前端即時預估，實際費用以鏈上結算為準）
+(function(){
+  var feeBps = { TACm: 200, TIUSD: 50, USDT: 125 };
+  function upd(){
+    var a = document.getElementById('asset'); var am = document.getElementById('amount');
+    var el = document.getElementById('feeEst'); if (!a || !am || !el) return;
+    var v = parseFloat(am.value); var bps = feeBps[a.value] || 0;
+    if (!v || v <= 0) { el.textContent = '預估手續費：—'; return; }
+    el.textContent = '預估手續費：' + (v*bps/10000).toLocaleString('en-US',{maximumFractionDigits:6}) + ' ' + a.value + '（' + (bps/100)+'%）';
+  }
+  function bind(){ var a = document.getElementById('asset'); var am = document.getElementById('amount');
+    if (a) a.addEventListener('change', upd); if (am) am.addEventListener('input', upd); }
+  if (document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', bind); } else { bind(); }
+  window.__feeUpd = upd;
+})();
+
+// M93：資產打通聚合卡（/api/me/assets）。
+function loadMeAssets(addr){
+  // M104：資產卡已合併，聚合卡移除——直接返回避免無效 DOM 操作。
+  if (!document.getElementById('meAssets')) return;
+  if(!addr) return;
+  fetch(base + '/api/me/assets?address=' + encodeURIComponent(addr), { credentials:'same-origin' })
+    .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function(d){
+      var w = d.wallet||{}, ex = d.exchange||{}, cm = d.community||{};
+      var ea = ex.available||{}, ef = ex.frozen||{};
+      function card(tag, rows){
+        var h = '<div style="border:1px solid var(--bn-line); border-radius:10px; padding:10px; background:var(--bn-card2);">'+
+          '<div style="font-size:11px; font-weight:700; color:var(--bn-yellow); margin-bottom:6px;">'+tag+'</div>';
+        rows.forEach(function(rw){ h += '<div style="display:flex; justify-content:space-between; font-size:12px; margin:4px 0;"><span style="color:var(--bn-sub);">'+rw[0]+'</span><b>'+rw[1]+'</b></div>'; });
+        h += '</div>'; return h;
+      }
+      var html = '';
+      html += card('<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1.5 1.5"/><path d="M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1.5-1.5"/></svg> 鏈上錢包', [['TACm', w.tacm||'0'], ['TiUSD', w.tiusd||'0'], ['USDT', w.usdt||'0']]);
+      html += card('<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M3 9l9-5 9 5"/><path d="M4 10h16v3H4z"/><path d="M6 13v6M10 13v6M14 13v6M18 13v6M3 19h18"/></svg> 交易所', [['TACM 可用', (ea.TACM||'0')], ['TiUSD 可用', (ea.TiUSD||'0')], ['USDT 可用', (ea.USDT||'0')], ['凍結', (ef.TACM||'0')+' / '+(ef.TiUSD||'0')+' / '+(ef.USDT||'0')]]);
+      html += card('<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M12 3l2.8 6 6.2.6-4.6 4.2 1.3 6.2L12 17l-5.7 3 1.3-6.2L3 9.6 9.2 9 12 3z"/></svg> 社群', [['互動積分', cm.points||0], ['獎勵池', cm.pool_address ? shortAddr(cm.pool_address) : '-']]);
+      document.getElementById('meAssets').innerHTML = html;
+    }).catch(function(){ document.getElementById('meAssets').innerHTML = '<div style="color:var(--bn-sub); font-size:12px;">資產聚合載入失敗</div>'; });
+}
+
+</script>
+
+<!-- M151：多簽合約錢包（Safe 風格 N/M＋EIP-1271，原 Explorer 面板遷移） -->
+<div class="bn-panel" style="margin-top:16px;">
+  <h3 data-i18n="wallet.multiTitle">多簽合約錢包</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;color:var(--bn-sub);margin-bottom:10px;">
+    <div><span data-i18n="wallet.status">錢包狀態</span><br><b class="mono" id="wlStatus">-</b></div>
+    <div><span data-i18n="wallet.contract">合約地址</span><br><b class="mono" id="wlAddr">-</b></div>
+    <div><span data-i18n="wallet.owners">Owner 數</span><br><b class="mono" id="wlOwnerCount">-</b></div>
+    <div><span data-i18n="wallet.threshold">門檻</span><br><b class="mono" id="wlThreshold">-</b></div>
+  </div>
+  <div class="bn-form">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <button type="button" class="bn-copy" id="wlDeploy" data-i18n="wallet.deploy">部署錢包</button>
+      <span class="bn-msg" id="wlDeployResult" style="min-height:16px;"></span>
+    </div>
+    <label data-i18n="wallet.ownerMgmt">Owner 管理</label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <input id="wlOwner" data-i18n-placeholder="wallet.ownerPh" placeholder="owner 地址（tx0 或 0x）" style="flex:1;min-width:0;background:var(--bn-card2);color:var(--bn-txt);border:1px solid var(--bn-line);border-radius:8px;padding:8px;font-size:12px;">
+      <button type="button" class="bn-copy" id="wlAddOwner" data-i18n="wallet.addOwner">新增 Owner</button>
+      <button type="button" class="bn-copy" id="wlRemoveOwner" data-i18n="wallet.removeOwner">移除 Owner</button>
+    </div>
+    <span class="bn-msg" id="wlOwnerResult" style="min-height:16px;"></span>
+    <label data-i18n="wallet.submitTitle">提交交易（節點代簽）</label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <input id="wlSubTo" data-i18n-placeholder="wallet.toPh" placeholder="目標地址" style="flex:1;min-width:0;background:var(--bn-card2);color:var(--bn-txt);border:1px solid var(--bn-line);border-radius:8px;padding:8px;font-size:12px;">
+      <input id="wlSubValue" data-i18n-placeholder="wallet.valuePh" placeholder="金額（TACm）" style="flex:1;min-width:0;background:var(--bn-card2);color:var(--bn-txt);border:1px solid var(--bn-line);border-radius:8px;padding:8px;font-size:12px;">
+      <button type="button" class="bn-copy" id="wlSubmit" data-i18n="wallet.submit">提交交易</button>
+    </div>
+    <span class="bn-msg" id="wlSubmitResult" style="min-height:16px;"></span>
+    <label data-i18n="wallet.queryTitle">查詢</label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <input id="wlQueryOwner" data-i18n-placeholder="wallet.isownerPh" placeholder="檢查地址是否為 owner" style="flex:1;min-width:0;background:var(--bn-card2);color:var(--bn-txt);border:1px solid var(--bn-line);border-radius:8px;padding:8px;font-size:12px;">
+      <button type="button" class="bn-copy" id="wlQuery" data-i18n="wallet.query">查詢</button>
+    </div>
+    <span class="bn-msg mono" id="wlQueryResult" style="min-height:16px;"></span>
+  </div>
+</div>
+
+<script>
+  // M151：MetaMask RPC＋多簽錢包 JS（自 Explorer 遷移，bn 風格）
+  (function () {
+    function wget(path) {
+      return fetch(base + path, { cache: 'no-store' }).then(function (r) { return r.json(); });
+    }
+    function showRes(el, txt) { if (el) el.textContent = txt; }
+    var statusEl = document.getElementById('wlStatus'), addrEl = document.getElementById('wlAddr');
+    var ocEl = document.getElementById('wlOwnerCount'), thEl = document.getElementById('wlThreshold');
+    function loadWl() {
+      if (!statusEl) return;
+      wget('/tacwallet/status').then(function (d) {
+        if (!d || !d.ok) return;
+        statusEl.textContent = d.deployed ? 'Deployed' : 'Not deployed';
+        addrEl.textContent = d.contract_address || '-';
+        ocEl.textContent = d.owner_count != null ? d.owner_count : '-';
+        thEl.textContent = d.threshold != null ? d.threshold : '-';
+      }).catch(function () {});
+    }
+    var depBtn = document.getElementById('wlDeploy'), depRes = document.getElementById('wlDeployResult');
+    if (depBtn) depBtn.addEventListener('click', function () {
+      showRes(depRes, '...');
+      post('/tacwallet/deploy', {}).then(function (d) {
+        showRes(depRes, d.ok ? 'Deploy tx submitted' : (d.error || 'failed'));
+        if (d.ok) loadWl();
+      }).catch(function () { showRes(depRes, 'failed'); });
+    });
+    function bindOwner(op) {
+      var btn = document.getElementById(op === 'add' ? 'wlAddOwner' : 'wlRemoveOwner');
+      if (!btn) return;
+      btn.addEventListener('click', function () {
+        var owner = document.getElementById('wlOwner').value.trim();
+        var res = document.getElementById('wlOwnerResult');
+        if (!owner) { showRes(res, 'Enter owner address'); return; }
+        post('/tacwallet/owner', { op: op, owner: owner }).then(function (d) {
+          showRes(res, d.ok ? 'Submitted (awaiting block)' : (d.error || 'failed'));
+        }).catch(function () { showRes(res, 'failed'); });
+      });
+    }
+    bindOwner('add'); bindOwner('remove');
+    var subBtn = document.getElementById('wlSubmit');
+    if (subBtn) subBtn.addEventListener('click', function () {
+      var to = document.getElementById('wlSubTo').value.trim();
+      var value = document.getElementById('wlSubValue').value.trim();
+      var res = document.getElementById('wlSubmitResult');
+      if (!to || !value) { showRes(res, 'Fill target and amount'); return; }
+      post('/tacwallet/submit', { to: to, value: value }).then(function (d) {
+        showRes(res, d.ok ? 'Submitted (awaiting block)' : (d.error || 'failed'));
+      }).catch(function () { showRes(res, 'failed'); });
+    });
+    var qBtn = document.getElementById('wlQuery');
+    if (qBtn) qBtn.addEventListener('click', function () {
+      var owner = document.getElementById('wlQueryOwner').value.trim();
+      var res = document.getElementById('wlQueryResult');
+      if (!owner) { showRes(res, 'Enter address'); return; }
+      wget('/tacwallet/query?op=isowner&owner=' + encodeURIComponent(owner)).then(function (d) {
+        showRes(res, d.ok ? (d.is_owner ? 'Yes' : 'No') : (d.error || 'failed'));
+      }).catch(function () { showRes(res, 'failed'); });
+    });
+    loadWl();
+  })();
+</script>
+
+{% endblock %}

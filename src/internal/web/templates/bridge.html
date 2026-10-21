@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+{% block title %}TAC Bridge{% endblock %}
+{% block content %}
+<section class="pg-banner">
+  <div class="pg-txt"><h1 data-i18n="bn.bridge">Bridge</h1><p data-i18n="bn.bridgeSub">Cross-chain asset interoperability (TACm &harr; BSC)</p></div>
+  <svg viewBox="0 0 40 40" class="pg-art"><path d="M6 20 h14 M26 12 h8 M26 28 h8" stroke="#68BE8D" stroke-width="2.4" fill="none"/><rect x="4" y="16" width="8" height="8" rx="2" fill="#68BE8D"/><rect x="28" y="10" width="8" height="6" rx="2" fill="#68BE8D"/><rect x="28" y="26" width="8" height="6" rx="2" fill="#68BE8D"/></svg>
+</section>
+<style>
+  .br-wrap{max-width:1100px;margin:0 auto}
+  .br-card{background:#f7f8fb;border:1px solid #e2e6ee;border-radius:14px;padding:16px;margin-bottom:14px}
+  .br-card h3{margin:0 0 12px;font-size:14px;color:#68BE8D;font-weight:800;display:flex;align-items:center;gap:8px}
+  .br-card h3 .hint{font-size:11px;color:#5d6778;font-weight:500;margin-left:auto}
+  .br-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+  @media (max-width:980px){.br-grid{grid-template-columns:1fr}}
+  .br-row{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px dashed #e2e6ee;font-size:13px;color:#14161a;word-break:break-all}
+  .br-row:last-child{border-bottom:none}
+  .br-row .k{color:#5d6778;flex:none}
+  .br-row .v{font-family:ui-monospace,monospace;text-align:right}
+  .br-tag{display:inline-block;background:rgba(104,190,141,.12);border:1px solid rgba(104,190,141,.35);border-radius:999px;padding:2px 10px;font-size:11px;font-weight:700;color:#68BE8D;margin:3px 4px 3px 0}
+  .br-tag.off{background:rgba(246,70,93,.1);border-color:rgba(246,70,93,.35);color:#f6465d}
+  .br-field{margin-bottom:10px}
+  .br-field label{display:block;font-size:12px;color:#5d6778;margin-bottom:4px}
+  .br-field input,.br-field select{width:100%;box-sizing:border-box;background:#f2f4f9;border:1px solid #e2e6ee;border-radius:10px;color:#14161a;padding:10px 12px;font-size:13px;font-family:ui-monospace,monospace}
+  .br-btn{width:100%;background:#68BE8D;color:#f7f8fb;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:800;cursor:pointer}
+  .br-btn.ghost{background:transparent;border:1px solid #e2e6ee;color:#14161a;font-weight:700}
+  .br-btn.sm{width:auto;padding:6px 14px;font-size:12px;border-radius:8px}
+  .br-msg{margin-top:10px;font-size:12px;color:#5d6778;min-height:16px;word-break:break-all}
+  .br-msg.ok{color:#0ecb81}
+  .br-msg.err{color:#f6465d}
+  .br-table{width:100%;border-collapse:collapse;font-size:12px}
+  .br-table th{text-align:left;color:#5d6778;font-weight:600;padding:6px 8px;border-bottom:1px solid #e2e6ee}
+  .br-table td{padding:6px 8px;border-bottom:1px dashed #e2e6ee;color:#14161a;word-break:break-all;vertical-align:top}
+  .br-empty{color:#5d6778;font-size:13px;padding:10px 0}
+  .br-st{font-size:11px;font-weight:700;border-radius:6px;padding:2px 8px}
+  .br-st.ok{background:rgba(14,203,129,.12);color:#0ecb81}
+  .br-st.warn{background:rgba(240,185,11,.14);color:#b78a07}
+  .br-st.err{background:rgba(246,70,93,.12);color:#f6465d}
+</style>
+<section class="br-wrap">
+  <div class="br-card">
+    <h3 data-i18n="br.status">Relay Status <span class="hint" id="statusHint"></span><select id="chainSel" style="margin-left:auto;width:auto;font-size:11px;padding:3px 8px;background:#f2f4f9;border:1px solid #e2e6ee;border-radius:8px;color:#14161a;font-weight:700"></select></h3>
+    <div id="statusBody"><div class="br-empty">Loading…</div></div>
+  </div>
+  <div class="br-grid">
+    <div class="br-card">
+      <h3 data-i18n="br.assets">Asset Mappings</h3>
+      <div id="assetsBody"><div class="br-empty">Loading…</div></div>
+    </div>
+    <div class="br-card">
+      <h3 id="lockTitle" data-i18n="br.lock">Lock to BSC</h3>
+      <div class="br-field">
+        <label for="lkAsset" data-i18n="br.asset">Asset</label>
+        <select id="lkAsset"><option value="tacm">TACM</option><option value="tiusd">TiUSD</option><option value="usdt">USDT</option></select>
+      </div>
+      <div class="br-field">
+        <label for="lkSrc" data-i18n="br.srcAddr">Source address (tx0)</label>
+        <input id="lkSrc" placeholder="tx0..." autocomplete="off">
+      </div>
+      <div class="br-field">
+        <label for="lkDst" id="dstLabel">Target address (0x BSC)</label>
+        <input id="lkDst" placeholder="0x..." autocomplete="off">
+      </div>
+      <div class="br-field">
+        <label for="lkAmt" data-i18n="br.amount">Amount</label>
+        <input id="lkAmt" type="number" min="0" step="any" placeholder="1.0" autocomplete="off">
+      </div>
+      <button class="br-btn" id="lkBtn" data-i18n="br.lockBtn">Lock &amp; Send</button>
+      <div class="br-msg" id="lkMsg"></div>
+    </div>
+  </div>
+  <div class="br-card">
+    <h3 data-i18n="br.history">Bridge History <span class="hint" data-i18n="br.historyHint">by address</span></h3>
+    <div class="br-field" style="display:flex;gap:8px">
+      <input id="hxAddr" placeholder="tx0... or 0x..." autocomplete="off" style="flex:1">
+      <button class="br-btn sm ghost" id="hxBtn" data-i18n="br.query">Query</button>
+    </div>
+    <div id="hxBody"><div class="br-empty" data-i18n="br.historyPh">Enter an address to view bridge transactions</div></div>
+  </div>
+</section>
+<script>
+  // M161：自動帶入我的錢包——登入會員優先，否則訪客地址（與全站 ensureGuestAddr 同源）。
+  (function () {
+    function afill(ids) {
+      function fill(a) { if (!a) return; ids.forEach(function (id) { var el = document.getElementById(id); if (el && !el.value.trim()) el.value = a; }); }
+      fetch('/api/auth/me', { cache: 'no-store' }).then(function (r) { return r.json().catch(function () { return null; }); }).then(function (j) {
+        if (j && j.ok && j.logged_in && j.user && j.user.wallet_addr) { fill(j.user.wallet_addr); return; }
+        if (window.ensureGuestAddr) { ensureGuestAddr().then(fill).catch(function () {}); }
+      }).catch(function () { if (window.ensureGuestAddr) { ensureGuestAddr().then(fill).catch(function () {}); } });
+    }
+    afill(['lkSrc']);
+  })();
+
+  (function () {
+    'use strict';
+    var api = location.origin;
+    var curChain = 'bsc';
+
+    function curLang() { return (window.TAC_I18N && TAC_I18N.cur) ? TAC_I18N.cur() : 'en'; }
+    function L(zh, en) { return curLang() === 'zh' ? zh : en; }
+    function chainName(c) { return { bsc: 'BSC', ethereum: 'Ethereum', polygon: 'Polygon' }[c] || String(c || '').toUpperCase(); }
+
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+    function row(k, v) {
+      return '<div class="br-row"><span class="k">' + esc(k) + '</span><span class="v">' + esc(v) + '</span></div>';
+    }
+
+    function loadStatus(chain) {
+      var el = document.getElementById('statusBody');
+      var hint = document.getElementById('statusHint');
+      fetch(api + '/bridge/bsc/status?chain=' + encodeURIComponent(chain || 'bsc'), { cache: 'no-store' }).then(function (r) { return r.json().catch(function () { return null; }); }).then(function (d) {
+        if (!d || d.error) {
+          hint.textContent = '';
+          el.innerHTML = '<div class="br-empty">' + esc((d && d.error) || L('橋未啟用或節點過舊', 'Not available (bridge disabled or old node)')) + '</div>';
+          return;
+        }
+        hint.textContent = chainName(chain || 'bsc');
+        if (!d.enabled) {
+          el.innerHTML = '<div class="br-empty">' + esc(L('中繼未啟用 — 配置 -' + chain + '-relay 旗標並部署合約', 'Relay not enabled — configure -' + chain + '-relay flags and deploy contracts')) + '</div>';
+          var ab = document.getElementById('assetsBody');
+          ab.innerHTML = '<div class="br-empty">' + esc(L('此鏈無資產映射', 'No mapped assets for this chain')) + '</div>';
+          return;
+        }
+        var h = '';
+        h += row(L('啟用', 'Enabled'), '<span class="br-st ' + (d.enabled ? 'ok' : 'err') + '">' + (d.enabled ? 'ON' : 'OFF') + '</span>');
+        h += row('RPC', d.rpc || '-');
+        h += row('Chain ID', d.chain_id || '-');
+        h += row('Signer', d.signer_addr || '-');
+        h += row(L('掃描高度', 'Last Scanned'), d.last_scanned || '-');
+        el.innerHTML = h;
+        var ab = document.getElementById('assetsBody');
+        var assets = (d.assets || []);
+        if (assets.length === 0) {
+          ab.innerHTML = '<div class="br-empty">' + esc(L('此鏈無資產映射', 'No mapped assets for this chain')) + '</div>';
+          return;
+        }
+        var ah = '';
+        for (var i = 0; i < assets.length; i++) {
+          ah += '<span class="br-tag">' + esc(assets[i].token) + ' &rarr; ' + esc(String(assets[i].bsc_token || '').slice(0, 10)) + '&hellip;</span>';
+        }
+        ah += '<div class="br-row"><span class="k">Min amount</span><span class="v">' + esc(assets[0].min_amount) + '</span></div>';
+        ab.innerHTML = ah;
+      }).catch(function () {
+        el.innerHTML = '<div class="br-empty">' + esc(L('橋狀態無法取得', 'Bridge status unavailable')) + '</div>';
+      });
+    }
+
+    function setChain(c) {
+      curChain = c || 'bsc';
+      var sel = document.getElementById('chainSel');
+      if (sel) { sel.value = curChain; }
+      var dl = document.getElementById('dstLabel');
+      if (dl) {
+        var m = { bsc: '0x BSC', ethereum: '0x ETH', polygon: '0x POL' }[curChain] || '0x';
+        dl.textContent = L('目標地址（' + m + '）', 'Target address (' + m + ')');
+      }
+      var lt = document.getElementById('lockTitle');
+      if (lt) { lt.textContent = L('鎖定至 ' + chainName(curChain), 'Lock to ' + chainName(curChain)); }
+      loadStatus(curChain);
+      if (document.getElementById('hxAddr').value) { queryHistory(); }
+    }
+
+    function loadChains() {
+      fetch(api + '/bridge/chains', { cache: 'no-store' }).then(function (r) { return r.json().catch(function () { return null; }); }).then(function (d) {
+        var sel = document.getElementById('chainSel');
+        if (!d || !d.chains || !sel) { return; }
+        sel.innerHTML = '';
+        var opts = [];
+        for (var i = 0; i < d.chains.length; i++) {
+          var c = d.chains[i];
+          if (c === 'tacm') { continue; }
+          var o = document.createElement('option');
+          o.value = c;
+          o.textContent = chainName(c);
+          sel.appendChild(o);
+          opts.push(c);
+        }
+        if (opts.indexOf(curChain) === -1 && opts.length) { curChain = opts[0]; }
+        sel.addEventListener('change', function () { setChain(sel.value); });
+        setChain(sel.value || curChain);
+      }).catch(function () {
+        setChain('bsc');
+      });
+    }
+
+    function queryHistory() {
+      var addr = document.getElementById('hxAddr').value.trim();
+      var el = document.getElementById('hxBody');
+      if (!addr) { el.innerHTML = '<div class="br-empty">' + esc(L('請先輸入地址', 'Enter an address first')) + '</div>'; return; }
+      el.innerHTML = '<div class="br-empty">Loading…</div>';
+      fetch(api + '/bridge/txs?address=' + encodeURIComponent(addr) + '&limit=50', { cache: 'no-store' })
+        .then(function (r) { return r.json().catch(function () { return null; }); }).then(function (d) {
+          if (!d || !Array.isArray(d)) {
+            el.innerHTML = '<div class="br-empty">' + esc(L('查詢失敗（橋未啟用？）', 'Query failed (bridge disabled?)')) + '</div>';
+            return;
+          }
+          var rows = [];
+          for (var i = 0; i < d.length; i++) {
+            var t = d[i];
+            var sc = String(t.source_chain || '').toLowerCase();
+            var tc = String(t.target_chain || '').toLowerCase();
+            if (curChain && tc !== curChain && sc !== curChain) { continue; }
+            rows.push(t);
+          }
+          if (rows.length === 0) { el.innerHTML = '<div class="br-empty">' + esc(L('此鏈無跨鏈交易', 'No bridge transactions for this chain')) + '</div>'; return; }
+          var h = '<div class="table-wrap"><table class="br-table" style="min-width:560px"><tr><th>Time</th><th>Route</th><th>Token</th><th>Amount</th><th>Status</th><th>ID</th></tr>';
+          for (var j = 0; j < rows.length; j++) {
+            var t2 = rows[j];
+            var st = t2.status || '-';
+            var stc = (st === 'confirmed' || st === 'minted' || st === 'unlocked') ? 'ok' : ((st === 'pending' || st === 'burning' || st === 'locked') ? 'warn' : 'err');
+            var route = (t2.source_chain || '?') + ' &rarr; ' + (t2.target_chain || '?');
+            h += '<tr><td>' + esc(t2.ts ? new Date(t2.ts * 1000).toLocaleString() : '-') + '</td>' +
+              '<td><span class="br-st warn">' + esc(route) + '</span></td>' +
+              '<td>' + esc(t2.token || '-') + '</td>' +
+              '<td>' + esc(t2.amount || '-') + '</td>' +
+              '<td><span class="br-st ' + stc + '">' + esc(st) + '</span></td>' +
+              '<td>' + esc(String(t2.bridge_tx_id || '-').slice(0, 18)) + '&hellip;</td></tr>';
+          }
+          el.innerHTML = h + '</table>';
+        }).catch(function () {
+          el.innerHTML = '<div class="br-empty">' + esc(L('查詢失敗', 'Query failed')) + '</div>';
+        });
+    }
+
+    function lock() {
+      var msg = document.getElementById('lkMsg');
+      msg.className = 'br-msg';
+      msg.textContent = 'Sending…';
+      var body = {
+        source_chain: 'tacm',
+        target_chain: curChain || 'bsc',
+        source_address: document.getElementById('lkSrc').value.trim(),
+        target_address: document.getElementById('lkDst').value.trim(),
+        amount: parseFloat(document.getElementById('lkAmt').value),
+        token: document.getElementById('lkAsset').value
+      };
+      if (!body.source_address || !body.target_address || !(body.amount > 0)) {
+        msg.className = 'br-msg err';
+        msg.textContent = L('請填寫來源地址、目標地址與金額', 'Fill source address, target address and amount');
+        return;
+      }
+      fetch(api + '/bridge/lock', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), cache: 'no-store' })
+        .then(function (r) { return r.json().catch(function () { return null; }); }).then(function (d) {
+          if (d && d.error) {
+            msg.className = 'br-msg err';
+            msg.textContent = d.error;
+            return;
+          }
+          msg.className = 'br-msg ok';
+          msg.textContent = L('已鎖定：', 'Locked: ') + (d && d.bridge_tx_id ? d.bridge_tx_id : JSON.stringify(d));
+          queryHistory();
+        }).catch(function () {
+          msg.className = 'br-msg err';
+          msg.textContent = L('請求失敗', 'Request failed');
+        });
+    }
+
+    document.getElementById('lkBtn').addEventListener('click', lock);
+    document.getElementById('hxBtn').addEventListener('click', queryHistory);
+    document.getElementById('hxAddr').addEventListener('keydown', function (e) { if (e.key === 'Enter') { queryHistory(); } });
+    loadChains();
+    if (document.getElementById('hxAddr').value) { queryHistory(); }
+  })();
+</script>
+{% endblock %}

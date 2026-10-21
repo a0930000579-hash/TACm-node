@@ -1,0 +1,25 @@
+# TAC Ai Smart Chain — Prometheus 抓取配置（M143-C 監控告警）
+# 用法：prometheus --config.file=prometheus.yml
+# 告警規則見 alerts.yml（本檔下方 rule_files 已掛載）。
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - alerts.yml
+
+scrape_configs:
+  # 主錨點節點
+  - job_name: tacm-anchor
+    static_configs:
+      - targets: ["localhost:8080"]
+        labels:
+          node: anchor
+
+  # 其他節點（依實際 IP/埠增補；RPC 埠 = Web 埠時 /metrics 同在 8080）
+  # - job_name: tacm-seed
+  #   static_configs:
+  #     - targets: ["1.2.3.4:8080"]
+  #       labels:
+  #         node: seed

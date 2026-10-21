@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+{% block title %}加入網絡 · TAC Node{% endblock %}
+{% block content %}
+<section class="panel">
+  <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M5 15c-1 1-1.5 4-1.5 4s3-.5 4-1.5"/><path d="M9 17c2-5 6-9 10-10 0 4-4 8-9 10"/><circle cx="14" cy="10" r="1.4"/></svg> 加入 TAC Ai 智能鏈主網</h2></div>
+  <p class="muted">任何一台伺服器都可成為節點（follower），與創世節點同步同一條鏈、共享全網狀態；內建礦機可額外挖礦瓜分出塊獎勵。節點之間嚴格遵循同一套出塊獎勵規則，任何入口看到的鏈上資料與在線礦工完全一致。</p>
+</section>
+
+<!-- M63：網絡概況 -->
+<section class="panel">
+  <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg> 網絡概況</h2></div>
+  <div class="chain-grid">
+    <div class="cg"><small>網絡</small><b>{{ network }}</b></div>
+    <div class="cg"><small>鏈 ID</small><b class="mono">{% if network == "testnet" %}tacm-testnet-1{% else %}tacm-mainnet-1{% endif %}</b></div>
+    <div class="cg"><small>共識</small><b>PoT 動態難度 + BFT 投票</b></div>
+    <div class="cg"><small>出塊獎勵</small><b>coinbase 分潤（池 + 礦工）</b></div>
+    <div class="cg"><small>種子節點</small><b>{{ seeds|length }}</b></div>
+    <div class="cg"><small>區塊時間</small><b>2 秒</b></div>
+  </div>
+</section>
+
+<!-- M63/M65：公開 seed 列表 -->
+<section class="panel">
+  <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1.5 1.5"/><path d="M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1.5-1.5"/></svg> 公開 Seed 列表</h2></div>
+  <div class="table-wrap">
+  <table class="data-table">
+    <thead>
+      <tr><th>節點</th><th>URL</th><th>角色</th></tr>
+    </thead>
+    <tbody>
+    {% for sd in seeds %}
+      <tr>
+        <td class="mono">{{ sd.NodeID }}</td>
+        <td class="mono"><a href="{{ sd.URL }}" target="_blank" rel="noopener">{{ sd.URL }}</a></td>
+        <td>{{ sd.Role }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="3" class="muted center">{% if network == "testnet" %}testnet 為實驗網段，無固定公開 seed——由起錨節點以 -p2p-seed 自行播報{% else %}尚無公開 seed{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- M144：下載節點程式包（免編譯，官方推薦方式） -->
+<section class="panel">
+  <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><rect x="4" y="15" width="16" height="5" rx="1"/></svg> 方式一：下載節點程式包（免編譯，推薦）</h2></div>
+  <p class="muted">官方預編譯的<b>純節點程式</b>（不含錢包/交易所/社群等 DApp）。下載即用，不需 Go、不需編譯、不需整套系統原始碼。</p>
+  <div class="join-cmd">
+    <pre id="dlCmd">curl -L -o /tmp/tacnode-package.zip http://2.28.201.174:8080/downloads/tacnode-package.zip
+unzip -q /tmp/tacnode-package.zip -d /tmp/tacnode
+sudo install -m 0755 /tmp/tacnode/tacweb /usr/local/bin/tacweb</pre>
+    <button class="search-btn" id="copyDlBtn" type="button">複製指令</button>
+  </div>
+  <p class="muted">啟動節點（把 <code>&lt;你的公網IP&gt;</code> 換成自己的公網 IP）：</p>
+  <div class="join-cmd">
+    <pre id="dlCmd2">sudo mkdir -p /var/tac/data
+sudo /usr/local/bin/tacweb -data-dir /var/tac/data -web-port 8080 -rpc-port 8080 -serve-dapp=false -p2p -p2p-url http://&lt;你的公網IP&gt;:8080 -p2p-seed http://2.28.201.174:8080 -network mainnet</pre>
+    <button class="search-btn" id="copyDl2Btn" type="button">複製指令</button>
+  </div>
+  <p class="muted">永久運行（systemd，開機自啟）：</p>
+  <div class="join-cmd">
+    <pre id="dlCmd3">sudo tee /etc/systemd/system/tacnode.service &lt;&lt;'EOF'
+[Unit]
+Description=TACm Node
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/tacweb -data-dir /var/tac/data -web-port 8080 -rpc-port 8080 -serve-dapp=false -p2p -p2p-url http://&lt;你的公網IP&gt;:8080 -p2p-seed http://2.28.201.174:8080 -network mainnet
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+sudo systemctl daemon-reload && sudo systemctl enable --now tacnode</pre>
+    <button class="search-btn" id="copyDl3Btn" type="button">複製指令</button>
+  </div>
+  <p class="muted"><b>收款</b>：首次啟動自動生成節點金鑰（<code>/var/tac/data/node_key.json</code>），節點地址＝你的收款錢包，出塊獎勵自動入帳。<b>請立即備份：</b><code>sudo cp /var/tac/data/node_key.json /root/node_key_backup.json</code></p>
+</section>
+
+<!-- M63/M65：一鍵加入指令 -->
+<section class="panel">
+  <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg> 方式二：一鍵自動安裝（需 Go 編譯）</h2></div>
+  <div class="join-cmd">
+    {% if network == "testnet" %}
+    <pre id="joinCmd">curl -L -o /tmp/tacnet-node.sh 'https://aka.doubaocdn.com/s/eFr3VVzdq3' && bash /tmp/tacnet-node.sh --network testnet --mode nohup --seed &lt;創世節點URL&gt;</pre>
+    <button class="search-btn" id="copyBtn" type="button">複製指令</button>
+  </div>
+  <p class="muted">一行一鍵安裝（自動下載／編譯／啟動）。testnet 使用獨立鏈 ID <b>tacm-testnet-1</b> 與獨立資料目錄，與主網完全分離，可放心試跑。</p>
+    {% else %}
+    <pre id="joinCmd">curl -L -o /tmp/tacnet-node.sh 'https://aka.doubaocdn.com/s/eFr3VVzdq3' && bash /tmp/tacnet-node.sh</pre>
+    <button class="search-btn" id="copyBtn" type="button">複製指令</button>
+  </div>
+  <p class="muted"><b>一行一鍵搭建</b>（自動裝 Go／下載／編譯／systemd 或 nohup 啟動／偵測公網 IP）。Linux 伺服器用 systemd（開機自啟），手機 Termux 自動用 nohup；自訂埠加 <code>--port 8081</code>，指定模式加 <code>--mode systemd|nohup|render</code>。啟動後節點品牌控制台＝<code>http://&lt;你的公網IP&gt;:8081</code>。⚠ 此腳本為早期版本（需 Go 編譯），主網現行請優先使用上方<b>方式一</b>節點程式包。</p>
+  <div class="join-cmd" style="margin-top:10px">
+    <pre id="joinCmdAlt"># Render（免費雲平台）：推 GitHub → Render 新建 Web Service → Go runtime（render.yaml 自動配置）
+# 進階手動方式：
+go build -o tacweb ./cmd/web
+./tacweb -web-port 8080 -rpc-port 8080 -data-dir ./data -block-time 2 -difficulty 3 -p2p -p2p-url http://&lt;你的公網IP&gt;:8080 -p2p-seed http://2.28.201.174:8080 -p2p-follower</pre>
+  </div>
+    {% endif %}
+</section>
+
+<!-- M63：節點要求 -->
+<section class="panel">
+  <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4a3 3 0 0 1 6 0"/></svg> 節點要求</h2></div>
+  <div class="table-wrap">
+  <table class="data-table">
+    <thead><tr><th>項目</th><th>要求</th></tr></thead>
+    <tbody>
+      <tr><td>系統</td><td>Linux / macOS（需 Go 1.22+）</td></tr>
+      <tr><td>記憶體</td><td>建議 2GB RAM 以上</td></tr>
+      <tr><td>磁碟</td><td>10GB 以上（鏈資料會持續增長）</td></tr>
+      <tr><td>網路</td><td>開放 TCP 8080 埠（P2P + RPC 同埠合併）；8081 埠供節點品牌控制台</td></tr>
+      <tr><td>同步</td><td>首次啟動自動從 seed 節點同步全鏈</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- M149m：質押成為驗證人（去中心化共識） -->
+<section class="panel">
+  <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.9 5l2.8 2.8"/><path d="M16.3 16.3l2.8 2.8"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="M4.9 19l2.8-2.8"/><path d="M16.3 7.7l2.8-2.8"/></svg> 質押成為驗證人（去中心化共識）</h2></div>
+  <p class="muted" style="background:#1e293b;border:1px solid #334155;border-radius:8px;padding:10px 12px;"><b>創節點引導獎勵（限額 50 名）</b>：新節點首次上線可領取 <b>1,000 TACm</b> 自動質押、直接成為驗證人——資金來自創世社群基金，<b>每地址僅一次、限量 50 名</b>（額滿即止）。領取方式：</p>
+  <div class="join-cmd">
+    <pre id="bootCmd">curl -s -X POST http://&lt;你的節點IP&gt;:8080/api/node/bootstrap -H "Content-Type: application/json" -d '{}'</pre>
+    <button class="search-btn" id="copyBootBtn" type="button">複製指令</button>
+  </div>
+  <p class="muted">返回交易雜湊即領取成功；入塊後 1,000 TACm 入錢包並自動鎖入質押池。</p>
+
+  <p class="muted"><b>質押 = 鎖幣取得驗證人資格</b>，與主流 PoS（以太坊等）一致：節點把 TACm 鎖進鏈上質押池 → 進入驗證人集（每 60 秒由鏈上質押重放重建，全網一致）→ 輪值出塊、由在線節點均分 <b>45% 節點獎勵</b>。驗證人越多、出塊越分散，鏈越去中心化（最多 <b>100 名</b>同時輪值）。</p>
+  <p class="muted"><b>門檻：質押 ≥ 1,000 TACm</b>（質押高者優先入集）。質押幣鎖在鏈上質押池（鏈上可查），不可挪用。</p>
+
+  <div class="panel-head" style="margin-top:8px"><h3 style="font-size:14px">第 1 步：確保節點錢包有幣</h3></div>
+  <p class="muted">新節點初始餘額為 0，需先由其他持有者轉入（例如從創世節點錢包或交易所轉到你的節點地址）。節點地址＝節點金鑰對應地址，見節點面板／<code>/var/tac/data/node_key.json</code>。</p>
+
+  <div class="panel-head" style="margin-top:8px"><h3 style="font-size:14px">第 2 步：發質押交易</h3></div>
+  <p class="muted">在節點控制台（節點面板）點「質押成為驗證人」輸入金額，或直接呼叫 API：</p>
+  <div class="join-cmd">
+    <pre id="stakeCmd">curl -s -X POST http://&lt;你的節點IP&gt;:8080/api/node/stake -H "Content-Type: application/json" -d '{"amount":1000}'</pre>
+    <button class="search-btn" id="copyStakeBtn" type="button">複製指令</button>
+  </div>
+  <p class="muted">成功後返回交易雜湊；交易入塊後最多 1 分鐘，節點自動進入驗證人集並開始輪值出塊。</p>
+
+  <div class="panel-head" style="margin-top:8px"><h3 style="font-size:14px">第 3 步：領取獎勵</h3></div>
+  <p class="muted">成為驗證人後：每塊 <b>45% 節點獎勵</b>由鏈上在線節點均分、直接入你的節點錢包（coinbase:node）。另可開啟算力成為礦工，按在線算力瓜分 <b>40%</b> 礦工獎勵（coinbase:miner）。兩者可同時開啟。</p>
+
+  <div class="panel-head" style="margin-top:8px"><h3 style="font-size:14px">快照快速同步（重要）</h3></div>
+  <p class="muted">節點啟動時加 <code>-snapshot-url http://2.28.201.174:8080</code>，會直接下載創世節點的最新狀態快照（創世+Tip+全帳戶餘額），<b>秒級就緒</b>，不再從創世逐塊重放（省 10 分鐘以上）。<b>無磁碟的免費雲節點（Render 等）每次重啟都必須帶此參數</b>，否則回到創世重放、長時間落後。</p>
+  <div class="join-cmd">
+    <pre id="snapCmd">/usr/local/bin/tacweb -data-dir /var/tac/data -web-port 8080 -rpc-port 8080 -serve-dapp=false -p2p -p2p-url http://&lt;你的公網IP&gt;:8080 -p2p-seed http://2.28.201.174:8080 -network mainnet -snapshot-url http://2.28.201.174:8080</pre>
+    <button class="search-btn" id="copySnapBtn" type="button">複製指令</button>
+  </div>
+
+  <div class="panel-head" style="margin-top:8px"><h3 style="font-size:14px">多驗證人注意事項</h3></div>
+  <p class="muted">BFT 共識需 2/3 驗證人在線才持續出塊：<b>2 個驗證人時任一離線鏈即暫停</b>，建議驗證人達 <b>3 個以上</b>（容忍 1 個離線）。加入的驗證人越多，鏈的可用性與去中心化程度越高。</p>
+</section>
+
+<!-- M63：驗證與挖礦 -->
+<section class="panel">
+  <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M4 12l5 5L20 7"/></svg> 驗證與挖礦</h2></div>
+  <div class="join-cmd">
+    <pre id="joinVerify">curl -s http://127.0.0.1:8080/status
+# 瀏覽器開啟 http://127.0.0.1:8080/explorer 查看你同步的鏈</pre>
+  </div>
+  <p class="muted">啟動後在網頁「挖礦」頁開啟礦機即可參與出塊：收益按鏈上 coinbase 分潤規則發放（池 + 礦工），開機/關機狀態經心跳交易寫入鏈上，任何入口看到你的在線狀態一致。</p>
+</section>
+
+<!-- M87：GitHub 永久固化 -->
+<section class="panel">
+  <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> 原始碼永久固化（GitHub）</h2></div>
+  <p class="muted">節點與整套鏈的原始碼固化到 GitHub，任何人可 clone、審計、部署（一次一條）：</p>
+  <div class="join-cmd">
+    <pre id="joinGit">cd tacm-go
+git init -b main
+git add -A
+git commit -m "TAC Ai Smart Chain - M87 (dynamic validators + slashing)"
+git remote add origin https://github.com/&lt;你的帳號&gt;/TACm-Ai_Cyprto.git
+git push -u origin main</pre>
+    <button class="search-btn" id="copyGitBtn" type="button">複製指令</button>
+  </div>
+  <p class="muted">推完後將 <b>公開倉庫網址</b> 貼回本頁 seed 列表（或告知我），即可成為全網永久可查證的開源創世節點。</p>
+</section>
+
+<style>
+  .chain-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+  .cg{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px}
+  .cg small{font-size:11px;color:var(--muted);display:block;margin-bottom:4px}
+  .cg b{font-size:13px;color:var(--text);word-break:break-all}
+  .join-cmd{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
+  .join-cmd pre{flex:1;min-width:280px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;font-size:12.5px;line-height:1.7;color:var(--text);overflow-x:auto;white-space:pre;margin:0}
+</style>
+
+<script>
+  // M63：複製一鍵指令（M87：GitHub 固化指令共用同一邏輯）。
+  function bindCopy(btnId, preId, doneLabel) {
+    var btn = document.getElementById(btnId);
+    var pre = document.getElementById(preId);
+    if (!btn || !pre) return;
+    btn.addEventListener('click', function () {
+      var text = pre.textContent;
+      function done() { btn.textContent = doneLabel + ' <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M4 12l5 5L20 7"/></svg>'; setTimeout(function () { btn.textContent = '複製指令'; }, 1500); }
+      function fallback() {
+        var ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); done(); } catch (e) {}
+        document.body.removeChild(ta);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(function () { fallback(); });
+      } else { fallback(); }
+    });
+  }
+  (function () {
+    bindCopy('copyBtn', 'joinCmd', '已複製');
+    bindCopy('copyGitBtn', 'joinGit', '已複製');
+    bindCopy('copyDlBtn', 'dlCmd', '已複製');
+    bindCopy('copyDl2Btn', 'dlCmd2', '已複製');
+    bindCopy('copyDl3Btn', 'dlCmd3', '已複製');
+    bindCopy('copyStakeBtn', 'stakeCmd', '已複製');
+    bindCopy('copySnapBtn', 'snapCmd', '已複製');
+    bindCopy('copyBootBtn', 'bootCmd', '已複製');
+  })();
+</script>
+{% endblock %}
