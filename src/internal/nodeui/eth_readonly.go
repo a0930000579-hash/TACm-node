@@ -118,6 +118,15 @@ func (s *Server) ethReadMethod(method string, params []any) (any, error) {
 	case "debug_traceBlockByHash":
 		out, err := s.rpc.DebugTraceBlockPublic(params, true)
 		return out, err
+	case "trace_replayBlockTransactions":
+		out, err := s.rpc.TraceReplayBlockPublic(params)
+		return out, err
+	case "trace_replayTransaction":
+		out, err := s.rpc.TraceReplayTransactionPublic(params)
+		return out, err
+	case "trace_transaction":
+		out, err := s.rpc.TraceTransactionPublic(params)
+		return out, err
 	case "debug_traceCall", "trace_call":
 		out, err := s.rpc.DebugTraceCallPublic(params)
 		return out, err

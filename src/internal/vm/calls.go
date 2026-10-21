@@ -104,7 +104,7 @@ func (in *Interpreter) doMessageCall(toBig, value *big.Int,
 	prevCur := in.ctx.curTrace
 	frameIdx := in.ctx.BeginTrace(callType, from0x, to0x,
 		toBigInt(callValue), requestedGas, input)
-	defer func() { in.ctx.EndTrace(frameIdx, prevCur, in.lastReturnData, !ok) }()
+	defer func() { in.ctx.EndTrace(frameIdx, prevCur, in.lastReturnData, in.gasUsed, !ok) }()
 
 	snap := in.world.Snapshot()
 
@@ -242,7 +242,7 @@ func (in *Interpreter) createContract(value *big.Int, offset, size uint64,
 		toBigInt(value), uint64(in.remainingGas()), initCode)
 	defer func() {
 		reverted := addr == nil || addr.Sign() == 0
-		in.ctx.EndTrace(frameIdx, prevCur, in.lastReturnData, reverted)
+		in.ctx.EndTrace(frameIdx, prevCur, in.lastReturnData, in.gasUsed, reverted)
 	}()
 
 	snap := in.world.Snapshot()

@@ -70,6 +70,7 @@ type TraceFrame struct {
 	Gas      uint64
 	Input    []byte
 	Output   []byte
+	GasUsed  uint64 // v138：frame 實際消耗 gas（EndTrace 填）
 	Reverted bool
 	Parent   int // parent frame idx，-1=根
 	Sibling  int // 同 parent 下的序號（traceAddress 用）
@@ -101,9 +102,10 @@ func (c *ExecutionContext) BeginTrace(typ, from, to string,
 }
 
 // EndTrace 填寫 frame 結果並還原執行指標（prev 為 BeginTrace 前的 curTrace）。
-func (c *ExecutionContext) EndTrace(idx, prev int, out []byte, reverted bool) {
+func (c *ExecutionContext) EndTrace(idx, prev int, out []byte, gasUsed uint64, reverted bool) {
 	if idx >= 0 && idx < len(c.Trace) {
 		c.Trace[idx].Output = append([]byte(nil), out...)
+		c.Trace[idx].GasUsed = gasUsed
 		c.Trace[idx].Reverted = reverted
 	}
 	c.curTrace = prev

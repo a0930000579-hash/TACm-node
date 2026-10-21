@@ -54,6 +54,7 @@ type CallResult struct {
 	RevertReason string     `json:"revert_reason,omitempty"`
 	Error        string     `json:"error,omitempty"`
 	Steps        []*ExecStep // v137：模擬執行收集的逐 opcode 步驟（僅 collect=true）
+	Trace        []*TraceFrame // v138：模擬執行收集的 call-frame 樹（子 frame；根層由呼叫端構）
 }
 
 // ContractManager 管理合約代碼/存儲的執行與持久化。
@@ -331,11 +332,13 @@ func (m *ContractManager) runCallWithGas(addr0x, caller0x string,
 			ReturnData:   hex.EncodeToString(res.ReturnData),
 			RevertReason: firstStr(res.Err, res.RevertReason),
 			Steps:        ctx.Steps,
+			Trace:        ctx.Trace,
 		}
 	}
 	return &CallResult{
 		OK: true, GasUsed: res.GasUsed,
 		Steps:       ctx.Steps, Logs: res.Logs,
+		Trace:       ctx.Trace,
 		ReturnData: hex.EncodeToString(res.ReturnData),
 	}
 }

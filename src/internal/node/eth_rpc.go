@@ -502,6 +502,27 @@ func (s *RPCServer) dispatchEthRPC(req ethRPCRequest) ethRPCResponse {
 		} else {
 			result = out
 		}
+	case "trace_replayBlockTransactions": // v138：Parity 區塊重放 trace 樹。
+		out, err := s.traceReplayBlockTransactions(req.Params)
+		if err != nil {
+			rpcErr = ethError(-32603, err.Error())
+		} else {
+			result = out
+		}
+	case "trace_replayTransaction": // v138：Parity 單筆重放。
+		out, err := s.traceReplayTransaction(req.Params)
+		if err != nil {
+			rpcErr = ethError(-32603, err.Error())
+		} else {
+			result = out
+		}
+	case "trace_transaction": // v138：Parity 單筆 trace 樹。
+		out, err := s.traceTransaction(req.Params)
+		if err != nil {
+			rpcErr = ethError(-32603, err.Error())
+		} else {
+			result = out
+		}
 	case "trace_call": // v137：Parity 標準名別名（同 debug_traceCall 模擬呼叫追蹤）。
 		out, err := s.debugTraceCall(req.Params)
 		if err != nil {

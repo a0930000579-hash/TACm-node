@@ -8,6 +8,7 @@ package node
 // 基於 DB 摘要（gas/gasUsed/failed 真實），structLogs 保留空（無歷史狀態重放）。
 
 import (
+	"encoding/hex"
 	"errors"
 	"math/big"
 	"strconv"
@@ -423,4 +424,253 @@ func (s *RPCServer) DebugTraceCallPublic(params []any) (map[string]any, error) {
 // DebugTraceTransactionPublic 只讀面用：debug_traceTransaction。
 func (s *RPCServer) DebugTraceTransactionPublic(params []any) (map[string]any, error) {
 	return s.debugTraceTransaction(params)
+}
+
+// ===== v138：Parity replay 面（trace_transaction / trace_replayTransaction /
+// trace_replayBlockTransactions）=====
+//
+// 以模擬執行（最新世界狀態）重放交易，回 Parity trace 樹（根層 frame＋VM
+// call-frame 子樹）。無 state-at-height 能力，模擬為最新狀態近似；stateDiff
+// 不計算（回空物件），與主流結構相容。
+
+// traceFrameToParity 單一 TraceFrame → Parity trace 節點（traceAddress/subtraces 由呼叫端填）。
+func traceFrameToParity(f *vm.TraceFrame) map[string]any {
+	action := map[string]any{
+		"callType": f.Type, "from": f.From,
+		"value": "0x" + strings.TrimPrefix(f.Value.Text(16), "0x"), "gas": "0x" + strconv.FormatUint(f.Gas, 16),
+		"input": "0x" + hex.EncodeToString(f.Input),
+	}
+	action["to"] = f.To
+	if f.Type == "create" {
+		delete(action, "to")
+	}
+	result := map[string]any{"gasUsed": "0x" + strconv.FormatUint(f.GasUsed, 16), "output": "0x" + hex.EncodeToString(f.Output)}
+	if f.Reverted {
+		result = map[string]any{"gasUsed": "0x" + strconv.FormatUint(f.GasUsed, 16)}
+	}
+	return map[string]any{
+		"action": action, "blockHash": nil, "blockNumber": nil,
+		"result": result, "subtraces": 0, "traceAddress": []any{}, "type": f.Type,
+	}
+}
+
+// parityRootFrame 根層 frame（type=call/create，無 parent）。
+func (s *RPCServer) parityRootFrame(tx *chaindb.Transaction, cr *vm.CallResult) map[string]any {
+	isCreate := tx.ToAddr == "" || tx.ToAddr == "0x"
+	ttype := "call"
+	if isCreate {
+		ttype = "create"
+	}
+	from0x, _ := tx0To0x(tx.FromAddr)
+	if from0x == "" {
+		from0x = "0x" + tx.FromAddr
+	}
+	to0x := ""
+	if !isCreate {
+		t0x, terr := tx0To0x(tx.ToAddr)
+		if terr != nil {
+			t0x = "0x" + tx.ToAddr
+		}
+		to0x = t0x
+	}
+	value := "0x0"
+	if tx.Amount != "" {
+		if strings.HasPrefix(tx.Amount, "0x") {
+			value = "0x" + strings.TrimPrefix(tx.Amount, "0x")
+		} else if n, ok := new(big.Int).SetString(tx.Amount, 10); ok {
+			value = "0x" + n.Text(16)
+		}
+	}
+	gas := "0x" + strconv.FormatInt(tx.GasLimit, 16)
+	input := s.txCalldata(tx)
+	action := map[string]any{"callType": ttype, "from": from0x, "to": to0x, "value": value, "gas": gas, "input": input}
+	if isCreate {
+		delete(action, "to")
+	}
+	out := "0x"
+	gasUsed := "0x" + strconv.FormatInt(tx.GasUsed, 16)
+	if cr != nil {
+		out = "0x" + strings.TrimPrefix(cr.ReturnData, "0x")
+		gasUsed = "0x" + strconv.FormatUint(cr.GasUsed, 16)
+	}
+	result := map[string]any{"gasUsed": gasUsed, "output": out}
+	failed := (cr != nil && (cr.Reverted || !cr.OK)) || (cr == nil && tx.Status != "" && tx.Status != "confirmed" && tx.Status != "success")
+	if failed {
+		result = map[string]any{"gasUsed": gasUsed}
+	}
+	return map[string]any{"action": action, "result": result, "subtraces": 0, "traceAddress": []any{}, "type": ttype}
+}
+
+// txCalldata 從交易 memo 提取 calldata（vm: 前綴或純 hex；無則空）。
+func (s *RPCServer) txCalldata(tx *chaindb.Transaction) string {
+	m := tx.Memo
+	if m == "" {
+		return "0x"
+	}
+	m = strings.TrimPrefix(m, "vm:")
+	cd, err := hexInput(m)
+	if err != nil {
+		return "0x"
+	}
+	return "0x" + hex.EncodeToString(cd)
+}
+
+// parityTraceTree 根層 frame＋子 frame 樹（traceAddress 依 DFS 序，subtraces 依子數）。
+func parityTraceTree(root map[string]any, frames []*vm.TraceFrame) []map[string]any {
+	out := []map[string]any{root}
+	if len(frames) == 0 {
+		return out
+	}
+	children := map[int][]*vm.TraceFrame{}
+	idxOf := map[*vm.TraceFrame]int{}
+	for i, f := range frames {
+		idxOf[f] = i
+		children[f.Parent] = append(children[f.Parent], f)
+	}
+	var walk func(parentIdx int, addr []any)
+	walk = func(parentIdx int, addr []any) {
+		for _, c := range children[parentIdx] {
+			childAddr := append(append([]any{}, addr...), c.Sibling)
+			node := traceFrameToParity(c)
+			node["traceAddress"] = childAddr
+			node["subtraces"] = len(children[idxOf[c]])
+			out = append(out, node)
+			walk(idxOf[c], childAddr)
+		}
+	}
+	root["subtraces"] = len(children[-1])
+	walk(-1, []any{})
+	return out
+}
+
+// simReplayTx 模擬執行單筆交易，回 parityTraceTree（create 交易無法模擬，回 DB 摘要根層）。
+func (s *RPCServer) simReplayTx(tx *chaindb.Transaction) []map[string]any {
+	isCreate := tx.ToAddr == "" || tx.ToAddr == "0x"
+	var cr *vm.CallResult
+	if !isCreate {
+		to0x, terr := tx0To0x(tx.ToAddr)
+		if terr == nil && len(s.node.contracts.GetCode(to0x)) > 0 {
+			caller0x, _ := tx0To0x(tx.FromAddr)
+			cd, _ := hexInput(s.txCalldata(tx))
+			callValue := new(big.Int)
+			if tx.Amount != "" {
+				if strings.HasPrefix(tx.Amount, "0x") {
+					callValue, _ = new(big.Int).SetString(strings.TrimPrefix(tx.Amount, "0x"), 16)
+				} else if n, ok := new(big.Int).SetString(tx.Amount, 10); ok {
+					callValue = n
+				}
+			}
+			r, rerr := s.node.contracts.SimulateCallGasOverrides(to0x, caller0x, cd, callValue, uint64(tx.GasLimit), nil, false)
+			if rerr == nil {
+				cr = r
+			}
+		}
+	}
+	var tr []*vm.TraceFrame
+	if cr != nil {
+		tr = cr.Trace
+	}
+	return parityTraceTree(s.parityRootFrame(tx, cr), tr)
+}
+
+// traceTransaction 單筆交易 trace 樹（trace_transaction；Parity 回 trace 陣列）。
+func (s *RPCServer) traceTransaction(params []any) ([]map[string]any, error) {
+	hash := strip0x(paramString(params, 0))
+	if hash == "" {
+		return nil, errors.New("trace: 缺少交易哈希")
+	}
+	tx, err := s.node.db.GetTransaction(hash)
+	if err != nil {
+		return nil, err
+	}
+	if tx == nil {
+		return nil, nil
+	}
+	return s.simReplayTx(tx), nil
+}
+
+// traceReplayTransaction 單筆重放（trace_replayTransaction；Parity 回 {output,stateDiff,trace}）。
+func (s *RPCServer) traceReplayTransaction(params []any) (map[string]any, error) {
+	hash := strip0x(paramString(params, 0))
+	if hash == "" {
+		return nil, errors.New("trace: 缺少交易哈希")
+	}
+	tx, err := s.node.db.GetTransaction(hash)
+	if err != nil {
+		return nil, err
+	}
+	if tx == nil {
+		return nil, nil
+	}
+	frames := s.simReplayTx(tx)
+	out := "0x"
+	for _, f := range frames {
+		if res, ok := f["result"].(map[string]any); ok {
+			if o, ok2 := res["output"].(string); ok2 && o != "" {
+				out = o
+			}
+		}
+	}
+	return map[string]any{"output": out, "stateDiff": map[string]any{}, "trace": frames}, nil
+}
+
+// traceReplayBlockTransactions 區塊內每筆重放（trace_replayBlockTransactions）。
+func (s *RPCServer) traceReplayBlockTransactions(params []any) ([]map[string]any, error) {
+	ref := paramString(params, 0)
+	if ref == "" {
+		return nil, errors.New("trace: 缺少區塊參數")
+	}
+	var b *chaindb.Block
+	var err error
+	if strings.HasPrefix(strings.ToLower(ref), "0x") {
+		b, err = s.node.db.GetBlockByHash(strip0x(ref))
+	} else {
+		latest, lerr := s.node.db.GetLatestBlock()
+		if lerr != nil || latest == nil {
+			return nil, errors.New("trace: 無區塊")
+		}
+		if ref == "latest" || ref == "pending" {
+			b = latest
+		} else if h := parseEthBlock(ref, latest.Height); h >= 0 {
+			b, err = s.node.db.GetBlock(h)
+		} else {
+			return nil, errors.New("trace: 區塊參數無法解析: " + ref)
+		}
+	}
+	if err != nil || b == nil {
+		return nil, errors.New("trace: 區塊不存在: " + ref)
+	}
+	txs, terr := s.node.db.GetTransactionsByBlock(b.Height)
+	if terr != nil {
+		return nil, terr
+	}
+	out := make([]map[string]any, 0, len(txs))
+	for i := range txs {
+		frames := s.simReplayTx(txs[i])
+		o := "0x"
+		for _, f := range frames {
+			if res, ok := f["result"].(map[string]any); ok {
+				if ov, ok2 := res["output"].(string); ok2 && ov != "" {
+					o = ov
+				}
+			}
+		}
+		out = append(out, map[string]any{"output": o, "stateDiff": map[string]any{}, "trace": frames})
+	}
+	return out, nil
+}
+
+// TraceTransactionPublic 只讀面用：trace_transaction。
+func (s *RPCServer) TraceTransactionPublic(params []any) ([]map[string]any, error) {
+	return s.traceTransaction(params)
+}
+
+// TraceReplayTransactionPublic 只讀面用：trace_replayTransaction。
+func (s *RPCServer) TraceReplayTransactionPublic(params []any) (map[string]any, error) {
+	return s.traceReplayTransaction(params)
+}
+
+// TraceReplayBlockPublic 只讀面用：trace_replayBlockTransactions。
+func (s *RPCServer) TraceReplayBlockPublic(params []any) ([]map[string]any, error) {
+	return s.traceReplayBlockTransactions(params)
 }
