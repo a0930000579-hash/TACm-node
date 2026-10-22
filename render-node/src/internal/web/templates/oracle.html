@@ -9,6 +9,16 @@
   .oc-table th{color:var(--muted,#667085);font-weight:600}
   .live-dot,.static-dot,.manual-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:1px}
   .live-dot{background:#22c55e}.static-dot{background:#f59e0b}.manual-dot{background:#8b5cf6}
+  /* v156 multi-source aggregation */
+  .badge{display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:600;margin-left:4px;white-space:nowrap}
+  .b-ok{background:#dcfce7;color:#15803d}.b-stale{background:#fef3c7;color:#b45309}
+  .b-outlier{background:#fee2e2;color:#b91c1c}.b-degraded{background:#fee2e2;color:#b91c1c}
+  .b-adopted{background:#dbeafe;color:#1d4ed8}.b-jump{background:#fae8ff;color:#a21caf}
+  .agg-chip{display:inline-block;padding:4px 10px;margin:2px;border-radius:8px;background:#f1f5f9;cursor:pointer;font-size:12px}
+  .agg-chip.on{background:#68BE8D;color:#fff}
+  .agg-summary{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0}
+  .agg-summary .wg{min-width:110px}
+  @media(max-width:640px){.oc-table{min-width:0!important}table.oc-table td,table.oc-table th{padding:6px 4px;font-size:12px}}
 </style>
 <section class="pg-banner">
   <div class="pg-txt"><h1 data-i18n="oracle.title">鏈上預言機（Oracle）</h1><p data-i18n="oracle.intro">主流幣即時喂價——DeFi 借貸、衍生品與開發者的可靠價格來源。</p></div>
@@ -21,6 +31,20 @@
   <div class="table-wrap"><table class="oc-table" style="min-width:520px">
     <thead><tr><th data-i18n="oracle.symbol">市場</th><th data-i18n="oracle.price">價格（USDT）</th><th data-i18n="oracle.chg">24h</th><th data-i18n="oracle.source">來源</th><th data-i18n="oracle.updated">更新時間</th></tr></thead>
     <tbody id="ocBody"><tr><td colspan="5" class="muted">-</td></tr></tbody>
+  </table></div>
+</section>
+<!-- v156：去中心化多源聚合（median-first，outlier 剔除，單源容錯降級） -->
+<section class="panel">
+  <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></svg> <span data-i18n="oracle.multiSrc">去中心化多源聚合 · Decentralized Multi-Source</span></h2><span class="muted" id="aggUpdated"></span></div>
+  <div class="agg-summary" id="aggSummary"><small class="muted">-</small></div>
+  <div id="aggChips" style="margin:6px 0"></div>
+  <div class="table-wrap"><table class="oc-table" style="min-width:560px">
+    <thead><tr><th data-i18n="oracle.srcName">數據源 Source</th><th data-i18n="oracle.weight">權重</th><th data-i18n="oracle.srcPrice">最新價</th><th data-i18n="oracle.status">狀態</th><th data-i18n="oracle.updated">更新</th></tr></thead>
+    <tbody id="srcBody"><tr><td colspan="5" class="muted">-</td></tr></tbody>
+  </table></div>
+  <div class="table-wrap" style="margin-top:10px"><table class="oc-table" style="min-width:560px">
+    <thead><tr><th data-i18n="oracle.aggPrice">聚合價 Median</th><th data-i18n="oracle.weighted">加權價</th><th data-i18n="oracle.conf">置信度</th><th data-i18n="oracle.adoptedN">採用源數</th><th data-i18n="oracle.flags">標記 Flags</th></tr></thead>
+    <tbody id="aggBody"><tr><td colspan="5" class="muted">-</td></tr></tbody>
   </table></div>
 </section>
 <section class="panel">
@@ -87,6 +111,65 @@
     }
     loadAll();
     setInterval(loadAll, 5000);
+
+    // ---- v156：多源聚合視圖 ----
+    var aggSyms = ['BTC/USDT', 'ETH/USDT', 'BNB/USDT', 'SOL/USDT', 'ADA/USDT'];
+    var aggCur = 'BTC/USDT';
+    function badge(cls, txt) { return '<span class="badge ' + cls + '">' + esc(txt) + '</span>'; }
+    function renderChips() {
+      var box = document.getElementById('aggChips');
+      box.innerHTML = aggSyms.map(function (s) {
+        return '<span class="agg-chip' + (s === aggCur ? ' on' : '') + '" data-sym="' + esc(s) + '">' + esc(s) + '</span>';
+      }).join('');
+      Array.prototype.forEach.call(box.querySelectorAll('.agg-chip'), function (el) {
+        el.onclick = function () { aggCur = el.getAttribute('data-sym'); renderChips(); loadAgg(); };
+      });
+    }
+    function loadSources() {
+      get('/api/oracle/sources').then(function (d) {
+        if (!d.ok || !d.sources) return;
+        var rows = '';
+        d.sources.forEach(function (s) {
+          var flags = '';
+          if (s.outlier) flags += badge('b-outlier', 'outlier');
+          if (s.stale) flags += badge('b-stale', 'stale');
+          if (s.adopted) flags += badge('b-adopted', 'adopted');
+          if (!flags) flags = '<span class="muted">-</span>';
+          var t = s.updated_at ? new Date(s.updated_at * 1000).toLocaleTimeString() : '-';
+          rows += '<tr><td class="mono">' + esc(s.name) + (s.error ? '<div class="muted" style="font-size:11px">' + esc(s.error) + '</div>' : '') +
+            '</td><td class="mono">' + (s.weight || 0).toFixed(2) + '</td><td class="mono">' + fmt(s.price) +
+            '</td><td>' + flags + '</td><td class="muted">' + t + '</td></tr>';
+        });
+        document.getElementById('srcBody').innerHTML = rows || '<tr><td colspan="5" class="muted">-</td></tr>';
+      }).catch(function () {});
+    }
+    function loadAgg() {
+      get('/api/oracle/aggregate?sym=' + encodeURIComponent(aggCur)).then(function (d) {
+        var box = document.getElementById('aggSummary');
+        if (!d.ok || !d.aggregate) { box.innerHTML = '<small class="muted">no aggregate data</small>'; return; }
+        var a = d.aggregate;
+        var flags = '';
+        if (a.degraded) flags += badge('b-degraded', 'degraded');
+        if (a.stale) flags += badge('b-stale', 'stale');
+        if (a.jump) flags += badge('b-jump', 'jump');
+        box.innerHTML =
+          '<div class="wg"><small class="muted">Median</small><b class="mono">' + fmt(a.price) + '</b></div>' +
+          '<div class="wg"><small class="muted">Weighted</small><b class="mono">' + fmt(a.weighted_price) + '</b></div>' +
+          '<div class="wg"><small class="muted">Confidence</small><b class="mono">' + (Math.round((a.confidence || 0) * 100)) + '%</b></div>' +
+          '<div class="wg"><small class="muted">Adopted</small><b class="mono">' + a.adopted_count + '</b></div>' +
+          '<div class="wg"><small class="muted">Flags</small>' + (flags || '<span class="muted">-</span>') + '</div>';
+        document.getElementById('aggBody').innerHTML =
+          '<tr><td class="mono"><b>' + fmt(a.price) + '</b></td><td class="mono">' + fmt(a.weighted_price) +
+          '</td><td class="mono">' + Math.round((a.confidence || 0) * 100) + '%</td><td class="mono">' + a.adopted_count +
+          '</td><td>' + flags + '</td></tr>';
+        var up = document.getElementById('aggUpdated');
+        if (up && a.updated_at) up.textContent = new Date(a.updated_at * 1000).toLocaleTimeString();
+      }).catch(function () {});
+    }
+    renderChips();
+    loadSources();
+    loadAgg();
+    setInterval(function () { loadSources(); loadAgg(); }, 5000);
 
     document.getElementById('ocLookup').addEventListener('click', function () {
       var sym = document.getElementById('ocQSymbol').value.trim();

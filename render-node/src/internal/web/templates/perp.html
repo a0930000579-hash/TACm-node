@@ -1,0 +1,328 @@
+{% extends "base.html" %}
+{% block title %}TAC Perpetuals{% endblock %}
+{% block content %}
+<section class="pg-banner">
+  <div class="pg-txt"><h1 data-i18n="bn.perp">Perpetuals</h1><p data-i18n="bn.perpSub">永續合約 · 對標 dYdX / GMX</p></div>
+  <svg viewBox="0 0 40 40" class="pg-art"><path d="M6 26 L14 26 L18 14 L24 32 L28 22 L34 22" fill="none" stroke="#68BE8D" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+</section>
+<style>
+  .pp-wrap{max-width:1180px;margin:0 auto}
+  .pp-head{background:linear-gradient(135deg,#f7f8fb,#f2f4f9);border:1px solid #e2e6ee;border-radius:16px;padding:18px 20px;color:#14161a;display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+  .pp-head .logo{width:48px;height:48px;border-radius:12px;background:#68BE8D;color:#f7f8fb;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex:none}
+  .pp-head h2{margin:0;font-size:20px;font-weight:800;color:#68BE8D}
+  .pp-head .sub{font-size:12px;opacity:.8;margin-top:2px}
+  .pp-stats{display:flex;gap:10px;flex-wrap:wrap;margin-left:auto}
+  .pp-stats span{background:rgba(104,190,141,.12);border:1px solid rgba(104,190,141,.35);border-radius:999px;padding:6px 14px;font-size:12px;font-weight:700;color:#68BE8D}
+  .pp-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:14px;align-items:start}
+  @media (max-width:980px){.pp-grid{grid-template-columns:1fr}}
+  .pp-card{background:#f7f8fb;border:1px solid #e2e6ee;border-radius:14px;padding:16px;margin-bottom:14px}
+  .pp-card h3{margin:0 0 12px;font-size:14px;color:#68BE8D;font-weight:800;display:flex;align-items:center;gap:8px}
+  .pp-card h3 .hint{font-size:11px;color:#5d6778;font-weight:500;margin-left:auto}
+  .pp-field{margin-bottom:10px}
+  .pp-field label{display:block;font-size:12px;color:#5d6778;margin-bottom:4px}
+  .pp-field input,.pp-field select{width:100%;box-sizing:border-box;background:#f2f4f9;border:1px solid #e2e6ee;border-radius:10px;color:#14161a;padding:10px 12px;font-size:13px;font-family:ui-monospace,monospace}
+  .pp-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .pp-btn{width:100%;background:#68BE8D;color:#f7f8fb;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:800;cursor:pointer}
+  .pp-btn.red{background:#e06060}
+  .pp-btn.ghost{background:transparent;border:1px solid #e2e6ee;color:#14161a;font-weight:700}
+  .pp-msg{font-size:12px;margin-top:8px;min-height:16px}
+  .pp-msg.ok{color:#68BE8D}.pp-msg.err{color:#e06060}
+  .pp-row{display:flex;justify-content:space-between;gap:10px;padding:9px 2px;border-bottom:1px dashed #e2e6ee;font-size:12px;align-items:center}
+  .pp-row:last-child{border-bottom:none}
+  .pp-row .nm{font-weight:700;color:#14161a;font-family:ui-monospace,monospace}
+  .pp-row .sub{color:#5d6778;font-size:11px}
+  .pp-addrbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+  .pp-addrbar input{flex:1;min-width:220px;box-sizing:border-box;background:#f2f4f9;border:1px solid #e2e6ee;border-radius:10px;color:#14161a;padding:10px 12px;font-size:13px;font-family:ui-monospace,monospace}
+  .pp-addrbar button{background:#68BE8D;color:#f7f8fb;border:none;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:800;cursor:pointer}
+  .pp-side{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+  .pp-side button{padding:10px;border-radius:10px;border:1px solid #e2e6ee;background:#f2f4f9;font-weight:800;cursor:pointer;color:#5d6778}
+  .pp-side button.long.on{background:#68BE8D;color:#f7f8fb;border-color:#68BE8D}
+  .pp-side button.short.on{background:#e06060;color:#f7f8fb;border-color:#e06060}
+  .pp-pos{background:#fff;border:1px solid #e2e6ee;border-radius:10px;padding:10px 12px;margin-bottom:8px}
+  .pp-pos .hd{display:flex;justify-content:space-between;font-weight:800;font-size:13px;margin-bottom:6px}
+  .pp-pos .hd .long{color:#68BE8D}
+  .pp-pos .hd .short{color:#e06060}
+  .pp-pos .grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:11px;color:#5d6778;margin-bottom:8px}
+  .pp-pos .actions{display:flex;gap:6px;flex-wrap:wrap}
+  .pp-pos .actions button{flex:1;padding:6px;border-radius:8px;border:1px solid #e2e6ee;background:#f7f8fb;font-size:11px;font-weight:700;cursor:pointer;color:#14161a}
+  .pp-pos .actions button.close{background:#68BE8D;color:#f7f8fb;border-color:#68BE8D}
+  .pp-pos .actions button.liq{background:#e06060;color:#f7f8fb;border-color:#e06060}
+  .pp-mkt{display:flex;justify-content:space-between;padding:8px 4px;border-bottom:1px dashed #e2e6ee;font-size:12px}
+  .pp-mkt:last-child{border-bottom:none}
+  .pp-mkt .sym{font-weight:800;color:#14161a}
+  .pp-mkt .fr.pos{color:#68BE8D}
+  .pp-mkt .fr.neg{color:#e06060}
+</style>
+
+<div class="pp-wrap">
+  <div class="pp-head">
+    <div class="logo">⇅</div>
+    <div><h2>TAC Perpetuals <span style="font-size:12px;font-weight:600;opacity:.7">泰坦鏈永續合約</span></h2>
+      <div class="sub" id="perpSub">BTC / ETH / SOL 永續 · 最高 20x · 資金費率每小時惰性結算</div></div>
+    <div class="pp-stats"><span id="ppStat">mark · oracle</span></div>
+  </div>
+
+  <div class="pp-addrbar">
+    <input id="me" placeholder="0x… / tx0…（你的鏈上地址，僅本地儲存）" value="">
+    <button onclick="connect()">連接</button>
+    <span id="topAddr" style="font-size:12px;color:#5d6778;font-family:ui-monospace,monospace"></span>
+  </div>
+
+  <div class="pp-grid">
+    <div>
+      <!-- 市場狀態 -->
+      <div class="pp-card">
+        <h3>市場狀態 <span class="hint">Mark · Funding · OI</span></h3>
+        <div id="mktList"><div class="pp-msg" style="color:#5d6778">載入中…</div></div>
+      </div>
+
+      <!-- 入金/出金 -->
+      <div class="pp-card">
+        <h3>入金 / 出金 <span class="hint">TACm · TiUSD</span></h3>
+        <div class="pp-row2">
+          <div class="pp-field"><label>資產</label>
+            <select id="ioAsset">
+              <option value="TIUSD">TiUSD</option>
+              <option value="TACm">TACm</option>
+            </select>
+          </div>
+          <div class="pp-field"><label>金額</label>
+            <input id="ioAmount" type="number" step="any" min="0" placeholder="100"></div>
+        </div>
+        <div class="pp-row2">
+          <button class="pp-btn" onclick="doIo(true)">入金 Deposit</button>
+          <button class="pp-btn ghost" onclick="doIo(false)">出金 Withdraw</button>
+        </div>
+        <div id="ioMsg" class="pp-msg"></div>
+      </div>
+
+      <!-- 開倉 -->
+      <div class="pp-card">
+        <h3>開倉 <span class="hint">Open Position</span></h3>
+        <div class="pp-row2">
+          <div class="pp-field"><label>市場</label>
+            <select id="opSym">
+              <option value="BTC">BTC/USD</option>
+              <option value="ETH">ETH/USD</option>
+              <option value="SOL">SOL/USD</option>
+            </select>
+          </div>
+          <div class="pp-field"><label>槓桿</label>
+            <input id="opLev" type="number" step="any" min="1" max="20" value="10"></div>
+        </div>
+        <div class="pp-field"><label>方向</label>
+          <div class="pp-side">
+            <button class="long on" id="opSideL" onclick="setSide('long')">做多 Long</button>
+            <button class="short" id="opSideS" onclick="setSide('short')">做空 Short</button>
+          </div>
+        </div>
+        <div class="pp-row2">
+          <div class="pp-field"><label>保證金</label>
+            <input id="opMargin" type="number" step="any" min="0" placeholder="100"></div>
+          <div class="pp-field"><label>保證金資產</label>
+            <select id="opAsset">
+              <option value="TIUSD">TiUSD</option>
+              <option value="TACm">TACm</option>
+            </select>
+          </div>
+        </div>
+        <div class="pp-row" style="font-size:11px"><span>名目 Notional</span><span class="nm" id="opNotional">—</span></div>
+        <div class="pp-row" style="font-size:11px"><span>預估強平價 Liq ≈</span><span class="nm" id="opLiq">—</span></div>
+        <button class="pp-btn" onclick="doOpen()">下單 Open</button>
+        <div id="opMsg" class="pp-msg"></div>
+      </div>
+    </div>
+
+    <div>
+      <!-- 帳戶權益 -->
+      <div class="pp-card">
+        <h3>帳戶權益 <span class="hint">Account Equity</span></h3>
+        <div id="acct"><div class="pp-msg" style="color:#5d6778">連接後載入</div></div>
+      </div>
+
+      <!-- 我的持倉 -->
+      <div class="pp-card">
+        <h3>我的持倉 <span class="hint">Positions</span></h3>
+        <div id="posList"><div class="pp-msg" style="color:#5d6778">連接後載入</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  var T = function(k, zh, en){ try { if (window.TAC_I18N && TAC_I18N.cur() === 'en') { return en; } } catch (e) {} return zh; };
+  var me = localStorage.getItem('tac_defi_addr') || '';
+  var curSide = 'long';
+  if(me) document.getElementById('me').value = me;
+
+  function show(el, cls, txt){ var e = document.getElementById(el); if(!e) return; e.className = 'pp-msg ' + cls; e.textContent = txt; }
+  function fetchJSON(url, tries){
+    var t = tries || 2;
+    return new Promise(function(res, rej){
+      var done = false;
+      var attempt = function(n){
+        var ctl = new AbortController();
+        var to = setTimeout(function(){ ctl.abort(); }, 6000);
+        fetch(url, {cache:'no-store', signal:ctl.signal}).then(function(r){ return r.json().catch(function(){ return null; }); })
+          .then(function(d){ clearTimeout(to); if(done) return; done = true; res(d); })
+          .catch(function(e){ clearTimeout(to); if(n > 0){ setTimeout(function(){ attempt(n-1); }, 1200); } else { if(done) return; done = true; rej(e); } });
+      };
+      attempt(t-1);
+    });
+  }
+  function postJSON(url, body, tries){
+    var t = tries || 2;
+    return new Promise(function(res, rej){
+      var done = false;
+      var attempt = function(n){
+        var ctl = new AbortController();
+        var to = setTimeout(function(){ ctl.abort(); }, 6000);
+        fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body), signal:ctl.signal})
+          .then(function(r){ return r.json().catch(function(){ return null; }); })
+          .then(function(d){ clearTimeout(to); if(done) return; done = true; res(d); })
+          .catch(function(e){ clearTimeout(to); if(n > 0){ setTimeout(function(){ attempt(n-1); }, 1200); } else { if(done) return; done = true; rej(e); } });
+      };
+      attempt(t-1);
+    });
+  }
+  function fmt(n){ if(n==null||isNaN(n)) return '—'; return Number(n).toLocaleString('en-US',{maximumFractionDigits:4}); }
+  function connect(){
+    me = document.getElementById('me').value.trim();
+    if(me) localStorage.setItem('tac_defi_addr', me);
+    document.getElementById('topAddr').textContent = me ? me.slice(0,10)+'…'+me.slice(-6) : '';
+    refreshAll();
+  }
+  function setSide(s){
+    curSide = s;
+    document.getElementById('opSideL').classList.toggle('on', s==='long');
+    document.getElementById('opSideS').classList.toggle('on', s==='short');
+    estimateLiq();
+  }
+  function loadMarkets(){
+    fetchJSON('/api/perp/markets').then(function(d){
+      var box = document.getElementById('mktList');
+      if(!d || !d.ok || !d.markets || !d.markets.length){ box.innerHTML = '<div class="pp-msg err">'+T('pp.noMkt','無市場資料','No markets')+'</div>'; return; }
+      box.innerHTML = d.markets.map(function(m){
+        var frCls = m.funding_rate >= 0 ? 'pos' : 'neg';
+        var frPct = (m.funding_rate*100).toFixed(4)+'%/hr';
+        return '<div class="pp-mkt"><div><span class="sym">'+m.symbol+'</span><div class="sub">max '+m.max_leverage+'x · maint '+(m.maint_margin_bps/100).toFixed(2)+'%</div></div>'
+          +'<div style="text-align:right"><div class="nm">'+fmt(m.mark_price)+'</div>'
+          +'<div class="fr '+frCls+'">'+(m.funding_rate>=0?'+':'')+frPct+'</div>'
+          +'<div class="sub">OI L '+fmt(m.open_interest_long)+' / S '+fmt(m.open_interest_short)+'</div></div></div>';
+      }).join('');
+      window._ppMkts = d.markets;
+      estimateLiq();
+    }).catch(function(){ document.getElementById('mktList').innerHTML = '<div class="pp-msg err">'+T('pp.fail','連線失敗','Connection failed')+'</div>'; });
+  }
+  function estimateLiq(){
+    var sym = document.getElementById('opSym').value;
+    var lev = parseFloat(document.getElementById('opLev').value)||10;
+    var margin = parseFloat(document.getElementById('opMargin').value)||0;
+    var m = (window._ppMkts||[]).find(function(x){return x.symbol===sym;});
+    if(!m || !m.mark_price || margin<=0){ document.getElementById('opNotional').textContent='—'; document.getElementById('opLiq').textContent='—'; return; }
+    document.getElementById('opNotional').textContent = fmt(margin*lev);
+    var size = (margin*lev)/m.mark_price;
+    var maintF = m.maint_margin_bps/10000;
+    var mpu = margin/size;
+    var liq = curSide==='long' ? (m.mark_price-mpu)/(1-maintF) : (m.mark_price+mpu)/(1+maintF);
+    document.getElementById('opLiq').textContent = fmt(liq);
+  }
+  document.getElementById('opSym').addEventListener('change', estimateLiq);
+  document.getElementById('opLev').addEventListener('input', estimateLiq);
+  document.getElementById('opMargin').addEventListener('input', estimateLiq);
+
+  function doIo(isDeposit){
+    if(!me){ show('ioMsg','err',T('pp.needConn','請先連接地址','Connect first')); return; }
+    var asset = document.getElementById('ioAsset').value;
+    var amt = parseFloat(document.getElementById('ioAmount').value)||0;
+    if(amt<=0){ show('ioMsg','err',T('pp.needAmt','請輸入金額','Enter amount')); return; }
+    var path = isDeposit ? '/api/perp/deposit' : '/api/perp/withdraw';
+    show('ioMsg','',T('pp.working','處理中…','Working…'));
+    postJSON(path, {address:me, asset:asset, amount:amt}).then(function(d){
+      if(!d || !d.ok){ show('ioMsg','err',(d&&d.error)||'failed'); return; }
+      show('ioMsg','ok', T('pp.ioOk','成功 ','OK ')+amt+' '+asset);
+      refreshAll();
+    }).catch(function(){ show('ioMsg','err',T('pp.fail','連線失敗','Connection failed')); });
+  }
+  function doOpen(){
+    if(!me){ show('opMsg','err',T('pp.needConn','請先連接地址','Connect first')); return; }
+    var sym = document.getElementById('opSym').value;
+    var lev = parseFloat(document.getElementById('opLev').value)||10;
+    var margin = parseFloat(document.getElementById('opMargin').value)||0;
+    var asset = document.getElementById('opAsset').value;
+    if(margin<=0){ show('opMsg','err',T('pp.needAmt','請輸入保證金','Enter margin')); return; }
+    show('opMsg','',T('pp.working','下單中…','Opening…'));
+    postJSON('/api/perp/position/open', {address:me, symbol:sym, side:curSide, leverage:lev, margin:margin, margin_asset:asset})
+      .then(function(d){
+        if(!d || !d.ok){ show('opMsg','err',(d&&d.error)||'failed'); return; }
+        show('opMsg','ok', T('pp.openOk','開倉成功 · 名目 ','Opened · notional ')+fmt(d.notional));
+        refreshAll();
+      }).catch(function(){ show('opMsg','err',T('pp.fail','連線失敗','Connection failed')); });
+  }
+  function loadAccount(){
+    if(!me){ document.getElementById('acct').innerHTML = '<div class="pp-msg" style="color:#5d6778">'+T('pp.needConn','請先連接地址','Connect first')+'</div>'; return; }
+    fetchJSON('/api/perp/account?trader='+encodeURIComponent(me)).then(function(d){
+      var box = document.getElementById('acct');
+      if(!d || !d.ok || !d.account){ box.innerHTML = '<div class="pp-msg err">'+((d&&d.error)||'no account')+'</div>'; return; }
+      var a = d.account;
+      var balHtml = Object.keys(a.balances||{}).map(function(k){
+        return '<div class="pp-row"><span class="nm">'+k+'</span><span>'+fmt(a.balances[k])+'</span></div>';
+      }).join('') || '<div class="pp-row"><span class="nm">—</span><span>0</span></div>';
+      box.innerHTML = balHtml
+        + '<div class="pp-row"><span class="nm" style="color:#68BE8D">Equity 權益</span><span>'+fmt(a.equity)+'</span></div>'
+        + '<div class="pp-row"><span class="nm">維持保證金合計</span><span>'+fmt(a.total_margin)+'</span></div>';
+    }).catch(function(){ document.getElementById('acct').innerHTML = '<div class="pp-msg err">'+T('pp.fail','連線失敗','Connection failed')+'</div>'; });
+  }
+  function loadPositions(){
+    if(!me){ document.getElementById('posList').innerHTML = '<div class="pp-msg" style="color:#5d6778">'+T('pp.needConn','請先連接地址','Connect first')+'</div>'; return; }
+    fetchJSON('/api/perp/positions?trader='+encodeURIComponent(me)).then(function(d){
+      var box = document.getElementById('posList');
+      if(!d || !d.ok || !d.positions || !d.positions.length){ box.innerHTML = '<div class="pp-msg" style="color:#5d6778">'+T('pp.noPos','尚無持倉','No positions')+'</div>'; return; }
+      box.innerHTML = d.positions.map(function(p){
+        var sideCls = p.side==='long' ? 'long' : 'short';
+        var pnlCls = p.unrealized_pnl >= 0 ? 'color:#68BE8D' : 'color:#e06060';
+        return '<div class="pp-pos"><div class="hd"><span>'+p.symbol+' <span class="'+sideCls+'">'+(p.side==='long'?'多':'空')+' '+fmt(p.leverage)+'x</span></span>'
+          +'<span style="'+pnlCls+'">'+(p.unrealized_pnl>=0?'+':'')+fmt(p.unrealized_pnl)+'</span></div>'
+          +'<div class="grid">'
+          +'<div>Size</div><div style="text-align:right;color:#14161a">'+fmt(p.size)+'</div>'
+          +'<div>Entry</div><div style="text-align:right;color:#14161a">'+fmt(p.entry_price)+'</div>'
+          +'<div>Mark</div><div style="text-align:right;color:#14161a">'+fmt(p.mark_price)+'</div>'
+          +'<div>Liq ≈</div><div style="text-align:right;color:#e06060">'+fmt(p.liq_price)+'</div>'
+          +'<div>Margin ('+p.margin_asset+')</div><div style="text-align:right;color:#14161a">'+fmt(p.margin)+'</div>'
+          +'</div>'
+          +'<div class="actions">'
+          +'<button onclick="doClose('+p.id+')">平倉 Close</button>'
+          +'<button onclick="doMargin('+p.id+',true)">+保證金</button>'
+          +'<button onclick="doMargin('+p.id+',false)">-保證金</button>'
+          +'<button class="liq" onclick="doLiquidate('+p.id+')">強平</button>'
+          +'</div></div>';
+      }).join('');
+    }).catch(function(){ document.getElementById('posList').innerHTML = '<div class="pp-msg err">'+T('pp.fail','連線失敗','Connection failed')+'</div>'; });
+  }
+  function doClose(id){
+    postJSON('/api/perp/position/close', {position_id:id}).then(function(d){
+      if(!d || !d.ok){ alert((d&&d.error)||'failed'); return; }
+      refreshAll();
+    });
+  }
+  function doMargin(id, isAdd){
+    var amt = parseFloat(prompt(isAdd ? T('pp.addM','輸入追加保證金金額','Amount to add margin') : T('pp.rmM','輸入減少保證金金額','Amount to remove margin')));
+    if(!amt || amt<=0) return;
+    var path = isAdd ? '/api/perp/margin/add' : '/api/perp/margin/remove';
+    postJSON(path, {position_id:id, amount:amt}).then(function(d){
+      if(!d || !d.ok){ alert((d&&d.error)||'failed'); return; }
+      refreshAll();
+    });
+  }
+  function doLiquidate(id){
+    if(!confirm(T('pp.liqCfm','確定要強平此倉位？（未達強平線會被拒絕）','Liquidate this position? (will fail if not reach liq)'))) return;
+    postJSON('/api/perp/liquidate', {position_id:id, liquidator:me}).then(function(d){
+      if(!d || !d.ok){ alert((d&&d.error)||'failed'); return; }
+      refreshAll();
+    });
+  }
+  function refreshAll(){ loadMarkets(); loadAccount(); loadPositions(); }
+  refreshAll();
+  if(me){ document.getElementById('topAddr').textContent = me.slice(0,10)+'…'+me.slice(-6); }
+</script>
+{% endblock %}

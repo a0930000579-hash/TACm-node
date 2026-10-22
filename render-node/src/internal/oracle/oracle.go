@@ -40,6 +40,10 @@ type Oracle struct {
 	round      map[string]uint64             // 各 symbol 當前聚合 round
 	staleAfter int64                         // 新鮮度閾值（秒）
 	minFeeders int                           // 觸發中位數聚合所需最少 feeder 數
+
+	// v156：去中心化多源聚合引擎（median-first、outlier 剔除、單源容錯降級、節流）。
+	// 獨立 mutex，不影響既有 cache/history；New() 內以合理預設組裝。
+	agg *aggEngine
 }
 
 // FeederSubmission 單一 feeder 的一筆喂價提交。
@@ -61,6 +65,7 @@ func New() *Oracle {
 		round:      make(map[string]uint64),
 		staleAfter: 300, // 5 分鐘未更新視為 stale（Chainlink 心跳等級）
 		minFeeders: 3,   // 至少 3 個獨立 feeder 才觸發中位數聚合
+		agg:        newDefaultAggEngine(),
 	}
 }
 
@@ -299,6 +304,10 @@ func (o *Oracle) Start(ctx context.Context, interval time.Duration) {
 					o.appendHistoryLocked(p)
 				}
 				o.mu.Unlock()
+				// v156：多源聚合引擎節流刷新（獨立 mutex，失敗自降級，不影響主喂價）。
+				if o.agg != nil {
+					o.agg.Refresh(ctx, false)
+				}
 			}
 		}
 	}()

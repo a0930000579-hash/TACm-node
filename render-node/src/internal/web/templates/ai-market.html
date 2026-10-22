@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+{% block title %}TAC AI Market{% endblock %}
+{% block content %}
+<section class="pg-banner">
+  <div class="pg-txt"><h1 data-i18n="bn.aimarket">AI Model Market</h1><p data-i18n="bn.aimarketSub">鏈上 AI 模型市場 · 對標 Bittensor / Ritual</p></div>
+  <svg viewBox="0 0 40 40" class="pg-art"><rect x="6" y="11" width="28" height="18" rx="3" fill="none" stroke="#68BE8D" stroke-width="2.2"/><circle cx="14" cy="18" r="2.4" fill="#68BE8D"/><circle cx="26" cy="18" r="2.4" fill="#68BE8D"/><path d="M14 24 Q20 20 26 24" stroke="#68BE8D" stroke-width="2" fill="none"/></svg>
+</section>
+<style>
+  .am-wrap{max-width:1180px;margin:0 auto}
+  .am-head{background:linear-gradient(135deg,#f7f8fb,#eef7f1);border:1px solid #dcefe4;border-radius:16px;padding:18px 20px;color:#14161a;display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+  .am-head .logo{width:48px;height:48px;border-radius:12px;background:#68BE8D;color:#f7f8fb;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;flex:none}
+  .am-head h2{margin:0;font-size:20px;font-weight:800;color:#2e7d52}
+  .am-head .sub{font-size:12px;opacity:.75;margin-top:2px}
+  .am-stats{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+  .am-stats span{background:rgba(104,190,141,.12);border:1px solid rgba(104,190,141,.35);border-radius:999px;padding:6px 12px;font-size:12px;font-weight:700;color:#2e7d52}
+  .am-addrbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+  .am-addrbar input{flex:1;min-width:220px;box-sizing:border-box;background:#f2f4f9;border:1px solid #e2e6ee;border-radius:10px;color:#14161a;padding:10px 12px;font-size:13px;font-family:ui-monospace,monospace}
+  .am-addrbar button{background:#68BE8D;color:#f7f8fb;border:none;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:800;cursor:pointer}
+  .am-toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  .am-toolbar input,.am-toolbar select{background:#f2f4f9;border:1px solid #e2e6ee;border-radius:10px;color:#14161a;padding:10px 12px;font-size:13px}
+  .am-toolbar input{flex:1;min-width:200px;box-sizing:border-box}
+  .am-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;align-items:start}
+  @media (max-width:980px){.am-grid{grid-template-columns:1fr 1fr}}
+  @media (max-width:640px){.am-grid{grid-template-columns:1fr}}
+  .am-card{background:#f7f8fb;border:1px solid #e2e6ee;border-radius:14px;padding:16px;margin-bottom:14px}
+  .am-card h3{margin:0 0 12px;font-size:14px;color:#2e7d52;font-weight:800;display:flex;align-items:center;gap:8px}
+  .am-card h3 .hint{font-size:11px;color:#5d6778;font-weight:500;margin-left:auto}
+  .am-field{margin-bottom:10px}
+  .am-field label{display:block;font-size:12px;color:#5d6778;margin-bottom:4px}
+  .am-field input,.am-field select,.am-field textarea{width:100%;box-sizing:border-box;background:#f2f4f9;border:1px solid #e2e6ee;border-radius:10px;color:#14161a;padding:10px 12px;font-size:13px;font-family:ui-monospace,monospace}
+  .am-field textarea{min-height:60px;resize:vertical}
+  .am-btn{width:100%;background:#68BE8D;color:#f7f8fb;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:800;cursor:pointer}
+  .am-btn.ghost{background:transparent;border:1px solid #e2e6ee;color:#14161a;font-weight:700}
+  .am-btn:disabled{opacity:.5;cursor:not-allowed}
+  .am-msg{font-size:12px;margin-top:8px;min-height:16px}
+  .am-msg.ok{color:#2e7d52}.am-msg.err{color:#e06060}
+  .am-mcard{background:#f7f8fb;border:1px solid #e2e6ee;border-radius:14px;padding:14px;cursor:pointer;transition:box-shadow .15s,border-color .15s}
+  .am-mcard:hover{border-color:#68BE8D;box-shadow:0 4px 14px rgba(104,190,141,.18)}
+  .am-mcard .nm{font-weight:800;color:#14161a;font-size:15px;font-family:ui-monospace,monospace}
+  .am-mcard .ver{font-size:10px;color:#5d6778;background:#eef1f6;border-radius:6px;padding:1px 6px;margin-left:6px}
+  .am-mcard .meta{font-size:12px;color:#5d6778;margin:6px 0;line-height:1.4;max-height:36px;overflow:hidden}
+  .am-mcard .price{font-size:16px;font-weight:800;color:#2e7d52}
+  .am-mcard .ptype{font-size:10px;font-weight:700;border-radius:6px;padding:2px 6px;margin-left:6px;background:rgba(104,190,141,.15);color:#2e7d52}
+  .am-mcard .stats{display:flex;gap:10px;font-size:11px;color:#5d6778;margin-top:8px;flex-wrap:wrap}
+  .am-mcard .stars{color:#e8a93c;font-size:12px}
+  .am-row{display:flex;justify-content:space-between;gap:10px;padding:9px 2px;border-bottom:1px dashed #e2e6ee;font-size:12px;align-items:center}
+  .am-row:last-child{border-bottom:none}
+  .am-row .k{color:#5d6778}.am-row .v{font-weight:700;color:#14161a;font-family:ui-monospace,monospace}
+  .am-stars input{display:none}
+  .am-stars label{font-size:22px;color:#cfd6e0;cursor:pointer}
+  .am-stars label.on{color:#e8a93c}
+</style>
+
+<div class="am-wrap">
+  <div class="am-head">
+    <div class="logo">AI</div>
+    <div><h2>TAC AI Market <span style="font-size:12px;font-weight:600;opacity:.7">鏈上模型市場</span></h2>
+      <div class="sub" id="amSub">註冊／訂閱／呼叫 AI 模型 · 費用直付模型 owner · 平台抽 10%</div></div>
+    <div class="am-stats"><span id="amCount">0 models</span><span>per_call · per_period</span></div>
+  </div>
+
+  <div class="am-addrbar">
+    <input id="me" placeholder="0x…（你的鏈上地址，僅本地儲存）" value="">
+    <button onclick="connect()" data-i18n="en.connect">連接</button>
+    <span id="topAddr" style="font-size:12px;color:#5d6778;font-family:ui-monospace,monospace"></span>
+  </div>
+
+  <div class="am-toolbar">
+    <input id="q" placeholder="搜尋模型名稱 / 標籤…" oninput="loadModels()">
+    <select id="sort" onchange="loadModels()">
+      <option value="new" data-i18n="am.sortNew">最新</option>
+      <option value="popular" data-i18n="am.sortPop">熱門</option>
+      <option value="rating" data-i18n="am.sortRate">評分</option>
+    </select>
+  </div>
+
+  <div class="am-grid">
+    <div style="grid-column:1 / -1">
+      <div id="modelGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px" class="am-mgrid"></div>
+    </div>
+
+    <div class="am-card">
+      <h3 data-i18n="am.regTitle">註冊模型 <span class="hint">version 自動遞增</span></h3>
+      <div class="am-field"><label data-i18n="am.name">模型名稱</label><input id="rgName" placeholder="demo-chat"></div>
+      <div class="am-field"><label data-i18n="am.meta">Metadata（描述 / 標籤）</label><textarea id="rgMeta" placeholder="chat, fast, 中文對話"></textarea></div>
+      <div class="am-field"><label>CID（IPFS）</label><input id="rgCid" placeholder="Qm…"></div>
+      <div class="am-field"><label>URL（可選，呼叫時盡力轉發）</label><input id="rgUrl" placeholder="https://…"></div>
+      <div class="am-field"><label data-i18n="am.price">價格（TACm）</label><input id="rgPrice" type="number" step="0.0001" value="1"></div>
+      <div class="am-field"><label data-i18n="am.ptype">計費方式</label>
+        <select id="rgPtype"><option value="per_call" data-i18n="am.call">按次 per_call</option><option value="per_period" data-i18n="am.period">按期 per_period</option></select>
+      </div>
+      <button class="am-btn" onclick="doRegister()" data-i18n="am.regBtn">註冊模型</button>
+      <div id="rgMsg" class="am-msg"></div>
+    </div>
+
+    <div class="am-card">
+      <h3 data-i18n="am.detail">模型詳情 <span class="hint" id="detName"></span></h3>
+      <div id="detBody"><div class="am-msg" style="color:#5d6778" data-i18n="am.pick">從上方卡片選一個模型</div></div>
+    </div>
+
+    <div class="am-card">
+      <h3 data-i18n="am.subs">我的訂閱 <span class="hint" data-i18n="am.subsHint">未到期</span></h3>
+      <div id="mySubs"><div class="am-msg" style="color:#5d6778" data-i18n="am.noSub">尚無訂閱</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  var T = function(k, zh, en){ try { if (window.TAC_I18N && TAC_I18N.cur() === 'en') { return en; } } catch (e) {} return zh; };
+  var me = localStorage.getItem('tac_defi_addr') || '';
+  if(me) document.getElementById('me').value = me;
+  var curModel = null;
+
+  function show(id, cls, txt){ var e = document.getElementById(id); if(!e) return; e.className = 'am-msg ' + cls; e.textContent = txt; }
+  function fetchJSON(url, tries){
+    var t = tries || 2;
+    return new Promise(function(res, rej){
+      var done = false;
+      var attempt = function(n){
+        var ctl = new AbortController();
+        var to = setTimeout(function(){ ctl.abort(); }, 6000);
+        fetch(url, {cache:'no-store', signal:ctl.signal}).then(function(r){ return r.json().catch(function(){ return null; }); })
+          .then(function(d){ clearTimeout(to); if(done) return; done = true; res(d); })
+          .catch(function(e){ clearTimeout(to); if(n > 0){ setTimeout(function(){ attempt(n-1); }, 1200); } else { if(done) return; done = true; rej(e); } });
+      };
+      attempt(t-1);
+    });
+  }
+  function postJSON(url, body, tries){
+    var t = tries || 2;
+    return new Promise(function(res, rej){
+      var done = false;
+      var attempt = function(n){
+        var ctl = new AbortController();
+        var to = setTimeout(function(){ ctl.abort(); }, 6000);
+        fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body), signal:ctl.signal})
+          .then(function(r){ return r.json().catch(function(){ return null; }); })
+          .then(function(d){ clearTimeout(to); if(done) return; done = true; res(d); })
+          .catch(function(e){ clearTimeout(to); if(n > 0){ setTimeout(function(){ attempt(n-1); }, 1200); } else { if(done) return; done = true; rej(e); } });
+      };
+      attempt(t-1);
+    });
+  }
+  function fmtTs(ts){ var d = new Date(ts*1000); var p=function(x){return (x<10?'0':'')+x;}; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes()); }
+  function stars(r){ if(!r || r<=0) return '☆☆☆☆☆'; var s=''; for(var i=1;i<=5;i++){ s += i<=Math.round(r)?'★':'☆'; } return s; }
+  function esc(x){ return String(x==null?'':x).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  function shortAddr(a){ if(!a) return ''; return a.slice(0,8)+'…'+a.slice(-6); }
+
+  function connect(){
+    me = document.getElementById('me').value.trim();
+    if(me) localStorage.setItem('tac_defi_addr', me);
+    document.getElementById('topAddr').textContent = me ? shortAddr(me) : '';
+    loadMySubs();
+  }
+
+  function loadModels(){
+    var q = encodeURIComponent(document.getElementById('q').value || '');
+    var sort = document.getElementById('sort').value;
+    fetchJSON('/api/aimarket/list?q='+q+'&sort='+sort).then(function(d){
+      var box = document.getElementById('modelGrid');
+      var arr = (d && d.models) || [];
+      document.getElementById('amCount').textContent = arr.length + (arr.length===1?' model':' models');
+      if(!arr.length){ box.innerHTML = '<div class="am-msg" style="color:#5d6778;grid-column:1/-1">'+T('am.nom','尚無模型','No models yet')+'</div>'; return; }
+      box.innerHTML = arr.map(function(m){
+        return '<div class="am-mcard" onclick="openModel('+m.id+')">'
+          + '<div><span class="nm">'+esc(m.name)+'</span><span class="ver">v'+esc(m.version)+'</span>'
+          + '<span class="ptype">'+(m.price_type==='per_period'?T('am.period','按期','per_period'):T('am.call','按次','per_call'))+'</span></div>'
+          + '<div class="meta">'+esc(m.metadata||'')+'</div>'
+          + '<div><span class="price">'+Number(m.price).toFixed(4)+' TACm</span></div>'
+          + '<div class="stats"><span class="stars">'+stars(m.avg_rating)+' ('+(m.rating_count||0)+')</span>'
+          + '<span>'+T('am.inv','呼叫','inv')+': '+(m.invoke_count||0)+'</span>'
+          + '<span>'+T('am.sub','訂閱','sub')+': '+(m.sub_count||0)+'</span></div>'
+          + '</div>';
+      }).join('');
+    }).catch(function(){ document.getElementById('modelGrid').innerHTML = '<div class="am-msg err" style="grid-column:1/-1">'+T('am.fail','連線失敗','Connection failed')+'</div>'; });
+  }
+
+  function openModel(id){
+    fetchJSON('/api/aimarket/model?id='+id).then(function(d){
+      if(!d || !d.ok){ show('detBody','err',(d&&d.error)||'not found'); return; }
+      curModel = d.model;
+      renderDetail(curModel);
+    });
+  }
+
+  function renderDetail(m){
+    document.getElementById('detName').textContent = m.name;
+    var perPeriod = m.price_type === 'per_period';
+    var html = ''
+      + '<div class="am-row"><span class="k">'+T('am.owner','Owner','Owner')+'</span><span class="v">'+shortAddr(m.owner)+'</span></div>'
+      + '<div class="am-row"><span class="k">'+T('am.ver','版本','Version')+'</span><span class="v">v'+esc(m.version)+'</span></div>'
+      + '<div class="am-row"><span class="k">'+T('am.price','價格','Price')+'</span><span class="v">'+Number(m.price).toFixed(4)+' TACm / '+(perPeriod?T('am.perPeriod','期','period'):T('am.perCall','次','call'))+'</span></div>'
+      + '<div class="am-row"><span class="k">'+T('am.loc','位置','Location')+'</span><span class="v">'+(m.cid?('CID:'+shortAddr(m.cid)):(m.url?shortAddr(m.url):'-'))+'</span></div>'
+      + '<div class="am-row"><span class="k">'+T('am.rate','評分','Rating')+'</span><span class="v">'+stars(m.avg_rating)+' ('+(m.rating_count||0)+')</span></div>'
+      + '<div class="am-field" style="margin-top:12px"><label>'+T('am.invokeInput','呼叫輸入（input）','Invoke input')+'</label><textarea id="invInput" placeholder="hello / JSON"></textarea></div>'
+      + '<button class="am-btn" onclick="doInvoke()">'+(perPeriod?T('am.invokeFree','呼叫（訂閱內）','Invoke (within sub)'):(T('am.invokePaid','呼叫並付費','Invoke & pay')+' '+Number(m.price).toFixed(4)+' TACm'))+'</button>'
+      + '<div id="invMsg" class="am-msg"></div>'
+      + (perPeriod ? '<button class="am-btn ghost" style="margin-top:8px" onclick="doSubscribe()">'+T('am.subscribeBtn','訂閱（付 '+Number(m.price).toFixed(4)+' TACm）','Subscribe (pay '+Number(m.price).toFixed(4)+' TACm)')+'</button><div id="subMsg" class="am-msg"></div>' : '')
+      + '<div class="am-field" style="margin-top:12px"><label>'+T('am.yourRate','你的評分','Your rating')+'</label>'
+      + '<div class="am-stars" id="rateStars">'
+      + [1,2,3,4,5].map(function(i){ return '<input type="radio" name="rs" value="'+i+'" id="rs'+i+'"><label for="rs'+i+'" onclick="setStar('+i+')">★</label>'; }).join('')
+      + '</div>'
+      + '<textarea id="rateComment" placeholder="'+T('am.comment','評論（選填）','Comment (optional)')+'" style="margin-top:6px"></textarea></div>'
+      + '<button class="am-btn ghost" onclick="doRate()">'+T('am.rateBtn','送出評分','Submit rating')+'</button>'
+      + '<div id="rateMsg" class="am-msg"></div>';
+    document.getElementById('detBody').innerHTML = html;
+  }
+
+  function setStar(n){ for(var i=1;i<=5;i++){ document.getElementById('rs'+i).checked = i===n; document.querySelectorAll('#rateStars label')[i-1].className = i<=n?'on':''; } }
+
+  function needMe(){ if(!me){ show('rgMsg','err',T('am.needMe','請先輸入並連接地址','Connect your address first')); return false; } return true; }
+
+  function doRegister(){
+    if(!needMe()) return;
+    var body = {
+      address: me, name: document.getElementById('rgName').value.trim(),
+      metadata: document.getElementById('rgMeta').value.trim(),
+      cid: document.getElementById('rgCid').value.trim(),
+      url: document.getElementById('rgUrl').value.trim(),
+      price: parseFloat(document.getElementById('rgPrice').value||'0'),
+      price_type: document.getElementById('rgPtype').value
+    };
+    if(!body.name){ show('rgMsg','err',T('am.needName','請輸入名稱','Enter a name')); return; }
+    show('rgMsg','',T('am.reging','註冊中…','Registering…'));
+    postJSON('/api/aimarket/register', body).then(function(d){
+      if(!d || !d.ok){ show('rgMsg','err',(d&&d.error)||'failed'); return; }
+      show('rgMsg','ok',T('am.regOk','註冊成功 · modelId ','Registered · modelId ')+d.model.id+' v'+d.model.version);
+      loadModels();
+    }).catch(function(){ show('rgMsg','err',T('am.fail','連線失敗','Connection failed')); });
+  }
+
+  function doSubscribe(){
+    if(!needMe() || !curModel) return;
+    postJSON('/api/aimarket/subscribe', {address: me, model_id: curModel.id}).then(function(d){
+      if(!d || !d.ok){ show('subMsg','err',(d&&d.error)||'failed'); return; }
+      show('subMsg','ok',T('am.subOk','訂閱成功 · 到期 ','Subscribed · expires ')+fmtTs(d.subscription.expires_at));
+      loadMySubs(); openModel(curModel.id);
+    }).catch(function(){ show('subMsg','err',T('am.fail','連線失敗','Connection failed')); });
+  }
+
+  function doInvoke(){
+    if(!needMe() || !curModel) return;
+    var input = document.getElementById('invInput').value;
+    postJSON('/api/aimarket/invoke', {address: me, model_id: curModel.id, input: input}).then(function(d){
+      if(!d || !d.ok){ show('invMsg','err',(d&&d.error)||'failed'); return; }
+      var r = d.result;
+      show('invMsg','ok',T('am.invOk','呼叫成功 #','Called #')+r.invocation_id+' · charged='+Number(r.charged).toFixed(4)+' · ['+r.source+'] · '+String(r.output).slice(0,80));
+      openModel(curModel.id);
+    }).catch(function(){ show('invMsg','err',T('am.fail','連線失敗','Connection failed')); });
+  }
+
+  function doRate(){
+    if(!needMe() || !curModel) return;
+    var el = document.querySelector('input[name=rs]:checked');
+    var score = el ? parseInt(el.value,10) : 0;
+    postJSON('/api/aimarket/rate', {address: me, model_id: curModel.id, score: score, comment: document.getElementById('rateComment').value.trim()}).then(function(d){
+      if(!d || !d.ok){ show('rateMsg','err',(d&&d.error)||'failed'); return; }
+      show('rateMsg','ok',T('am.rateOk','評分已送出','Rating submitted'));
+      openModel(curModel.id);
+    }).catch(function(){ show('rateMsg','err',T('am.fail','連線失敗','Connection failed')); });
+  }
+
+  function loadMySubs(){
+    if(!me){ document.getElementById('mySubs').innerHTML = '<div class="am-msg" style="color:#5d6778">'+T('am.noSub','尚無訂閱','No subscriptions')+'</div>'; return; }
+    fetchJSON('/api/aimarket/subscriptions?subscriber='+encodeURIComponent(me)).then(function(d){
+      var box = document.getElementById('mySubs');
+      var arr = (d && d.subscriptions) || [];
+      if(!arr.length){ box.innerHTML = '<div class="am-msg" style="color:#5d6778">'+T('am.noSub','尚無訂閱','No subscriptions')+'</div>'; return; }
+      box.innerHTML = arr.map(function(s){
+        var st = s.active ? T('am.active','有效','active') : T('am.expired','已到期','expired');
+        return '<div class="am-row"><div><span class="v">'+esc(s.model_name||('#'+s.model_id))+'</span>'
+          + '<div class="am-msg" style="color:#5d6778;min-height:0">'+st+' · '+T('am.exp','到期 ','expires ')+fmtTs(s.expires_at)+'</div></div></div>';
+      }).join('');
+    }).catch(function(){ document.getElementById('mySubs').innerHTML = '<div class="am-msg err">'+T('am.fail','連線失敗','Connection failed')+'</div>'; });
+  }
+
+  if(me){ document.getElementById('topAddr').textContent = shortAddr(me); loadMySubs(); }
+  loadModels();
+</script>
+{% endblock %}

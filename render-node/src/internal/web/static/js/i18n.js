@@ -5,9 +5,21 @@
   var dict = {
     zh: {
       'nav.home': '首頁', 'nav.wallet': '錢包',
+      'ls.home': '首頁', 'ls.defi': 'DeFi', 'ls.stake': '質押', 'ls.liquid': '流動性質押', 'ls.gov': '治理', 'ls.apply': '套用',
+      'ls.heroTitle': 'PoT 流動性質押（Proof-of-Trust Liquid Staking）', 'ls.heroDesc': '存入 TACm 獲得 stTACm 流動憑證——憑證餘額隨池內委託獎勵依匯率增長，可隨時贖回，也可用於 DeFi。質押即流動，資產不鎖倉。',
+      'ls.tvl': '池內總質押 (TACm)', 'ls.stSupply': 'stTACm 流通量', 'ls.rate': '兌換率', 'ls.apy': '預估年化 (APY)', 'ls.depositors': '參與帳戶', 'ls.rateChart': '匯率實時曲線 (stTACm/TACm)', 'ls.rateNote': '每 10 秒取樣一次（本機歷史），匯率隨池委託獎勵注入上升。',
+      'ls.tiusdTitle': 'TiUSD 取得（穩定幣 1:1 錨定 USDT）', 'ls.tiusdDesc': 'TiUSD 非免費水龍頭資產：① DeFi 超額抵押 CDP 抵押 TACm 鑄造（1:1 錨定）；② 交易所穩定幣兌換 USDT ↔ TiUSD（0.5% 費）；③ 質押收益累積 TACm 後經 CDP 換取。', 'ls.goDefi': '前往 DeFi CDP 鑄造', 'ls.goSwap': '前往穩定幣兌換', 'ls.stakeTitle': '質押 TACm → 得 stTACm', 'ls.address': '你的地址', 'ls.amount': '質押數量 (TACm)', 'ls.stakeBtn': '質押',
+      'ls.redeemTitle': '贖回 stTACm → TACm', 'ls.address2': '你的地址', 'ls.amount2': '贖回數量 (stTACm)', 'ls.redeemBtn': '贖回',
+      'ls.myTitle': '我的持倉', 'ls.query': '查詢', 'ls.myStaked': '質押本金 (TACm)', 'ls.mySt': 'stTACm 餘額', 'ls.myRedeem': '可贖回 (TACm)',
+      'ls.howTitle': '運作方式', 'ls.step': '步驟', 'ls.desc': '說明',
+      'ls.how1': '存入 TACm，系統按現行匯率鑄造 stTACm 流動憑證（初期 1:1）。',
+      'ls.how2': '池內資產參與節點委託，委託獎勵每區塊自動注入池中（v75），匯率逐步上升——你的 stTACm 贖回值隨之增長。',
+      'ls.how3': '隨時依現行匯率贖回 TACm；stTACm 也可用於其他 DeFi 協議。',
       'wallet.onchain': ' 我的鏈上紀錄', 'nav.exchange': '交易所', 'nav.dash': '儀表板',
-      'nav.mining': '挖礦', 'nav.community': '社群', 'nav.ai': 'TAC Ai', 'nav.tokens': '代幣', 'nav.nfts': 'NFT', 'nav.governance': '治理',
-      'tx.logs': '事件日誌', 'tx.logAddr': '合約地址', 'tx.decodedEvents': '事件解碼（ABI）', 'tx.gasUsed': 'Gas 使用量', 'tx.transfers': '代幣轉移', 'tx.tContract': '合約', 'tx.tValue': '數量 / Token ID', 'tx.tBlock': '區塊', 'tx.hash': '交易哈希', 'addr.transfers': '代幣轉移', 'fc.title': '測試幣水龍頭', 'fc.sub': '開發者生態：為你的地址免費領取測試 TACm', 'fc.claim': '領取測試幣', 'fc.limit': '每地址每日限額', 'fc.addrLabel': '你的 tx0 地址', 'fc.claimBtn': '領取', 'fc.how': '如何使用', 'fc.step1': '填入你的錢包地址後點擊領取', 'fc.step2': '交易由節點金鑰簽發並在數秒內上鏈', 'fc.step3': '到錢包或區塊瀏覽器確認到帳（每日一次）',
+      'nav.mining': '挖礦', 'nav.community': '社群', 'nav.ai': 'TAC Ai', 'nav.tokens': '代幣', 'nav.nfts': 'NFT', 'nav.defi': 'DeFi', 'nav.tiusd': 'TiUSD 監控', 'nav.ls': '質押', 'nav.governance': '治理',
+      'nh.title': '網路健康',
+      'nh.sub': '全網節點健康儀表 · 在線狀態 / 最後心跳 / 出塊接管',
+      'tx.logs': '事件日誌', 'tx.logAddr': '合約地址', 'tx.decodedEvents': '事件解碼（ABI）', 'tx.gasUsed': 'Gas 使用量', 'tx.transfers': '代幣轉移', 'tx.tContract': '合約', 'tx.tValue': '數量 / Token ID', 'tx.tBlock': '區塊', 'tx.hash': '交易哈希', 'addr.transfers': '代幣轉移', 'fc.title': '測試幣水龍頭', 'fc.sub': '開發者生態：為你的地址免費領取測試 TACm', 'fc.claim': '領取測試幣', 'fc.limit': '每地址每日 {{ limit }} TACm', 'fc.disabled': '主網已停用（免費資產不再發放）', 'fc.guide': 'TiUSD / USDT 流通', 'fc.guide1': '① 水龍頭領 TACm → 交易所賣 TACM/TiUSD 買 TiUSD（穩定幣 1:1 錨定 USDT）。', 'fc.guide2': '② DeFi 借貸（CDP）：抵押 TACm 鑄造 TiUSD。', 'fc.guide3': '③ TACm/TiUSD → USDT：交易所 TACM/USDT、TiUSD/USDT 市場（掛單/市價/閃兌）。', 'fc.guide4': '④ 跨鏈：TACM/TiUSD/USDT 皆可經多鏈橋轉移至 BSC/Ethereum 等主流鏈。', 'fc.limitNote': '每地址每日限額', 'fc.addrLabel': '你的 tx0 地址', 'fc.claimBtn': '領取', 'fc.how': '如何使用', 'fc.step1': '填入你的錢包地址後點擊領取', 'fc.step2': '交易由節點金鑰簽發並在數秒內上鏈', 'fc.step3': '到錢包或區塊瀏覽器確認到帳（每日一次）',
       'pill.ai': 'TAC Ai',
       'ai_assistant': 'TAC Ai', 'ai_sub': 'TAC Ai —— 鏈上智能助手，問鏈上數據即時回答',
       'ai_suggest_status': '節點狀態', 'ai_suggest_block': '最新區塊', 'ai_suggest_audit': '鏈上審計',
@@ -15,11 +27,11 @@
       'ai_suggest_join': '加入節點', 'ai_suggest_transfer': '轉帳指引',
       'ai_placeholder': '輸入問題…（例如：節點狀態）', 'ai_send': '發送',
       'pill.standby': '待機', 'pill.mining': '挖礦中', 'pill.login': '登入/註冊',
-      'pill.tools': '☰ 工具', 'pill.wp': '白皮書', 'pill.defi': 'DeFi', 'pill.c2c': 'C2C', 'pill.tokens': '代幣', 'pill.nfts': 'NFT', 'pill.en': 'EN', 'pill.lang': '中',
+      'pill.tools': '☰ 工具', 'pill.wp': '白皮書', 'pill.defi': 'DeFi', 'pill.assets': '資產中心', 'pill.c2c': 'C2C', 'pill.tokens': '代幣', 'pill.nfts': 'NFT', 'pill.en': 'EN', 'pill.lang': '中',
       'mining.start': '⚡ 開機挖礦', 'mining.stop': '停止挖礦', 'mining.online': '在線挖礦中', 'mining.offline': '離線',
       'mining.mech1': '・每區塊獎勵依供應模型動態計算（首年約 1.5 TACm、逐年衰減 25%，6 年總供應 5,200 萬封頂）：節點 45% 由鏈上在線節點（PoT 時間權證）均分，池 15% 自動挹注獎勵池，其餘 40% 按在線礦工算力占比即時瓜分。',
-      'mining.mech2': '・礦機以地址註冊並持續心跳（hb:on），出塊時自動入帳；離線超過約 3 分鐘（60 個區塊）不參與瓜分。節點無需質押即可註冊公鑰（node:reg）參與 PoT 出塊——時間面前人人平等。',
-      'mining.mech3': '・共識為 PoT＋PoS 混合（時間權證＋質押驗證人）：質押 1,000 TACm 成為驗證人輪值出塊；未質押節點依在線時長累積出塊權重（每 6 小時 +1，上限 10）。',
+      'mining.mech2': '・礦機以地址註冊並持續心跳（hb:on），出塊時自動入帳；離線超過約 1 小時（3700 個區塊）不參與瓜分。節點無需質押即可註冊公鑰（node:reg）參與 PoT 出塊——時間面前人人平等。',
+      'mining.mech3': '・共識為 PoT＋PoS 混合（時間權證＋質押節點）：質押 1,000 TACm 成為節點輪值出塊；未質押節點依在線時長累積出塊權重（每 6 小時 +1，上限 10）。',
       'pill.miner': '礦機狀態', 'nav.main': '主導航', 'explorer.searchPh': '輸入區塊高度、交易哈希或 tx0 地址…',
       'w3.title': 'MetaMask 接入', 'wallet.intro': '透過自訂 RPC 將 TACm 主網加入 MetaMask / Trust Wallet —— 完整支援 EIP-1559（Type 2）交易、事件日誌與交易收據。',
       'wallet.rpc': 'RPC URL', 'wallet.chainId': 'Chain ID', 'wallet.symbol': '代幣符號', 'wallet.decimals': '小數位',
@@ -35,11 +47,16 @@
       'tacns.noOwner': '未註冊', 'tacns.expiry': '到期（unix）', 'tacns.owner': '擁有者', 'tacns.resolved': '解析地址',
       'tacns.needDeploy': '請先部署註冊表', 'tacns.deployOk': '部署交易已提交', 'tacns.deployErr': '部署失敗',
       'tacns.calldataNote': 'setAddr / transfer / renew 請以自備私鑰簽名後 POST /tx/submit 上鏈',
-      'wallet.multiTitle': '多簽合約錢包', 'wallet.intro': 'Safe 風格 N/M 門檻錢包——多簽管理資金，支援 EIP-1271 合約簽名驗證。',
+      'wallet.multiTitle': '多簽合約錢包', 'wallet.intro': 'N/M 門檻多簽錢包——多簽管理資金，支援 EIP-1271 合約簽名驗證。',
       'wallet.status': '錢包狀態', 'wallet.contract': '合約地址', 'wallet.owners': 'Owner 數', 'wallet.threshold': '門檻',
       'wallet.deploy': '部署錢包', 'wallet.deployed': '已部署', 'wallet.undeployed': '未部署',
       'wallet.deployOk': '部署交易已提交', 'wallet.deployErr': '部署失敗',
       'wallet.ownerMgmt': 'Owner 管理', 'wallet.ownerPh': 'owner 地址（tx0 或 0x）',
+      'wallet.hdTitle': '金鑰管理（HD）', 'wallet.hdHint': '標準 BIP-39/32/44 —— 一組助記詞管理所有帳戶，可導入 MetaMask 等主流錢包。',
+      'wallet.hdNew': '建立 HD 錢包（標準助記詞）', 'wallet.hdPath': '路徑', 'wallet.hdRestore': '匯入 HD 錢包（助記詞）',
+      'wallet.hdRestorePh': '貼上 12/15/18/21/24 詞助記詞', 'wallet.hdDerive': '派生',
+      'wallet.hdSetActive': '設定為我的錢包', 'wallet.hdActive': '目前錢包',
+      'wallet.advanced': '進階功能（多簽合約錢包）',
       'wallet.addOwner': '新增 Owner', 'wallet.removeOwner': '移除 Owner',
       'wallet.thresholdSet': '設定門檻', 'wallet.setThreshold': '設定', 'wallet.fillThreshold': '請輸入 ≥1 的門檻',
       'wallet.submitTitle': '提交交易（節點代簽）', 'wallet.toPh': '目標地址', 'wallet.valuePh': '金額（TACm）',
@@ -64,7 +81,7 @@
       'gov.opOk': '已提交（等待入塊）', 'gov.opErr': '操作失敗',
       'gov.creator': '提案人', 'gov.passed': '通過', 'gov.executed': '已執行', 'gov.pending': '進行中',
       'gov.propInfo': '提案資訊', 'gov.infoEmpty': '尚未建立提案或查無此 ID',
-      'gov.daoTitle': '鏈上治理（DAO）', 'gov.paramTab': '參數治理', 'gov.daoTab': '合約 DAO', 'svc.title': '鏈上服務', 'svc.wallet': 'TAC 錢包（資產＋多簽）', 'svc.ns': '命名服務 .tac', 'svc.gov': '鏈上治理（DAO）', 'oracle.title': '鏈上預言機（Oracle）', 'oracle.intro': '主流幣即時喂價——DeFi 借貸、衍生品與開發者的可靠價格來源。', 'oracle.feeds': '價格喂價', 'oracle.query': '查詢與覆寫', 'oracle.symbol': '市場', 'oracle.price': '價格（USDT）', 'oracle.chg': '24h', 'oracle.source': '來源', 'oracle.updated': '更新時間', 'oracle.lookupBtn': '查詢', 'oracle.feedHint': '手動覆寫喂價（節點操作）', 'oracle.feedBtn': '覆寫', 'oracle.historyHint': '歷史喂價', 'oracle.historyBtn': '檢視', 'aa.title': '帳戶抽象（Account Abstraction）', 'aa.intro': 'EIP-4337 智能帳戶——以 UserOperation 授權操作，由 Bundler 代付 Gas 並代執行合約呼叫。', 'aa.submit': '提交 UserOperation', 'aa.submitHint': '填入智能帳戶位址與其簽名（ECDSA），Bundler 驗證授權後代付 Gas 並執行目標合約呼叫。', 'aa.senderPh': 'Sender（智能帳戶位址）', 'aa.pubkeyPh': 'Pubkey（壓縮公鑰 hex）', 'aa.sigPh': 'Signature（DER 簽名 hex）', 'aa.targetPh': 'Target（目標合約位址）', 'aa.callDataPh': 'Call Data（hex，如 00）', 'aa.estimateBtn': '估算 Gas', 'aa.submitBtn': '提交操作', 'aa.estGas': '估算 Gas', 'aa.estFee': '估算費用', 'aa.status': '操作狀態', 'aa.statusBtn': '查詢', 'aa.colStatus': '狀態', 'aa.colTarget': '目標合約', 'aa.colTx': '交易哈希', 'aa.colGas': 'Gas 費用', 'aa.colTime': '提交時間', 'aa.how': '運作方式', 'aa.how1': '持有者用智能帳戶私鑰對操作摘要（含 sender/nonce/target/callData/fee）簽名——摘要由節點 Canonical＋DoubleSHA256 計算。', 'aa.how2': '節點 Bundler（離線 EntryPoint）驗證簽名與 pubkey↔sender 匹配、callData 為合法 hex、gas 參數合理。', 'aa.how3': '驗證通過後由節點金鑰代付 Gas 並提交合約呼叫交易（memo=vm:call:），操作可於 Explorer 追蹤。', 'aa.how4': 'v2 路線：鏈上 EntryPoint 合約＋Paymaster 機制（由任意帳戶代付 Gas）。', 'api.title': 'Indexer API', 'api.intro': '公共只讀查詢面（Etherscan 風）——區塊、交易、地址與鏈統計，供開發者與工具整合。全部端點回傳 JSON。', 'api.endpoints': '端點 / Endpoints', 'api.base': 'Base URL：', 'api.statsDesc': '鏈統計：高度、區塊數、交易數、帳戶數、Mempool 大小。', 'api.blocksDesc': '區塊列表（高度降序）。limit 預設 20、上限 100。', 'api.blockDesc': '單一區塊（高度或區塊哈希）＋區塊內交易。', 'api.txDesc': '單一交易（64 位 hex 哈希）。', 'api.txsDesc': '地址交易歷史。dir 可選 in / out（僅收/僅發）。', 'api.addrDesc': '地址帳戶：餘額、Nonce、首末活躍時間與交易總數。', 'api.delegDesc': '質押委託分頁：全鏈委託紀錄（委託額降序，含委託人／驗證人／金額／時間）。', 'api.delegatorDesc': '委託人視角：全部委託明細＋累計委託獎勵（coinbase:deleg 鏈上入賬）。', 'api.validatorsDesc': '驗證人排名：權重（自有＋委託）／委託總額／委託人數／狀態，權重降序。', 'api.usage': '使用規範 / Usage', 'api.usage1': '全部端點為只讀，不消耗 Gas、不需簽名。', 'api.usage2': '分頁上限：limit ≤ 100。', 'api.usage3': '錯誤回傳：404（不存在）／400（參數/地址/哈希格式錯誤）／500（內部錯誤）。', 'api.usage4': '與 eth_* JSON-RPC 並存：RPC 面供錢包/合約，Indexer 面供瀏覽器與分析工具。', 'st.title': '質押委託（Staking Delegation）', 'st.intro': '將 TACm 委託給驗證人——委託增加驗證人出塊權重（total_stake），紀錄隨區塊上鏈、全網一致。委託後資產鎖倉，撤銷即返還。', 'st.delegateTitle': '委託 / 撤銷', 'st.delegateHint': '填入你的錢包地址、目標驗證人（節點）地址與金額。委託後站內帳本鎖倉並上鏈紀錄；撤銷上鏈後返還。', 'st.fromPh': 'From（你的 tx0 地址）', 'st.validatorPh': 'Validator（驗證人節點地址）', 'st.amountPh': 'Amount（TACm）', 'st.delegateBtn': '委託 Delegate', 'st.undelegateBtn': '撤銷 Undelegate', 'st.myTitle': '我的委託', 'st.queryBtn': '查詢', 'st.colValidator': '驗證人', 'st.colAmount': '委託額（TACm）', 'st.colTime': '時間', 'st.validatorsTitle': '驗證人委託總額', 'st.colTotal': '委託總額（TACm）', 'st.colCount': '委託人數', 'st.rewardsTitle': '累計委託獎勵（鏈上 coinbase:deleg）', 'st.unbondTitle': '解綁中（Unbonding）', 'st.colComplete': '完成高度', 'st.colStatus': '狀態', 'st.colVStatus': '狀態',      'mining.mech4': '・節點自身維護一台默認礦機（不參與瓜分）；若鏈上暫無在線礦工，該塊 40% 礦工份額全數挹注獎勵池，離線期間不會獲得任何收益。',
+      'gov.daoTitle': '鏈上治理（DAO）', 'gov.paramTab': '參數治理', 'gov.bridgeTitle': '跨鏈橋治理（Kill-switch）', 'gov.bridgeState': '狀態', 'gov.bridgePause': '緊急暫停橋', 'gov.bridgeResume': '恢復橋', 'gov.bridgeNote': '僅限已登入管理員；暫停將拒絕所有跨鏈操作。', 'gov.bridgeNeedLogin': '需先登入主網錢包（管理員）', 'gov.bridgeFail': '操作失敗', 'gov.vaultTitle': 'DeFi 金庫參數治理', 'gov.vaultId': 'Vault ID', 'gov.vaultFee': '績效費率（0-1）', 'gov.vaultMin': '最低存款（TACm）', 'gov.vaultStatus': '狀態', 'gov.vaultApply': '套用參數', 'gov.vaultNote': '查詢 GET /api/defi/vaults 取得金庫 ID 清單。', 'gov.vaultNeedId': '請輸入 Vault ID', 'gov.vaultOk': '金庫參數已更新', 'gov.vaultFail': '更新失敗', 'gov.daoTab': '合約 DAO', 'svc.title': '鏈上服務', 'svc.wallet': 'TAC 錢包（資產＋多簽）', 'svc.ns': '命名服務 .tac', 'svc.gov': '鏈上治理（DAO）', 'vld.title': '節點排名 / Validator Ranking', 'vld.colNode': '節點', 'vld.colStake': '總權重（TACm）', 'vld.colDeleg': '委託總額（TACm）', 'vld.colNum': '委託人數', 'vld.colStatus': '狀態', 'vld.loading': '載入中…', 'vld.modalTitle': '驗證人明細', 'vld.pubkey': '公鑰', 'vld.firstSeen': '首次上線', 'vld.lastActive': '最後活躍', 'vld.delegatorNum': '委託人數', 'vld.totalStake': '總權重', 'vld.colNode': '驗證人', 'vld.delegTotal': '委託總額', 'vld.colStatus': '狀態', 'oracle.title': '鏈上預言機（Oracle）', 'oracle.intro': '主流幣即時喂價——DeFi 借貸、衍生品與開發者的可靠價格來源。', 'oracle.feeds': '價格喂價', 'oracle.query': '查詢與覆寫', 'oracle.symbol': '市場', 'oracle.price': '價格（USDT）', 'oracle.chg': '24h', 'oracle.source': '來源', 'oracle.updated': '更新時間', 'oracle.lookupBtn': '查詢', 'oracle.feedHint': '手動覆寫喂價（節點操作）', 'oracle.feedBtn': '覆寫', 'oracle.historyHint': '歷史喂價', 'oracle.historyBtn': '檢視', 'aa.title': '帳戶抽象（Account Abstraction）', 'aa.intro': 'EIP-4337 智能帳戶——以 UserOperation 授權操作，由 Bundler 代付 Gas 並代執行合約呼叫。', 'aa.submit': '提交 UserOperation', 'aa.submitHint': '填入智能帳戶位址與其簽名（ECDSA），Bundler 驗證授權後代付 Gas 並執行目標合約呼叫。', 'aa.senderPh': 'Sender（智能帳戶位址）', 'aa.pubkeyPh': 'Pubkey（壓縮公鑰 hex）', 'aa.sigPh': 'Signature（DER 簽名 hex）', 'aa.targetPh': 'Target（目標合約位址）', 'aa.callDataPh': 'Call Data（hex，如 00）', 'aa.estimateBtn': '估算 Gas', 'aa.submitBtn': '提交操作', 'aa.estGas': '估算 Gas', 'aa.estFee': '估算費用', 'aa.status': '操作狀態', 'aa.statusBtn': '查詢', 'aa.colStatus': '狀態', 'aa.colTarget': '目標合約', 'aa.colTx': '交易哈希', 'aa.colGas': 'Gas 費用', 'aa.colTime': '提交時間', 'aa.how': '運作方式', 'aa.how1': '持有者用智能帳戶私鑰對操作摘要（含 sender/nonce/target/callData/fee）簽名——摘要由節點 Canonical＋DoubleSHA256 計算。', 'aa.how2': '節點 Bundler（離線 EntryPoint）驗證簽名與 pubkey↔sender 匹配、callData 為合法 hex、gas 參數合理。', 'aa.how3': '驗證通過後由節點金鑰代付 Gas 並提交合約呼叫交易（memo=vm:call:），操作可於 Explorer 追蹤。', 'aa.how4': 'v2 路線：鏈上 EntryPoint 合約＋Paymaster 機制（由任意帳戶代付 Gas）。', 'api.title': 'Indexer API', 'api.intro': '公共只讀查詢面——區塊、交易、地址與鏈統計，供開發者與工具整合。全部端點回傳 JSON。', 'api.endpoints': '端點 / Endpoints', 'api.base': 'Base URL：', 'api.statsDesc': '鏈統計：高度、區塊數、交易數、帳戶數、Mempool 大小。', 'api.blocksDesc': '區塊列表（高度降序）。limit 預設 20、上限 100。', 'api.blockDesc': '單一區塊（高度或區塊哈希）＋區塊內交易。', 'api.txDesc': '單一交易（64 位 hex 哈希）。', 'api.txsDesc': '地址交易歷史。dir 可選 in / out（僅收/僅發）。', 'api.addrDesc': '地址帳戶：餘額、Nonce、首末活躍時間與交易總數。', 'api.delegDesc': '質押委託分頁：全鏈委託紀錄（委託額降序，含委託人／節點／金額／時間）。', 'api.delegatorDesc': '委託人視角：全部委託明細＋累計委託獎勵（coinbase:deleg 鏈上入賬）。', 'api.validatorsDesc': '節點排名：權重（自有＋委託）／委託總額／委託人數／狀態，權重降序。', 'api.usage': '使用規範 / Usage', 'api.usage1': '全部端點為只讀，不消耗 Gas、不需簽名。', 'api.usage2': '分頁上限：limit ≤ 100。', 'api.usage3': '錯誤回傳：404（不存在）／400（參數/地址/哈希格式錯誤）／500（內部錯誤）。', 'api.usage4': '與 eth_* JSON-RPC 並存：RPC 面供錢包/合約，Indexer 面供瀏覽器與分析工具。', 'st.title': 'PoT 質押委託（Proof-of-Trust Staking）', 'st.intro': '將 TACm 委託給節點——委託增加節點出塊權重（total_stake），紀錄隨區塊上鏈、全網一致。委託後資產鎖倉，撤銷即返還。', 'st.delegateTitle': '委託 / 撤銷', 'st.delegateHint': '填入你的錢包地址、目標節點（節點）地址與金額。委託後站內帳本鎖倉並上鏈紀錄；撤銷上鏈後返還。', 'st.fromPh': 'From（你的 tx0 地址）', 'st.validatorPh': '節點地址', 'st.amountPh': 'Amount（TACm）', 'st.delegateBtn': '委託 Delegate', 'st.undelegateBtn': '撤銷 Undelegate', 'st.myTitle': '我的委託', 'st.queryBtn': '查詢', 'st.colValidator': '節點', 'st.colAmount': '委託額（TACm）', 'st.colTime': '時間', 'st.validatorsTitle': '節點委託總額', 'st.colTotal': '委託總額（TACm）', 'st.colCount': '委託人數', 'st.rewardsTitle': '累計委託獎勵（鏈上 coinbase:deleg）', 'st.unbondTitle': '解綁中（Unbonding）', 'st.colComplete': '完成高度', 'st.colStatus': '狀態', 'st.colVStatus': '狀態',      'mining.mech4': '・節點自身維護一台默認礦機（不參與瓜分）；若鏈上暫無在線礦工，該塊 40% 礦工份額全數挹注獎勵池，離線期間不會獲得任何收益。',
     'mining.earnTitle': '我的收益明細（近 7 日 · 鏈上 coinbase 瓜分）', 'mining.earnSub': '每日收益（TACm，綠）／每日平均時權（藍，右軸）',
     'mining.earnDate': '日期', 'mining.earnAmt': '收益 TACm', 'mining.earnCnt': '瓜分筆數', 'mining.earnHash': '平均時權',
     'mining.twTitle': '時權設定（固定不可改）', 'mining.twDesc1': '基礎時間權證：節點/礦機在線即取得（預設 1.0）', 'mining.twDesc2': '加成證明權證：鏈上證明（質押／推薦註冊）累加（預設 2.0）', 'mining.twDesc3': '邀請碼＝你的錢包地址，分享給朋友於註冊時填寫即可。',
@@ -74,9 +91,9 @@
       'index.title': 'TAC Ai 智能鏈', 'index.overview': '全鏈儀表',
       'bn.wallet': 'Web3 錢包', 'bn.walletSub': '鏈上資產與轉帳',
       'bn.mining': '開始挖礦', 'bn.miningSub': '算力與獎勵',
-      'bn.exchange': '交易所', 'bn.exchangeSub': '閃兌與訂單',
+      'bn.exchange': '交易所', 'ss.title': '穩定幣兌換（TiUSD ↔ USDT）', 'ss.sub': '1:1 錨定兌換 · 0.5% 手續費入庫 · 治理可調', 'ss.addr': 'address (tx0...)', 'ss.from': '從', 'ss.to': '到', 'ss.btn': '兌換', 'ss.note': '提示：TiUSD 為 TACm 鏈穩定幣（peg 1 USDT）。USDT 可經多鏈橋入金；TiUSD 可經 DeFi CDP 抵押 TACm 鑄造。', 'ss.req': '請輸入地址與金額', 'ss.ok': '兌換成功', 'bn.exchangeSub': '閃兌與訂單',
       'ex.hot': '熱門市場', 'ex.tapTrade': '點選幣種即可交易', 'ex.ref': '參考',
-      'ex.onchain': '鏈上', 'ex.live': '即時', 'ex.fee': '手續費',
+      'ex.onchain': '鏈上', 'ex.live': '即時', 'ex.refDisabled': '已停用：僅鏈上資產（TACM/TiUSD/USDT）可交易', 'ex.fee': '手續費',
       'ex.refBook': '參考行情（估值對映）· 無訂單簿',
       'ex.refDepth': '主流幣估值行情 · 無真實訂單簿',
       'ex.best': '最優',
@@ -99,7 +116,7 @@
       'cm.postsN': '則貼文', 'cm.following': '追蹤中', 'cm.followers': '追蹤者', 'cm.videoTag': '影片', 'cm.marketTag': '市集', 'cm.openVideo': '開啟影片',
       'cm.sell': '發布商品', 'cm.listItem': '上架', 'cm.buyTitle': '確認購買', 'cm.confirmPay': '確認付款（一鍵轉帳）',
       'cm.rateItem': '評價市集商品', 'cm.rating': '評分（1-5）', 'cm.submit': '送出評價',
-      'cm.adCreate': '建立廣告', 'cm.adPlace': '投放位置', 'cm.adPlaceRule': '比照 Facebook／YouTube 插播',
+      'cm.adCreate': '建立廣告', 'cm.adPlace': '投放位置', 'cm.adPlaceRule': '資訊流插播',
       'cm.adBudget': '總預算', 'cm.adDaily': '每日預算', 'cm.adTarget': '點擊跳轉網址', 'cm.adTargetRule': '按「了解更多」前往',
       'cm.adSubmit': '發佈廣告（付款後投放）', 'cm.myAds': '我的廣告', 'cm.了解更多': '了解更多',
       'cm.已售出': '已售出', 'cm.購買': '購買', 'cm.評價': '評價', 'cm.賣家': '賣家', 'cm.鏈上費': '鏈上費',
@@ -142,12 +159,12 @@
       'ld.d6t': 'AI 原生', 'ld.d6s': '鏈上 AI 助手直接查詢餘額、交易、出塊與治理參數；社群獎勵自動上鏈。TAC 天生為智能時代而設計。',
       'ld.specT': '主網技術規格', 'ld.enterT': '從這裡開始','index.height': '鏈頂高度', 'index.final': '最終化高度', 'index.diff': '當前難度', 'index.mempool': '待打包交易',
       'auth.register': '註冊', 'auth.login': '登入', 'auth.email': 'Email', 'auth.password': '密碼',
-      'tokens.title': '代幣工作室', 'tokens.sub': '鏈上標準代幣（ERC-20 風格）· 節點官方發行 · 即時出塊',
+      'tokens.title': '代幣工作室', 'tokens.sub': '鏈上標準代幣（ERC-20）· 節點官方發行 · 即時出塊',
       'tokens.count': '個代幣', 'tokens.deploy': '發行代幣', 'tokens.name': '名稱（≤32 字元）', 'tokens.symbol': '代號（≤32 字元）',
-      'tokens.supply': '總供應量', 'tokens.deploy_btn': '⚡ 發行', 'tokens.detail': '代幣詳情', 'tokens.list': '已發行代幣',
+      'tokens.supply': '總供應量', 'tokens.from': '發行者地址（選填；發行費 100 TACm 由此扣，空則節點代付）', 'tokens.usage': '發行用途：可在 DEX 建立流動性池交易（AMM）、ERC-20 轉帳/授權/跨鏈、IDO 認購、社群市集付款。', 'tokens.fee': '發行費', 'tokens.deploy_btn': '⚡ 發行', 'tokens.detail': '代幣詳情', 'tokens.list': '已發行代幣',
       'tokens.select': '← 從列表選擇代幣', 'tokens.mybal': '我的餘額', 'tokens.contract': '合約地址',
       'tokens.to': '轉帳至（tx0 地址）', 'tokens.amount': '數量', 'tokens.transfer': '⇄ 代簽轉帳',
-      'nfts.title': 'NFT 工作室', 'nfts.sub': '鏈上標準 NFT（ERC-721 風格）· 節點官方發行 · 即時出塊',
+      'nfts.title': 'NFT 工作室', 'nfts.sub': '鏈上標準 NFT（ERC-721）· 節點官方發行 · 即時出塊',
       'nfts.count': '個 NFT 集合', 'nfts.deploy': '發行 NFT 集合', 'nfts.deploy_btn': '⚡ 發行',
       'nfts.detail': 'NFT 詳情', 'nfts.list': '已發行 NFT 集合', 'nfts.mybal': '我的持有數',
       'nfts.contract': '合約地址', 'nfts.mint_to': '鑄造給（tx0 地址）', 'nfts.token_id': 'Token ID',
@@ -159,7 +176,7 @@
       'nfts.approve_btn': '⚡ 代簽授權', 'nfts.get_approved': '查詢 getApproved', 'nfts.approved_of': 'Token 獲批者',
       'nfts.operator': '操作員（tx0）', 'nfts.owner_addr': 'Owner（tx0）', 'nfts.set_all_true': '⇄ 全量授權（true）', 'nfts.set_all_false': '⇄ 撤銷（false）',
       'nfts.operator_approved': '查詢 isApprovedForAll', 'nfts.approve_hint': 'approve 授權單一 Token 給指定地址；setApprovalForAll 授權操作員代管全部 Token（節點代簽=節點帳戶為 owner/授權人）',
-      'nav.dex': 'DEX', 'pill.dex': 'DEX', 'pill.sign': '簽名工具',
+      'nav.dex': 'DEX', 'nav.orderbook': '訂單簿', 'nav.aiv': 'AI 驗證', 'pill.dex': 'DEX', 'pill.orderbook': '訂單簿', 'pill.aiv': 'AI 驗證', 'pill.sign': '簽名工具',
       'sign.title': '簽名工具台', 'sign.sub': '開發者簽名工具 — EIP-191 personal_sign · EIP-712 typed data · ecRecover',
       'contract.title': '合約驗證中心', 'contract.sub': '檢視已部署合約並以 ABI 編碼執行只讀互動（不寫鏈）',
       'contract.listTitle': '已部署合約', 'contract.thAddr': '地址', 'contract.thName': '名稱', 'contract.thSymbol': '代號', 'contract.thSupply': '供應量', 'contract.thCode': '代碼',
@@ -189,17 +206,19 @@
       'dex.farm': '流動性挖礦（Farm）', 'dex.farm_hint': '質押 LP 份額賺取獎勵代幣', 'dex.farm_empty': '尚無農場：先建立流動性池並注資獎勵',
       'dex.farm_stake': '質押', 'dex.farm_unstake': '解除質押', 'dex.farm_claim': '領取獎勵',
       'gov.title': '鏈上治理', 'gov.sub': '鏈上提案 · 權重投票 · 自動執行',
-      'gov.proposals': '全部提案', 'gov.propose': '發起提案', 'gov.params': '可治理參數',
+      'gov.proposals': '全部提案', 'gov.propose': '發起提案', 'gov.rules': '治理規則',
+      'gov.params': '可治理參數',
       'gov.window': '投票窗口', 'gov.threshold': '通過門檻', 'gov.quorum': '法定人數', 'gov.timelock': '時間鎖', 'gov.create': '提交提案',
       'gov.title_f': '標題', 'gov.desc': '描述', 'gov.type': '類型', 'gov.param': '參數',
-      'gov.value': '數值', 'gov.address': '你的地址', 'gov.amount': '金額 (TACm)', 'gov.none': '尚無提案',
+      'gov.value': '數值', 'gov.address': '你的地址', 'gov.amount': '金額 (TACm)', 'gov.none': '尚無提案', 'gov.myRole': '我的角色', 'gov.adminYes': '管理員 ✓', 'gov.adminNo': '一般會員', 'gov.adminGuest': '未登入（僅管理員可操作橋）', 'gov.adminNote': '管理員可升級/降級其他帳號（僅限已具管理員角色者）。', 'gov.adminBtn': '套用', 'gov.adminOk': '已更新管理員角色', 'gov.adminFail': '設定失敗，請稍後再試', 'gov.adminNeedEmail': '請輸入 email',
       'gov.tp_param': '參數調整', 'gov.tp_treasury': '國庫支出', 'gov.tp_meta': '治理決議',
       'gov.pk_bt': '出塊時間 (block_time)', 'gov.pk_d': '基礎難度 (difficulty)',
       'gov.pk_f': '手續費基準 (tx_fee_bps)', 'gov.pk_t': 'TiUSD 下限 (tiusd_floor_bps)', 'gov.pk_q': '法定人數 (gov_quorum_pct)', 'gov.pk_tl': '時間鎖 (gov_timelock_blocks)', 'gov.pk_pm': '提案門檻 (gov_proposer_min)', 'gov.pk_ts': '權重總供應 (gov_total_supply)',
       'common.copy': '複製', 'common.refresh': '刷新', 'common.close': '關閉', 'common.confirm': '確認', 'common.loading': '載入中…',
-      'net.audit': ' 鏈上審計（區塊 · 交易 · 合約）',
+      'net.audit': ' 鏈上審計（區塊 · 交易 · 合約）', 'net.alertsTitle': '供應警報（TiUSD）',
       'net.auditTip': '正在驗證最近 100 塊＋全鏈賬本重放…',
       'net.auditNA': '審計暫不可用', 'net.auditNA2': '無法驗證',
+      'net.auditInc': '增量審計（自區塊', 'net.auditFull': '全量審計',
       'net.auditBlocks': '審計塊數', 'net.auditCoin': 'coinbase==獎勵', 'net.auditPool': 'pool 15%',
       'net.auditSplit': 'node 45% · miner 40%', 'net.auditMined': '全鏈總產出', 'net.auditPoolBal': '獎勵池餘額',
       'net.auditPoolShare': 'Pool 挹注（鏈上）', 'net.auditMiners': '鏈上在線礦工',
@@ -213,9 +232,10 @@
       'net.issueList': '異常清單：',
       'node.badge': 'NODE', 'node.title': '節點品牌控制台', 'node.h1': '節點獨立品牌前端',
       'node.p1': '節點已獨立成自有品牌（TAC Ai Smart Chain — Node），檔案自成一個資料夾（cmd/nodeweb + internal/nodeui），與主網用戶功能完全分離。',
-      'node.acc1': '節點儀表', 'node.acc2': '同步狀態', 'node.acc3': 'P2P Peers', 'node.acc4': '驗證人', 'node.acc5': '出塊記錄',
+      'node.encNote': '🔒 P2P 通訊 v65 起預設加密（ECDH+AES-GCM），對端為舊版節點時自動降級明文；強制明文加 -p2p-plain。節點儀表 Peers 顯示 🔒加密／⚠明文。',
+      'node.acc1': '節點儀表', 'node.acc2': '同步狀態', 'node.acc3': 'P2P Peers', 'node.acc4': '節點', 'node.acc5': '出塊記錄',
       'node.cmdTitle': '啟動指令', 'node.cmdHint': '以下指令一次一條，於節點伺服器執行：',
-      'node.seedTitle': '種子節點', 'node.step1': '下載套件並解壓。', 'node.step2': '用同一創世節點啟動（follower）。', 'node.step3': '開啟節點品牌控制台。', 'node.step4': '節點自動同步、驗證並由在線節點均分 45% 節點獎勵。',
+      'node.seedTitle': '種子節點', 'node.step1': '下載套件並解壓。', 'node.step2': '用同一創世節點啟動（跟隨模式）。', 'node.step3': '開啟節點品牌控制台。', 'node.step4': '節點自動同步、驗證並由在線節點均分 45% 節點獎勵。',
       'node.dlTitle': '下載節點程式（免編譯）', 'node.dlDesc': '官方預編譯純節點程式，下載即用（不需 Go、不需編譯）：', 'node.dlNote': '架設者依此下載、安裝並以 systemd 常駐；節點金鑰自動生成＝你的收款地址，請備份 node_key.json。',
       'ld2.navEco': '生態系統', 'ld2.navWhy': '為什麼 TAC', 'ld2.navHow': '使用方式', 'ld2.navSpec': '技術規格', 'ld2.navJoin': '加入網絡',
       'ld2.enter': '進入系統', 'ld2.tag2': '為智能時代打造的一體化區塊鏈——共識、EVM、L2、跨鏈橋與 AI 全在同一條鏈上。你的資產、你的社群、你的未來，都在鏈上。',
@@ -227,7 +247,11 @@
       'ld2.s3t': '交易所', 'ld2.s3s': '訂單簿＋閃兌＋鏈上交易',
       'ld2.s4t': 'DEX', 'ld2.s4s': 'AMM 流動性池，即時兌換',
       'ld2.s5t': 'DeFi', 'ld2.s5s': '流動性挖礦＋借貸＋Vault',
-      'ld2.s6t': 'NFT', 'ld2.s6s': 'ERC-721 收藏與交易',
+      'ld2.s6t': 'NFT',
+      'ld2.s7t': '流動質押',
+      'ld2.s7s': 'stTACm 流動憑證，獎勵自動注入',
+      'ld2.s8t': '網路健康',
+      'ld2.s8s': '節點狀態與心跳儀表', 'ld2.s6s': 'ERC-721 收藏與交易',
       'ld2.howT': '三步開始', 'ld2.howS': '從錢包到治理，全部鏈上完成。',
       'ld2.h1t': '建立錢包', 'ld2.h1s': '一鍵生成地址與私鑰——你的資產、你的金鑰。',
       'ld2.h2t': '選擇服務', 'ld2.h2s': '挖礦、交易、DeFi、NFT——進入任何一個生態入口。',
@@ -238,6 +262,7 @@
     
       'pill.sign': '簽章工具',
       'pill.contracts': '合約驗證',
+      'pill.zk': 'ZK／VRF',
       'contract.title': '合約驗證',
       'contract.sub': '瀏覽已部署合約並讀取／驗證',
       'contract.listTitle': '已部署合約',
@@ -289,9 +314,19 @@
 },
     en: {
       'nav.home': 'Home', 'nav.wallet': 'Wallet',
+      'ls.home': 'Home', 'ls.defi': 'DeFi', 'ls.stake': 'Staking', 'ls.liquid': 'Liquid Staking', 'ls.gov': 'Governance', 'ls.apply': 'Apply',
+      'ls.heroTitle': 'PoT Liquid Staking (Proof-of-Trust)', 'ls.heroDesc': 'Deposit TACm to mint stTACm liquid receipts — your balance grows with staking rewards via exchange rate. Redeem anytime; use stTACm across DeFi.',
+      'ls.tvl': 'Total Staked (TACm)', 'ls.stSupply': 'stTACm Supply', 'ls.rate': 'Exchange Rate', 'ls.apy': 'Est. APY', 'ls.depositors': 'Depositors', 'ls.rateChart': 'Exchange Rate Live Chart (stTACm/TACm)', 'ls.rateNote': 'Sampled every 10s (local history); the rate rises as delegation rewards are injected.',
+      'ls.tiusdTitle': 'Getting TiUSD (stablecoin 1:1 pegged to USDT)', 'ls.tiusdDesc': 'TiUSD is not a free faucet asset: ① DeFi over-collateralized CDP mint with TACm collateral (1:1 peg); ② Stable Swap USDT ↔ TiUSD (0.5% fee); ③ Accumulate TACm via staking rewards, then mint TiUSD via CDP.', 'ls.goDefi': 'Go to DeFi CDP Mint', 'ls.goSwap': 'Go to Stable Swap', 'ls.stakeTitle': 'Stake TACm → get stTACm', 'ls.address': 'Your address', 'ls.amount': 'Stake amount (TACm)', 'ls.stakeBtn': 'Stake',
+      'ls.redeemTitle': 'Redeem stTACm → TACm', 'ls.address2': 'Your address', 'ls.amount2': 'Redeem amount (stTACm)', 'ls.redeemBtn': 'Redeem',
+      'ls.myTitle': 'My Position', 'ls.query': 'Query', 'ls.myStaked': 'Staked (TACm)', 'ls.mySt': 'stTACm Balance', 'ls.myRedeem': 'Redeemable (TACm)',
+      'ls.howTitle': 'How it works', 'ls.step': 'Step', 'ls.desc': 'Description',
+      'ls.how1': 'Deposit TACm; the protocol mints stTACm at the current exchange rate (1:1 initially).',
+      'ls.how2': 'Pooled assets are delegated to validators; rewards are auto-injected every block (v75) and the rate rises — your stTACm redeem value grows.',
+      'ls.how3': 'Redeem TACm anytime at the current rate; stTACm also works across other DeFi protocols.',
       'wallet.onchain': ' My On-chain History', 'nav.exchange': 'Exchange', 'nav.dash': 'Dashboard',
-      'nav.mining': 'Mining', 'nav.community': 'Community', 'nav.ai': 'TAC Ai', 'nav.tokens': 'Tokens', 'nav.nfts': 'NFT', 'nav.governance': 'Governance',
-      'tx.logs': 'Event Logs', 'tx.logAddr': 'Contract Address', 'tx.decodedEvents': 'Decoded Events (ABI)', 'tx.gasUsed': 'Gas Used', 'tx.transfers': 'Token Transfers', 'tx.tContract': 'Contract', 'tx.tValue': 'Amount / Token ID', 'tx.tBlock': 'Block', 'tx.hash': 'Tx Hash', 'addr.transfers': 'Token Transfers', 'fc.title': 'Test Token Faucet', 'fc.sub': 'Developer ecosystem — free test TACm for your address', 'fc.claim': 'Claim Test Tokens', 'fc.limit': 'Daily limit per address', 'fc.addrLabel': 'Your tx0 address', 'fc.claimBtn': 'Claim', 'fc.how': 'How to use', 'fc.step1': 'Enter your wallet address and click claim', 'fc.step2': 'The tx is signed by the node key and lands on-chain in seconds', 'fc.step3': 'Check Wallet or Explorer to confirm (once per address per day)',
+      'nav.mining': 'Mining', 'nav.community': 'Community', 'nav.ai': 'TAC Ai', 'nav.tokens': 'Tokens', 'nav.nfts': 'NFT', 'nav.defi': 'DeFi', 'nav.tiusd': 'TiUSD Monitor', 'nav.ls': 'Staking', 'nav.governance': 'Governance',
+      'tx.logs': 'Event Logs', 'tx.logAddr': 'Contract Address', 'tx.decodedEvents': 'Decoded Events (ABI)', 'tx.gasUsed': 'Gas Used', 'tx.transfers': 'Token Transfers', 'tx.tContract': 'Contract', 'tx.tValue': 'Amount / Token ID', 'tx.tBlock': 'Block', 'tx.hash': 'Tx Hash', 'addr.transfers': 'Token Transfers', 'fc.title': 'Test Token Faucet', 'fc.sub': 'Developer ecosystem — free test TACm for your address', 'fc.claim': 'Claim Test Tokens', 'fc.limit': 'Daily limit per address', 'fc.addrLabel': 'Your tx0 address', 'fc.claimBtn': 'Claim', 'fc.how': 'How to use', 'fc.step1': 'Enter your wallet address and click claim', 'fc.step2': 'The tx is signed by the node key and lands on-chain in seconds', 'fc.step3': 'Check Wallet or Explorer to confirm (once per address per day)', 'fc.disabled': 'Disabled on mainnet (free assets no longer distributed)', 'fc.guide': 'TiUSD / USDT Circulation', 'fc.guide1': '① Claim TACm from the faucet → buy TiUSD on the exchange (TACM/TiUSD pair; stablecoin pegged 1:1 to USDT).', 'fc.guide2': '② DeFi lending (CDP): collateralize TACm to mint TiUSD.', 'fc.guide3': '③ TACm/TiUSD → USDT: trade on TACM/USDT and TiUSD/USDT markets (limit/market/swap).', 'fc.guide4': '④ Cross-chain: TACM/TiUSD/USDT can be bridged to BSC/Ethereum and other major chains.',
       'pill.ai': 'TAC Ai',
       'ai_assistant': 'TAC Ai', 'ai_sub': 'On-chain assistant — ask about the chain, get instant answers',
       'ai_suggest_status': 'Node status', 'ai_suggest_block': 'Latest block', 'ai_suggest_audit': 'On-chain audit',
@@ -299,10 +334,10 @@
       'ai_suggest_join': 'Join network', 'ai_suggest_transfer': 'Transfer guide',
       'ai_placeholder': 'Ask anything about TACm… (e.g. node status)', 'ai_send': 'Ask',
       'pill.standby': 'Idle', 'pill.mining': 'Mining', 'pill.login': 'Sign In / Sign Up',
-      'pill.tools': '☰ Tools', 'pill.wp': 'Whitepaper', 'pill.defi': 'DeFi', 'pill.c2c': 'C2C', 'pill.tokens': 'Tokens', 'pill.nfts': 'NFT', 'pill.en': 'EN', 'pill.lang': '中',
+      'pill.tools': '☰ Tools', 'pill.wp': 'Whitepaper', 'pill.defi': 'DeFi', 'pill.assets': 'Assets Center', 'pill.c2c': 'C2C', 'pill.tokens': 'Tokens', 'pill.nfts': 'NFT', 'pill.en': 'EN', 'pill.lang': '中',
       'mining.start': '⚡ Start Mining', 'mining.stop': 'Stop Mining', 'mining.online': 'Mining Online', 'mining.offline': 'Offline',
       'mining.mech1': '· Per-block reward follows the supply model (≈1.5 TACm year 1, decaying 25% yearly, 52M total cap over 6 years): 45% split equally among online PoT nodes, 15% auto-contributes to the reward pool, remaining 40% split by online hashrate share.',
-      'mining.mech2': '· Miners register by address (initial 1vCPU×1M + 2vGPU×2M) and keep heartbeats; rewards credit per block. Offline over ~3 min (60 blocks) stops sharing.',
+      'mining.mech2': '· Miners register by address (initial 1vCPU×1M + 2vGPU×2M) and keep heartbeats; rewards credit per block. Offline over ~1 hour (3700 blocks) stops sharing.',
       'mining.mech3': '· Hashrate grows via referrals: each member registered with your address grants +0.01 CPU / +0.02 GPU.',
       'pill.miner': 'Miner Status', 'nav.main': 'Main navigation', 'explorer.searchPh': 'Enter block height, tx hash or tx0 address…',
       'w3.title': 'MetaMask RPC', 'wallet.intro': 'Add the TACm Mainnet to MetaMask / Trust Wallet via custom RPC — full EIP-1559 (Type 2) transactions, event logs and receipts supported.',
@@ -319,11 +354,16 @@
       'tacns.noOwner': 'Unregistered', 'tacns.expiry': 'Expiry (unix)', 'tacns.owner': 'Owner', 'tacns.resolved': 'Resolved address',
       'tacns.needDeploy': 'Deploy the registry first', 'tacns.deployOk': 'Deploy tx submitted', 'tacns.deployErr': 'Deploy failed',
       'tacns.calldataNote': 'setAddr / transfer / renew: sign with your own key and submit via POST /tx/submit',
-      'wallet.multiTitle': 'Multi-Sig Wallet', 'wallet.intro': 'Safe-style N/M threshold wallet — multi-sig fund management with EIP-1271 contract signature verification.',
+      'wallet.multiTitle': 'Multi-Sig Wallet', 'wallet.intro': 'N/M threshold multi-sig wallet — multi-sig fund management with EIP-1271 contract signature verification.',
       'wallet.status': 'Wallet', 'wallet.contract': 'Contract', 'wallet.owners': 'Owners', 'wallet.threshold': 'Threshold',
       'wallet.deploy': 'Deploy Wallet', 'wallet.deployed': 'Deployed', 'wallet.undeployed': 'Not deployed',
       'wallet.deployOk': 'Deploy tx submitted', 'wallet.deployErr': 'Deploy failed',
       'wallet.ownerMgmt': 'Owner Management', 'wallet.ownerPh': 'owner address (tx0 or 0x)',
+      'wallet.hdTitle': 'Key Management (HD)', 'wallet.hdHint': 'Standard BIP-39/32/44 — one mnemonic manages all accounts, importable into MetaMask etc.',
+      'wallet.hdNew': 'Create HD Wallet (standard mnemonic)', 'wallet.hdPath': 'Path', 'wallet.hdRestore': 'Import HD wallet (mnemonic)',
+      'wallet.hdRestorePh': 'paste 12/15/18/21/24-word mnemonic', 'wallet.hdDerive': 'Derive',
+      'wallet.hdSetActive': 'Set as My Wallet', 'wallet.hdActive': 'Current Wallet',
+      'wallet.advanced': 'Advanced (Multi-Sig Contract Wallet)',
       'wallet.addOwner': 'Add Owner', 'wallet.removeOwner': 'Remove Owner',
       'wallet.thresholdSet': 'Set Threshold', 'wallet.setThreshold': 'Set', 'wallet.fillThreshold': 'Enter a threshold ≥ 1',
       'wallet.submitTitle': 'Submit Transaction (node-signed)', 'wallet.toPh': 'Target address', 'wallet.valuePh': 'Amount (TACm)',
@@ -348,7 +388,7 @@
       'gov.opOk': 'Submitted (awaiting block)', 'gov.opErr': 'Operation failed',
       'gov.creator': 'Creator', 'gov.passed': 'Passed', 'gov.executed': 'Executed', 'gov.pending': 'Pending',
       'gov.propInfo': 'Proposal Info', 'gov.infoEmpty': 'No proposal yet or ID not found',
-      'gov.daoTitle': 'On-chain Governance (DAO)', 'gov.paramTab': 'Parameter Governance', 'gov.daoTab': 'Contract DAO', 'svc.title': 'On-chain Services', 'svc.wallet': 'TAC Wallet (Assets + Multi-Sig)', 'svc.ns': 'Naming Service .tac', 'svc.gov': 'On-chain Governance (DAO)', 'oracle.title': 'Price Oracle', 'oracle.intro': 'Real-time price feeds for major assets — a reliable price source for DeFi lending, derivatives and developers.', 'oracle.feeds': 'Price Feeds', 'oracle.query': 'Query & Override', 'oracle.symbol': 'Market', 'oracle.price': 'Price (USDT)', 'oracle.chg': '24h', 'oracle.source': 'Source', 'oracle.updated': 'Updated', 'oracle.lookupBtn': 'Lookup', 'oracle.feedHint': 'Manually override a feed (node operator)', 'oracle.feedBtn': 'Override', 'oracle.historyHint': 'Price history', 'oracle.historyBtn': 'View', 'aa.title': 'Account Abstraction', 'aa.intro': 'EIP-4337 smart accounts — authorize operations with UserOperations; the Bundler pays gas and executes contract calls on your behalf.', 'aa.submit': 'Submit UserOperation', 'aa.submitHint': 'Enter the smart account address and its ECDSA signature; the Bundler verifies authorization, pays gas and executes the target contract call.', 'aa.senderPh': 'Sender (smart account)', 'aa.pubkeyPh': 'Pubkey (compressed hex)', 'aa.sigPh': 'Signature (DER hex)', 'aa.targetPh': 'Target (contract address)', 'aa.callDataPh': 'Call Data (hex, e.g. 00)', 'aa.estimateBtn': 'Estimate Gas', 'aa.submitBtn': 'Submit Operation', 'aa.estGas': 'Estimated Gas', 'aa.estFee': 'Estimated Fee', 'aa.status': 'Operation Status', 'aa.statusBtn': 'Query', 'aa.colStatus': 'Status', 'aa.colTarget': 'Target Contract', 'aa.colTx': 'Tx Hash', 'aa.colGas': 'Gas Fee', 'aa.colTime': 'Submitted At', 'aa.how': 'How It Works', 'aa.how1': 'The holder signs the operation digest (sender/nonce/target/callData/fee) with the smart account key — the digest is Canonical + DoubleSHA256 computed by the node.', 'aa.how2': 'The node Bundler (offline EntryPoint) verifies the signature, pubkey↔sender match, valid hex callData and sane gas parameters.', 'aa.how3': 'Once verified, the node key pays gas and submits the contract call (memo=vm:call:); the operation is traceable in the Explorer.', 'aa.how4': 'v2 roadmap: on-chain EntryPoint contract + Paymaster (any account can pay gas).', 'api.title': 'Indexer API', 'api.intro': 'Public read-only query surface (Etherscan-style) — blocks, transactions, addresses and chain stats for developers and tooling. All endpoints return JSON.', 'api.endpoints': 'Endpoints', 'api.base': 'Base URL:', 'api.statsDesc': 'Chain stats: height, block count, tx count, account count, mempool size.', 'api.blocksDesc': 'Block list (height descending). limit defaults to 20, max 100.', 'api.blockDesc': 'Single block (height or block hash) with its transactions.', 'api.txDesc': 'Single transaction (64-char hex hash).', 'api.txsDesc': 'Address transaction history. dir may be in / out.', 'api.addrDesc': 'Address account: balance, nonce, first/last active time and total tx count.', 'api.delegDesc': 'Staking delegation page: all on-chain delegations (amount desc, delegator/validator/amount/time).', 'api.delegatorDesc': 'Delegator view: full delegation details + accumulated delegation rewards (coinbase:deleg on-chain).', 'api.validatorsDesc': 'Validator ranking: weight (self+delegated) / delegation total / delegator count / status, weight desc.', 'api.usage': 'Usage', 'api.usage1': 'All endpoints are read-only; no gas or signature required.', 'api.usage2': 'Pagination cap: limit ≤ 100.', 'api.usage3': 'Errors: 404 (not found) / 400 (invalid param/address/hash) / 500 (internal).', 'api.usage4': 'Coexists with eth_* JSON-RPC: RPC for wallets/contracts, Indexer for explorers and analytics.', 'st.title': 'Staking Delegation', 'st.intro': 'Delegate TACm to a validator — delegation increases the validator\'s block weight (total_stake); records go on-chain and are consistent network-wide. Delegated assets are locked; undelegating returns them.', 'st.delegateTitle': 'Delegate / Undelegate', 'st.delegateHint': 'Enter your wallet address, target validator (node) address and amount. Delegating locks assets in the wallet ledger and records on-chain; undelegating returns them.', 'st.fromPh': 'From (your tx0 address)', 'st.validatorPh': 'Validator (node address)', 'st.amountPh': 'Amount (TACm)', 'st.delegateBtn': 'Delegate', 'st.undelegateBtn': 'Undelegate', 'st.myTitle': 'My Delegations', 'st.queryBtn': 'Query', 'st.colValidator': 'Validator', 'st.colAmount': 'Delegated (TACm)', 'st.colTime': 'Time', 'st.validatorsTitle': 'Validator Delegation Totals', 'st.colTotal': 'Total Delegated (TACm)', 'st.colCount': 'Delegators', 'st.rewardsTitle': 'Accumulated Delegation Rewards (on-chain coinbase:deleg)', 'st.unbondTitle': 'Unbonding', 'st.colComplete': 'Complete Height', 'st.colStatus': 'Status', 'st.colVStatus': 'Status',      'mining.mech4': '· The node maintains one default miner (not sharing rewards); if no online miners exist, that block\'s 40% miner share goes fully into the reward pool. No rewards while offline.',
+      'gov.daoTitle': 'On-chain Governance (DAO)', 'gov.paramTab': 'Parameter Governance', 'gov.bridgeTitle': 'Bridge Governance (Kill-switch)', 'gov.bridgeState': 'Status', 'gov.bridgePause': 'Pause Bridge', 'gov.bridgeResume': 'Resume Bridge', 'gov.bridgeNote': 'Admin-only after mainnet wallet login; pausing rejects all bridge operations.', 'gov.bridgeNeedLogin': 'Login to mainnet wallet (admin) required', 'gov.bridgeFail': 'Operation failed', 'gov.vaultTitle': 'DeFi Vault Parameter Governance', 'gov.vaultId': 'Vault ID', 'gov.vaultFee': 'Performance Fee (0-1)', 'gov.vaultMin': 'Min Deposit (TACm)', 'gov.vaultStatus': 'Status', 'gov.vaultApply': 'Apply', 'gov.vaultNote': 'Run GET /api/defi/vaults to list vault IDs.', 'gov.vaultNeedId': 'Enter a Vault ID', 'gov.vaultOk': 'Vault params updated', 'gov.vaultFail': 'Update failed', 'gov.daoTab': 'Contract DAO', 'svc.title': 'On-chain Services', 'svc.wallet': 'TAC Wallet (Assets + Multi-Sig)', 'svc.ns': 'Naming Service .tac', 'svc.gov': 'On-chain Governance (DAO)', 'vld.title': 'Validator Ranking', 'vld.colNode': 'Node', 'vld.colStake': 'Total Weight (TACm)', 'vld.colDeleg': 'Delegated Total (TACm)', 'vld.colNum': 'Delegators', 'vld.colStatus': 'Status', 'vld.loading': 'Loading…', 'vld.modalTitle': 'Validator Detail', 'vld.pubkey': 'Public Key', 'vld.firstSeen': 'First Seen', 'vld.lastActive': 'Last Active', 'vld.delegatorNum': 'Delegators', 'vld.totalStake': 'Total Stake', 'vld.colNode': 'Validator', 'vld.delegTotal': 'Delegated', 'vld.colStatus': 'Status', 'oracle.title': 'Price Oracle', 'oracle.intro': 'Real-time price feeds for major assets — a reliable price source for DeFi lending, derivatives and developers.', 'oracle.feeds': 'Price Feeds', 'oracle.query': 'Query & Override', 'oracle.symbol': 'Market', 'oracle.price': 'Price (USDT)', 'oracle.chg': '24h', 'oracle.source': 'Source', 'oracle.updated': 'Updated', 'oracle.lookupBtn': 'Lookup', 'oracle.feedHint': 'Manually override a feed (node operator)', 'oracle.feedBtn': 'Override', 'oracle.historyHint': 'Price history', 'oracle.historyBtn': 'View', 'aa.title': 'Account Abstraction', 'aa.intro': 'EIP-4337 smart accounts — authorize operations with UserOperations; the Bundler pays gas and executes contract calls on your behalf.', 'aa.submit': 'Submit UserOperation', 'aa.submitHint': 'Enter the smart account address and its ECDSA signature; the Bundler verifies authorization, pays gas and executes the target contract call.', 'aa.senderPh': 'Sender (smart account)', 'aa.pubkeyPh': 'Pubkey (compressed hex)', 'aa.sigPh': 'Signature (DER hex)', 'aa.targetPh': 'Target (contract address)', 'aa.callDataPh': 'Call Data (hex, e.g. 00)', 'aa.estimateBtn': 'Estimate Gas', 'aa.submitBtn': 'Submit Operation', 'aa.estGas': 'Estimated Gas', 'aa.estFee': 'Estimated Fee', 'aa.status': 'Operation Status', 'aa.statusBtn': 'Query', 'aa.colStatus': 'Status', 'aa.colTarget': 'Target Contract', 'aa.colTx': 'Tx Hash', 'aa.colGas': 'Gas Fee', 'aa.colTime': 'Submitted At', 'aa.how': 'How It Works', 'aa.how1': 'The holder signs the operation digest (sender/nonce/target/callData/fee) with the smart account key — the digest is Canonical + DoubleSHA256 computed by the node.', 'aa.how2': 'The node Bundler (offline EntryPoint) verifies the signature, pubkey↔sender match, valid hex callData and sane gas parameters.', 'aa.how3': 'Once verified, the node key pays gas and submits the contract call (memo=vm:call:); the operation is traceable in the Explorer.', 'aa.how4': 'v2 roadmap: on-chain EntryPoint contract + Paymaster (any account can pay gas).', 'api.title': 'Indexer API', 'api.intro': 'Public read-only query surface — blocks, transactions, addresses and chain stats for developers and tooling. All endpoints return JSON.', 'api.endpoints': 'Endpoints', 'api.base': 'Base URL:', 'api.statsDesc': 'Chain stats: height, block count, tx count, account count, mempool size.', 'api.blocksDesc': 'Block list (height descending). limit defaults to 20, max 100.', 'api.blockDesc': 'Single block (height or block hash) with its transactions.', 'api.txDesc': 'Single transaction (64-char hex hash).', 'api.txsDesc': 'Address transaction history. dir may be in / out.', 'api.addrDesc': 'Address account: balance, nonce, first/last active time and total tx count.', 'api.delegDesc': 'Staking delegation page: all on-chain delegations (amount desc, delegator/node/amount/time).', 'api.delegatorDesc': 'Delegator view: full delegation details + accumulated delegation rewards (coinbase:deleg on-chain).', 'api.validatorsDesc': 'Node ranking: weight (self+delegated) / delegation total / delegator count / status, weight desc.', 'api.usage': 'Usage', 'api.usage1': 'All endpoints are read-only; no gas or signature required.', 'api.usage2': 'Pagination cap: limit ≤ 100.', 'api.usage3': 'Errors: 404 (not found) / 400 (invalid param/address/hash) / 500 (internal).', 'api.usage4': 'Coexists with eth_* JSON-RPC: RPC for wallets/contracts, Indexer for explorers and analytics.', 'st.title': 'PoT Staking (Proof-of-Trust)', 'st.intro': 'Delegate TACm to a node — delegation increases the node\'s block weight (total_stake); records go on-chain and are consistent network-wide. Delegated assets are locked; undelegating returns them.', 'st.delegateTitle': 'Delegate / Undelegate', 'st.delegateHint': 'Enter your wallet address, target node address and amount. Delegating locks assets in the wallet ledger and records on-chain; undelegating returns them.', 'st.fromPh': 'From (your tx0 address)', 'st.validatorPh': 'Node address', 'st.amountPh': 'Amount (TACm)', 'st.delegateBtn': 'Delegate', 'st.undelegateBtn': 'Undelegate', 'st.myTitle': 'My Delegations', 'st.queryBtn': 'Query', 'st.colValidator': 'Node', 'st.colAmount': 'Delegated (TACm)', 'st.colTime': 'Time', 'st.validatorsTitle': 'Node Delegation Totals', 'st.colTotal': 'Total Delegated (TACm)', 'st.colCount': 'Delegators', 'st.rewardsTitle': 'Accumulated Delegation Rewards (on-chain coinbase:deleg)', 'st.unbondTitle': 'Unbonding', 'st.colComplete': 'Complete Height', 'st.colStatus': 'Status', 'st.colVStatus': 'Status',      'mining.mech4': '· The node maintains one default miner (not sharing rewards); if no online miners exist, that block\'s 40% miner share goes fully into the reward pool. No rewards while offline.',
       'mining.earnTitle': 'My Earnings (7d · on-chain coinbase)', 'mining.earnSub': 'Daily reward (TACm, green) / daily avg time warrant (blue, right axis)',
       'mining.earnDate': 'Date', 'mining.earnAmt': 'Reward TACm', 'mining.earnCnt': 'Payouts', 'mining.earnHash': 'Avg Time Warrant',
       'mining.twTitle': 'Time Warrant Settings (fixed)', 'mining.twDesc1': 'Base time warrant: earned while node/miner online (default 1.0)', 'mining.twDesc2': 'Bonus proof warrant: from on-chain proof (staking/referrals), default 2.0', 'mining.twDesc3': 'Referral code = your wallet address; share it for friends to fill in at signup.',
@@ -360,7 +400,7 @@
       'bn.mining': 'Mining', 'bn.miningSub': 'Hashrate & Rewards',
       'bn.exchange': 'Exchange', 'bn.exchangeSub': 'Swap & Orders',
       'ex.hot': 'Hot Markets', 'ex.tapTrade': 'Tap a coin to trade', 'ex.ref': 'Ref',
-      'ex.onchain': 'On-chain', 'ex.live': 'Live', 'ex.fee': 'Fee',
+      'ex.onchain': 'On-chain', 'ex.live': 'Live', 'ex.refDisabled': 'Disabled: only on-chain assets (TACM/TiUSD/USDT) are tradable', 'ex.fee': 'Fee',
       'ex.refBook': 'Reference quote (valuation mirror) · no order book',
       'ex.refDepth': 'Reference quote · no live order book',
       'ex.best': 'Best',
@@ -383,7 +423,7 @@
       'cm.postsN': 'posts', 'cm.following': 'Following', 'cm.followers': 'followers', 'cm.videoTag': 'Video', 'cm.marketTag': 'Market', 'cm.openVideo': 'Open Video',
       'cm.sell': 'List Item', 'cm.listItem': 'Publish', 'cm.buyTitle': 'Confirm Purchase', 'cm.confirmPay': 'Confirm & Pay (one-click)',
       'cm.rateItem': 'Rate Item', 'cm.rating': 'Rating (1-5)', 'cm.submit': 'Submit Review',
-      'cm.adCreate': 'Create Ad', 'cm.adPlace': 'Placement', 'cm.adPlaceRule': 'Facebook / YouTube style in-feed ads',
+      'cm.adCreate': 'Create Ad', 'cm.adPlace': 'Placement', 'cm.adPlaceRule': 'In-feed ads',
       'cm.adBudget': 'Total Budget', 'cm.adDaily': 'Daily Budget', 'cm.adTarget': 'Click-through URL', 'cm.adTargetRule': 'Opens on "Learn More"',
       'cm.adSubmit': 'Publish Ad (starts after payment)', 'cm.myAds': 'My Ads', 'cm.了解更多': 'Learn More',
       'cm.已售出': 'Sold', 'cm.購買': 'Buy', 'cm.評價': 'Review', 'cm.賣家': 'Seller', 'cm.鏈上費': 'Chain Fee',
@@ -426,12 +466,12 @@
       'ld.d6t': 'AI-Native', 'ld.d6s': 'On-chain AI assistant queries balances, transactions, blocks and governance params; community rewards are recorded on-chain. TAC is built for the intelligent era.',
       'ld.specT': 'Mainnet Specifications', 'ld.enterT': 'Get Started','index.height': 'Chain Height', 'index.final': 'Finalized Height', 'index.diff': 'Difficulty', 'index.mempool': 'Pending Tx',
       'auth.register': 'Register', 'auth.login': 'Log In', 'auth.email': 'Email', 'auth.password': 'Password',
-      'tokens.title': 'Token Studio', 'tokens.sub': 'On-chain standard tokens (ERC-20 style) · Official issuance · Live blocks',
+      'tokens.title': 'Token Studio', 'tokens.sub': 'On-chain standard tokens (ERC-20) · Official issuance · Live blocks',
       'tokens.count': 'tokens', 'tokens.deploy': 'Issue Token', 'tokens.name': 'Name (≤32 chars)', 'tokens.symbol': 'Symbol (≤32 chars)',
-      'tokens.supply': 'Total Supply', 'tokens.deploy_btn': '⚡ Issue', 'tokens.detail': 'Token Details', 'tokens.list': 'Issued Tokens',
+      'tokens.supply': 'Total Supply', 'tokens.from': 'Issuer address (optional; 100 TACm deploy fee deducted here, node pays if empty)', 'tokens.usage': 'Usage: create AMM liquidity pools on DEX, ERC-20 transfer/approve/bridge, IDO subscription, community market payments.', 'tokens.deploy_btn': '⚡ Issue', 'tokens.detail': 'Token Details', 'tokens.list': 'Issued Tokens',
       'tokens.select': '← Select a token from list', 'tokens.mybal': 'My Balance', 'tokens.contract': 'Contract Address',
       'tokens.to': 'Transfer To (tx0 addr)', 'tokens.amount': 'Amount', 'tokens.transfer': '⇄ Transfer',
-      'nfts.title': 'NFT Studio', 'nfts.sub': 'On-chain standard NFTs (ERC-721 style) · Official issuance · Live blocks',
+      'nfts.title': 'NFT Studio', 'nfts.sub': 'On-chain standard NFTs (ERC-721) · Official issuance · Live blocks',
       'nfts.count': 'NFT collections', 'nfts.deploy': 'Deploy NFT Collection', 'nfts.deploy_btn': '⚡ Deploy',
       'nfts.detail': 'NFT Details', 'nfts.list': 'NFT Collections', 'nfts.mybal': 'My Holdings',
       'nfts.contract': 'Contract Address', 'nfts.mint_to': 'Mint To (tx0 addr)', 'nfts.token_id': 'Token ID',
@@ -443,7 +483,7 @@
       'nfts.approve_btn': '⚡ Approve', 'nfts.get_approved': 'Query getApproved', 'nfts.approved_of': 'Approved caller (this token)',
       'nfts.operator': 'Operator (tx0)', 'nfts.owner_addr': 'Owner (tx0)', 'nfts.set_all_true': '⇄ Approve All (true)', 'nfts.set_all_false': '⇄ Revoke (false)',
       'nfts.operator_approved': 'Query isApprovedForAll', 'nfts.approve_hint': 'approve grants a single token to one address; setApprovalForAll grants an operator full management of your tokens (node-signed calls act as the node account)',
-      'nav.dex': 'DEX', 'pill.dex': 'DEX',
+      'nav.dex': 'DEX', 'nav.orderbook': 'OrderBook', 'nav.aiv': 'AI Verify', 'pill.dex': 'DEX', 'pill.orderbook': 'OrderBook', 'pill.aiv': 'AI Verify',
       'dex.title': 'On-Chain DEX (AMM)', 'dex.sub': 'Constant product · On-chain settlement · 0.3% fee',
       'dex.pools_word': 'pools', 'dex.fee': 'Fee 0.30%',
       'dex.pools': 'Liquidity Pools', 'dex.pools_hint': 'List tokens to create pools', 'dex.empty': 'No pools yet',
@@ -459,17 +499,19 @@
       'dex.farm': 'Liquidity Mining (Farm)', 'dex.farm_hint': 'Stake LP shares to earn reward tokens', 'dex.farm_empty': 'No farms yet: create a pool and fund rewards first',
       'dex.farm_stake': 'Stake', 'dex.farm_unstake': 'Unstake', 'dex.farm_claim': 'Claim Rewards',
       'gov.title': 'On-Chain Governance', 'gov.sub': 'On-chain proposals · weighted voting · auto-execution',
-      'gov.proposals': 'All Proposals', 'gov.propose': 'Create Proposal', 'gov.params': 'Governable Parameters',
+      'gov.proposals': 'All Proposals', 'gov.propose': 'Create Proposal', 'gov.params': 'Governable Parameters', 'gov.rules': 'Governance Rules',
       'gov.window': 'Voting Window', 'gov.threshold': 'Pass Threshold', 'gov.quorum': 'Quorum', 'gov.timelock': 'Timelock', 'gov.create': 'Submit Proposal',
       'gov.title_f': 'Title', 'gov.desc': 'Description', 'gov.type': 'Type', 'gov.param': 'Parameter',
-      'gov.value': 'Value', 'gov.address': 'Your Address', 'gov.amount': 'Amount (TACm)', 'gov.none': 'No proposals yet',
+      'gov.value': 'Value', 'gov.address': 'Your Address', 'gov.amount': 'Amount (TACm)', 'gov.none': 'No proposals yet', 'gov.myRole': 'My Role', 'gov.adminYes': 'Admin ✓', 'gov.adminNo': 'Regular Member', 'gov.adminGuest': 'Not logged in (admin only for bridge)', 'gov.adminNote': 'Admins can promote/demote other accounts (admin-only).', 'gov.adminBtn': 'Apply', 'gov.adminOk': 'Admin role updated', 'gov.adminFail': 'Update failed, try again', 'gov.adminNeedEmail': 'Enter email',
       'gov.tp_param': 'Parameter Change', 'gov.tp_treasury': 'Treasury Spend', 'gov.tp_meta': 'Meta Decision',
       'gov.pk_bt': 'Block Time (block_time)', 'gov.pk_d': 'Base Difficulty (difficulty)',
       'gov.pk_f': 'Fee Basis (tx_fee_bps)', 'gov.pk_t': 'TiUSD Floor (tiusd_floor_bps)', 'gov.pk_q': 'Quorum (gov_quorum_pct)', 'gov.pk_tl': 'Timelock (gov_timelock_blocks)', 'gov.pk_pm': 'Proposer Min (gov_proposer_min)', 'gov.pk_ts': 'Total Supply (gov_total_supply)',
       'common.copy': 'Copy', 'common.refresh': 'Refresh', 'common.close': 'Close', 'common.confirm': 'Confirm', 'common.loading': 'Loading…',
       'net.audit': ' Chain Audit (Blocks · Txs · Contracts)',
+      'net.alertsTitle': 'Supply Alerts (TiUSD)',
       'net.auditTip': 'Verifying last 100 blocks + full-ledger replay…',
       'net.auditNA': 'Audit unavailable', 'net.auditNA2': 'Cannot verify',
+      'net.auditInc': 'Incremental audit (from block', 'net.auditFull': 'Full audit',
       'net.auditBlocks': 'Audited Blocks', 'net.auditCoin': 'Coinbase == Reward', 'net.auditPool': 'Pool 15%',
       'net.auditSplit': 'Node 45% · Miner 40%', 'net.auditMined': 'Total Mined', 'net.auditPoolBal': 'Reward Pool',
       'net.auditPoolShare': 'Pool On-Chain', 'net.auditMiners': 'Online Miners',
@@ -483,9 +525,10 @@
       'net.issueList': 'Issues: ',
       'node.badge': 'NODE', 'node.title': 'Node Branded Console', 'node.h1': 'Standalone Node Console',
       'node.p1': 'The node front-end is now an independent brand (TAC Ai Smart Chain — Node), living in its own folder (cmd/nodeweb + internal/nodeui), fully separated from mainnet user features.',
-      'node.acc1': 'Node Dashboard', 'node.acc2': 'Sync Status', 'node.acc3': 'P2P Peers', 'node.acc4': 'Validators', 'node.acc5': 'Latest Blocks',
+      'node.encNote': '🔒 P2P traffic is encrypted by default since v65 (ECDH+AES-GCM), auto-downgrading to plaintext with legacy peers; add -p2p-plain to force plaintext. The node console Peers table shows 🔒 encrypted / ⚠ plaintext per channel.',
+      'node.acc1': 'Node Dashboard', 'node.acc2': 'Sync Status', 'node.acc3': 'P2P Peers', 'node.acc4': 'Nodes', 'node.acc5': 'Latest Blocks',
       'node.cmdTitle': 'Start Command', 'node.cmdHint': 'Run one command at a time on your node server:',
-      'node.seedTitle': 'Seed Node', 'node.step1': 'Download the package and unpack it.', 'node.step2': 'Start with the same genesis anchor (follower).', 'node.step3': 'Open your branded node console.', 'node.step4': 'The node syncs automatically, validates and splits the 45% node reward among online nodes.',
+      'node.seedTitle': 'Seed Node', 'node.step1': 'Download the package and unpack it.', 'node.step2': 'Start with the same genesis node (follow mode).', 'node.step3': 'Open your branded node console.', 'node.step4': 'The node syncs automatically, validates and splits the 45% node reward among online nodes.',
       'node.dlTitle': 'Download Node Binary (pre-built)', 'node.dlDesc': 'Official pre-built node binary — ready to run (no Go, no compiling):', 'node.dlNote': 'Setup: download, install and run under systemd. The node key is auto-generated = your payout address; back up node_key.json.',
       'ld2.navEco': 'Ecosystem', 'ld2.navWhy': 'Why TAC', 'ld2.navHow': 'How It Works', 'ld2.navSpec': 'Specs', 'ld2.navJoin': 'Join Network',
       'ld2.enter': 'Launch App', 'ld2.tag2': 'The all-in-one blockchain for the smart age — consensus, EVM, L2, bridges and AI on a single network. Your assets, your community, your future — on-chain.',
@@ -508,6 +551,7 @@
     
       'pill.sign': 'Sign Tool',
       'pill.contracts': 'Contract Verifier',
+      'pill.zk': 'ZK/VRF',
       'contract.title': 'Contract Verifier',
       'contract.sub': 'Explore deployed contracts and read / verify them',
       'contract.listTitle': 'Deployed Contracts',
@@ -688,7 +732,7 @@
     '認購': 'Subscribe', '我的認購': 'My Subscriptions', '金庫頭寸': 'Vault Positions', '策略自動復投': 'Auto-compound strategy',
     '流動性挖礦與借貸': 'Liquidity Mining & Lending', '獎勵': 'Reward', '待領獎勵': 'Pending Reward',
     '投入': 'Deposited', '加入': 'Add', '市場': 'Market', '最新區塊': 'Latest Blocks', '出塊': 'Block',
-    '驗證人': 'Validators', '驗證節點': 'Validator Nodes', '共識': 'Consensus', '質押': 'Stake', '鎖倉': 'Lock',
+    '節點': 'Nodes', '節點': 'Node', '共識': 'Consensus', '質押': 'Stake', '鎖倉': 'Lock',
     '社區': 'Community', '貼文': 'Posts', '成員': 'Members', '市集': 'Marketplace', '廣告': 'Ads',
     '讚': 'Like', '留言': 'Comment', '分享': 'Share', '發佈': 'Post', '發布': 'Post', '貼文內容': 'Post content',
     '回覆': 'Reply', '已售出': 'Sold', '上架': 'List', '下架': 'Delist', '暫停': 'Pause', '啟用': 'Enable',
@@ -785,7 +829,7 @@
 '開啟影片': 'Open Video',
     '發布商品': 'List Item', '上架': 'Publish', '確認購買': 'Confirm Purchase', '確認付款（一鍵轉帳）': 'Confirm & Pay (one-click)',
     '評價市集商品': 'Rate Item', '評分（1-5）': 'Rating (1-5)', '送出評價': 'Submit Review',
-    '建立廣告': 'Create Ad', '投放位置': 'Placement', '比照 Facebook／YouTube 插播': 'Facebook / YouTube style in-feed ads',
+    '建立廣告': 'Create Ad', '投放位置': 'Placement', '資訊流插播': 'In-feed ads',
     '總預算': 'Total Budget', '每日預算': 'Daily Budget', '點擊跳轉網址': 'Click-through URL',
     '發佈廣告（付款後投放）': 'Publish Ad (starts after payment)', '我的廣告': 'My Ads', '了解更多': 'Learn More',
     '已售出': 'Sold', '購買': 'Buy', '評價': 'Review', '賣家': 'Seller', '鏈上費': 'Chain Fee',
@@ -986,7 +1030,7 @@
     '領取成功': 'Claimed',
     '領取獎勵成功': 'Rewards claimed',
     ' 加入 TAC Ai 智能鏈主網': ' Join TAC Ai Smart Chain Mainnet',
-    '任何一台伺服器都可成為節點（follower），與創世節點同步同一條鏈、共享全網狀態；內建礦機可額外挖礦瓜分出塊獎勵。節點之間嚴格遵循同一套出塊獎勵規則，任何入口看到的鏈上資料與在線礦工完全一致。': 'Any server can become a node (follower): sync the same chain with the genesis node, share global status; the built-in miner can mine and share block rewards. All nodes follow the same reward rules — every entry shows identical on-chain data and online miners.',
+    '任何一台伺服器都可成為節點，與創世節點同步同一條鏈、共享全網狀態；內建礦機可額外挖礦瓜分出塊獎勵。節點之間嚴格遵循同一套出塊獎勵規則，任何入口看到的鏈上資料與在線礦工完全一致。': 'Any server can become a node: sync the same chain with the genesis node, share global status; the built-in miner can mine and share block rewards. All nodes follow the same reward rules — every entry shows identical on-chain data and online miners.',
     ' 網絡概況': ' Network Overview',
     '鏈 ID': 'Chain ID',
     'PoT 動態難度 + BFT 投票': 'PoT Dynamic Difficulty + BFT Voting',
@@ -996,7 +1040,7 @@
     '區塊時間': 'Block Time',
     '2 秒': '2 sec',
     ' 公開 Seed 列表': ' Public Seed List',
-    'testnet 為實驗網段，無固定公開 seed——由起錨節點以 -p2p-seed 自行播報': 'Testnet is experimental with no fixed public seed — propagated by the anchor node via -p2p-seed',
+    'testnet 為實驗網段，無固定公開 seed——由創世節點以 -p2p-seed 自行播報': 'Testnet is experimental with no fixed public seed — propagated by the genesis node via -p2p-seed',
     '尚無公開 seed': 'No public seed yet',
     ' 一鍵加入指令': ' One-click Join Commands',
     '複製指令': 'Copy Command',
@@ -1077,7 +1121,7 @@
   
     '1 星 — 很差': '1 star — very poor',
     '100 名': '100 spots',
-    '2 個驗證人時任一離線鏈即暫停': 'with 2 validators the chain pauses if either goes offline',
+    '2 個節點時任一離線鏈即暫停': 'with 2 nodes the chain pauses if either goes offline',
     '2 星 — 不佳': '2 stars — poor',
     '3 個以上': '3 or more',
     '3 星 — 普通': '3 stars — average',
@@ -1087,10 +1131,10 @@
     'ABI 不是合法 JSON：': 'ABI is not valid JSON:',
     'AI 助手': 'AI Assistant',
     'AI 引擎：': 'AI engine:',
-    'BFT 共識需 2/3 驗證人在線才持續出塊：': 'BFT consensus needs 2/3 validators online to keep producing blocks:',
+    'BFT 共識需 2/3 節點在線才持續出塊：': 'BFT consensus needs 2/3 nodes online to keep producing blocks:',
     'BSC Bridge（SPV＋多簽）': 'BSC Bridge (SPV + multi-sig)',
     'CDP 市場暫不可用': 'CDP market temporarily unavailable',
-    'DAI 式 CDP': 'DAI-style CDP',
+    '超額抵押 CDP': 'DAI-style CDP',
     'DEX 兌換': 'DEX Swap',
     'EIP-1559（Base Fee 銷毀）': 'EIP-1559 (Base Fee burn)',
     'EVM 原子性與 gas 資源治理': 'EVM atomicity & gas resource governance',
@@ -1143,7 +1187,7 @@
     '✓ 已確認收到節點獎勵（近 200 塊入帳': '✓ node reward received (last ~200 blocks)',
     '。啟動後節點品牌控制台＝': '. After start, node console =',
     '。確認已完成法幣付款？': '. Confirm fiat payment done?',
-    '。驗證人越多、出塊越分散，鏈越去中心化（最多': '. More validators spread block production — the chain gets more decentralized (max',
+    '。節點越多、出塊越分散，鏈越去中心化（最多': '. More nodes spread block production — the chain gets more decentralized (max',
     '一行一鍵搭建': 'one-line one-click setup',
     '上一頁': 'Prev',
     '上傳失敗：': 'Upload failed:',
@@ -1216,7 +1260,7 @@
     '基礎': 'Base',
     '基礎時權': 'Base uptime',
     '塊／每期': 'blocks / per round',
-    '多驗證人注意事項': 'Multi-validator notes',
+    '多節點注意事項': 'Multi-node notes',
     '失敗：': 'Failed:',
     '安全審計': 'Security audit',
     '官方預編譯的': 'officially pre-built',
@@ -1281,7 +1325,7 @@
     '思考中…': 'Thinking…',
     '恢復失敗，請稍後再試': 'Recovery failed, try again later',
     '恢復成功：': 'Recovery success:',
-    '成為驗證人後：每塊': 'After becoming a validator: per block',
+    '成為節點後：每塊': 'After becoming a node: per block',
     '我已了解並接受無常損失風險': 'I understand and accept impermanent loss risk',
     '我的 CDP 倉位': 'My CDP positions',
     '我的身份': 'My identity',
@@ -1390,7 +1434,7 @@
     '編輯貼文內容：': 'Edit post content:',
     '總估值（USDT）': 'Total value (USDT)',
     '總時權': 'Total uptime',
-    '自動質押、直接成為驗證人——資金來自創世社群基金，': 'auto-staked to become a validator — funded by the genesis community fund,',
+    '自動質押、直接成為節點——資金來自創世社群基金，': 'auto-staked to become a node — funded by the genesis community fund,',
     '自動配置）。': 'auto-config).',
     '自訂…': 'Custom…',
     '行情載入失敗': 'Market data load failed',
@@ -1441,7 +1485,7 @@
     '資產聚合載入失敗': 'Asset aggregation load failed',
     '賣家地址：': 'Seller address:',
     '賣家：': 'Seller:',
-    '質押成為驗證人（去中心化共識）': 'Stake to become a validator (decentralized consensus)',
+    '質押成為節點（去中心化共識）': 'Stake to become a node (decentralized consensus)',
     '賬本異常': 'Ledger anomaly',
     '購買商品（TACM 鏈上轉帳）': 'Buy item (TACM on-chain transfer)',
     '購買意向失敗：': 'Purchase intent failed:',
@@ -1503,7 +1547,7 @@
     '，不再從創世逐塊重放（省 10 分鐘以上）。': ', no more genesis replay from block 0 (saves 10+ min).',
     '，備註：': ', note:',
     '，否則回到創世重放、長時間落後。': ', otherwise it replays from genesis and falls far behind.',
-    '，建議驗證人達': ', recommend at least',
+    '，建議節點達': ', recommend at least',
     '，指定模式加': ', add --mode for',
     '：新節點首次上線可領取': ': new nodes can claim once at first start',
     '：首次啟動自動生成節點金鑰（': ': auto-generates the node key on first start (',
@@ -1552,16 +1596,16 @@
     '。⚠ 此腳本為早期版本（需 Go 編譯），主網現行請優先使用上方': '. ⚠ This script is an early version (needs Go); on mainnet prefer the',
     '開放 TCP 8080 埠（P2P + RPC 同埠合併）；8081 埠供節點品牌控制台': 'Open TCP 8080 (P2P + RPC merged); 8081 serves the node console',
     '返回交易雜湊即領取成功；入塊後 1,000 TACm 入錢包並自動鎖入質押池。': 'A tx hash is returned on success; once mined, 1,000 TACm enters the wallet and is auto-locked into the staking pool.',
-    ',與主流 PoS（以太坊等）一致：節點把 TACm 鎖進鏈上質押池 → 進入驗證人集（每 60 秒由鏈上質押重放重建，全網一致）→ 輪值出塊、由在線節點均分': ', like mainstream PoS (Ethereum etc.): the node locks TACm into the on-chain staking pool → enters the validator set (rebuilt chain-wide every 60s from on-chain stakes) → takes turns producing blocks, split among online nodes',
+    ',與主流 PoS（以太坊等）一致：節點把 TACm 鎖進鏈上質押池 → 進入節點集（每 60 秒由鏈上質押重放重建，全網一致）→ 輪值出塊、由在線節點均分': ', like mainstream PoS (Ethereum etc.): the node locks TACm into the on-chain staking pool → enters the node set (rebuilt chain-wide every 60s from on-chain stakes) → takes turns producing blocks, split among online nodes',
     '（質押高者優先入集）。質押幣鎖在鏈上質押池（鏈上可查），不可挪用。': '(higher stakes enter first). Staked coins stay locked in the on-chain pool (auditable), cannot be diverted.',
     '新節點初始餘額為 0，需先由其他持有者轉入（例如從創世節點錢包或交易所轉到你的節點地址）。節點地址＝節點金鑰對應地址，見節點面板／': 'New nodes start with 0 balance; someone must first transfer in (e.g. from the genesis wallet or exchange to your node address). Node address = address of the node key; see Node Panel /',
-    '在節點控制台（節點面板）點「質押成為驗證人」輸入金額，或直接呼叫 API：': 'In the node console (Node Panel) click "Stake to become a validator", enter an amount, or call the API directly:',
-    '成功後返回交易雜湊；交易入塊後最多 1 分鐘，節點自動進入驗證人集並開始輪值出塊。': 'A tx hash is returned on success; within 1 minute of mining the node auto-joins the validator set and starts producing blocks.',
+    '在節點控制台（節點面板）點「質押成為節點」輸入金額，或直接呼叫 API：': 'In the node console (Node Panel) click "Stake to become a node", enter an amount, or call the API directly:',
+    '成功後返回交易雜湊；交易入塊後最多 1 分鐘，節點自動進入節點集並開始輪值出塊。': 'A tx hash is returned on success; within 1 minute of mining the node auto-joins the node set and starts producing blocks.',
     '由鏈上在線節點均分、直接入你的節點錢包（coinbase:node）。另可開啟算力成為礦工，按在線算力瓜分': 'split among online nodes straight into your node wallet (coinbase:node). You can also mine with hashrate and share',
     '礦工獎勵（coinbase:miner）。兩者可同時開啟。': 'miner rewards (coinbase:miner). Both can run at once.',
     '，會直接下載創世節點的最新狀態快照（創世+Tip+全帳戶餘額），': ', it downloads the genesis node latest state snapshot (genesis + Tip + all balances),',
     '無磁碟的免費雲節點（Render 等）每次重啟都必須帶此參數': 'diskless free cloud nodes (Render etc.) must pass this flag on every restart',
-    '（容忍 1 個離線）。加入的驗證人越多，鏈的可用性與去中心化程度越高。': '(tolerates 1 offline). More validators = higher availability and decentralization.',
+    '（容忍 1 個離線）。加入的節點越多，鏈的可用性與去中心化程度越高。': '(tolerates 1 offline). More nodes = higher availability and decentralization.',
     '節點與整套鏈的原始碼固化到 GitHub，任何人可 clone、審計、部署（一次一條）：': 'The node and full chain source is frozen on GitHub — anyone can clone, audit, deploy (one at a time):',
     '貼回本頁 seed 列表（或告知我），即可成為全網永久可查證的開源創世節點。': 'Paste it back into this page seed list (or tell me) to become a permanently verifiable open-source genesis node.',
     '管理你的節點：綁定收款地址、查詢節點獎勵（coinbase:node 45%，在線均分）、將獎勵提領轉入 TACm web3 錢包。操作需節點管理密碼。': 'Manage your node: bind a receive address, check node rewards (coinbase:node 45%, split online), withdraw rewards to your TACm web3 wallet. Requires the node admin password.',
@@ -1618,11 +1662,249 @@
   Object.keys(m101).forEach(function (k) { if (!(k in zh2en)) { zh2en[k] = m101[k]; } });
   // M150g：i18n 缺口修正——①data-i18n 指向不存在的 key（profile/tx/videos）補 zh+en；
   // ②硬編碼中文模板（auth/block/c2c/dashboard/defi/node_panel/join）主要 UI 短語補 zh2en 雙向字典（英文模式 TreeWalker 自動替換）。
+  dict.zh['tiusd.title'] = 'TiUSD 穩定幣監控台'; dict.zh['tiusd.sub'] = '儲備量 · 鑄造 · 流通 · 流向 · 跨鏈明細 —— 確保總供應不超額膨脹';
+  dict.zh['tiusd.overview'] = '總覽'; dict.zh['tiusd.supply'] = '流通供應 (TiUSD)'; dict.zh['tiusd.cap'] = '市值上限 (1:1 市值)'; dict.zh['tiusd.mcap'] = '市值規則'; dict.zh['tiusd.listed'] = '已上市 · 市價 $'; dict.zh['tiusd.unlisted'] = '未上市 · 按 1:0.330 計算';
+  dict.zh['tiusd.floor'] = '供應下限 (33%)'; dict.zh['tiusd.remaining'] = '剩餘可鑄'; dict.zh['tiusd.util'] = '供應利用率';
+  dict.zh['tiusd.peg'] = '錨定價格'; dict.zh['tiusd.health'] = '膨脹檢查'; dict.zh['tiusd.h.unlisted'] = '未上市 · 0.330 基準'; dict.zh['tiusd.export'] = '匯出帳本 CSV'; dict.zh['tiusd.chart'] = '供應 vs 市值上限趨勢'; dict.zh['tiusd.chartNote'] = '累計鑄造（ledger mint 累加）對照市值上限——確認無超額膨脹。'; dict.zh['tiusd.chartWait'] = '暫無鑄造歷史'; dict.zh['tiusd.pie'] = '供應來源占比'; dict.zh['tiusd.positions'] = '借款頭寸（全鏈 DeFi）'; dict.zh['tiusd.addr2'] = '地址'; dict.zh['tiusd.collateral'] = '抵押'; dict.zh['tiusd.borrow2'] = '借出'; dict.zh['tiusd.status2'] = '狀態'; dict.zh['tiusd.noPos'] = '尚無借款頭寸'; dict.zh['tiusd.posTotals'] = '全鏈總借款：'; dict.zh['tiusd.posColl'] = '總抵押價值：'; dict.zh['tiusd.posActive'] = '活躍：'; dict.zh['tiusd.bridgeNet'] = '跨鏈淨流入 (轉入−轉出)：'; dict.zh['tiusd.bridgeDone'] = '已完成'; dict.zh['tiusd.alerts'] = '近期警報事件（30 天）'; dict.zh['tiusd.alertsLevel'] = '等級'; dict.zh['tiusd.alertsType'] = '類型'; dict.zh['tiusd.alertsDetail'] = '明細'; dict.zh['tiusd.alertsTime'] = '時間';  dict.zh['tiusd.alertsCfg'] = '⚙ 配置';
+ dict.zh['tiusd.alertsCfgTitle'] = '警報閾值配置';
+  dict.zh['tiusd.alertsNear'] = 'WARN 閾值（0-1）：';
+  dict.zh['tiusd.alertsOver'] = 'CRIT 閾值（0-1）：';
+  dict.zh['tiusd.alertsWebhook'] = 'Webhook 通知 URL：';
+  dict.zh['tiusd.alertsWebhookNote'] = '警報產生時 POST JSON（{event:\'tiusd_alert\', alerts:[…]}）到該 URL；留空即關閉。';
+  dict.zh['tiusd.alertsSaved'] = '已保存';
+  dict.zh['tiusd.alertsFail'] = '保存失敗';
+  dict.zh['tiusd.cancel'] = '取消';
+  dict.zh['tiusd.save'] = '保存';
+ dict.zh['tiusd.bridgeStatus'] = '跨鏈橋狀態';
+  dict.zh['tiusd.bridgePending'] = '待處理';
+  dict.zh['tiusd.bridgeChains'] = '支援鏈數';
+  dict.zh['tiusd.bridgeFee'] = '手續費率';
+  dict.zh['tiusd.bridgePaused'] = '暫停中';
+ dict.zh['tiusd.poolOps'] = '資金池近期操作（TiUSD）';
+  dict.zh['tiusd.poolAcct'] = '池帳戶';
+  dict.zh['tiusd.memo'] = '備註';
+  dict.zh['tiusd.yes'] = '是';
+  dict.zh['tiusd.no'] = '否';
+  dict.zh['tiusd.time'] = '時間';
+dict.zh['tiusd.alertsNone'] = '尚無警報事件'; dict.zh['tiusd.reserves'] = '真實儲備';
+  dict.zh['tiusd.stablePool'] = '兌換儲備池 (stable-pool)'; dict.zh['tiusd.feePool'] = '手續費池 (fee)';
+  dict.zh['tiusd.reserveNote'] = 'TiUSD 有真實儲備背書（USDT/TACm）才可兌換；無儲備時僅能 TACm 閃兌。';
+  dict.zh['tiusd.mint'] = '鑄造與銷毀'; dict.zh['tiusd.totalMinted'] = '累計鑄造'; dict.zh['tiusd.totalBurned'] = '累計銷毀';
+  dict.zh['tiusd.net'] = '淨鑄造'; dict.zh['tiusd.updated'] = '更新時間';
+  dict.zh['tiusd.mintNote'] = '產生途徑：CDP 抵押借貸、native-swap TACm 閃兌、stable-swap（受儲備限制）、供給層補鑄；還款即銷毀。';
+  dict.zh['tiusd.flow'] = 'TiUSD 流向統計（帳本分類）'; dict.zh['tiusd.category'] = '來源 / 流向'; dict.zh['tiusd.inflow'] = '流入 (TiUSD)';
+  dict.zh['tiusd.outflow'] = '流出 (TiUSD)'; dict.zh['tiusd.net2'] = '淨額';
+  dict.zh['tiusd.bridgeTitle'] = '跨鏈轉出 / 轉入明細（TiUSD）'; dict.zh['tiusd.dir'] = '方向'; dict.zh['tiusd.route'] = '鏈路由';
+  dict.zh['tiusd.amount'] = '金額'; dict.zh['tiusd.status'] = '狀態'; dict.zh['tiusd.addr'] = '地址'; dict.zh['tiusd.txhash'] = '交易哈希';
+  dict.zh['tiusd.recent'] = '近期 TiUSD 流水（帳本）'; dict.zh['tiusd.time'] = '時間'; dict.zh['tiusd.account'] = '帳戶'; dict.zh['tiusd.memo'] = 'Memo';
+  dict.zh['tiusd.na'] = '未啟用 (未設 TACM_MAX_SUPPLY)'; dict.zh['tiusd.h.ok'] = '健康 · 未超額'; dict.zh['tiusd.h.near'] = '接近上限 (>95%)';
+  dict.zh['tiusd.h.over'] = '已超上限！'; dict.zh['tiusd.h.dis'] = '未設上限 (未啟用)';
+  dict.zh['tiusd.f.cdp'] = 'CDP 抵押借貸鑄造'; dict.zh['tiusd.f.repay'] = '還款 / 銷毀'; dict.zh['tiusd.f.stable'] = '穩定幣兌換 stable-swap';
+  dict.zh['tiusd.f.native'] = 'TACm 閃兌 native-swap'; dict.zh['tiusd.f.seed'] = '池創世注資 (鏈上鑄造)'; dict.zh['tiusd.f.floor'] = '供給層補鑄 (下限)';
+  dict.zh['tiusd.f.bridge'] = '跨鏈橋'; dict.zh['tiusd.f.transfer'] = '一般轉帳'; dict.zh['tiusd.f.other'] = '其他 (未分類)'; dict.zh['assets.f.other'] = '其他 (未分類)';
+  dict.zh['tiusd.din'] = '轉入'; dict.zh['tiusd.dout'] = '轉出';
+  dict.zh['tiusd.noBridge'] = '尚無 TiUSD 跨鏈記錄'; dict.zh['tiusd.noLedger'] = '尚無 TiUSD 流水';
+  dict.zh['assets.title'] = '資產中心'; dict.zh['assets.sub'] = '鏈上資產總覽：供應 · 儲備 · 流向 · 跨鏈明細 —— 確保無超額膨脹';
+  dict.zh['assets.tabTacm'] = 'TACm'; dict.zh['assets.export'] = '匯出帳本 CSV';
+  dict.zh['assets.tools'] = '開發者工具';
+  dict.zh['assets.signTool'] = '簽名工具台 (EIP-191/712)';
+  dict.zh['assets.tokenStudio'] = '代幣工作室 (Token Studio)';
+  dict.zh['assets.contractVerify'] = '合約驗證中心 (Contract Verifier)';
+  dict.zh['assets.blockExplorer'] = '區塊瀏覽器';
+  dict.zh['assets.rpcDocs'] = 'API 文檔';
+dict.zh['assets.secTitle'] = '錢包安全與多簽';
+dict.zh['assets.secNote'] = '已支援 EIP-191 / EIP-712 標準簽名與 MetaMask 級多幣種管理；多簽（Multisig）採用閾值簽名方案，交易需指定數量簽署人共同授權。';
+dict.zh['assets.secList'] = '• 簽名工具：訊息 / TypedData 簽名與驗證<br>• 多簽設定：可在 Web3 錢包建立 2/3、3/5 等多簽帳戶<br>• 硬體錢包：支援 Ledger 風格離線簽名（簽名僅本地產生，私鑰永不離機）';
+  dict.zh['assets.tacmPrice'] = '市場價';
+  dict.zh['assets.tacmUpdated'] = '更新時間';
+  dict.zh['assets.tacmPoolOps'] = '資金池近期操作（TACm）';
+  dict.zh['assets.poolAcct2'] = '池帳戶';
+  dict.zh['assets.tacmTrend'] = '已出塊產出 vs 供應上限趨勢';
+  dict.zh['assets.tacmTrendNote'] = '累計產出（ledger mint/reward 累加）對照供應上限——確認開採進度。';
+  dict.zh['assets.tacmPie'] = '開採來源占比';
+  dict.zh['assets.tacmAlerts'] = '開採進度警報';
+  dict.zh['assets.tacmBridge'] = '跨鏈橋狀態';
+  dict.zh['assets.tacmAlertsDisabled'] = '未設上限（減半模式）——警報停用';
+  dict.zh['assets.tacmAlertsSummary'] = '開採進度：';
+  dict.zh['assets.tacmAlertsNearLb'] = 'WARN 閾值：';
+  dict.zh['assets.tacmAlertsOverLb'] = 'CRIT 閾值：';
+  dict.zh['assets.tacmAlertsOverDetail'] = '已超過 CRIT 閾值——接近或超過供應上限';
+  dict.zh['assets.tacmAlertsNearDetail'] = '接近 WARN 閾值——剩餘可挖有限';
+  dict.zh['assets.tacmAlertsOk'] = '開採進度健康';
+  dict.zh['tiusd.alertsSecret'] = 'Webhook Secret（HMAC 簽名）：';
+  dict.zh['oracle.native'] = '價格預言機（原生資產）';
+  dict.zh['oracle.note'] = 'TACm 市價＝交易所最後成交（未上市按 1:0.330 兜底）；TiUSD 穩定幣 1:1 錨定 USDT。';
+  dict.zh['oracle.asset'] = '資產';
+  dict.zh['oracle.price'] = '價格 (USDT)';
+  dict.zh['oracle.decimals'] = '精度';
+  dict.zh['oracle.source'] = '來源';
+  dict.zh['oracle.updated'] = '更新';
+  dict.zh['mining.refs'] = '推薦';
+  dict.zh['mining.refsUnit'] = '人';
+  dict.zh['mining.inviteBonus'] = ' 推薦加成';
+  dict.zh['assets.bridgeChainPending'] = '分鏈待處理明細';
+  dict.zh['assets.bridgeChainName'] = '鏈';
+  dict.zh['assets.bridgeChainId'] = 'Chain ID';
+  dict.zh['assets.bridgeChainPending2'] = '待處理';
+
+ dict.zh['assets.tabTacmSub'] = '原生幣 · 出塊獎勵'; dict.zh['assets.tabTiUSD'] = 'TiUSD'; dict.zh['assets.tabTiUSDSub'] = '穩定幣 · 1:1 錨定 USDT';
+  dict.zh['assets.tacmOverview'] = 'TACm 總覽'; dict.zh['assets.mined'] = '已出塊產出（全鏈）'; dict.zh['assets.cap2'] = '總供應上限'; dict.zh['assets.remaining2'] = '剩餘可挖';
+  dict.zh['assets.util2'] = '開採進度'; dict.zh['assets.health2'] = '膨脹檢查'; dict.zh['assets.tacmNote'] = 'TACm 為原生幣：出塊獎勵（coinbase）產生——節點 45% / 獎勵池 15% / 礦工 40%。';
+  dict.zh['assets.reserves2'] = '儲備／鎖倉池'; dict.zh['assets.rewardPool'] = '鏈上獎勵池 (reward_pool)'; dict.zh['assets.cdpVault'] = 'CDP 抵押託管 (defi_cdp)'; dict.zh['assets.feePool2'] = '手續費池 (fee)';
+  dict.zh['assets.flow2'] = 'TACm 流向統計（帳本分類）'; dict.zh['assets.category2'] = '來源 / 流向'; dict.zh['assets.inflow2'] = '流入 (TACm)'; dict.zh['assets.outflow2'] = '流出 (TACm)';
+  dict.zh['assets.bridge2'] = '跨鏈轉出 / 轉入明細（TACm）'; dict.zh['assets.dir2'] = '方向'; dict.zh['assets.route2'] = '鏈路由'; dict.zh['assets.amount2'] = '金額'; dict.zh['assets.status2'] = '狀態'; dict.zh['assets.addr2'] = '地址'; dict.zh['assets.txhash2'] = '交易哈希';
+  dict.zh['assets.recent2'] = '近期 TACm 流水（帳本）'; dict.zh['assets.time2'] = '時間'; dict.zh['assets.account2'] = '帳戶'; dict.zh['assets.amount3'] = '金額'; dict.zh['assets.memo2'] = 'Memo';
+  dict.zh['assets.halving'] = '減半模式 (未設上限)';
+  dict.zh['assets.f.cbNode'] = '節點獎勵 (45%)'; dict.zh['assets.f.cbPool'] = '獎勵池挹注 (15%)'; dict.zh['assets.f.cbMiner'] = '礦工獎勵 (40%)'; dict.zh['assets.f.swap'] = '兌換 (swap)'; dict.zh['assets.f.borrow'] = '借款 / 還款 (CDP)';
+  dict.zh['assets.f.blockReward'] = '出塊獎勵 (coinbase)'; dict.zh['assets.f.staking'] = '質押 / 委託'; dict.zh['assets.f.cdp'] = 'CDP 抵押鎖倉'; dict.zh['assets.f.yieldFarm']='流動性挖礦';
+  dict.zh['assets.f.ido']='IDO 發行 / 回購';
+  dict.zh['assets.f.lp'] = '流動性 (LP)'; dict.zh['assets.f.bridge'] = '跨鏈橋'; dict.zh['assets.f.transfer'] = '一般轉帳'; dict.zh['api.tiusdDesc'] = 'TiUSD 穩定幣總覽：供應、市值上限、下限、利用率、儲備、流向、跨鏈淨額。'; dict.zh['api.histDesc'] = 'TiUSD 累計鑄造歷史＋現值上限。'; dict.zh['api.posDesc'] = '全鏈借款頭寸＋總借款／總抵押。'; dict.zh['api.csvDesc'] = 'TiUSD 全量帳本 CSV 匯出。'; dict.zh['api.tacmDesc'] = 'TACm 總覽：產出、上限、剩餘可挖、流向分類。'; dict.zh['api.alertsDesc'] = '最近 30 天鏈上警報事件。'; dict.zh['api.rpcdocDesc'] = '節點 RPC 全路由清單（自動生成）。'; dict.zh['api.full'] = '節點 RPC 全路由 / Full Route List'; dict.zh['api.fullNote'] = '節點自動註冊的全部 HTTP 路由（含 eth_* JSON-RPC 面）。'; dict.zh['api.fullFail'] = '路由載入失敗';
+dict.zh['sdk.title'] = '開發者 SDK — 主網範例';
+dict.zh['sdk.intro'] = 'TAC Ai 智能鏈官方 JS SDK（tacjs）：連線主網節點、查詢鏈狀態與地址餘額，並以一步轉帳示範簽署與提交。SDK 原始碼位於專案 sdk/tacjs（瀏覽器與 Node 通用）。';
+dict.zh['sdk.rpcTitle'] = '節點連線測試';
+dict.zh['sdk.rpcDesc'] = '輸入節點 RPC 位址（預設為目前站台），查詢鏈狀態。';
+dict.zh['sdk.rpcBtn'] = '連線測試';
+dict.zh['sdk.rpcFail'] = '連線失敗';
+dict.zh['sdk.balTitle'] = '地址餘額查詢';
+dict.zh['sdk.balDesc'] = '透過 Indexer 端點 GET /api/v1/address/{address} 查詢 TACm 餘額與交易筆數。';
+dict.zh['sdk.balBtn'] = '查餘額';
+dict.zh['sdk.balFail'] = '查詢失敗（主網需啟用 Indexer）';
+dict.zh['sdk.balNeedAddr'] = '請輸入地址';
+dict.zh['sdk.codeTitle'] = 'JS SDK 範例';
+dict.zh['sdk.codeDesc'] = '與 Go SDK（tacclient）簽章格式互通——前端用 tacjs 簽署的交易，Go 節點可直接驗證入池。';
+dict.zh['sdk.endpointTitle'] = '常用端點';
+dict.zh['sdk.endpointDesc'] = '下列端點可由任何 JSON 客戶端直接呼叫。'; dict.zh['assets.warn'] = '⚠ 供應利用率 '; dict.zh['assets.warn2'] = ' — 接近上限 (>80%)'; dict.zh['assets.warnCrit'] = '⚠ 供應利用率 '; dict.zh['assets.warnCrit2'] = ' — 接近/超過市值上限，將觸發自動銷毀';
+
   dict.zh['cm.cancel'] = '取消'; dict.zh['cm.editProfile'] = '編輯個人資料'; dict.zh['cm.dispName'] = '對外顯示名稱';
   dict.zh['cm.avatar'] = '個人頭像（圖片網址或上傳後網址）'; dict.zh['cm.save'] = '儲存';
   dict.zh['tx.status'] = '狀態'; dict.zh['tx.confirmations'] = '確認數'; dict.zh['tx.blocks'] = '區塊';
   dict.zh['tx.block'] = '所在區塊'; dict.zh['tx.fee'] = '手續費'; dict.zh['tx.gasPrice'] = 'Gas Price（有效）';
+  dict.zh['blk.back'] = '← 返回'; dict.zh['blk.hash'] = '區塊哈希'; dict.zh['blk.prev'] = '上一區塊'; dict.zh['blk.merkle'] = 'Merkle 根';
+  dict.zh['blk.proposer'] = '提議者'; dict.zh['blk.difficulty'] = '當前難度'; dict.zh['blk.txcount'] = '交易數';
+  dict.zh['blk.basefee'] = 'Base Fee'; dict.zh['blk.gasused'] = 'Gas Used'; dict.zh['blk.burned'] = '已銷毀 (Burned)';
+  dict.zh['blk.ts'] = '出塊時間'; dict.zh['blk.txs'] = '區塊交易'; dict.zh['blk.txhash'] = '交易哈希';
+  dict.zh['blk.from'] = '發送方'; dict.zh['blk.to'] = '接收方'; dict.zh['blk.amount'] = '金額'; dict.zh['blk.fee'] = '手續費';
+  dict.zh['blk.empty'] = '本區塊無交易';
+  dict.en['blk.back'] = '← Back'; dict.en['blk.hash'] = 'Block Hash'; dict.en['blk.prev'] = 'Previous Block'; dict.en['blk.merkle'] = 'Merkle Root';
+  dict.en['blk.proposer'] = 'Proposer'; dict.en['blk.difficulty'] = 'Difficulty'; dict.en['blk.txcount'] = 'Transactions';
+  dict.en['blk.basefee'] = 'Base Fee'; dict.en['blk.gasused'] = 'Gas Used'; dict.en['blk.burned'] = 'Burned';
+  dict.en['blk.ts'] = 'Block Time'; dict.en['blk.txs'] = 'Block Transactions'; dict.en['blk.txhash'] = 'Tx Hash';
+  dict.en['blk.from'] = 'From'; dict.en['blk.to'] = 'To'; dict.en['blk.amount'] = 'Amount'; dict.en['blk.fee'] = 'Fee';
+  dict.en['blk.empty'] = 'No transactions in this block';
   dict.zh['cm.loading'] = '載入中…';
+  dict.en['tiusd.title'] = 'TiUSD Stablecoin Monitor'; dict.en['tiusd.sub'] = 'Reserves · Mint · Circulation · Flow · Cross-chain details — ensure supply never over-expands';
+  dict.en['tiusd.overview'] = 'Overview'; dict.en['tiusd.supply'] = 'Circulating Supply (TiUSD)'; dict.en['tiusd.cap'] = 'Mcap Cap (1:1 mcap)'; dict.en['tiusd.mcap'] = 'Mcap Rule'; dict.en['tiusd.listed'] = 'Listed · price $'; dict.en['tiusd.unlisted'] = 'Unlisted · 1:0.330 basis';
+  dict.en['tiusd.floor'] = 'Supply Floor (33%)'; dict.en['tiusd.remaining'] = 'Remaining Mintable'; dict.en['tiusd.util'] = 'Utilization';
+  dict.en['tiusd.peg'] = 'Peg Price'; dict.en['tiusd.health'] = 'Inflation Check'; dict.en['tiusd.h.unlisted'] = 'Unlisted · 0.330 basis'; dict.en['tiusd.export'] = 'Export Ledger CSV'; dict.en['tiusd.chart'] = 'Supply vs Cap Trend'; dict.en['tiusd.chartNote'] = 'Cumulative mint (ledger) vs market cap — inflation check.'; dict.en['tiusd.chartWait'] = 'No mint history yet'; dict.en['tiusd.pie'] = 'Supply Sources'; dict.en['tiusd.positions'] = 'Loan Positions (on-chain DeFi)'; dict.en['tiusd.addr2'] = 'Address'; dict.en['tiusd.collateral'] = 'Collateral'; dict.en['tiusd.borrow2'] = 'Borrowed'; dict.en['tiusd.status2'] = 'Status'; dict.en['tiusd.noPos'] = 'No loans yet'; dict.en['tiusd.posTotals'] = 'Total borrow:'; dict.en['tiusd.posColl'] = 'Total collateral:'; dict.en['tiusd.posActive'] = 'Active:'; dict.en['tiusd.bridgeNet'] = 'Bridge net inflow (in−out):'; dict.en['tiusd.bridgeDone'] = 'completed'; dict.en['tiusd.alerts'] = 'Recent Alerts (30d)'; dict.en['tiusd.alertsLevel'] = 'Level'; dict.en['tiusd.alertsType'] = 'Type'; dict.en['tiusd.alertsDetail'] = 'Detail'; dict.en['tiusd.alertsTime'] = 'Time';  dict.en['tiusd.alertsCfg'] = '⚙ Config';
+ dict.en['tiusd.alertsCfgTitle'] = 'Alert Thresholds';
+  dict.en['tiusd.alertsNear'] = 'WARN threshold (0-1):';
+  dict.en['tiusd.alertsOver'] = 'CRIT threshold (0-1):';
+  dict.en['tiusd.alertsWebhook'] = 'Webhook URL:';
+  dict.en['tiusd.alertsWebhookNote'] = 'POSTs JSON ({event:\'tiusd_alert\', alerts:[...]}) to this URL when an alert fires; leave empty to disable.';
+  dict.en['tiusd.alertsSaved'] = 'Saved';
+  dict.en['tiusd.alertsFail'] = 'Failed';
+  dict.en['tiusd.cancel'] = 'Cancel';
+  dict.en['tiusd.save'] = 'Save';
+ dict.en['tiusd.bridgeStatus'] = 'Bridge Status';
+  dict.en['tiusd.bridgePending'] = 'Pending';
+  dict.en['tiusd.bridgeChains'] = 'Chains';
+  dict.en['tiusd.bridgeFee'] = 'Fee Rate';
+  dict.en['tiusd.bridgePaused'] = 'Paused';
+ dict.en['tiusd.poolOps'] = 'Pool Recent Ops (TiUSD)';
+  dict.en['tiusd.poolAcct'] = 'Pool Account';
+  dict.en['tiusd.memo'] = 'Memo';
+  dict.en['tiusd.yes'] = 'Yes';
+  dict.en['tiusd.no'] = 'No';
+  dict.en['tiusd.time'] = 'Time';
+dict.en['tiusd.alertsNone'] = 'No alerts'; dict.en['tiusd.reserves'] = 'Real Reserves';
+  dict.en['tiusd.stablePool'] = 'Swap Reserve Pool (stable-pool)'; dict.en['tiusd.feePool'] = 'Fee Pool';
+  dict.en['tiusd.reserveNote'] = 'TiUSD is convertible only when backed by real reserves (USDT/TACm); otherwise TACm flash-swap only.';
+  dict.en['tiusd.mint'] = 'Mint & Burn'; dict.en['tiusd.totalMinted'] = 'Total Minted'; dict.en['tiusd.totalBurned'] = 'Total Burned';
+  dict.en['tiusd.net'] = 'Net Minted'; dict.en['tiusd.updated'] = 'Updated';
+  dict.en['tiusd.mintNote'] = 'Ways to mint: CDP collateral loan, native-swap TACm flash-swap, stable-swap (reserve-limited), supply floor top-up; repay burns.';
+  dict.en['tiusd.flow'] = 'TiUSD Flow by Ledger Category'; dict.en['tiusd.category'] = 'Source / Flow'; dict.en['tiusd.inflow'] = 'Inflow (TiUSD)';
+  dict.en['tiusd.outflow'] = 'Outflow (TiUSD)'; dict.en['tiusd.net2'] = 'Net';
+  dict.en['tiusd.bridgeTitle'] = 'Cross-chain Transfer Details (TiUSD)'; dict.en['tiusd.dir'] = 'Direction'; dict.en['tiusd.route'] = 'Chain Route';
+  dict.en['tiusd.amount'] = 'Amount'; dict.en['tiusd.status'] = 'Status'; dict.en['tiusd.addr'] = 'Address'; dict.en['tiusd.txhash'] = 'Tx Hash';
+  dict.en['tiusd.recent'] = 'Recent TiUSD Ledger'; dict.en['tiusd.time'] = 'Time'; dict.en['tiusd.account'] = 'Account'; dict.en['tiusd.memo'] = 'Memo';
+  dict.en['tiusd.na'] = 'Disabled (no TACM_MAX_SUPPLY)'; dict.en['tiusd.h.ok'] = 'Healthy · Within Cap'; dict.en['tiusd.h.near'] = 'Near Cap (>95%)';
+  dict.en['tiusd.h.over'] = 'OVER CAP!'; dict.en['tiusd.h.dis'] = 'Cap Disabled (not set)';
+  dict.en['tiusd.f.cdp'] = 'CDP Collateral Mint'; dict.en['tiusd.f.repay'] = 'Repay / Burn'; dict.en['tiusd.f.stable'] = 'Stable Swap';
+  dict.en['tiusd.f.native'] = 'Native Swap (TACm)'; dict.en['tiusd.f.seed'] = 'Pool Genesis Seed (on-chain mint)'; dict.en['tiusd.f.floor'] = 'Supply Floor Top-up';
+  dict.en['tiusd.f.bridge'] = 'Cross-chain Bridge'; dict.en['tiusd.f.transfer'] = 'Transfer'; dict.en['tiusd.f.other'] = 'Other (uncategorized)'; dict.en['assets.f.other'] = 'Other (uncategorized)';
+  dict.en['tiusd.din'] = 'IN'; dict.en['tiusd.dout'] = 'OUT';
+  dict.en['tiusd.noBridge'] = 'No TiUSD bridge records yet'; dict.en['tiusd.noLedger'] = 'No TiUSD ledger entries yet';
+  dict.en['assets.title'] = 'Assets Center'; dict.en['assets.sub'] = 'On-chain asset overview: supply · reserves · flow · cross-chain details — no over-expansion';
+  dict.en['assets.tabTacm'] = 'TACm'; dict.en['assets.export'] = 'Export Ledger CSV';
+  dict.en['assets.tools'] = 'Developer Tools';
+  dict.en['assets.signTool'] = 'Sign Tool (EIP-191/712)';
+  dict.en['assets.tokenStudio'] = 'Token Studio';
+  dict.en['assets.contractVerify'] = 'Contract Verifier';
+  dict.en['assets.blockExplorer'] = 'Block Explorer';
+  dict.en['assets.rpcDocs'] = 'API Docs';
+dict.en['assets.secTitle'] = 'Wallet Security & Multisig';
+dict.en['assets.secNote'] = 'EIP-191 / EIP-712 standard signing and MetaMask-grade multi-asset management are supported; Multisig uses threshold signatures where a transaction requires a configured number of co-signers.';
+dict.en['assets.secList'] = '• Signing tool: message / TypedData sign & verify<br>• Multisig: create 2/3, 3/5 multisig accounts in the Web3 wallet<br>• Hardware wallet: Ledger-style offline signing (signature generated locally, private key never leaves device)';
+  dict.en['assets.tacmPrice'] = 'Market Price';
+  dict.en['assets.tacmUpdated'] = 'Updated';
+  dict.en['assets.tacmPoolOps'] = 'Pool Recent Ops (TACm)';
+  dict.en['assets.poolAcct2'] = 'Pool Account';
+  dict.en['assets.tacmTrend'] = 'Mined vs Supply Cap Trend';
+  dict.en['assets.tacmTrendNote'] = 'Cumulative mined (ledger mint/reward) vs supply cap — mining progress check.';
+  dict.en['assets.tacmPie'] = 'Mining Sources';
+  dict.en['assets.tacmAlerts'] = 'Mining Progress Alerts';
+  dict.en['assets.tacmBridge'] = 'Bridge Status';
+  dict.en['assets.tacmAlertsDisabled'] = 'No cap (halving mode) — alerts disabled';
+  dict.en['assets.tacmAlertsSummary'] = 'Mining progress:';
+  dict.en['assets.tacmAlertsNearLb'] = 'WARN:';
+  dict.en['assets.tacmAlertsOverLb'] = 'CRIT:';
+  dict.en['assets.tacmAlertsOverDetail'] = 'Over CRIT threshold — near/over supply cap';
+  dict.en['assets.tacmAlertsNearDetail'] = 'Near WARN threshold — limited remaining';
+  dict.en['assets.tacmAlertsOk'] = 'Mining progress healthy';
+  dict.en['tiusd.alertsSecret'] = 'Webhook Secret (HMAC sign):';
+  dict.en['oracle.native'] = 'Price Oracle (Native Assets)';
+  dict.en['oracle.note'] = 'TACm = last exchange trade (unlisted: 1:0.330 floor); TiUSD pegged 1:1 to USDT.';
+  dict.en['oracle.asset'] = 'Asset';
+  dict.en['oracle.price'] = 'Price (USDT)';
+  dict.en['oracle.decimals'] = 'Decimals';
+  dict.en['oracle.source'] = 'Source';
+  dict.en['oracle.updated'] = 'Updated';
+  dict.en['mining.refs'] = 'Referrals';
+  dict.en['mining.refsUnit'] = '';
+  dict.en['mining.inviteBonus'] = ' referral bonus';
+  dict.en['assets.bridgeChainPending'] = 'Per-chain Pending';
+  dict.en['assets.bridgeChainName'] = 'Chain';
+  dict.en['assets.bridgeChainId'] = 'Chain ID';
+  dict.en['assets.bridgeChainPending2'] = 'Pending';
+
+ dict.en['assets.tabTacmSub'] = 'Native coin · block rewards'; dict.en['assets.tabTiUSD'] = 'TiUSD'; dict.en['assets.tabTiUSDSub'] = 'Stablecoin · 1:1 USDT peg';
+  dict.en['assets.tacmOverview'] = 'TACm Overview'; dict.en['assets.mined'] = 'Mined (chain-wide)'; dict.en['assets.cap2'] = 'Total Supply Cap'; dict.en['assets.remaining2'] = 'Remaining to Mine';
+  dict.en['assets.util2'] = 'Mining Progress'; dict.en['assets.health2'] = 'Inflation Check'; dict.en['assets.tacmNote'] = 'TACm is the native coin: minted via block rewards (coinbase) — node 45% / pool 15% / miner 40%.';
+  dict.en['assets.reserves2'] = 'Reserves / Locked'; dict.en['assets.rewardPool'] = 'On-chain Reward Pool (reward_pool)'; dict.en['assets.cdpVault'] = 'CDP Collateral Vault (defi_cdp)'; dict.en['assets.feePool2'] = 'Fee Pool (fee)';
+  dict.en['assets.flow2'] = 'TACm Flow by Ledger Category'; dict.en['assets.category2'] = 'Source / Flow'; dict.en['assets.inflow2'] = 'Inflow (TACm)'; dict.en['assets.outflow2'] = 'Outflow (TACm)';
+  dict.en['assets.bridge2'] = 'Cross-chain Transfer Details (TACm)'; dict.en['assets.dir2'] = 'Direction'; dict.en['assets.route2'] = 'Chain Route'; dict.en['assets.amount2'] = 'Amount'; dict.en['assets.status2'] = 'Status'; dict.en['assets.addr2'] = 'Address'; dict.en['assets.txhash2'] = 'Tx Hash';
+  dict.en['assets.recent2'] = 'Recent TACm Ledger'; dict.en['assets.time2'] = 'Time'; dict.en['assets.account2'] = 'Account'; dict.en['assets.amount3'] = 'Amount'; dict.en['assets.memo2'] = 'Memo';
+  dict.en['assets.halving'] = 'Halving Mode (no cap set)';
+  dict.en['assets.f.cbNode'] = 'Node Reward (45%)'; dict.en['assets.f.cbPool'] = 'Reward Pool (15%)'; dict.en['assets.f.cbMiner'] = 'Miner Reward (40%)'; dict.en['assets.f.swap'] = 'Swap'; dict.en['assets.f.borrow'] = 'Borrow / Repay (CDP)';
+  dict.en['assets.f.blockReward'] = 'Block Reward (coinbase)'; dict.en['assets.f.staking'] = 'Staking / Delegation'; dict.en['assets.f.cdp'] = 'CDP Collateral Lock'; dict.en['assets.f.yieldFarm']='Liquidity Farm';
+  dict.en['assets.f.ido']='IDO Launch / Repurchase';
+  dict.en['assets.f.lp'] = 'Liquidity (LP)'; dict.en['assets.f.bridge'] = 'Cross-chain Bridge'; dict.en['assets.f.transfer'] = 'Transfer'; dict.en['api.tiusdDesc'] = 'TiUSD stablecoin overview: supply, mcap cap, floor, utilization, reserves, flow, bridge net.'; dict.en['api.histDesc'] = 'TiUSD cumulative mint history + current cap.'; dict.en['api.posDesc'] = 'All-chain loan positions + totals.'; dict.en['api.csvDesc'] = 'TiUSD full ledger CSV export.'; dict.en['api.tacmDesc'] = 'TACm overview: mined, cap, remaining, flow categories.'; dict.en['api.alertsDesc'] = 'On-chain alert events (last 30 days).'; dict.en['api.rpcdocDesc'] = 'Full node RPC route list (auto-generated).'; dict.en['api.full'] = 'Node RPC Full Route List'; dict.en['api.fullNote'] = 'All auto-registered HTTP routes (incl. eth_* JSON-RPC).'; dict.en['api.fullFail'] = 'Failed to load routes';
+dict.en['sdk.title'] = 'Developer SDK — Mainnet Examples';
+dict.en['sdk.intro'] = 'Official JS SDK (tacjs) for TAC Ai Smart Chain: connect to a mainnet node, query chain status and address balances, and demo signing & submission with one-step transfers. Source lives in sdk/tacjs (browser + Node).';
+dict.en['sdk.rpcTitle'] = 'Node Connection Test';
+dict.en['sdk.rpcDesc'] = 'Enter a node RPC URL (defaults to this site) to query chain status.';
+dict.en['sdk.rpcBtn'] = 'Test';
+dict.en['sdk.rpcFail'] = 'Connection failed';
+dict.en['sdk.balTitle'] = 'Address Balance';
+dict.en['sdk.balDesc'] = 'Query TACm balance and tx count via Indexer endpoint GET /api/v1/address/{address}';
+dict.en['sdk.balBtn'] = 'Query';
+dict.en['sdk.balFail'] = 'Query failed (mainnet needs Indexer enabled)';
+dict.en['sdk.balNeedAddr'] = 'Enter an address';
+dict.en['sdk.codeTitle'] = 'JS SDK Usage';
+dict.en['sdk.codeDesc'] = 'Interoperable with the Go SDK (tacclient): transactions signed by tacjs in the frontend are directly verifiable by Go nodes.';
+dict.en['sdk.endpointTitle'] = 'Common Endpoints';
+dict.en['sdk.endpointDesc'] = 'The following endpoints can be called by any JSON client.'; dict.en['assets.warn'] = '⚠ Utilization '; dict.en['assets.warn2'] = ' — approaching cap (>80%)'; dict.en['assets.warnCrit'] = '⚠ Utilization '; dict.en['assets.warnCrit2'] = ' — near/over cap, auto-burn may trigger';
+
   dict.en['cm.cancel'] = 'Cancel'; dict.en['cm.editProfile'] = 'Edit Profile'; dict.en['cm.dispName'] = 'Display Name';
   dict.en['cm.avatar'] = 'Avatar (image URL or uploaded URL)'; dict.en['cm.save'] = 'Save';
   dict.en['tx.status'] = 'Status'; dict.en['tx.confirmations'] = 'Confirmations'; dict.en['tx.blocks'] = 'blocks';
@@ -1676,7 +1958,7 @@
   zh2en['分潤（池'] = 'split (pool ';
   zh2en['礦工）'] = 'miners)';
   zh2en['為實驗網段，無固定公開'] = 'testnet segment, no fixed public ';
-  zh2en['由起錨節點以 -'] = 'anchor node announces via -';
+  zh2en['由創世節點以 -'] = 'genesis node announces via -';
   zh2en['自行播報'] = 'self-announced';
   zh2en['尚無公開'] = 'no public ';
   zh2en['方式一：下載節點程式包（免編譯，推薦）'] = 'Option 1: Download node binary (no compile, recommended)';
@@ -1715,23 +1997,23 @@
   zh2en['同埠合併）；8081 埠供節點品牌控制台'] = 'same-port merge); port 8081 for node console';
   zh2en['首次啟動自動從'] = 'first start auto-syncs from ';
   zh2en['節點同步全鏈'] = 'node full-chain sync';
-  zh2en['質押成為驗證人（去中心化共識）'] = 'Stake to become validator (decentralized consensus)';
+  zh2en['質押成為節點（去中心化共識）'] = 'Stake to become node (decentralized consensus)';
   zh2en['創節點引導獎勵（限額 50 名）'] = 'Genesis node onboarding reward (limited to 50)';
   zh2en['新節點首次上線可領取'] = 'New nodes on first launch can claim ';
-  zh2en['自動質押、直接成為驗證人'] = 'auto-stake, instantly become validator';
+  zh2en['自動質押、直接成為節點'] = 'auto-stake, instantly become node';
   zh2en['資金來自創世社群基金，'] = 'Funded by genesis community fund, ';
   zh2en['每地址僅一次、限量 50 名'] = 'once per address, limited 50';
   zh2en['額滿即止）。領取方式：'] = 'first come first served). Claim:';
   zh2en['返回交易雜湊即領取成功；入塊後 1'] = 'Return tx hash to claim; 1 min after block';
   zh2en['入錢包並自動鎖入質押池。'] = 'into wallet & auto-locked to staking pool.';
-  zh2en['鎖幣取得驗證人資格'] = 'Lock to become validator';
+  zh2en['鎖幣取得節點資格'] = 'Lock to become node';
   zh2en['與主流'] = 'like mainstream ';
   zh2en['以太坊等）一致：節點把'] = 'Ethereum): node locks ';
   zh2en['鎖進鏈上質押池'] = 'into on-chain staking pool';
-  zh2en['進入驗證人集（每 60 秒由鏈上質押重放重建，全網一致）'] = 'enter validator set (rebuilt every 60s from on-chain stakes, globally consistent)';
+  zh2en['進入節點集（每 60 秒由鏈上質押重放重建，全網一致）'] = 'enter node set (rebuilt every 60s from on-chain stakes, globally consistent)';
   zh2en['輪值出塊、由在線節點均分'] = 'round-robin blocks, split among online nodes';
   zh2en['節點獎勵'] = 'Node Rewards';
-  zh2en['驗證人越多、出塊越分散，鏈越去中心化（最多'] = 'More validators = more decentralization (max ';
+  zh2en['節點越多、出塊越分散，鏈越去中心化（最多'] = 'More nodes = more decentralization (max ';
   zh2en['同時輪值）。'] = 'rotating simultaneously).';
   zh2en['門檻：質押'] = 'Threshold: stake ';
   zh2en['質押高者優先入集）。質押幣鎖在鏈上質押池（鏈上可查），不可挪用。'] = 'higher stake enters first). Staked coins locked on-chain (verifiable), not withdrawable.';
@@ -1740,11 +2022,11 @@
   zh2en['節點金鑰對應地址，見節點面板'] = 'node key address, see node panel';
   zh2en['第 2 步：發質押交易'] = 'Step 2: Send stake tx';
   zh2en['在節點控制台（節點面板）點'] = 'In node console (node panel) click ';
-  zh2en['質押成為驗證人'] = 'Stake as Validator';
+  zh2en['質押成為節點'] = 'Stake as a Node';
   zh2en['輸入金額，或直接呼叫'] = 'Enter amount, or call ';
-  zh2en['成功後返回交易雜湊；交易入塊後最多 1 分鐘，節點自動進入驗證人集並開始輪值出塊。'] = 'On success a tx hash returns; within 1 min the node auto-enters the validator set and starts producing blocks.';
+  zh2en['成功後返回交易雜湊；交易入塊後最多 1 分鐘，節點自動進入節點集並開始輪值出塊。'] = 'On success a tx hash returns; within 1 min the node auto-enters the node set and starts producing blocks.';
   zh2en['第 3 步：領取獎勵'] = 'Step 3: Claim rewards';
-  zh2en['成為驗證人後：每塊'] = 'After becoming validator: each block ';
+  zh2en['成為節點後：每塊'] = 'After becoming node: each block ';
   zh2en['由鏈上在線節點均分、直接入你的節點錢包（'] = 'split by online nodes, paid to your node wallet (';
   zh2en['另可開啟算力成為礦工，按在線算力瓜分'] = 'or enable hashrate to mine, split by online hashrate ';
   zh2en['礦工獎勵（'] = 'miner rewards (';
@@ -1758,12 +2040,12 @@
   zh2en['無磁碟的免費雲節點（'] = 'Diskless free cloud nodes (';
   zh2en['等）每次重啟都必須帶此參數'] = 'etc.) must pass this flag on every restart';
   zh2en['否則回到創世重放、長時間落後。'] = 'otherwise replays from genesis and lags.';
-  zh2en['多驗證人注意事項'] = 'Multi-validator notes';
-  zh2en['共識需 2/3 驗證人在線才持續出塊：'] = 'Consensus requires 2/3 validators online:';
-  zh2en['個驗證人時任一離線鏈即暫停'] = 'validators: any offline pauses the chain';
-  zh2en['建議驗證人達'] = 'Recommend reaching ';
-  zh2en['個以上'] = 'or more validators';
-  zh2en['容忍 1 個離線）。加入的驗證人越多，鏈的可用性與去中心化程度越高。'] = 'tolerates 1 offline). More validators = higher availability & decentralization.';
+  zh2en['多節點注意事項'] = 'Multi-node notes';
+  zh2en['共識需 2/3 節點在線才持續出塊：'] = 'Consensus requires 2/3 nodes online:';
+  zh2en['個節點時任一離線鏈即暫停'] = 'nodes: any offline pauses the chain';
+  zh2en['建議節點達'] = 'Recommend reaching ';
+  zh2en['個以上'] = 'or more nodes';
+  zh2en['容忍 1 個離線）。加入的節點越多，鏈的可用性與去中心化程度越高。'] = 'tolerates 1 offline). More nodes = higher availability & decentralization.';
   zh2en['驗證與挖礦'] = 'Validation & Mining';
   zh2en['啟動後在網頁'] = 'After start, on web ';
   zh2en['頁開啟礦機即可參與出塊：收益按鏈上'] = 'page enable miner to mine: rewards by on-chain ';
@@ -1938,3 +2220,28 @@
     mo.observe(document.body, { childList: true, subtree: true });
   } catch (e) { /* 舊瀏覽器忽略 */ }
 })();
+
+dict.zh['tiusd.hookPending']='Webhook 待投遞 ';
+dict.en['tiusd.hookPending']='Webhook pending ';
+
+dict.zh['nh.priceTitle']='資產行情（Oracle）';
+dict.en['nh.priceTitle']='Asset Prices (Oracle)';
+dict.zh['nh.listed']='已上市';
+dict.en['nh.listed']='Listed';
+dict.zh['nh.unlisted']='未上市（0.330 兜底）';
+dict.en['nh.unlisted']='Unlisted (0.330 floor)';
+dict.zh['tiusd.hookFailed']='重試佇列 ';
+dict.en['tiusd.hookFailed']='retry queue ';dict.zh['zk.title']='ZK／VRF 工具台'; dict.zh['zk.sub']='零知識原語 — 狀態批次證明 · 承諾 · Nullifier · 可驗證隨機數';
+dict.zh['zk.batch']='ZK-Rollup 批次證明'; dict.zh['zk.old']='舊狀態根'; dict.zh['zk.new']='新狀態根';
+dict.zh['zk.prove']='產生證明'; dict.zh['zk.verify']='驗證';
+dict.zh['zk.commitTitle']='隱私承諾與 Nullifier'; dict.zh['zk.commitSub']='隱藏性＋綁定性 · 防雙花';
+dict.zh['zk.msg']='金額/訊息'; dict.zh['zk.commit']='產生承諾';
+dict.zh['vrf.title']='可驗證隨機函數（ECVRF）'; dict.zh['vrf.sub']='公平抽籤 · 節點選舉 · 白名單';
+dict.zh['vrf.keygen']='產生密鑰'; dict.zh['vrf.msg']='訊息'; dict.zh['vrf.prove']='產生證明'; dict.zh['vrf.verify']='驗證';
+dict.en['zk.title']='ZK &amp; VRF Toolkit'; dict.en['zk.sub']='Zero-Knowledge primitives — state batch proof · commitment · nullifier · verifiable randomness';
+dict.en['zk.batch']='ZK-Rollup Batch Proof'; dict.en['zk.old']='old state root'; dict.en['zk.new']='new state root';
+dict.en['zk.prove']='Prove'; dict.en['zk.verify']='Verify';
+dict.en['zk.commitTitle']='Privacy Commitment &amp; Nullifier'; dict.en['zk.commitSub']='hiding + binding · double-spend guard';
+dict.en['zk.msg']='amount/message'; dict.en['zk.commit']='Commit';
+dict.en['vrf.title']='Verifiable Random Function (ECVRF)'; dict.en['vrf.sub']='fair lottery · node election · whitelist';
+dict.en['vrf.keygen']='Generate Key'; dict.en['vrf.msg']='message'; dict.en['vrf.prove']='Prove'; dict.en['vrf.verify']='Verify';

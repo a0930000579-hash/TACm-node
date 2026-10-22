@@ -80,10 +80,12 @@ func (s *Server) handleExplorer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	scheme := "http"
-	if r.TLS != nil { scheme = "https" }
+	if r.TLS != nil {
+		scheme = "https"
+	}
 	s.render(w, "explorer.html", pongo2.Context{
 		"blocks": blocks, "txs": txs, "chain": s.ds.ChainStats(),
-		"self": s.ds.Status(),
+		"self":   s.ds.Status(),
 		"rpcURL": scheme + "://" + r.Host,
 	})
 }
@@ -190,11 +192,11 @@ func (s *Server) handleSnapshotInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, map[string]any{
-		"ok":          true,
-		"version":     sd.Version,
-		"height":      sd.Height,
+		"ok":           true,
+		"version":      sd.Version,
+		"height":       sd.Height,
 		"genesis_hash": sd.GenesisHash,
-		"tip_hash":    sd.TipHash,
+		"tip_hash":     sd.TipHash,
 	})
 }
 
@@ -540,7 +542,6 @@ func (s *Server) handleDefi(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "defi.html", pongo2.Context{})
 }
 
-
 // handleTokens GET /tokens — 代幣工作室（Token Studio）：鏈上標準代幣發行
 // （節點官方金鑰代簽）＋列表/詳情/轉帳，App 化。實時數據由前端讀取 RPC。
 // handleAssets GET /assets — 資產中心（TACm＋TiUSD 雙分頁監控台）。
@@ -572,6 +573,31 @@ func (s *Server) handleDex(w http.ResponseWriter, r *http.Request) {
 // handleENS GET /ens — 鏈上域名（ENS 對標）：.tac 註冊/解析/反向解析。
 func (s *Server) handleENS(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "ens.html", pongo2.Context{})
+}
+
+// handleDexV3 GET /dexv3 — DEX V3 集中流動性（對標 Uniswap V3）。
+func (s *Server) handleDexV3(w http.ResponseWriter, r *http.Request) {
+	s.render(w, "dexv3.html", pongo2.Context{})
+}
+
+// handlePerp GET /perp — 永續合約（對標 dYdX/GMX）。
+func (s *Server) handlePerp(w http.ResponseWriter, r *http.Request) {
+	s.render(w, "perp.html", pongo2.Context{})
+}
+
+// handleAIMarket GET /ai-market — 鏈上 AI 模型市場（對標 Bittensor/Ritual）。
+func (s *Server) handleAIMarket(w http.ResponseWriter, r *http.Request) {
+	s.render(w, "ai-market.html", pongo2.Context{})
+}
+
+// handleOrderBook GET /orderbook — 鏈上訂單簿式現貨（公開可驗證 orderbook，對標 Binance）。
+func (s *Server) handleOrderBook(w http.ResponseWriter, r *http.Request) {
+	s.render(w, "orderbook.html", pongo2.Context{})
+}
+
+// handleAIVerify GET /ai-verify — 跨鏈 AI 推理驗證網路（驗證者質押／多數決／獎懲）。
+func (s *Server) handleAIVerify(w http.ResponseWriter, r *http.Request) {
+	s.render(w, "ai-verify.html", pongo2.Context{})
 }
 
 // handleBridge GET /bridge — 跨鏈橋中心（M149w）：BSC 橋狀態、資產映射、
@@ -691,8 +717,8 @@ func (s *Server) handleLive(w http.ResponseWriter, r *http.Request) {
 
 // M94：社群本地上傳（圖片/影片）——存到工作目錄 uploads/，回 /uploads/<name> URL。
 var (
-	uploadsDir  = "uploads"
-	uploadExts  = map[string]string{
+	uploadsDir = "uploads"
+	uploadExts = map[string]string{
 		".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png",
 		".gif": "image/gif", ".webp": "image/webp",
 		".mp4": "video/mp4", ".webm": "video/webm", ".mov": "video/quicktime",

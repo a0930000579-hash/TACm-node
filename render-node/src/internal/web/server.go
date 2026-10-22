@@ -4,13 +4,13 @@ import (
 	"embed"
 	"io/fs"
 	"math"
-	"path/filepath"
 	"math/big"
 	"net/http"
 	"os"
-	"sync"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/flosch/pongo2/v6"
@@ -246,7 +246,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/node/panel", s.handleNodePanelAPI)
 	s.mux.HandleFunc("POST /api/node/setup", s.handleNodeSetupAPI)
 	s.mux.HandleFunc("POST /api/node/bind", s.handleNodeBindAPI)
-		s.mux.HandleFunc("POST /api/node/withdraw", s.handleNodeWithdrawAPI)
+	s.mux.HandleFunc("POST /api/node/withdraw", s.handleNodeWithdrawAPI)
 	s.mux.HandleFunc("POST /api/node/stake", s.handleNodeStakeAPI)
 	s.mux.HandleFunc("POST /api/node/bootstrap", s.handleNodeBootstrapAPI)
 	s.mux.HandleFunc("POST /api/node/register", s.handleNodeRegisterAPI) // M149m-9 PoT 節點註冊
@@ -257,8 +257,8 @@ func (s *Server) routes() {
 		return
 	}
 	// M85：以太坊式 WebSocket 訂閱（eth_subscribe / eth_unsubscribe）。
-		s.mux.HandleFunc("GET /api/snapshot", s.handleSnapshotAPI)
-		s.mux.HandleFunc("GET /api/snapshot/info", s.handleSnapshotInfo)
+	s.mux.HandleFunc("GET /api/snapshot", s.handleSnapshotAPI)
+	s.mux.HandleFunc("GET /api/snapshot/info", s.handleSnapshotInfo)
 	s.mux.HandleFunc("GET /ws", s.handleWS)
 	s.mux.HandleFunc("GET /", s.handleIndex)
 	s.mux.HandleFunc("GET /app", s.handleApp)
@@ -324,6 +324,11 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /nfts", s.handleNFTs)
 	s.mux.HandleFunc("GET /dex", s.handleDex)
 	s.mux.HandleFunc("GET /ens", s.handleENS)
+	s.mux.HandleFunc("GET /dexv3", s.handleDexV3)
+	s.mux.HandleFunc("GET /perp", s.handlePerp)
+	s.mux.HandleFunc("GET /ai-market", s.handleAIMarket)
+	s.mux.HandleFunc("GET /orderbook", s.handleOrderBook)
+	s.mux.HandleFunc("GET /ai-verify", s.handleAIVerify)
 	s.mux.HandleFunc("GET /auth/login", s.handleAuthLoginPage)
 	s.mux.HandleFunc("GET /auth/register", s.handleAuthRegisterPage)
 	// M39：節點健康檢查與運行指標（商業營運/監控告警必備）。

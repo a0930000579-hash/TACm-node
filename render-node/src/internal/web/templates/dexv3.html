@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+{% block title %}TAC DEX V3{% endblock %}
+{% block content %}
+<style>
+  .dx-wrap{max-width:1080px;margin:0 auto;padding:14px 12px 90px}
+  .dx-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 2px 14px}
+  .dx-head h1{font-size:20px;font-weight:800;color:#14161a;margin:0}
+  .dx-head .dx-badge{font-size:11px;font-weight:700;color:#68BE8D;background:rgba(104,190,141,.12);padding:4px 10px;border-radius:999px}
+  .dx-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:760px){.dx-grid{grid-template-columns:1fr}}
+  .dx-card{background:#f7f8fb;border:1px solid #eef0f4;border-radius:16px;padding:16px;box-shadow:0 1px 2px rgba(16,24,40,.05)}
+  .dx-card h2{font-size:14px;font-weight:800;color:#14161a;margin:0 0 12px}
+  .dx-field{margin-bottom:10px}
+  .dx-field label{display:block;font-size:12px;color:#5d6778;margin-bottom:4px}
+  .dx-field input,.dx-field select{width:100%;box-sizing:border-box;border:1px solid #e2e6ee;background:#fff;border-radius:10px;padding:10px 12px;font-size:14px;color:#14161a;outline:none}
+  .dx-field input:focus{border-color:#68BE8D}
+  .dx-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .dx-btn{background:#68BE8D;color:#fff;border:none;border-radius:10px;padding:11px 14px;font-size:14px;font-weight:700;width:100%;cursor:pointer}
+  .dx-btn:active{transform:scale(.99)}
+  .dx-btn.ghost{background:#fff;color:#14161a;border:1px solid #e2e6ee}
+  .-btnrow{display:flex;gap:6px;flex-wrap:wrap}
+  .btn-sm{flex:1;min-width:60px;font-size:12px;padding:7px 6px;border-radius:8px;border:1px solid #e2e6ee;background:#fff;color:#14161a;cursor:pointer}
+  .btn-sm.primary{background:#68BE8D;color:#fff;border-color:#68BE8D}
+  .dx-msg{font-size:12px;margin-top:8px;min-height:16px;color:#5d6778}
+  .dx-msg.err{color:#e5484d}.dx-msg.ok{color:#2f9e63}
+  .dx-table{width:100%;border-collapse:collapse;font-size:12px}
+  .dx-table th{color:#8a93a6;text-align:left;font-weight:600;padding:6px 4px;border-bottom:1px solid #eef0f4}
+  .dx-table td{padding:8px 4px;border-bottom:1px solid #f2f4f8;color:#14161a}
+  .dx-poolchip{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(104,190,141,.14);color:#2f9e63}
+  .dx-pos{border:1px solid #eef0f4;border-radius:12px;padding:10px;margin-bottom:8px;background:#fff}
+  .dx-pos .dx-pos-top{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#5d6778;margin-bottom:6px}
+  .dx-pos .dx-pos-id{font-weight:800;color:#14161a}
+  .dx-muted{color:#8a93a6;font-size:12px}
+  .dx-price{font-size:18px;font-weight:800;color:#14161a}
+</style>
+<div class="dx-wrap">
+  <div class="dx-head">
+    <h1>TAC DEX V3 <span class="dx-badge" id="hBadge">Uniswap V3 集中流動性</span></h1>
+  </div>
+
+  <div class="dx-field">
+    <label id="lAddr">錢包地址 (Wallet Address)</label>
+    <input id="me" placeholder="0x…" />
+  </div>
+
+  <div class="dx-grid">
+    <!-- 池列表 -->
+    <div class="dx-card">
+      <h2 id="hPools">流動池 Pools</h2>
+      <div id="poolList" class="dx-muted">—</div>
+      <div class="dx-msg" id="poolMsg"></div>
+    </div>
+
+    <!-- 建池 -->
+    <div class="dx-card">
+      <h2 id="hCreate">建立流動池 Create Pool</h2>
+      <div class="dx-row">
+        <div class="dx-field"><label id="lT0">Token0</label><input id="cpT0" value="TACm" /></div>
+        <div class="dx-field"><label id="lT1">Token1</label><input id="cpT1" value="TIUSD" /></div>
+      </div>
+      <div class="dx-field">
+        <label id="lFee">手續費分級 Fee Tier</label>
+        <select id="cpFee">
+          <option value="1">0.01% (spacing 1)</option>
+          <option value="5">0.05% (spacing 10)</option>
+          <option value="30" selected>0.30% (spacing 60)</option>
+        </select>
+      </div>
+      <div class="dx-field"><label id="lPrice">初始價格 Price (token1/token0)</label><input id="cpPrice" value="1" /></div>
+      <button class="dx-btn" id="cpBtn" onclick="doCreate()">建池 Create</button>
+      <div class="dx-msg" id="cpMsg"></div>
+    </div>
+
+    <!-- Mint 位置 -->
+    <div class="dx-card">
+      <h2 id="hMint">新增流動性 Mint Position</h2>
+      <div class="dx-row">
+        <div class="dx-field"><label id="lPool">池 Pool ID</label><input id="mtPool" value="1" /></div>
+        <div class="dx-field"><label id="lTier">費率</label><input id="mtTier" value="0.3%" disabled /></div>
+      </div>
+      <div class="dx-row">
+        <div class="dx-field"><label id="lTL">Tick 下界 Lower</label><input id="mtTL" value="-600" /></div>
+        <div class="dx-field"><label id="lTU">Tick 上界 Upper</label><input id="mtTU" value="600" /></div>
+      </div>
+      <div class="dx-row">
+        <div class="dx-field"><label id="lA0">投入 Token0</label><input id="mtA0" value="100" /></div>
+        <div class="dx-field"><label id="lA1">投入 Token1</label><input id="mtA1" value="100" /></div>
+      </div>
+      <button class="dx-btn" onclick="doMint()">Mint 建立位置</button>
+      <div class="dx-msg" id="mtMsg"></div>
+    </div>
+
+    <!-- Swap -->
+    <div class="dx-card">
+      <h2 id="hSwap">換幣 Swap</h2>
+      <div class="dx-row">
+        <div class="dx-field"><label id="sPool">池 Pool ID</label><input id="swPool" value="1" /></div>
+        <div class="dx-field">
+          <label id="sDir">方向 Direction</label>
+          <select id="swDir">
+            <option value="1" selected>賣 TACm → 買 TIUSD</option>
+            <option value="0">賣 TIUSD → 買 TACm</option>
+          </select>
+        </div>
+      </div>
+      <div class="dx-field"><label id="sIn">輸入量 Input</label><input id="swIn" value="10" /></div>
+      <button class="dx-btn" onclick="doSwap()">Swap 換幣</button>
+      <div class="dx-msg" id="swMsg"></div>
+    </div>
+  </div>
+
+  <!-- 我的位置 -->
+  <div class="dx-card" style="margin-top:12px">
+    <h2 id="hMyPos">我的流動性位置 My Positions</h2>
+    <div id="posList" class="dx-muted">—</div>
+    <div class="dx-msg" id="posMsg"></div>
+  </div>
+</div>
+
+<script>
+  var T = function(k, zh, en){ try { if (window.TAC_I18N && TAC_I18N.cur() === 'en') { return en; } } catch (e) {} return zh; };
+  var me = localStorage.getItem('tac_defi_addr') || '';
+  if(me) document.getElementById('me').value = me;
+  function saveMe(){ me = document.getElementById('me').value.trim(); if(me) localStorage.setItem('tac_defi_addr', me); }
+  function fetchJSON(url, tries){
+    var t = tries || 2;
+    return new Promise(function(res, rej){
+      var done = false;
+      var attempt = function(n){
+        var ctl = new AbortController();
+        var to = setTimeout(function(){ ctl.abort(); }, 6000);
+        fetch(url, {cache:'no-store', signal:ctl.signal}).then(function(r){ return r.json().catch(function(){ return null; }); })
+          .then(function(d){ clearTimeout(to); if(done) return; done = true; res(d); })
+          .catch(function(e){ clearTimeout(to); if(n > 0){ setTimeout(function(){ attempt(n-1); }, 1200); } else { if(done) return; done = true; rej(e); } });
+      };
+      attempt(t-1);
+    });
+  }
+  function postJSON(url, body, tries){
+    var t = tries || 2;
+    return new Promise(function(res, rej){
+      var done = false;
+      var attempt = function(n){
+        var ctl = new AbortController();
+        var to = setTimeout(function(){ ctl.abort(); }, 6000);
+        fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body), signal:ctl.signal})
+          .then(function(r){ return r.json().catch(function(){ return null; }); })
+          .then(function(d){ clearTimeout(to); if(done) return; done = true; res(d); })
+          .catch(function(e){ clearTimeout(to); if(n > 0){ setTimeout(function(){ attempt(n-1); }, 1200); } else { if(done) return; done = true; rej(e); } });
+      };
+      attempt(t-1);
+    });
+  }
+  function show(id, msg, ok){ var e = document.getElementById(id); if(!e) return; e.textContent = msg; e.className = 'dx-msg ' + (ok ? 'ok' : (msg ? 'err' : '')); }
+  function f2(x){ if(x === null || x === undefined) return '0'; return Number(x).toFixed(4); }
+
+  function loadPools(){
+    fetchJSON('/api/dexv3/pools').then(function(d){
+      if(!d || !d.ok){ show('poolMsg', T('p_err','載入失敗','load failed')); return; }
+      var ps = d.pools || [];
+      if(!ps.length){ document.getElementById('poolList').textContent = T('p_empty','尚無池子，請先建立','no pools yet'); return; }
+      var html = '<table class="dx-table"><tr><th>ID</th><th>Pair</th><th>Fee</th><th>Tick</th><th>Price</th><th>L</th></tr>';
+      ps.forEach(function(p){
+        var price = (p.sqrt_price * p.sqrt_price);
+        html += '<tr><td>' + p.id + '</td><td>' + p.token0 + '/' + p.token1 + '</td>'
+          + '<td><span class="dx-poolchip">' + (p.fee_tier/100).toFixed(2) + '%</span></td>'
+          + '<td>' + p.tick + '</td><td>' + f2(price) + '</td><td>' + f2(p.liquidity) + '</td></tr>';
+      });
+      html += '</table>';
+      document.getElementById('poolList').innerHTML = html;
+    }).catch(function(){ show('poolMsg', T('p_net','網路錯誤','network error')); });
+  }
+
+  function loadPositions(){
+    saveMe();
+    if(!me){ show('posMsg', T('p_noaddr','請先輸入地址','enter address')); return; }
+    fetchJSON('/api/dexv3/positions?address=' + encodeURIComponent(me)).then(function(d){
+      if(!d || !d.ok){ show('posMsg', (d && d.error) || T('p_poserr','載入位置失敗','load positions failed')); return; }
+      var list = d.positions || [];
+      if(!list.length){ document.getElementById('posList').textContent = T('p_posempty','尚無位置','no positions'); return; }
+      var html = '';
+      list.forEach(function(p){
+        html += '<div class="dx-pos"><div class="dx-pos-top">'
+          + '<span><span class="dx-pos-id">#' + p.id + '</span> · Pool ' + p.pool_id + '</span>'
+          + '<span>[' + p.tick_lower + ', ' + p.tick_upper + ']</span></div>'
+          + '<div class="dx-row"><div><span class="dx-muted">L</span> ' + f2(p.liquidity) + '</div>'
+          + '<div><span class="dx-muted">費用 0/1</span> ' + f2(p.tokens_owed0) + ' / ' + f2(p.tokens_owed1) + '</div></div>'
+          + '<div class="btnrow" style="margin-top:8px">'
+          + '<button class="btn-sm" onclick="doIncrease(' + p.id + ')">' + T('p_inc','增加','Increase') + '</button>'
+          + '<button class="btn-sm" onclick="doDecrease(' + p.id + ',false)">' + T('p_dec','撤流','Decrease') + '</button>'
+          + '<button class="btn-sm" onclick="doDecrease(' + p.id + ',true)">' + T('p_all','全撤','Remove all') + '</button>'
+          + '<button class="btn-sm primary" onclick="doCollect(' + p.id + ')">' + T('p_collect','領費','Collect') + '</button>'
+          + '</div></div>';
+      });
+      document.getElementById('posList').innerHTML = html;
+      show('posMsg','',true);
+    }).catch(function(){ show('posMsg', T('p_net','網路錯誤','network error')); });
+  }
+
+  function doCreate(){
+    saveMe();
+    if(!me){ show('cpMsg', T('p_noaddr','請先輸入地址','enter address')); return; }
+    var price = parseFloat(document.getElementById('cpPrice').value || '1');
+    postJSON('/api/dexv3/pool/create', {
+      address: me, token0: document.getElementById('cpT0').value.trim(), token1: document.getElementById('cpT1').value.trim(),
+      fee_tier: parseInt(document.getElementById('cpFee').value, 10), sqrt_price: Math.sqrt(price)
+    }).then(function(d){
+      if(!d || !d.ok){ show('cpMsg', (d && d.error) || T('p_fail','失敗','failed')); return; }
+      show('cpMsg', T('p_created','已建立池 #','Pool created #') + d.pool.id, true);
+      loadPools();
+    }).catch(function(){ show('cpMsg', T('p_net','網路錯誤','network error')); });
+  }
+
+  function doMint(){
+    saveMe();
+    if(!me){ show('mtMsg', T('p_noaddr','請先輸入地址','enter address')); return; }
+    postJSON('/api/dexv3/position/mint', {
+      address: me, pool_id: parseInt(document.getElementById('mtPool').value, 10),
+      tick_lower: parseInt(document.getElementById('mtTL').value, 10),
+      tick_upper: parseInt(document.getElementById('mtTU').value, 10),
+      amount0: parseFloat(document.getElementById('mtA0').value),
+      amount1: parseFloat(document.getElementById('mtA1').value)
+    }).then(function(d){
+      if(!d || !d.ok){ show('mtMsg', (d && d.error) || T('p_fail','失敗','failed')); return; }
+      show('mtMsg', T('p_minted','位置 #','Position #') + d.position_id + ' · L=' + f2(d.liquidity), true);
+      loadPositions();
+    }).catch(function(){ show('mtMsg', T('p_net','網路錯誤','network error')); });
+  }
+
+  function doIncrease(pid){
+    saveMe();
+    var a0 = parseFloat(prompt(T('p_inc0','增加投入 Token0 量','Add Token0 amount'), '50')); if(isNaN(a0)) return;
+    var a1 = parseFloat(prompt(T('p_inc1','增加投入 Token1 量','Add Token1 amount'), '50')); if(isNaN(a1)) return;
+    postJSON('/api/dexv3/position/increase', { address: me, position_id: pid, amount0: a0, amount1: a1 })
+      .then(function(d){ loadPositions(); }).catch(function(){});
+  }
+  function doDecrease(pid, all){
+    saveMe();
+    var l = 0;
+    if(!all){ l = parseFloat(prompt(T('p_decamount','撤銷的流動性 L（0=全撤）','Liquidity L to remove (0=all)'), '0')); if(isNaN(l)) l = 0; }
+    postJSON('/api/dexv3/position/decrease', { address: me, position_id: pid, liquidity: l })
+      .then(function(d){ loadPositions(); }).catch(function(){});
+  }
+  function doCollect(pid){
+    saveMe();
+    postJSON('/api/dexv3/position/collect', { address: me, position_id: pid })
+      .then(function(d){ loadPositions(); }).catch(function(){});
+  }
+
+  function doSwap(){
+    saveMe();
+    if(!me){ show('swMsg', T('p_noaddr','請先輸入地址','enter address')); return; }
+    var zfo = document.getElementById('swDir').value === '1';
+    postJSON('/api/dexv3/swap', {
+      address: me, pool_id: parseInt(document.getElementById('swPool').value, 10),
+      zero_for_one: zfo, amount_in: parseFloat(document.getElementById('swIn').value)
+    }).then(function(d){
+      if(!d || !d.ok){ show('swMsg', (d && d.error) || T('p_fail','失敗','failed')); return; }
+      show('swMsg', T('p_got','輸出 ','Out ') + f2(d.amount_out) + ' · ' + T('p_fee','費 ','fee ') + f2(d.fee) + ' · P=' + f2(d.price), true);
+      loadPools();
+    }).catch(function(){ show('swMsg', T('p_net','網路錯誤','network error')); });
+  }
+
+  loadPools();
+  loadPositions();
+</script>
+{% endblock %}

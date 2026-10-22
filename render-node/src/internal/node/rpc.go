@@ -1,7 +1,6 @@
 package node
 
 import (
-	"time"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -9,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"tacm/internal/chaindb"
 	"tacm/internal/crypto"
@@ -25,9 +25,9 @@ type route struct {
 // RPCServer 暴露節點的 HTTP RPC 接口。
 type RPCServer struct {
 	routeDocs []routeDoc
-	node   *Node
-	mux    *http.ServeMux
-	routes []route
+	node      *Node
+	mux       *http.ServeMux
+	routes    []route
 	// M143：RPC 防灌水——per-IP 限流（寫入端點更嚴格）＋請求體積上限。
 	limiter *ipLimiter
 	// M128：以太式過濾器狀態（eth_newFilter / getFilterChanges / uninstallFilter）。
@@ -330,6 +330,65 @@ func NewRPCServer(n *Node) *RPCServer {
 	s.addRouteDoc("GET /api/ens/resolve", "ENS 域名解析（名稱→地址）", s.handleENSResolve)
 	s.addRouteDoc("GET /api/ens/reverse", "ENS 反向解析（地址→名稱）", s.handleENSReverse)
 	s.addRouteDoc("GET /api/ens/my", "ENS 我的域名（地址名下清單）", s.handleENSMy)
+	// DEX V3 集中流動性（對標 Uniswap V3）。
+	s.addRouteDoc("POST /api/dexv3/pool/create", "DEX V3 建立流動池（token0/token1/費率分級/初始√P）", s.handleDexV3CreatePool)
+	s.addRouteDoc("POST /api/dexv3/position/mint", "DEX V3 mint 新集中流動性位置", s.handleDexV3MintPosition)
+	s.addRouteDoc("POST /api/dexv3/position/increase", "DEX V3 增加位置流動性", s.handleDexV3IncreasePosition)
+	s.addRouteDoc("POST /api/dexv3/position/decrease", "DEX V3 撤出部分/全部流動性", s.handleDexV3DecreasePosition)
+	s.addRouteDoc("POST /api/dexv3/position/collect", "DEX V3 領取位置累積費用", s.handleDexV3Collect)
+	s.addRouteDoc("POST /api/dexv3/swap", "DEX V3 集中流動性 swap（跨 tick）", s.handleDexV3Swap)
+	s.addRouteDoc("GET /api/dexv3/pools", "DEX V3 池列表", s.handleDexV3Pools)
+	s.addRouteDoc("GET /api/dexv3/positions", "DEX V3 我的位置（?address=）", s.handleDexV3Positions)
+	s.addRouteDoc("GET /api/dexv3/pool", "DEX V3 單池詳情（?poolId=）", s.handleDexV3Pool)
+	// Web3 錢包簽名登入（EIP-4361 SIWE）。
+	s.addRouteDoc("POST /api/auth/web3/nonce", "Web3 錢包登入：依地址產生一次性 SIWE(EIP-4361) 挑戰訊息。body: {address, chain_id?} → {ok, nonce, message}", s.handleWeb3Nonce)
+	s.addRouteDoc("POST /api/auth/web3/verify", "Web3 錢包登入：驗 EIP-191 personal_sign 簽名，成功即發 session cookie。body: {address, message, signature} → {ok, token, user, uid}", s.handleWeb3Verify)
+	// 永續合約（對標 dYdX/GMX）。
+	s.addRouteDoc("POST /api/perp/deposit", "Perp 入金（TACm/TiUSD 進保證金帳戶）", s.handlePerpDeposit)
+	s.addRouteDoc("POST /api/perp/withdraw", "Perp 出金（檢查維持保證金）", s.handlePerpWithdraw)
+	s.addRouteDoc("POST /api/perp/position/open", "Perp 開倉（多/空、槓桿、保證金）", s.handlePerpOpen)
+	s.addRouteDoc("POST /api/perp/position/close", "Perp 平倉（回 realized PnL）", s.handlePerpClose)
+	s.addRouteDoc("POST /api/perp/margin/add", "Perp 增加保證金", s.handlePerpMarginAdd)
+	s.addRouteDoc("POST /api/perp/margin/remove", "Perp 減少保證金", s.handlePerpMarginRemove)
+	s.addRouteDoc("POST /api/perp/liquidate", "Perp 強平（需達強平線）", s.handlePerpLiquidate)
+	s.addRouteDoc("GET /api/perp/markets", "Perp 市場狀態（標記價/funding/ OI）", s.handlePerpMarkets)
+	s.addRouteDoc("GET /api/perp/positions", "Perp 持倉查詢（?trader=）", s.handlePerpPositions)
+	s.addRouteDoc("GET /api/perp/account", "Perp 帳戶權益（?trader=）", s.handlePerpAccount)
+	// AI 模型市場（對標 Bittensor/Ritual）。
+	s.addRouteDoc("POST /api/aimarket/register", "AI Market 註冊模型", s.handleAIMarketRegister)
+	s.addRouteDoc("GET /api/aimarket/list", "AI Market 列表/搜尋（?q=）", s.handleAIMarketList)
+	s.addRouteDoc("GET /api/aimarket/model", "AI Market 模型詳情（?id=）", s.handleAIMarketModel)
+	s.addRouteDoc("POST /api/aimarket/subscribe", "AI Market 訂閱 per_period 模型", s.handleAIMarketSubscribe)
+	s.addRouteDoc("POST /api/aimarket/invoke", "AI Market 呼叫模型（計費給 owner）", s.handleAIMarketInvoke)
+	s.addRouteDoc("POST /api/aimarket/rate", "AI Market 評分（1-5）", s.handleAIMarketRate)
+	s.addRouteDoc("GET /api/aimarket/subscriptions", "AI Market 我的訂閱（?subscriber=）", s.handleAIMarketSubscriptions)
+	// v156 第 2 項：鏈上訂單簿式現貨（公開可驗證 orderbook，與中心化 exchange 區隔）。
+	s.addRouteDoc("POST /api/orderbook/place", "鏈上訂單簿掛限價單（委託資金鏈上託管、自動撮合）", s.handleOrderBookPlace)
+	s.addRouteDoc("POST /api/orderbook/cancel", "鏈上訂單簿撤單（解鎖退還）", s.handleOrderBookCancel)
+	s.addRouteDoc("GET /api/orderbook/depth", "訂單簿深度（?market=TACm/TiUSD）", s.handleOrderBookDepth)
+	s.addRouteDoc("GET /api/orderbook/trades", "最近成交（?market=TACm/TiUSD）", s.handleOrderBookTrades)
+	s.addRouteDoc("GET /api/orderbook/markets", "鏈上訂單簿市場列表", s.handleOrderBookMarkets)
+	s.addRouteDoc("GET /api/orderbook/myorders", "我的委託（?address=0x...&market=）", s.handleOrderBookMyOrders)
+	// v156 第 5 項：跨鏈 AI 推理驗證（驗證者質押／多數決／激勵與懲罰）。
+	s.addRouteDoc("POST /api/aiverify/verifier/register", "AI Verify 驗證者質押註冊", s.handleAIVerifyVerifierRegister)
+	s.addRouteDoc("POST /api/aiverify/verifier/withdraw", "AI Verify 驗證者提領質押", s.handleAIVerifyVerifierWithdraw)
+	s.addRouteDoc("POST /api/aiverify/task/submit", "AI Verify 提交跨鏈推理結果驗證任務", s.handleAIVerifyTaskSubmit)
+	s.addRouteDoc("POST /api/aiverify/attest", "AI Verify 驗證者投票（達 quorum 自動結算）", s.handleAIVerifyAttest)
+	s.addRouteDoc("GET /api/aiverify/task", "AI Verify 單一任務詳情（?id=）", s.handleAIVerifyTask)
+	s.addRouteDoc("GET /api/aiverify/tasks", "AI Verify 任務列表（?status=）", s.handleAIVerifyTasks)
+	s.addRouteDoc("GET /api/aiverify/verifiers", "AI Verify 驗證者排行", s.handleAIVerifyVerifiers)
+	s.addRouteDoc("POST /api/aiverify/infer", "AI Verify 編排：呼叫 aimarket 模型→提交驗證任務", s.handleAIVerifyInfer)
+	// v156 第 3 項：ZK rollup 有效性證明鏈路（批次提交／有效性驗證／狀態根／挑戰）。
+	s.addRouteDoc("POST /api/rollup/batch/submit", "Rollup 收集 L2 內存池成批次、提交承諾根並回傳有效性證明", s.handleRollupBatchSubmit)
+	s.addRouteDoc("GET /api/rollup/batch", "Rollup 批次列表（?index=N 回單一批次＋有效性證明）", s.handleRollupBatch)
+	s.addRouteDoc("POST /api/rollup/proof/verify", "Rollup 驗證批次有效性證明（{index} 或無狀態 {proof}）", s.handleRollupProofVerify)
+	s.addRouteDoc("GET /api/rollup/state-root", "Rollup 當前狀態根／高度／賬戶數／最近批次有效性", s.handleRollupStateRoot)
+	s.addRouteDoc("POST /api/rollup/challenge", "Rollup 挑戰期內對批次提欺詐挑戰（基於 pre-snapshot 重放）", s.handleRollupChallenge)
+	// v156 第 4 項：預言機去中心化多源聚合。
+	s.addRouteDoc("GET /api/oracle/sources", "預言機去中心化多源狀態清單（各源權重/最新價/adopted/stale/outlier/錯誤）", s.handleOracleSources)
+	s.addRouteDoc("GET /api/oracle/aggregate", "預言機單一 symbol 多源聚合詳情（?sym=BTC/USDT；中位數/加權價/置信度/採用源數/degraded/jump）", s.handleOracleAggregateDetail)
+	// v156 第 1 項：狀態膨脹治理（唯讀統計）。
+	s.addRouteDoc("GET /api/stateprune/stats", "狀態膨脹治理（歷史清理/歸檔）統計，唯讀", s.handleStatePruneStats)
 	s.addRoute("POST /oracle/aggregate", s.handleOracleAggregate)
 	s.addRoute("POST /aa/submit", s.handleAASubmit)
 	s.addRoute("POST /aa/estimate", s.handleAAEstimate)

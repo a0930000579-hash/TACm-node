@@ -5,6 +5,7 @@
     <div class="auth-tabs">
       <button class="auth-tab active" data-tab="login" onclick="switchTab('login')">登入</button>
       <button class="auth-tab" data-tab="register" onclick="switchTab('register')">註冊</button>
+      <button class="auth-tab" data-tab="web3" onclick="switchTab('web3')">Web3 錢包</button>
     </div>
 
     <div id="tab-login" class="auth-pane">
@@ -26,6 +27,21 @@
       <button class="btn primary block" onclick="doRegister()">註冊</button>
     </div>
 
+    <div id="tab-web3" class="auth-pane" style="display:none">
+      <div class="f-label">錢包地址 (0x…)</div>
+      <div style="display:flex; gap:8px;">
+        <input id="w3-addr" class="f-input" type="text" placeholder="0x…" style="flex:1">
+        <button class="btn" style="margin-top:0; white-space:nowrap; width:auto; padding:0 12px;" onclick="w3Connect()">連接錢包</button>
+      </div>
+      <button class="btn primary block" onclick="w3GetNonce()">取得登入訊息並簽名</button>
+      <div class="f-label" style="margin-top:14px;">待簽訊息（EIP-4361）</div>
+      <textarea id="w3-msg" class="f-input" rows="6" readonly placeholder="取得訊息後顯示於此"></textarea>
+      <div class="f-label" style="margin-top:10px;">手動簽名（無 MetaMask 時：用其他工具對上方訊息 personal_sign，把簽名貼此）</div>
+      <input id="w3-sig" class="f-input" type="text" placeholder="0x…簽名">
+      <button class="btn block" style="background:#2b6cb0; color:#fff;" onclick="w3Verify()">送出簽名登入</button>
+      <div style="font-size:11.5px; color:var(--bn-sub,#5d6778); margin-top:8px;">支援 MetaMask / Rabby 等 EIP-191 personal_sign 錢包；簽名僅用於登入、不耗 Gas。</div>
+    </div>
+
     <div id="auth-msg" class="auth-msg"></div>
   </div>
 </div>
@@ -35,7 +51,43 @@ function switchTab(t) {
   document.querySelectorAll('.auth-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
   document.getElementById('tab-login').style.display = t === 'login' ? '' : 'none';
   document.getElementById('tab-register').style.display = t === 'register' ? '' : 'none';
+  document.getElementById('tab-web3').style.display = t === 'web3' ? '' : 'none';
   msg('');
+}
+function L(zh, en) { return (localStorage.getItem('tac_lang') === 'zh') ? zh : en; }
+let w3Message = '';
+async function w3Connect() {
+  if (!window.ethereum) { msg(L('未偵測到錢包，請手動輸入地址', 'No wallet detected — enter address manually'), true); return; }
+  try {
+    const accs = await ethereum.request({ method: 'eth_requestAccounts' });
+    if (accs && accs[0]) document.getElementById('w3-addr').value = accs[0];
+  } catch (e) { msg(L('連接錢包被拒', 'Wallet connection rejected'), true); }
+}
+async function w3GetNonce() {
+  const addr = document.getElementById('w3-addr').value.trim();
+  if (!addr) { msg(L('請先連接錢包或輸入地址', 'Connect wallet or enter address'), true); return; }
+  const { j } = await post('/api/auth/web3/nonce', { address: addr, chain_id: '1' });
+  if (!j.ok) { msg(j.message || L('取得登入訊息失敗', 'Failed to get challenge'), true); return; }
+  w3Message = j.message;
+  document.getElementById('w3-msg').value = w3Message;
+  // 有錢包：自動 personal_sign 後送出。
+  if (window.ethereum) {
+    try {
+      const sig = await ethereum.request({ method: 'personal_sign', params: [w3Message, addr] });
+      document.getElementById('w3-sig').value = sig;
+      await w3Verify();
+    } catch (e) { msg(L('簽名已取消，可於下方手動貼上簽名', 'Signature cancelled — paste it manually below'), true); }
+  } else {
+    msg(L('請以其他工具對上方訊息簽名後，貼上簽名並按「送出簽名登入」', 'Sign the message above with another tool, paste the signature, then submit.'));
+  }
+}
+async function w3Verify() {
+  const addr = document.getElementById('w3-addr').value.trim();
+  const sig = document.getElementById('w3-sig').value.trim();
+  if (!addr || !sig || !w3Message) { msg(L('請填妥地址、訊息與簽名', 'Address, message and signature required'), true); return; }
+  const { j } = await post('/api/auth/web3/verify', { address: addr, message: w3Message, signature: sig });
+  if (j.ok) { msg(L('錢包登入成功，重新載入…', 'Wallet login success, redirecting…')); setTimeout(() => location.href = '/', 600); }
+  else msg(j.message || L('錢包登入失敗', 'Wallet login failed'), true);
 }
 function msg(s, err) { const m = document.getElementById('auth-msg'); m.textContent = s; m.className = 'auth-msg' + (err ? ' err' : ''); }
 async function post(url, body) {
@@ -63,7 +115,9 @@ async function doRegister() {
 .auth-tab.active { background: #68BE8D; color: #f7f8fb; font-weight: 600; }
 .f-label { margin: 12px 0 6px; font-size: 13px; color: var(--muted, #5d6778); }
 .f-input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--line, #e2e6ee); background: var(--input, #f2f4f9); color: var(--text, #14161a); box-sizing: border-box; }
+textarea.f-input { resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11.5px; line-height: 1.5; }
 .btn.block { width: 100%; margin-top: 18px; }
+.btn.block:not(:first-of-type) { margin-top: 12px; }
 .auth-msg { margin-top: 14px; font-size: 13px; color: var(--good, #0ecb81); min-height: 18px; }
 .auth-msg.err { color: #f6465d; }
 </style>

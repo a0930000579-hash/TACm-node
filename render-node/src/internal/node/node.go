@@ -18,6 +18,8 @@ import (
 	"time"
 
 	"tacm/internal/aa"
+	"tacm/internal/aimarket"
+	"tacm/internal/aiverify"
 	bridgepkg "tacm/internal/bridge"
 	"tacm/internal/c2c"
 	"tacm/internal/chaindb"
@@ -29,13 +31,17 @@ import (
 	"tacm/internal/crypto"
 	"tacm/internal/defi"
 	"tacm/internal/dex"
+	"tacm/internal/dexv3"
 	"tacm/internal/ens"
 	"tacm/internal/exchange"
 	"tacm/internal/governance"
 	"tacm/internal/liquidstake"
 	"tacm/internal/oracle"
+	"tacm/internal/orderbook"
 	"tacm/internal/p2p"
+	"tacm/internal/perp"
 	"tacm/internal/rollup"
+	"tacm/internal/stateprune"
 	"tacm/internal/vm"
 	"tacm/internal/wallet"
 )
@@ -115,6 +121,12 @@ type Node struct {
 	defiSvc      *defi.Store
 	ensSvc       *ens.Store
 	c2cSvc       *c2c.Store
+	dexv3St      *dexv3.Store
+	perpSt       *perp.Store
+	aimSt        *aimarket.Store
+	aivSt        *aiverify.Store
+	obSt         *orderbook.Store
+	pruner       *stateprune.Pruner
 	authSvc      *AuthService
 
 	// M40 鏈上治理（提案/投票/參數執行；高度驅動）。
@@ -301,6 +313,53 @@ func New(cfg *config.Config, nodeID string, baseDifficulty int) (*Node, error) {
 	}
 	n.c2cSvc = cs2
 
+	// DEX V3 集中流動性（對標 Uniswap V3）：dexv3.db。
+	dexv3St, err := dexv3.Open(dataDir)
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	n.dexv3St = dexv3St
+
+	// AI 模型市場（對標 Bittensor/Ritual）：aimarket.db。
+	aimSt, err := aimarket.Open(dataDir)
+	if err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("aimarket open: %w", err)
+	}
+	n.aimSt = aimSt
+
+	// 鏈上訂單簿式現貨交易（對標 Binance orderbook；公開可驗證、鏈上託管）：orderbook.db。
+	obSt, err := orderbook.Open(dataDir)
+	if err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("orderbook open: %w", err)
+	}
+	n.obSt = obSt
+
+	// 跨鏈 AI 推理驗證（對標 Bittensor/Ritual 驗證網路）：aiverify.db。
+	aivSt, err := aiverify.Open(dataDir)
+	if err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("aiverify open: %w", err)
+	}
+	n.aivSt = aivSt
+
+	// 永續合約（對標 dYdX/GMX）：perp.db；標記價格源接 oracle。
+	perpSt, err := perp.Open(dataDir)
+	if err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("perp open: %w", err)
+	}
+	perpSt.SetPriceFn(func(sym string) (float64, bool) {
+		if n.oracleSvc == nil {
+			return 0, false
+		}
+		p, ok := n.oracleSvc.Get(sym)
+		return p.Price, ok
+	})
+	n.perpSt = perpSt
+
 	// 會員系統（註冊/登入/登出）：users.db。
 	as, err := OpenAuth(dataDir)
 	if err != nil {
@@ -376,6 +435,13 @@ func New(cfg *config.Config, nodeID string, baseDifficulty int) (*Node, error) {
 	// v102：TiUSD 市值錨定——TACm 市價注入（訂單簿最後成交價）＋市值上限自動銷毀。
 	// 無成交（未上市）時市價維持 0 → 上限按 1:0.330 兜底。
 	go n.priceCapLoop()
+
+	// v156 A1：狀態膨脹治理背景排程（保守預設：保留 50 萬塊、不動 live state、預設不自動 VACUUM），
+	// 週期清理/歸檔最終化歷史 blocks/txs/logs，預防 chain.db 無限膨脹導致 OOM 斷線。
+	n.pruner = stateprune.New(n.db, stateprune.Config{
+		Interval: time.Hour,
+		Prune:    chaindb.DefaultPruneConfig(),
+	})
 
 	return n, nil
 }
@@ -798,6 +864,10 @@ func (n *Node) ResumeConsensus() {
 
 // Close 停止出塊循環並關閉數據庫。
 func (n *Node) Close() error {
+	// 先停狀態治理排程，避免關庫過程中仍在清理歷史資料。
+	if n.pruner != nil {
+		_ = n.pruner.Close()
+	}
 	n.mu.Lock()
 	if !n.running {
 		n.mu.Unlock()
@@ -853,6 +923,21 @@ func (n *Node) Close() error {
 	}
 	if n.c2cSvc != nil {
 		_ = n.c2cSvc.Close()
+	}
+	if n.dexv3St != nil {
+		_ = n.dexv3St.Close()
+	}
+	if n.perpSt != nil {
+		_ = n.perpSt.Close()
+	}
+	if n.aimSt != nil {
+		_ = n.aimSt.Close()
+	}
+	if n.obSt != nil {
+		_ = n.obSt.Close()
+	}
+	if n.aivSt != nil {
+		_ = n.aivSt.Close()
 	}
 	if n.authSvc != nil {
 		_ = n.authSvc.Close()

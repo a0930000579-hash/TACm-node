@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% block title %}TAC AI Verify{% endblock %}
+{% block content %}
+<section class="pg-banner">
+  <div class="pg-txt"><h1 data-i18n="bn.aiv">Cross-chain AI Inference Verification</h1><p data-i18n="bn.aivSub">跨鏈 AI 推理驗證 · 驗證者質押 · 多數共識 · 獎懲對標 Bittensor / Ritual</p></div>
+  <svg viewBox="0 0 40 40" class="pg-art"><path d="M8 22l6 6L32 10" fill="none" stroke="#f0b90b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="20" cy="20" r="16" fill="none" stroke="#f0b90b" stroke-width="2" opacity=".35"/></svg>
+</section>
+<style>
+  .av-wrap{max-width:1180px;margin:0 auto}
+  .av-head{background:linear-gradient(135deg,#fff9e6,#fdfdfd);border:1px solid #f0e0b0;border-radius:16px;padding:18px 20px;color:#1e2329;display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+  .av-head .logo{width:48px;height:48px;border-radius:12px;background:#f0b90b;color:#1e2329;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;flex:none}
+  .av-head h2{margin:0;font-size:20px;font-weight:800;color:#b8860b}
+  .av-head .sub{font-size:12px;opacity:.75;margin-top:2px}
+  .av-stats{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+  .av-stats span{background:rgba(240,185,11,.12);border:1px solid rgba(240,185,11,.4);border-radius:999px;padding:6px 12px;font-size:12px;font-weight:700;color:#b8860b}
+  .av-addrbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+  .av-addrbar input{flex:1;min-width:220px;box-sizing:border-box;background:#f0f2f5;border:1px solid #e6eaee;border-radius:10px;color:#1e2329;padding:10px 12px;font-size:13px;font-family:ui-monospace,monospace}
+  .av-addrbar button{background:#f0b90b;color:#1e2329;border:none;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:800;cursor:pointer}
+  .av-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;align-items:start}
+  @media (max-width:980px){.av-grid{grid-template-columns:1fr 1fr}}
+  @media (max-width:640px){.av-grid{grid-template-columns:1fr}}
+  .av-card{background:#fafafa;border:1px solid #e6eaee;border-radius:14px;padding:16px;margin-bottom:14px}
+  .av-card h3{margin:0 0 12px;font-size:14px;color:#b8860b;font-weight:800;display:flex;align-items:center;gap:8px}
+  .av-card h3 .hint{font-size:11px;color:#707a8a;font-weight:500;margin-left:auto}
+  .av-field{margin-bottom:10px}
+  .av-field label{display:block;font-size:12px;color:#707a8a;margin-bottom:4px}
+  .av-field input,.av-field select,.av-field textarea{width:100%;box-sizing:border-box;background:#f0f2f5;border:1px solid #e6eaee;border-radius:10px;color:#1e2329;padding:10px 12px;font-size:13px;font-family:ui-monospace,monospace}
+  .av-btn{width:100%;background:#f0b90b;color:#1e2329;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:800;cursor:pointer}
+  .av-btn.ghost{background:transparent;border:1px solid #e6eaee;color:#1e2329;font-weight:700}
+  .av-btn:disabled{opacity:.5;cursor:not-allowed}
+  .av-msg{font-size:12px;margin-top:8px;min-height:16px}
+  .av-msg.ok{color:#0ecb81}.av-msg.err{color:#f6465d}
+  .av-row{display:flex;justify-content:space-between;gap:10px;padding:9px 2px;border-bottom:1px dashed #e6eaee;font-size:12px;align-items:center}
+  .av-row:last-child{border-bottom:none}
+  .av-row .k{color:#707a8a}.av-row .v{font-weight:700;color:#1e2329;font-family:ui-monospace,monospace}
+  .av-task{border:1px solid #e6eaee;border-radius:10px;padding:12px;margin-bottom:10px;background:#fff}
+  .av-task .top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+  .av-task .tid{font-weight:800;font-family:ui-monospace,monospace}
+  .av-badge{font-size:10px;font-weight:800;border-radius:6px;padding:2px 8px;text-transform:uppercase}
+  .av-badge.pending{background:#fff3cd;color:#8a6d00}
+  .av-badge.verified{background:#d4f7e6;color:#0a8a5f}
+  .av-badge.rejected{background:#ffd6db;color:#c0392b}
+  .av-badge.expired{background:#e6e8eb;color:#5a6472}
+  .av-task .meta{font-size:11px;color:#707a8a;margin-top:6px;font-family:ui-monospace,monospace;word-break:break-all;line-height:1.5}
+  .av-task .acts{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+  .av-task .acts button{flex:1;background:#f0f2f5;border:1px solid #e6eaee;border-radius:8px;padding:7px;font-size:12px;font-weight:700;cursor:pointer}
+  .av-task .acts button.approve{color:#0a8a5f}.av-task .acts button.reject{color:#c0392b}
+  .vtab{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+  .vtab button{background:#f0f2f5;border:1px solid #e6eaee;border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;font-weight:700;color:#707a8a}
+  .vtab button.on{background:#f0b90b;color:#1e2329;border-color:#f0b90b}
+</style>
+
+<div class="av-wrap">
+  <div class="av-head">
+    <div class="logo">AV</div>
+    <div><h2>TAC AI Verify <span style="font-size:12px;font-weight:600;opacity:.7">跨鏈推理驗證網路</span></h2>
+      <div class="sub" id="avSub">驗證者質押出獎 · 多數共識定案 · 作惡 slash</div></div>
+    <div class="av-stats"><span id="avTaskCount">0 tasks</span><span id="avVerCount">0 verifiers</span><span>min stake 10 TACm</span></div>
+  </div>
+
+  <div class="av-addrbar">
+    <input id="me" placeholder="0x…" value="">
+    <button onclick="connect()" data-i18n="en.connect">Connect</button>
+    <span id="topAddr" style="font-size:12px;color:#707a8a;font-family:ui-monospace,monospace"></span>
+  </div>
+
+  <div class="av-grid">
+    <div class="av-card">
+      <h3 data-i18n="av.infer">Run Inference + Verify <span class="hint">aimarket → verify</span></h3>
+      <div class="av-field"><label data-i18n="av.modelId">Model ID</label><input id="infModel" type="number" value="1"></div>
+      <div class="av-field"><label data-i18n="av.input">Input</label><textarea id="infInput" placeholder="hello"></textarea></div>
+      <div class="av-field"><label data-i18n="av.taskFee">Verify Task Fee (TACm)</label><input id="infFee" type="number" step="0.1" value="1"></div>
+      <button class="av-btn" onclick="doInfer()" data-i18n="av.inferBtn">Call Model & Submit Verify</button>
+      <div id="infMsg" class="av-msg"></div>
+    </div>
+
+    <div class="av-card">
+      <h3 data-i18n="av.stake">Verifier Stake <span class="hint" data-i18n="av.stakeHint">min 10 TACm</span></h3>
+      <div class="av-field"><label data-i18n="av.stakeAmt">Stake Amount (TACm)</label><input id="stakeAmt" type="number" step="0.1" value="10"></div>
+      <button class="av-btn" onclick="doStake()" data-i18n="av.stakeBtn">Register / Top-up Stake</button>
+      <button class="av-btn ghost" style="margin-top:8px" onclick="doWithdraw()" data-i18n="av.withdrawBtn">Withdraw (all exit)</button>
+      <div id="stakeMsg" class="av-msg"></div>
+    </div>
+
+    <div class="av-card">
+      <h3 data-i18n="av.submit">Submit Inference Result <span class="hint" data-i18n="av.submitHint">cross-chain</span></h3>
+      <div class="av-field"><label data-i18n="av.chain">Source Chain</label><input id="sbChain" placeholder="BSC / TACm" value="TACm"></div>
+      <div class="av-field"><label>Input CID</label><input id="sbCid" placeholder="Qm…"></div>
+      <div class="av-field"><label data-i18n="av.outHash">Expected Output Hash</label><input id="sbOut" placeholder="0x…"></div>
+      <div class="av-field"><label data-i18n="av.taskFee2">Task Fee (TACm)</label><input id="sbFee" type="number" step="0.1" value="1"></div>
+      <button class="av-btn" onclick="doSubmit()" data-i18n="av.submitBtn">Submit Task</button>
+      <div id="sbMsg" class="av-msg"></div>
+    </div>
+  </div>
+
+  <div class="av-grid">
+    <div style="grid-column:1 / -1">
+      <div class="av-card">
+        <h3 data-i18n="av.tasks">Tasks <span class="hint" data-i18n="av.tasksHint">pending / verified / rejected / expired</span></h3>
+        <div class="vtab">
+          <button class="on" onclick="loadTasks('')">All</button>
+          <button onclick="loadTasks('pending')">Pending</button>
+          <button onclick="loadTasks('verified')">Verified</button>
+          <button onclick="loadTasks('rejected')">Rejected</button>
+          <button onclick="loadTasks('expired')">Expired</button>
+        </div>
+        <div id="taskList"></div>
+      </div>
+    </div>
+    <div style="grid-column:1 / -1">
+      <div class="av-card">
+        <h3 data-i18n="av.verifiers">Verifier Leaderboard <span class="hint" data-i18n="av.verHint">reputation / stake / slash</span></h3>
+        <div id="verList"><div class="av-msg" style="color:#707a8a" data-i18n="av.noVer">No verifiers yet</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  var T = function(k, zh, en){ try { if (window.TAC_I18N && TAC_I18N.cur() === 'en') { return en; } } catch (e) {} return zh; };
+  var me = localStorage.getItem('tac_defi_addr') || '';
+  if(me) document.getElementById('me').value = me;
+
+  function show(id, cls, txt){ var e = document.getElementById(id); if(!e) return; e.className = 'av-msg ' + cls; e.textContent = txt; }
+  function addr(){ return document.getElementById('me').value.trim(); }
+  function connect(){ var v = addr(); if(!v){ show('sbMsg','err','Need address'); return; } localStorage.setItem('tac_defi_addr', v); document.getElementById('topAddr').textContent = v.slice(0,10)+'…'+v.slice(-6); }
+  if(me) document.getElementById('topAddr').textContent = me.slice(0,10)+'…'+me.slice(-6);
+
+  function post(url, body){
+    return fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body||{})})
+      .then(function(r){ return r.json(); });
+  }
+  function get(url){ return fetch(url).then(function(r){ return r.json(); }); }
+  function short(a){ if(!a) return ''; return a.slice(0,10)+'…'+a.slice(-6); }
+
+  function doStake(){
+    if(!addr()){ show('stakeMsg','err', T('needaddr','請先連接地址','Connect address first')); return; }
+    post('/api/aiverify/verifier/register', {address: addr(), stake: parseFloat(document.getElementById('stakeAmt').value||0)})
+      .then(function(d){ if(d.ok){ show('stakeMsg','ok', T('staked','質押成功','Staked OK')); loadVerifiers(); } else show('stakeMsg','err', d.error||'fail'); })
+      .catch(function(e){ show('stakeMsg','err', String(e)); });
+  }
+  function doWithdraw(){
+    if(!addr()){ show('stakeMsg','err','Need address'); return; }
+    post('/api/aiverify/verifier/withdraw', {address: addr(), amount: 0})
+      .then(function(d){ if(d.ok){ show('stakeMsg','ok', T('wd','已退場','Withdrawn')); loadVerifiers(); } else show('stakeMsg','err', d.error||'fail'); })
+      .catch(function(e){ show('stakeMsg','err', String(e)); });
+  }
+  function doSubmit(){
+    if(!addr()){ show('sbMsg','err','Need address'); return; }
+    post('/api/aiverify/task/submit', {
+      address: addr(), source_chain: document.getElementById('sbChain').value,
+      input_cid: document.getElementById('sbCid').value,
+      expected_output_hash: document.getElementById('sbOut').value,
+      task_fee: parseFloat(document.getElementById('sbFee').value||0)
+    }).then(function(d){ if(d.ok){ show('sbMsg','ok', T('submitted','已提交 task #','Submitted task #')+d.task.id); loadTasks(''); } else show('sbMsg','err', d.error||'fail'); })
+      .catch(function(e){ show('sbMsg','err', String(e)); });
+  }
+  function doInfer(){
+    if(!addr()){ show('infMsg','err','Need address'); return; }
+    post('/api/aiverify/infer', {
+      address: addr(), model_id: parseInt(document.getElementById('infModel').value||'1'),
+      input: document.getElementById('infInput').value, task_fee: parseFloat(document.getElementById('infFee').value||0)
+    }).then(function(d){ if(d.ok){ show('infMsg','ok', T('inferok','推理完成，驗證任務 #','Inference done, verify task #')+d.verify_task.id); loadTasks(''); } else show('infMsg','err', d.error||'fail'); })
+      .catch(function(e){ show('infMsg','err', String(e)); });
+  }
+
+  function doAttest(taskId, decision){
+    if(!addr()){ alert(T('needaddr','請先連接地址','Connect address first')); return; }
+    var ch = '';
+    if(decision === 'reject'){ ch = prompt(T('rejectHash','輸入你主張的正確 output hash','Enter your claimed correct output hash')) || ''; }
+    post('/api/aiverify/attest', {address: addr(), task_id: taskId, decision: decision, claim_hash: ch})
+      .then(function(d){ if(!d.ok){ alert(d.error||'fail'); } else loadTasks(''); })
+      .catch(function(e){ alert(String(e)); });
+  }
+
+  function loadTasks(status){
+    get('/api/aiverify/tasks' + (status? '?status='+status : '')).then(function(d){
+      if(!d.ok) return;
+      document.getElementById('avTaskCount').textContent = d.tasks.length + ' tasks';
+      var box = document.getElementById('taskList');
+      if(!d.tasks.length){ box.innerHTML = '<div class="av-msg" style="color:#707a8a">'+T('notasks','尚無任務','No tasks yet')+'</div>'; return; }
+      box.innerHTML = d.tasks.map(function(t){
+        return '<div class="av-task"><div class="top"><span class="tid">#'+t.id+'</span>'+
+          '<span class="av-badge '+t.status+'">'+t.status+'</span></div>'+
+          '<div class="meta">'+T('chain','來源鏈','chain')+': '+t.source_chain+' · model #'+t.model_id+' v'+(t.model_version||'-')+'<br>'+
+          T('fee','任務費','fee')+': '+t.task_fee+' TACm · '+T('by','提交者','by')+': '+short(t.submitter)+'<br>'+
+          T('out','期望 output','expected out')+': '+short(t.expected_output_hash)+'</div>'+
+          (t.status==='pending' ? '<div class="acts"><button class="approve" onclick="doAttest('+t.id+',\'approve\')">'+T('approve','✓ 驗證正確','Approve')+'</button>'+
+          '<button class="reject" onclick="doAttest('+t.id+',\'reject\')">'+T('reject','✗ 有誤','Reject')+'</button></div>' : '')+
+          '</div>';
+      }).join('');
+    });
+  }
+  function loadVerifiers(){
+    get('/api/aiverify/verifiers').then(function(d){
+      if(!d.ok) return;
+      document.getElementById('avVerCount').textContent = d.verifiers.length + ' verifiers';
+      var box = document.getElementById('verList');
+      if(!d.verifiers.length){ box.innerHTML = '<div class="av-msg" style="color:#707a8a">'+T('noVer','尚無驗證者','No verifiers yet')+'</div>'; return; }
+      box.innerHTML = d.verifiers.map(function(v,i){
+        return '<div class="av-row"><span class="k">#'+(i+1)+' '+short(v.address)+(v.enabled?'':' ('+T('off','退場','off')+')')+'</span>'+
+          '<span class="v">'+T('rep','聲譽','rep')+':'+v.reputation+' · '+T('stake2','質押','stake')+':'+v.stake+' · '+T('slashed','被罰','slashed')+':'+v.slashed_count+'</span></div>';
+      }).join('');
+    });
+  }
+  loadTasks(''); loadVerifiers();
+  setInterval(function(){ loadTasks(''); loadVerifiers(); }, 8000);
+</script>
+{% endblock %}
