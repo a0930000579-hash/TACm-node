@@ -93,12 +93,49 @@ func (n *Node) onNewBlock(height int64, hash string) {
 	if height <= n.FinalizedHeight() {
 		return
 	}
+	// v157：BFT 停滯視窗最終化 fallback——驗證節點失聯／未達 quorum 時
+	// BFT commit 停滯，依「視窗無重組」保守推進最終化高度（對標 Solana
+	// optimistic confirmation），避免最終化高度永久滯後。
+	n.applyFinalityFallback(height)
 	if h, _, _ := n.bftNode.RoundInfo(); h == height {
 		n.bftNode.ReceiveProposal(&hash, true)
 		return
 	}
 	n.bftNode.StartHeight(height)
 	n.bftNode.ReceiveProposal(&hash, true)
+}
+
+// finalityFallbackWindow：最終化 fallback 視窗（區塊數）。BFT commit 落後
+// 超過該視窗時，允許把最終化高度推進到 tip-window+1（該深度視為不可逆）。
+const finalityFallbackWindow = 256
+
+// applyFinalityFallback 在 BFT 未達 quorum 而停滯時，保守推進最終化高度：
+// 僅在 tip 已跟上（落差不超過視窗）時，把 finalized 推到 tip-window+1，
+// 且不超過本次新塊高度。任一條件不符則不動，維持 BFT 語義。
+func (n *Node) applyFinalityFallback(h int64) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	if n.finalizedH >= h || h-n.finalizedH < finalityFallbackWindow {
+		return
+	}
+	tip := int64(0)
+	if n.db != nil {
+		tip = n.db.GetTipHeight()
+	}
+	if tip == 0 {
+		tip = h
+	}
+	if tip-h > finalityFallbackWindow {
+		return // catch-up 中，落後過多時不推進
+	}
+	cand := tip - finalityFallbackWindow + 1
+	if cand <= n.finalizedH {
+		return
+	}
+	if cand > h {
+		cand = h
+	}
+	n.finalizedH = cand
 }
 
 // handleIncomingViewChange 接收網絡 view-change 票（M12 硬化）：驗證身份與簽名後
