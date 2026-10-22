@@ -7,12 +7,14 @@
 package defi
 
 import (
+	"errors"
 	"database/sql"
 	"fmt"
 	"math"
 	"os"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -25,10 +27,71 @@ const (
 	poolPrefix     = "defi_lp_"     // 流動性池帳戶前綴（defi_lp_{pool_id}）
 )
 
+// GetSetting 讀取 DeFi 治理設定（defi_settings 表；不存在回空字串）。
+func (s *Store) GetSetting(key string) (string, error) {
+	var v string
+	err := s.db.QueryRow(`SELECT value FROM defi_settings WHERE key=?`, key).Scan(&v)
+	if err == sql.ErrNoRows {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	return v, nil
+}
+
+// SetSetting 寫入 DeFi 治理設定（UPSERT）。
+func (s *Store) SetSetting(key, value string) error {
+	_, err := s.db.Exec(`INSERT INTO defi_settings (key, value) VALUES (?, ?)
+		ON CONFLICT(key) DO UPDATE SET value=excluded.value`, key, value)
+	if err == nil && key == "defi.borrow_rate" {
+		s.invalidateBorrowRateCache()
+	}
+	return err
+}
+
+// BorrowRate 讀取參數化借貸年利率（v118：settings defi.borrow_rate 覆寫；預設 0.10＝10%）。
+// 範圍限制 [0,1]；非法值回預設，避免利率失控。1s 記憶體快取，避免持有連線的迴圈內查詢死鎖。
+func (s *Store) BorrowRate() float64 {
+	s.rateMu.Lock()
+	defer s.rateMu.Unlock()
+	if s.rateInit && time.Since(s.rateAt) < time.Second {
+		return s.rateVal
+	}
+	r := annualInterest
+	if v, err := s.GetSetting("defi.borrow_rate"); err == nil && v != "" {
+		if f, ferr := strconv.ParseFloat(v, 64); ferr == nil && f >= 0 && f <= 1 {
+			r = f
+		}
+	}
+	s.rateAt = time.Now()
+	s.rateVal = r
+	s.rateInit = true
+	return r
+}
+
+// SetSetting 寫入後失效利率快取，讓治理設定立即生效。
+func (s *Store) invalidateBorrowRateCache() {
+	s.rateMu.Lock()
+	s.rateInit = false
+	s.rateMu.Unlock()
+}
+
 // Store DeFi 資料庫（SQLite）。
 type Store struct {
 	db             *sql.DB
 	CompoundMinSec int64 // Vault 復投最小間隔（秒，預設 3600；測試可用 env TAC_VAULT_COMPOUND_MIN_SEC 覆蓋）
+	// v84：pools/markets 2 秒記憶體快取——降低 SQLite 讀壓（手機端 8 秒輪詢時尤其明顯）。
+	mu         sync.Mutex
+	poolsAt    time.Time
+	poolsVal   []Pool
+	marketsAt  time.Time
+	marketsVal []LendingMarket
+	// v118：borrowRate 快取（1s TTL）——BorrowRate 不可在持有 rows 連線的迴圈內查 DB（MaxOpenConns=1 死鎖）。
+	rateMu   sync.Mutex
+	rateAt   time.Time
+	rateVal  float64
+	rateInit bool
 }
 
 // Pool 流動性池視圖。
@@ -232,6 +295,19 @@ CREATE TABLE IF NOT EXISTS defi_cdps (
   updated_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_vault_addr ON defi_vault_positions(address, vault_id);
+CREATE TABLE IF NOT EXISTS defi_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL DEFAULT ''
+);
+CREATE TABLE IF NOT EXISTS defi_flash_loans (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  address TEXT NOT NULL,
+  asset TEXT NOT NULL,
+  amount REAL NOT NULL,
+  fee REAL NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_flash_addr ON defi_flash_loans(address, id DESC);
 `
 
 // Open 開啟 DeFi 資料庫並種子預設池/市場（照 Python seed）。
@@ -269,13 +345,7 @@ func (s *Store) Close() error { return s.db.Close() }
 
 // seedDefault 種子預設流動性池與借貸市場（照 Python _seed_default_data）。
 func (s *Store) seedDefault() error {
-	var n int
-	if err := s.db.QueryRow(`SELECT COUNT(1) FROM defi_pools`).Scan(&n); err != nil {
-		return fmt.Errorf("defi: 檢查種子: %w", err)
-	}
-	if n > 0 {
-		return nil
-	}
+	// v79：冪等補種——即使舊庫已有部分池/市場，缺的也會自動補齊（不再因 count>0 直接跳過）。
 	now := time.Now().Unix()
 	pools := [][9]float64{
 		{50000, 500000, 15811.39, 500, 0.45, 0, 0, 0, 0}, // TACM/USDT
@@ -285,9 +355,49 @@ func (s *Store) seedDefault() error {
 	pairNames := []string{"TACM/USDT", "TACM/TIUSD", "TIUSD/USDT"}
 	tokens := [][2]string{{"TACm", "USDT"}, {"TACm", "TIUSD"}, {"TIUSD", "USDT"}}
 	for i, p := range pools {
+		var one int
+		if err := s.db.QueryRow(`SELECT COUNT(1) FROM defi_pools WHERE pair=?`, pairNames[i]).Scan(&one); err != nil {
+			return fmt.Errorf("defi: 檢查種子池: %w", err)
+		}
+		if one > 0 {
+			continue
+		}
 		if _, err := s.db.Exec(`INSERT INTO defi_pools(pair, token0, token1, reserve0, reserve1, total_lp, reward_token, reward_per_day, apr, created_at)
 			VALUES(?,?,?,?,?,?,?,?,?,?)`, pairNames[i], tokens[i][0], tokens[i][1], p[0], p[1], p[2], "TACm", p[3], p[4], now); err != nil {
 			return fmt.Errorf("defi: 種子池: %w", err)
+		}
+	}
+	// v91：池數據自癒——既有池若 reserve/total_lp 無效（≤0 / NaN / Inf），重建創世值，
+	// 避免歷史污染導致「添加流動性 LP 為 0」。
+	seedRes := map[string][3]float64{
+		"TACM/USDT":   {50000, 500000, 15811.39},
+		"TACM/TIUSD":  {30000, 300000, 9486.83},
+		"TIUSD/USDT":  {100000, 99500, 9974.97},
+	}
+	prows, err := s.db.Query(`SELECT id, pair, reserve0, reserve1, total_lp FROM defi_pools`)
+	if err != nil {
+		return fmt.Errorf("defi: 檢查池健康: %w", err)
+	}
+	type prow struct{ id int64; pair string; r0, r1, tl float64 }
+	var needFix []prow
+	for prows.Next() {
+		var q prow
+		if err := prows.Scan(&q.id, &q.pair, &q.r0, &q.r1, &q.tl); err != nil {
+			prows.Close()
+			return fmt.Errorf("defi: 讀取池健康: %w", err)
+		}
+		if q.r0 <= 0 || q.r1 <= 0 || q.tl <= 0 || math.IsNaN(q.r0) || math.IsNaN(q.r1) || math.IsNaN(q.tl) || math.IsInf(q.r0, 0) || math.IsInf(q.r1, 0) || math.IsInf(q.tl, 0) {
+			needFix = append(needFix, q)
+		}
+	}
+	prows.Close()
+	for _, q := range needFix {
+		sr, ok := seedRes[q.pair]
+		if !ok {
+			continue
+		}
+		if _, err := s.db.Exec(`UPDATE defi_pools SET reserve0=?, reserve1=?, total_lp=? WHERE id=?`, sr[0], sr[1], sr[2], q.id); err != nil {
+			return fmt.Errorf("defi: 池自癒 %s: %w", q.pair, err)
 		}
 	}
 	markets := [][7]float64{
@@ -295,8 +405,44 @@ func (s *Store) seedDefault() error {
 		{200000, 50000, 0.08, 0.15, 0.65, 0.75, 1},
 		{300000, 80000, 0.05, 0.10, 0.80, 0.90, 1},
 	}
-	marketAssets := []string{"USDT", "TACm", "TIUSD"}
+	marketAssets := []string{"USDT", "TACm", "TIUSD"} // wallet canonical 為大寫 TIUSD
+	// v90：資產名統一為 wallet canonical 大寫 "TIUSD"。
+	// 修 v89 把 db 誤改小寫 'TiUSD' 導致 seedAccountIfEmpty 解析資產失敗、節點起不來。
+	// db 中無論 'TiUSD' 小寫或 'TIUSD' 大寫，全部歸一為大寫 'TIUSD'。
+	{
+		var hasUp int
+		_ = s.db.QueryRow(`SELECT COUNT(1) FROM defi_lending_markets WHERE asset='TIUSD'`).Scan(&hasUp)
+		var hasLo int
+		_ = s.db.QueryRow(`SELECT COUNT(1) FROM defi_lending_markets WHERE asset='TiUSD'`).Scan(&hasLo)
+		if hasUp > 0 && hasLo > 0 {
+			var tDep, tBor float64
+			_ = s.db.QueryRow(`SELECT total_deposit, total_borrow FROM defi_lending_markets WHERE asset='TiUSD'`).Scan(&tDep, &tBor)
+			if _, err := s.db.Exec(`UPDATE defi_lending_markets SET total_deposit=total_deposit+?, total_borrow=total_borrow+? WHERE asset='TIUSD'`, tDep, tBor); err != nil {
+				return fmt.Errorf("defi: 合併市場: %w", err)
+			}
+			if _, err := s.db.Exec(`DELETE FROM defi_lending_markets WHERE asset='TiUSD'`); err != nil {
+				return fmt.Errorf("defi: 清理小寫市場: %w", err)
+			}
+		} else if hasLo > 0 {
+			if _, err := s.db.Exec(`UPDATE defi_lending_markets SET asset='TIUSD' WHERE asset='TiUSD'`); err != nil {
+				return fmt.Errorf("defi: 市場資產歸一: %w", err)
+			}
+		}
+		if _, err := s.db.Exec(`UPDATE defi_loans SET borrow_asset='TIUSD' WHERE borrow_asset='TiUSD'`); err != nil {
+			return fmt.Errorf("defi: 貸款資產歸一: %w", err)
+		}
+		if _, err := s.db.Exec(`UPDATE defi_loans SET collateral_asset='TIUSD' WHERE collateral_asset='TiUSD'`); err != nil {
+			return fmt.Errorf("defi: 抵押資產歸一: %w", err)
+		}
+	}
 	for i, m := range markets {
+		var one int
+		if err := s.db.QueryRow(`SELECT COUNT(1) FROM defi_lending_markets WHERE asset=?`, marketAssets[i]).Scan(&one); err != nil {
+			return fmt.Errorf("defi: 檢查種子市場: %w", err)
+		}
+		if one > 0 {
+			continue
+		}
 		if _, err := s.db.Exec(`INSERT INTO defi_lending_markets(asset, total_deposit, total_borrow, deposit_apr, borrow_apr, collateral_factor, liquidation_threshold, enabled)
 			VALUES(?,?,?,?,?,?,?,?)`, marketAssets[i], m[0], m[1], m[2], m[3], m[4], m[5], int(m[6])); err != nil {
 			return fmt.Errorf("defi: 種子市場: %w", err)
@@ -320,6 +466,13 @@ func (s *Store) seedDefault() error {
 		{"TACm AI", "TACA", "USDT", "TACm AI 智能合約和預言機服務代幣", 1.0, 100000, 100, 10000, startOff + day*6, startOff + day*9},
 	}
 	for _, pj := range projects {
+		var one int
+		if err := s.db.QueryRow(`SELECT COUNT(1) FROM defi_ido_projects WHERE symbol=?`, pj.symbol).Scan(&one); err != nil {
+			return fmt.Errorf("defi: 檢查種子 IDO: %w", err)
+		}
+		if one > 0 {
+			continue
+		}
 		if _, err := s.db.Exec(`INSERT INTO defi_ido_projects(name, symbol, token_price, raise_target, raise_asset, min_buy, max_buy, start_time, end_time, status, description, created_at)
 			VALUES(?,?,?,?,?,?,?,?,?,'upcoming',?,?)`,
 			pj.name, pj.symbol, pj.price, pj.target, pj.asset, pj.minBuy, pj.maxBuy, now+pj.startIn, now+pj.endIn, pj.desc, now); err != nil {
@@ -336,6 +489,13 @@ func (s *Store) seedDefault() error {
 		{"TiUSD 活利寶", "flexible_saving", "TIUSD", "靈活存取，每日結息，低風險穩定收益", 200000, 0.08, 10, 0.05},
 	}
 	for _, v := range vaults {
+		var one int
+		if err := s.db.QueryRow(`SELECT COUNT(1) FROM defi_vaults WHERE name=?`, v.name).Scan(&one); err != nil {
+			return fmt.Errorf("defi: 檢查種子 Vault: %w", err)
+		}
+		if one > 0 {
+			continue
+		}
 		if _, err := s.db.Exec(`INSERT INTO defi_vaults(name, strategy, underlying_asset, total_assets, total_shares, apr, min_deposit, performance_fee, status, description, created_at)
 			VALUES(?,?,?,?,?,?,?,?,'active',?,?)`,
 			v.name, v.strategy, v.asset, v.total, v.total, v.apr, v.minDep, v.fee, v.desc, now); err != nil {
@@ -350,6 +510,13 @@ func PoolAccount(poolID int64) string { return fmt.Sprintf("%s%d", poolPrefix, p
 
 // Pools 全部流動性池。
 func (s *Store) Pools() ([]Pool, error) {
+	s.mu.Lock()
+	if time.Since(s.poolsAt) < 2*time.Second {
+		out := append([]Pool(nil), s.poolsVal...)
+		s.mu.Unlock()
+		return out, nil
+	}
+	s.mu.Unlock()
 	rows, err := s.db.Query(`SELECT id, pair, token0, token1, reserve0, reserve1, total_lp, reward_token, reward_per_day, apr, created_at FROM defi_pools ORDER BY id`)
 	if err != nil {
 		return nil, fmt.Errorf("defi: 讀取池: %w", err)
@@ -364,7 +531,13 @@ func (s *Store) Pools() ([]Pool, error) {
 		}
 		out = append(out, p)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	s.mu.Lock()
+	s.poolsAt, s.poolsVal = time.Now(), out
+	s.mu.Unlock()
+	return out, nil
 }
 
 // GetPool 單個池。
@@ -444,8 +617,8 @@ func (s *Store) AddLiquidity(address string, poolID int64, amount0, amount1 floa
 		lp1 := amount1 * pool.TotalLP / pool.Reserve1
 		lp = math.Min(lp0, lp1)
 	}
-	if lp <= 0 {
-		return 0, fmt.Errorf("LP 數量計算錯誤")
+	if lp <= 0 || math.IsNaN(lp) || math.IsInf(lp, 0) {
+		return 0, fmt.Errorf("LP 計算錯誤：池%d reserve0=%.4f reserve1=%.4f total_lp=%.4f（請回報）", poolID, pool.Reserve0, pool.Reserve1, pool.TotalLP)
 	}
 	now := time.Now().Unix()
 	if _, err := s.db.Exec(`UPDATE defi_pools SET reserve0=reserve0+?, reserve1=reserve1+?, total_lp=total_lp+? WHERE id=?`,
@@ -515,6 +688,37 @@ func (s *Store) RemoveLiquidity(address string, positionID int64, lpAmount float
 }
 
 // LoanByID 單筆貸款。
+// AllLoans 返回全鏈借款頭寸（資產中心監控用，不區分帳戶）。
+func (s *Store) AllLoans() ([]Loan, error) {
+	rows, err := s.db.Query(`SELECT id, address, collateral_asset, collateral_amount, borrow_asset, borrow_amount,
+		collateral_value, loan_value, ltv, liquidation_price, interest_accrued, status, last_update, created_at
+		FROM defi_loans ORDER BY id ASC`)
+	if err != nil {
+		return nil, fmt.Errorf("defi: 讀借款頭寸: %w", err)
+	}
+	defer rows.Close()
+	out := make([]Loan, 0, 16)
+	for rows.Next() {
+		var l Loan
+		if err := rows.Scan(&l.ID, &l.Address, &l.CollateralAsset, &l.CollateralAmount, &l.BorrowAsset, &l.BorrowAmount,
+			&l.CollateralValue, &l.LoanValue, &l.LTV, &l.LiquidationPrice, &l.InterestAccrued, &l.Status, &l.LastUpdate, &l.CreatedAt); err != nil {
+			return nil, fmt.Errorf("defi: 掃借款頭寸: %w", err)
+		}
+		out = append(out, l)
+	}
+	return out, rows.Err()
+}
+
+// LoanTotals 返回全鏈借款聚合：總借款 / 總抵押（價值） / 活躍筆數。
+func (s *Store) LoanTotals() (totalBorrow, totalCollateral float64, active int64, err error) {
+	row := s.db.QueryRow(`SELECT COALESCE(SUM(borrow_amount),0), COALESCE(SUM(collateral_value),0),
+		COUNT(CASE WHEN status='active' THEN 1 END) FROM defi_loans`)
+	if err = row.Scan(&totalBorrow, &totalCollateral, &active); err != nil {
+		return 0, 0, 0, fmt.Errorf("defi: 借款聚合: %w", err)
+	}
+	return totalBorrow, totalCollateral, active, nil
+}
+
 func (s *Store) LoanByID(id int64) (*Loan, error) {
 	row := s.db.QueryRow(`SELECT id, address, collateral_asset, collateral_amount, borrow_asset, borrow_amount,
 		collateral_value, loan_value, ltv, liquidation_price, interest_accrued, status, last_update, created_at
@@ -582,7 +786,13 @@ func (s *Store) LendingMarkets() ([]LendingMarket, error) {
 		}
 		out = append(out, m)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	s.mu.Lock()
+	s.marketsAt, s.marketsVal = time.Now(), out
+	s.mu.Unlock()
+	return out, nil
 }
 
 // GetMarket 單個借貸市場。
@@ -700,11 +910,11 @@ func (s *Store) Borrow(address, collateralAsset string, collateralAmount float64
 }
 
 // interestFor 計算應計利息（10% 年利率，照 Python）。
-func interestFor(principal float64, from, now int64) float64 {
+func interestFor(principal float64, from, now int64, rate float64) float64 {
 	if now <= from {
 		return 0
 	}
-	return principal * annualInterest * (float64(now-from) / 31536000)
+	return principal * rate * (float64(now-from) / 31536000)
 }
 
 // RepayLoan 還款（照 Python：全額含息→repaid＋歸還抵押；部分→減少本金）。
@@ -724,7 +934,7 @@ func (s *Store) RepayLoan(address string, loanID int64, amount float64) (map[str
 		return nil, fmt.Errorf("defi: 查詢貸款: %w", err)
 	}
 	now := time.Now().Unix()
-	interest := interestFor(l.BorrowAmount, l.LastUpdate, now)
+	interest := interestFor(l.BorrowAmount, l.LastUpdate, now, s.BorrowRate())
 	totalOwed := l.BorrowAmount + interest
 	out := map[string]float64{}
 	if amount >= totalOwed {
@@ -789,12 +999,20 @@ func (s *Store) MyLoans(address string) ([]Loan, error) {
 			&l.CollateralValue, &l.LoanValue, &l.LTV, &l.LiquidationPrice, &l.InterestAccrued, &l.Status, &l.LastUpdate, &l.CreatedAt); err != nil {
 			return nil, err
 		}
-		if l.Status == "active" {
-			l.InterestNow = interestFor(l.BorrowAmount, l.LastUpdate, now)
-		}
 		out = append(out, l)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	// v118：先釋放 rows 連線（MaxOpenConns=1）再計算利息，避免迴圈內查詢死鎖；rate 僅查一次。
+	rows.Close()
+	rate := s.BorrowRate()
+	for i := range out {
+		if out[i].Status == "active" {
+			out[i].InterestNow = interestFor(out[i].BorrowAmount, out[i].LastUpdate, now, rate)
+		}
+	}
+	return out, nil
 }
 
 // ==================== IDO 平台 ====================
@@ -1042,6 +1260,63 @@ func (s *Store) Vaults() ([]Vault, error) {
 		out = append(out, v)
 	}
 	return out, rows.Err()
+}
+
+// SetVaultParams 金庫治理參數（績效費率/最低存款/狀態）——v125 參數化治理。
+func (s *Store) SetVaultParams(id int64, perfFee, minDeposit *float64, status *string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var sets []string
+	var args []any
+	if perfFee != nil {
+		if *perfFee < 0 || *perfFee > 1 {
+			return errors.New("defi: performance_fee must be in [0,1]")
+		}
+		sets = append(sets, "performance_fee=?")
+		args = append(args, *perfFee)
+	}
+	if minDeposit != nil {
+		if *minDeposit < 0 {
+			return errors.New("defi: min_deposit must be >= 0")
+		}
+		sets = append(sets, "min_deposit=?")
+		args = append(args, *minDeposit)
+	}
+	if status != nil {
+		if *status != "active" && *status != "paused" {
+			return errors.New("defi: status must be active or paused")
+		}
+		sets = append(sets, "status=?")
+		args = append(args, *status)
+	}
+	if len(sets) == 0 {
+		return errors.New("defi: no fields to update")
+	}
+	q := "UPDATE defi_vaults SET " + fmt.Sprintf("%s", joinComma(sets)) + " WHERE id=?"
+	args = append(args, id)
+	res, err := s.db.Exec(q, args...)
+	if err != nil {
+		return fmt.Errorf("defi: 更新金庫參數: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return errors.New("defi: vault not found")
+	}
+	return nil
+}
+
+func joinComma(ss []string) string {
+	out := ""
+	for i, v := range ss {
+		if i > 0 {
+			out += ","
+		}
+		out += v
+	}
+	return out
 }
 
 // GetVault 單個金庫。

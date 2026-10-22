@@ -1,6 +1,7 @@
 package node
 
 import (
+	"time"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -18,10 +19,12 @@ import (
 type route struct {
 	pattern string
 	h       http.HandlerFunc
+	desc    string
 }
 
 // RPCServer 暴露節點的 HTTP RPC 接口。
 type RPCServer struct {
+	routeDocs []routeDoc
 	node   *Node
 	mux    *http.ServeMux
 	routes []route
@@ -30,6 +33,39 @@ type RPCServer struct {
 	// M128：以太式過濾器狀態（eth_newFilter / getFilterChanges / uninstallFilter）。
 	filters   map[string]*ethFilter
 	filtersMu sync.Mutex
+	// v104：dashboard 聚合快取（5s TTL，避免每次掃 3000 筆 ledger）。
+	dashMu    sync.Mutex
+	dashCache map[string]*dashCacheItem
+	// v108：Webhook 通知去重（僅新警報推播）。
+	notifyMu     sync.Mutex
+	lastAlertSig string
+	workerOnce   sync.Once
+	// v133：personal_importRawKey 記憶體金鑰快取（不落盤；低 64 hex → priv）。
+	importedKeys map[string][]byte
+	importedMu   sync.Mutex
+}
+
+type dashCacheItem struct {
+	data map[string]any
+	at   time.Time
+}
+
+func (s *RPCServer) dashGet(key string, ttl time.Duration) map[string]any {
+	s.dashMu.Lock()
+	defer s.dashMu.Unlock()
+	if it, ok := s.dashCache[key]; ok && time.Since(it.at) < ttl {
+		return it.data
+	}
+	return nil
+}
+
+func (s *RPCServer) dashSet(key string, data map[string]any) {
+	s.dashMu.Lock()
+	defer s.dashMu.Unlock()
+	if s.dashCache == nil {
+		s.dashCache = make(map[string]*dashCacheItem)
+	}
+	s.dashCache[key] = &dashCacheItem{data: data, at: time.Now()}
 }
 
 // addRoute 同時註冊至自身 mux 並記錄，供 MountInto 回放。
@@ -38,6 +74,13 @@ func (s *RPCServer) addRoute(pattern string, h http.HandlerFunc) {
 	hh := s.limitWrap(h)
 	s.mux.HandleFunc(pattern, hh)
 	s.routes = append(s.routes, route{pattern: pattern, h: hh})
+	s.routeDocs = append(s.routeDocs, routeDoc{Pattern: pattern, Desc: ""})
+}
+
+// addRouteDoc 註冊路由並附說明（RPC 文檔頁用）。
+func (s *RPCServer) addRouteDoc(pattern, desc string, h http.HandlerFunc) {
+	s.addRoute(pattern, h)
+	s.routeDocs = append(s.routeDocs, routeDoc{Pattern: pattern, Desc: desc})
 }
 
 // MountInto 將 RPC 路由掛載至外部 mux（Web/RPC 同埠時由 Web 單一監聽）。
@@ -55,14 +98,30 @@ func (s *RPCServer) MountInto(mux *http.ServeMux) {
 	}
 }
 
+// routeDoc RPC 文檔項目。
+type routeDoc struct {
+	Pattern string `json:"pattern"`
+	Desc    string `json:"desc"`
+}
+
+// handleRPCDocs GET /api/rpc-doc — 回傳已註冊路由清單（文檔頁自動生成）。
+func (s *RPCServer) handleRPCDocs(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "routes": s.routeDocs})
+}
+
 // NewRPCServer 建立路由並註冊全部端點。
 func NewRPCServer(n *Node) *RPCServer {
 	mux := http.NewServeMux()
 	s := &RPCServer{node: n, mux: mux, limiter: newIPLimiter(rpcRateReadLimit, rpcRateWriteLimit), filters: make(map[string]*ethFilter)}
 
+	s.addRouteDoc("GET /api/rpc-doc", "RPC 路由文檔（JSON）", s.handleRPCDocs)
+	s.addRouteDoc("GET /api/alerts", "最近鏈上警報事件（30 天）", s.handleAlerts)
+	s.addRouteDoc("GET /api/alerts/config", "警報閾值/Webhook 配置", s.handleAlertConfig)
+	s.addRouteDoc("PUT /api/alerts/config", "更新警報閾值/Webhook 配置", s.handleAlertConfig)
 	s.addRoute("GET /health", s.handleHealth)
 	s.addRoute("GET /metrics", s.handleMetrics)
 	s.addRoute("GET /api/pos/validators", s.handlePosValidators)
+	s.addRouteDoc("GET /api/validators/takeovers", "Takeover history of this node: heights this node produced while covering for missing proposers (recent 20, desc).", s.handleValidatorTakeovers)
 	s.addRoute("POST /api/pos/register", s.handlePosRegister)
 	s.addRoute("POST /api/pos/stake", s.handlePosStake)
 	s.addRoute("GET /api/pos/slash_evidence", s.handlePosSlashEvidence)
@@ -90,6 +149,11 @@ func NewRPCServer(n *Node) *RPCServer {
 	s.addRoute("POST /api/miner/start", s.handleMinerStart)
 	s.addRoute("POST /api/miner/stop", s.handleMinerStop)
 	s.addRoute("GET /api/miners", s.handleMiners)
+	s.addRouteDoc("GET /api/defi/config", "DeFi 參數化治理（借貸利率，讀）", s.handleDefiConfig)
+	s.addRouteDoc("PUT /api/defi/config", "DeFi 參數化治理（借貸利率，寫）", s.handleDefiConfig)
+	s.addRouteDoc("GET /api/tacm/flows", "TACm 流向入口 API（14 類＋total_in/out）", s.handleTACMFlows)
+	s.addRouteDoc("GET /api/gov/invite", "邀請加成參數化治理（讀）", s.handleGovInvite)
+	s.addRouteDoc("PUT /api/gov/invite", "邀請加成參數化治理（寫 settings）", s.handleGovInvite)
 	s.addRoute("GET /api/miner/earnings", s.handleMinerEarnings)
 	s.addRoute("GET /api/chain/stats", s.handleChainStats)
 	s.addRoute("GET /api/exchange/pool", s.handleExchangePool)
@@ -142,6 +206,14 @@ func NewRPCServer(n *Node) *RPCServer {
 	s.addRoute("POST /api/wallet/transfer", s.handleWalletTransfer)
 	s.addRoute("POST /api/wallet/deposit", s.handleWalletDeposit)
 	s.addRoute("GET /api/tiusd/summary", s.handleTiUSDSummary)
+	s.addRoute("GET /api/tiusd/dashboard", s.handleTiUSDDashboard)
+	s.addRoute("GET /api/tacm/dashboard", s.handleTACmDashboard)
+	s.addRoute("GET /api/tacm/reserve-history", s.handleTACmReserveHistory)
+	s.addRoute("GET /api/tiusd/history", s.handleTiUSDHistory)
+	s.addRoute("GET /api/tiusd/reserve-history", s.handleTiUSDReserveHistory)
+	s.addRoute("GET /api/tiusd/positions", s.handleTiUSDPositions)
+	s.addRoute("GET /api/tiusd/export.csv", s.handleAssetExport)
+	s.addRoute("GET /api/tacm/export.csv", s.handleAssetExport)
 	// M31：移除公開 TiUSD 發行/銷毀——穩定幣僅由鏈上機制（供給層鑄造）產生，禁止私自鑄造。
 	s.addRoute("GET /api/exchange/balances", s.handleExchangeBalances)
 	s.addRoute("GET /api/exchange/orders", s.handleExchangeOrders)
@@ -149,6 +221,9 @@ func NewRPCServer(n *Node) *RPCServer {
 	s.addRoute("GET /api/exchange/book", s.handleExchangeBook)
 	s.addRoute("GET /api/exchange/klines", s.handleExchangeKlines)
 	s.addRoute("GET /api/exchange/mytrades", s.handleExchangeMyTrades)
+	s.addRoute("POST /api/exchange/stable-swap", s.handleStableSwap)
+	s.addRoute("POST /api/exchange/native-swap", s.handleNativeSwap)
+	s.addRoute("GET /api/exchange/stable-info", s.handleStableInfo)
 	s.addRoute("POST /api/exchange/order", s.handleExchangeOrder)
 	s.addRoute("POST /api/exchange/cancel", s.handleExchangeCancel)
 	s.addRoute("POST /api/exchange/flash", s.handleExchangeFlash)
@@ -173,6 +248,7 @@ func NewRPCServer(n *Node) *RPCServer {
 	s.addRoute("POST /api/defi/withdraw", s.handleDefiWithdraw)
 	s.addRoute("POST /api/defi/borrow", s.handleDefiBorrow)
 	s.addRoute("POST /api/defi/repay", s.handleDefiRepay)
+	s.addRoute("POST /api/defi/flash_loan", s.handleDefiFlashLoan)
 	s.addRoute("GET /api/defi/ido-projects", s.handleDefiIDOProjects)
 	s.addRoute("POST /api/defi/cdp/open", s.handleDefiCDPOpen)
 	s.addRoute("POST /api/defi/cdp/add", s.handleDefiCDPAdd)
@@ -188,6 +264,9 @@ func NewRPCServer(n *Node) *RPCServer {
 	s.addRoute("GET /api/defi/vaults", s.handleDefiVaults)
 	s.addRoute("GET /api/defi/my-vaults", s.handleDefiMyVaults)
 	s.addRoute("POST /api/defi/vault-deposit", s.handleDefiVaultDeposit)
+	s.addRouteDoc("GET /api/defi/vault/{id}", "DeFi vault detail (all parameters) for governance.", s.handleDefiVaultConfig)
+	s.addRouteDoc("POST /api/admin/set-admin", "Promote/demote an account to bridge admin (admin-only, requires login).", s.handleAdminSetAdmin)
+	s.addRouteDoc("PUT /api/defi/vault/{id}", "Governance: update vault parameters (performance_fee in [0,1], min_deposit >=0, status active|paused).", s.handleDefiVaultConfig)
 	s.addRoute("POST /api/defi/vault-withdraw", s.handleDefiVaultWithdraw)
 	s.addRoute("POST /api/defi/vault-compound/{id}", s.handleDefiVaultCompound)
 	s.addRoute("GET /api/c2c/ads", s.handleC2CAds)
@@ -243,6 +322,7 @@ func NewRPCServer(n *Node) *RPCServer {
 	// M152：鏈上預言機——喂價快照/單價/手動覆寫/歷史。
 	s.addRoute("GET /oracle/prices", s.handleOraclePrices)
 	s.addRoute("GET /oracle/price", s.handleOraclePrice)
+	s.addRouteDoc("GET /api/oracle/native", "原生資產喂價（TACm/TiUSD/USDT）", s.handleOracleNativePrices)
 	s.addRoute("POST /oracle/feed", s.handleOracleFeed)
 	s.addRoute("GET /oracle/history", s.handleOracleHistory)
 	s.addRoute("POST /oracle/feeder", s.handleOracleFeeder)
@@ -260,6 +340,7 @@ func NewRPCServer(n *Node) *RPCServer {
 	s.addRoute("GET /api/v1/delegations", s.handleIndexerDelegations)
 	s.addRoute("GET /api/v1/delegations/{delegator}", s.handleIndexerDelegator)
 	s.addRoute("GET /api/v1/validators", s.handleIndexerValidators)
+	s.addRouteDoc("GET /api/v1/validators/{address}", "Single validator detail (stake, status, delegation totals) for explorer.", s.handleIndexerValidatorOne)
 
 	// M156：質押委託（Staking Delegation）——委託/撤銷/狀態。
 	s.addRoute("POST /stake/delegate", s.handleStakeDelegate)
@@ -328,6 +409,7 @@ func NewRPCServer(n *Node) *RPCServer {
 	// 跨鏈橋
 	s.addRoute("GET /bridge/chains", s.handleBridgeChains)
 	s.addRoute("GET /bridge/stats", s.handleBridgeStats)
+	s.addRouteDoc("GET /api/bridge/chains", "跨鏈橋分鏈狀態/pending 明細", s.handleBridgeChains)
 	s.addRoute("GET /bridge/txs", s.handleBridgeTxs)
 	s.addRoute("POST /bridge/lock", s.handleBridgeLock)
 	s.addRoute("POST /bridge/burn", s.handleBridgeBurn)
@@ -341,10 +423,49 @@ func NewRPCServer(n *Node) *RPCServer {
 	s.addRoute("POST /bridge/resume", s.handleBridgeResume)
 	s.addRoute("GET /bridge/pause_status", s.handleBridgePauseStatus)
 	s.addRoute("GET /api/governance/proposals", s.handleGovernanceProposals)
+	s.addRoute("POST /api/liquidstake/deposit", s.handleLiquidstakeDeposit)
+	s.addRoute("POST /api/liquidstake/redeem", s.handleLiquidstakeRedeem)
+	s.addRoute("GET /api/liquidstake/balance", s.handleLiquidstakeBalance)
+	s.addRoute("GET /api/liquidstake/stats", s.handleLiquidstakeStats)
+	s.addRoute("GET /api/liquidstake/rate-history", s.handleLiquidstakeRateHistory)
+	s.addRoute("POST /api/liquidstake/rewards", s.handleLiquidstakeRewards)
+	s.addRoute("POST /api/liquidstake/apy", s.handleLiquidstakeSetAPY)
 	s.addRoute("GET /api/governance/params", s.handleGovernanceParams)
+	s.addRoute("GET /api/governance/votes", s.handleGovernanceVotes)
 	s.addRoute("POST /api/governance/propose", s.handleGovernancePropose)
 	s.addRoute("POST /api/governance/vote", s.handleGovernanceVote)
 	s.addRoute("GET /api/governance/config", s.handleGovernanceConfig)
+	// v129：治理委託投票（delegateVote）。
+	s.addRoute("POST /api/governance/delegate", s.handleGovernanceDelegate)
+	s.addRoute("POST /api/governance/undelegate", s.handleGovernanceUndelegate)
+	s.addRoute("GET /api/governance/delegations", s.handleGovernanceDelegations)
+	// v129：鏈上多簽錢包（Gnosis Safe 模式）。
+	s.addRoute("POST /api/multisig/create", s.handleMultisigCreate)
+	s.addRoute("GET /api/multisig/list", s.handleMultisigList)
+	s.addRoute("GET /api/multisig/info", s.handleMultisigInfo)
+	s.addRoute("POST /api/multisig/submit", s.handleMultisigSubmit)
+	s.addRoute("POST /api/multisig/confirm", s.handleMultisigConfirm)
+	s.addRoute("POST /api/multisig/execute", s.handleMultisigExecute)
+	s.addRoute("POST /api/multisig/cancel", s.handleMultisigCancel)
+	s.addRoute("GET /api/multisig/txs", s.handleMultisigTxs)
+	s.addRoute("GET /api/multisig/confirmations", s.handleMultisigConfirmations)
+	// v130：鏈上拍賣（Auction）。
+	s.addRouteDoc("POST /api/auction/create", "建立拍賣（賣方/品項/資產/起標價/結束高度）", s.handleAuctionCreate)
+	s.addRouteDoc("POST /api/auction/bid", "出價（需高於目前最高價）", s.handleAuctionBid)
+	s.addRouteDoc("POST /api/auction/settle", "結算拍賣（到期後執行，最高價得標）", s.handleAuctionSettle)
+	s.addRouteDoc("GET /api/auction/list", "拍賣列表（?status=open|sold|unsold）", s.handleAuctionList)
+	s.addRouteDoc("GET /api/auction/info", "單一拍賣詳情（?id=N）", s.handleAuctionInfo)
+	s.addRouteDoc("GET /api/auction/bids", "出價清單（?auction_id=N）", s.handleAuctionBids)
+	// v130：ZK 證明（批次承諾/包含證明/隱私承諾/防雙花）。
+	s.addRouteDoc("POST /api/zk/prove", "產生 ZK-Rollup 批次證明（承諾＋包含證明＋可選簽名）", s.handleZkProve)
+	s.addRouteDoc("POST /api/zk/verify", "驗證批次證明＋淨額檢查", s.handleZkVerify)
+	s.addRouteDoc("POST /api/zk/commit", "產生隱私承諾與 Nullifier（防雙花）", s.handleZkCommit)
+	s.addRouteDoc("GET /api/zk/status", "ZK 原語能力清單", s.handleZkStatus)
+	// v131：ECVRF 可驗證隨機數（公平抽籤/節點選舉）。
+	s.addRouteDoc("POST /api/vrf/keygen", "產生 ECVRF 密鑰對", s.handleVrfKeygen)
+	s.addRouteDoc("POST /api/vrf/prove", "以私鑰對訊息產生 VRF 證明與隨機輸出", s.handleVrfProve)
+	s.addRouteDoc("POST /api/vrf/verify", "以公鑰驗證 VRF 證明", s.handleVrfVerify)
+	s.addRouteDoc("GET /api/vrf/status", "VRF 方案能力清單", s.handleVrfStatus)
 
 	return s
 }

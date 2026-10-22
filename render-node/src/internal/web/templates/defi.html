@@ -2,6 +2,12 @@
 {% block title %}TAC DeFi · Liquidity & Lending{% endblock %}
 {% block content %}
 <style>
+@media (max-width:640px){
+  .table-wrap table{min-width:0 !important;font-size:12px}
+  .table-wrap th:nth-child(3),.table-wrap td:nth-child(3),
+  .table-wrap th:nth-child(4),.table-wrap td:nth-child(4),
+  .table-wrap th:nth-child(6),.table-wrap td:nth-child(6){display:none}
+}
   :root { --bn-bg:#f7f8fb; --bn-card:#ffffff; --bn-card2:#f2f4f9; --bn-line:#e2e6ee;
           --bn-txt:#14161a; --bn-sub:#5d6778; --bn-yellow:#fcd535; --bn-green:#0ecb81;
           --bn-red:#f6465d; --bn-blue:#3d8cff; }
@@ -49,16 +55,7 @@
   a { color:var(--bn-yellow); text-decoration:none; }
 </style>
 
-<div class="bn-top">
-  <div class="bn-logo"><b>TAC</b> DEFI</div>
-  <div class="bn-nav">
-    <a href="/">區塊瀏覽器</a>
-    <a href="/wallet">錢包</a>
-    <a href="/exchange">交易所</a>
-    <a href="/community">社群</a>
-    <a href="/mining">礦機</a>
-    <a href="/dashboard">儀表板</a>
-  </div>
+<div class="bn-top" style="display:none">
   <div class="bn-addr mono" id="topAddr" style="margin-left:auto;color:var(--bn-sub)">未連接</div>
 </div>
 
@@ -71,11 +68,9 @@
   </div>
 
   <div id="meBox" class="box" style="margin-bottom:12px">
-    <h3><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><circle cx="7.5" cy="15.5" r="4.5"/><path d="M11 12L21 2M17 6l3 3M14 9l2 2"/></svg> 身份（錢包地址）<button class="bn-btn" onclick="connect()" style="padding:6px 12px;font-size:12px">讀取</button></h3>
-    <div class="flow">
-      <div class="f"><input id="me" placeholder="tx0 address" style="font-family:ui-monospace,monospace"></div>
-      <div class="f" style="flex:2"><span class="sub">以地址為身份操作 DeFi；資產進出即時上鏈記帳（費率：TACm 2%／TiUSD 0.5%／USDT 1.25%）。</span></div>
-    </div>
+    <h3><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><circle cx="7.5" cy="15.5" r="4.5"/><path d="M11 12L21 2M17 6l3 3M14 9l2 2"/></svg> 身份（錢包地址）</h3>
+    <input id="me" placeholder="tx0 address" style="font-family:ui-monospace,monospace;width:100%;margin-bottom:6px" onchange="connect()">
+    <span class="sub" style="word-break:break-word;overflow-wrap:anywhere">以地址為身份操作 DeFi，資產進出即時上鏈記帳（費率：TACm 2%／TiUSD 0.5%／USDT 1.25%）。</span>
   </div>
 
   <!-- ============ 流動性挖礦 ============ -->
@@ -89,9 +84,9 @@
           <tbody id="pools"></tbody>
         </table></div>
         </div>
-        <div class="mini">＋ 添加流動性</div>
+        <div class="mini">＋ 添加流動性 <span id="lpPairName" class="chip">TACM/USDT</span></div>
         <div class="bn-form">
-          <select id="lpPool"><option value="">選擇交易對…</option></select>
+          <select id="lpPool"><option value="1">TACM/USDT</option><option value="2">TACM/TIUSD</option><option value="3">TIUSD/USDT</option></select>
           <div class="flow">
             <div class="f"><label id="lblT0">T0</label><input id="lpA0" type="number" step="any" placeholder="0.0"></div>
             <div class="f"><label id="lblT1">T1</label><input id="lpA1" type="number" step="any" placeholder="0.0"></div>
@@ -103,7 +98,7 @@
           </div>
           <label class="defi-ack"><input type="checkbox" id="lpAck"> 我已了解並接受無常損失風險</label>
           <button class="bn-btn" onclick="addLp()">加入流動性</button>
-          <div class="bn-msg" id="lpMsg"></div>
+          <div class="bn-msg" id="lpMsg"></div><div class="sub" style="margin-top:6px">DeFi · v95</div>
         </div>
       </div>
       <div class="box">
@@ -112,6 +107,17 @@
       </div>
     </div>
     <div class="box" style="margin-top:12px">
+      <h3><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg> TiUSD 穩定幣健康 <span class="chip">peg 1 USDT</span></h3>
+      <div class="table-wrap"><table style="min-width:540px">
+        <thead><tr><th>指標</th><th>數值</th></tr></thead>
+        <tbody id="tiUSDHealth">
+          <tr><td>TiUSD 流通量（供應）</td><td>載入中…</td></tr>
+          <tr><td>累計鑄造（抵押產生）</td><td>—</td></tr>
+          <tr><td>累計銷毀（還款回收）</td><td>—</td></tr>
+          <tr><td>錨定價格</td><td>—</td></tr>
+        </tbody>
+      </table></div>
+      <div class="mini">TiUSD 由「抵押 TACm 借出」產生（DAI 模式），1 TiUSD 錨定 1 USDT；流通上限＝TACm 總供應（1:1），下限 33% 由供給層自動補鑄。</div>
       <h3><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M12 3l7 3v6c0 5-3 7-7 9-4-2-7-4-7-9V6l7-3z"/></svg> 安全審計 <span class="chip">鏈上可驗證</span></h3>
         <div class="table-wrap"><table style="min-width:540px">
         <thead><tr><th>審計項目</th><th>狀態</th></tr></thead>
@@ -128,7 +134,7 @@
   </div>
 
   <!-- ============ IDO 發行 ============ -->
-  <section id="pan-ido" style="display:none">
+  <section class="panel" id="panel-ido">
     <div class="card">
       <h3>IDO 項目發行 <span class="chip">以 USDT 認購</span></h3>
       <div id="ido-list"></div>
@@ -139,7 +145,7 @@
     </div>
   </section>
   <!-- ============ 收益金庫 ============ -->
-  <section id="pan-vault" style="display:none">
+  <section class="panel" id="panel-vault">
     <div class="card">
       <h3>收益聚合器 <span class="chip">策略自動復投</span></h3>
       <div id="vault-list"></div>
@@ -149,6 +155,15 @@
       <div id="vault-mine"></div>
     </div>
   </section>
+  <!-- ============ TiUSD 流通閉環指引 ============ -->
+  <div class="panel">
+    <div class="grid">
+      <h3><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M4 19L12 5l8 14"/><path d="M4 12h16"/></svg> TiUSD 流通閉環（借出→花用→還款）</h3>
+      <div class="mini"><b>如何獲得 TiUSD：</b>① 抵押 TACm 借出（下方借貸市場）② <a href="/exchange/swap" style="color:#68BE8D;text-decoration:underline">閃兌：TACm→TiUSD（交易所）</a> ③ 穩定幣兌換：USDT→TiUSD 1:1（交易所閃兌頁）</div>
+      <div class="mini"><b>如何還款：</b>用 TACm 在交易所「閃兌」成 TiUSD → 回到本頁還款（還款即鏈上銷毀 TiUSD，回收供應）</div>
+      <div class="mini">TiUSD 就像 DAI：抵押產生、市場流通、還款回收——閉環成立，流通量由借貸與兌換需求驅動。</div>
+    </div>
+  </div>
   <!-- ============ 借貸市場 ============ -->
   <div class="panel" id="panel-lend">
     <div class="grid">
@@ -162,7 +177,7 @@
         </div>
         <div class="mini">存款／取款</div>
         <div class="bn-form">
-          <select id="lendAsset"><option value="">選擇資產…</option></select>
+          <select id="lendAsset"><option value="">選擇資產…</option><option value="USDT">USDT</option><option value="TACm">TACm</option><option value="TiUSD">TiUSD</option></select>
           <div class="flow">
             <div class="f"><input id="lendAmt" type="number" step="any" placeholder="amount"></div>
             <div class="f"><button class="bn-btn" onclick="lendDep()">存入</button><button class="bn-btn blue" onclick="lendWd()" style="margin-left:6px">取出</button></div>
@@ -172,11 +187,11 @@
         <div class="mini">抵押借款（抵押資產 × 抵押率 = 最大可借）</div>
         <div class="bn-form">
           <div class="flow">
-            <div class="f"><label>抵押資產</label><select id="colAsset"><option value="">選擇…</option></select></div>
+            <div class="f"><label>抵押資產</label><select id="colAsset"><option value="">選擇…</option><option value="TACm">TACm</option><option value="USDT">USDT</option><option value="TiUSD">TiUSD</option></select></div>
             <div class="f"><label>抵押數量</label><input id="colAmt" type="number" step="any" placeholder="0.0"></div>
           </div>
           <div class="flow">
-            <div class="f"><label>借款資產</label><select id="borrowAsset"><option value="">選擇…</option></select></div>
+            <div class="f"><label>借款資產</label><select id="borrowAsset"><option value="">選擇…</option><option value="TiUSD">TiUSD</option></select></div>
             <div class="f"><label>借款數量</label><input id="borrowAmt" type="number" step="any" placeholder="0.0"></div>
           </div>
           <button class="bn-btn" onclick="doBorrow()">借出</button>
@@ -189,13 +204,23 @@
         <div class="mini">我的貸款 <span class="sub">10% 年息、全額還款釋放抵押</span></div>
         <div id="myLoan"></div>
       </div>
+      <div class="box">
+        <h3>閃電貸 <span class="chip">無抵押 · 同交易償還 · 0.09% 費</span></h3>
+        <div class="mini">借出 →（選填 callback 合約）→ 同筆請求自動償還本金＋費；償還不足則整筆回滾。</div>
+        <div class="f"><label>借出資產</label><select id="flashAsset"><option value="TACm">TACm</option><option value="TIUSD">TiUSD</option><option value="USDT">USDT</option></select></div>
+        <div class="f"><label>金額</label><input id="flashAmount" type="number" step="any" placeholder="0.0"></div>
+        <div class="f"><label>callback 合約（選填）</label><input id="flashTarget" placeholder="0x…"></div>
+        <div class="f"><label>calldata（選填）</label><input id="flashCalldata" placeholder="0x…"></div>
+        <button class="bn-btn" onclick="doFlash()">閃電借入</button>
+        <div id="flashMsg" class="mini"></div>
+      </div>
     </div>
   </div>
-  <!-- ============ DAI 式 CDP（TiUSD 超額抵押真實化） ============ -->
+  <!-- ============ 超額抵押 CDP（TiUSD 超額抵押真實化） ============ -->
   <div class="panel" id="panel-cdp">
     <div class="grid">
       <div class="box">
-        <h3>DAI 式 CDP <span class="chip">TiUSD 超額抵押 · 抵押 TACm 借 TiUSD</span></h3>
+        <h3>超額抵押 CDP <span class="chip">TiUSD 超額抵押 · 抵押 TACm 借 TiUSD</span></h3>
         <div id="cdpMarket" class="mini">載入中…</div>
         <div class="mini">開倉（抵押率 ≥ 150% · 清算線 130% · 穩定費年息 2% · 清算罰金 5%）</div>
         <div class="bn-form">
@@ -229,34 +254,94 @@
   })();
 
 var me = localStorage.getItem('tac_defi_addr') || '';
-var api = (new URLSearchParams(location.search).get('rpc')) || (location.origin.replace(/:\d+$/, ':8781'));
+var api = (new URLSearchParams(location.search).get('rpc')) || location.origin;
 function esc(x){ var d=document.createElement('div'); d.textContent=(x==null?'':String(x)); return d.innerHTML; }
 function num(x){ return Number(x||0).toLocaleString('en-US',{maximumFractionDigits:6}); }
 function post(u,b){ return fetch(api+u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(function(r){return r.json().then(function(d){ if(!d.ok) throw new Error(d.message||(d.error||TAC_TE('失敗'))); return d; });}); }
-function get(u){ return fetch(api+u).then(function(r){return r.json();}); }
+function _fetch(u,opt,retry){
+  var ctrl=new AbortController(), to=setTimeout(function(){ctrl.abort();},10000);
+  return fetch(api+u,Object.assign({},opt,{signal:ctrl.signal})).then(function(r){
+    clearTimeout(to);
+    return r.json().then(function(d){ if(d&&(d.ok===false||d.error)) throw new Error(d.error||'API error'); return d; }).catch(function(e){
+      if(e instanceof SyntaxError){ throw new Error('Invalid API response'); }
+      throw e;
+    });
+  }).catch(function(e){
+    clearTimeout(to);
+    if(retry>0){ return new Promise(function(res){ setTimeout(function(){ res(_fetch(u,opt,retry-1)); }, 2000); }); }
+    throw new Error((e&&e.name==='AbortError')?'連線逾時（10秒），請檢查節點':((e&&e.message)||'Load failed')+' · 連線失敗');
+  });
+}
+function get(u){ return _fetch(u,null,2); }
+function post(u,b){ return _fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)},2); }
 function sw(p){ document.querySelectorAll('.tab').forEach(function(t){t.classList.toggle('on',t.dataset.p===p);}); document.querySelectorAll('.panel').forEach(function(x){x.classList.toggle('on',x.id==='panel-'+p);}); }
 function connect(){ me=document.getElementById('me').value.trim(); if(me) localStorage.setItem('tac_defi_addr',me); document.getElementById('topAddr').textContent=me?me.slice(0,10)+'…'+me.slice(-6):'未連接'; refresh(); }
-function setMe(){ document.getElementById('me').value=me; document.getElementById('topAddr').textContent=me?me.slice(0,10)+'…'+me.slice(-6):'未連接'; }
+function setMe(){ document.getElementById('me').value=me; document.getElementById('topAddr').textContent=me?me.slice(0,10)+'…'+me.slice(-6):'未連接'; refresh(); }
+
+function loadIdo(){
+  get('/api/defi/ido-projects').then(function(d){
+    var ps=d.projects||[];
+    document.getElementById('ido-list').innerHTML=ps.map(function(p){
+      var st=p.status==='active'?'<span class="chip" style="background:#e8f8f0;color:#0ecb81">進行中</span>':(p.status==='upcoming'?'<span class="chip" style="background:#e8f0ff;color:#3d8cff">即將開始</span>':'<span class="chip" style="background:#fdecea;color:#f6465d">已結束</span>');
+      return '<div class="pos-row"><div class="grow"><div class="v">'+esc(p.name)+' ('+esc(p.symbol)+') '+st+'</div>'+
+        '<div class="sub">認購價 '+num(p.token_price)+' '+esc(p.raise_asset)+' · 目標 '+num(p.raise_target)+' · 每人 '+num(p.min_buy)+'~'+num(p.max_buy)+'</div>'+
+        '<div class="sub">'+esc(p.description||'')+'</div></div>'+
+        '<button class="bn-btn" onclick="idoSub('+p.id+')" style="padding:6px 10px;font-size:12px">認購</button></div>';
+    }).join('')||'<div class="sub">暫無 IDO 項目</div>';
+  });
+}
+function idoSub(id){ if(!me){ alert('請先輸入地址'); return; } var a=prompt('認購數量 ('+TAC_TE('USDT')+')：'); if(!(parseFloat(a)>0)) return; post('/api/defi/ido-subscribe',{address:me,project_id:id,amount:parseFloat(a)}).then(function(r){ alert(r&&r.ok?'認購成功':'失敗：'+((r&&r.error)||'')); loadIdo(); }).catch(function(e){ alert('失敗：'+(e.message||e)); }); }
+function loadVault(){
+  get('/api/defi/vaults').then(function(d){
+    var vs=d.vaults||[];
+    document.getElementById('vault-list').innerHTML=vs.map(function(v){
+      return '<div class="pos-row"><div class="grow"><div class="v">'+esc(v.name)+' <span class="sub">'+num(v.apr*100).toFixed(1)+'% APR</span></div>'+
+        '<div class="sub">策略：'+esc(v.strategy)+' · 資產 '+esc(v.asset)+' · 存入 '+num(v.min_deposit)+' 起</div>'+
+        '<div class="sub">'+esc(v.description||'')+'</div></div>'+
+        '<button class="bn-btn" onclick="vaultDep('+v.id+')" style="padding:6px 10px;font-size:12px">存入</button></div>';
+    }).join('')||'<div class="sub">暫無金庫</div>';
+  });
+}
+function vaultDep(id){ if(!me){ alert('請先輸入地址'); return; } var a=prompt('存入數量：'); if(!(parseFloat(a)>0)) return; post('/api/defi/vault-deposit',{address:me,vault_id:id,amount:parseFloat(a)}).then(function(r){ alert(r&&r.ok?'存入成功':'失敗：'+((r&&r.error)||'')); loadVault(); }).catch(function(e){ alert('失敗：'+(e.message||e)); }); }
 
 function refresh(){
+  loadIdo(); loadVault();
   get('/api/defi/pools').then(function(d){
     var ps=d.pools||[];
     document.getElementById('pools').innerHTML = ps.map(function(p){
       return '<tr><td class="pair">'+esc(p.pair)+'</td><td>'+num(p.reserve0)+'</td><td>'+num(p.reserve1)+'</td><td>'+num(p.total_lp)+'</td><td class="up">'+(p.apr*100).toFixed(0)+'%</td><td><span class="chip">'+esc(p.reward_token)+' 獎勵</span></td></tr>';
-    }).join('')||'<tr><td colspan="6" class="sub">暫無池</td></tr>';
-    var sel=document.getElementById('lpPool'); sel.innerHTML=ps.map(function(p){return '<option value="'+p.id+'">'+esc(p.pair)+'</option>';}).join('');
-    if(ps[0]){ document.getElementById('lblT0').textContent=ps[0].token0; document.getElementById('lblT1').textContent=ps[0].token1; }
-    sel.onchange=function(){ var p=ps.find(function(x){return x.id==sel.value;}); if(p){ document.getElementById('lblT0').textContent=p.token0; document.getElementById('lblT1').textContent=p.token1; } };
+    }).join('')||'<tr><td colspan="6" class="sub">載入中／暫無池，請確認節點已啟動</td></tr>';
+    if (!ps.length) { ps=[{id:1,pair:'TACM/USDT',token0:'TACm',token1:'USDT'},{id:2,pair:'TACM/TIUSD',token0:'TACm',token1:'TIUSD'},{id:3,pair:'TIUSD/USDT',token0:'TIUSD',token1:'USDT'}]; }
+    var sel=document.getElementById('lpPool');
+    var curSel=sel.value;
+    sel.innerHTML=ps.map(function(p){return '<option value="'+p.id+'">'+esc(p.pair)+'</option>';}).join('');
+    if(ps.length && ps.some(function(x){return String(x.id)==curSel;})){ sel.value=curSel; }
+    function syncLabels(){ var p=ps.find(function(x){return String(x.id)==sel.value;}); if(p){ document.getElementById('lblT0').textContent=p.token0; document.getElementById('lblT1').textContent=p.token1; document.getElementById('lpPairName').textContent=p.pair; } }
+    syncLabels();
+    sel.onchange=syncLabels;
   });
+  get('/api/tiusd/summary').then(function(d){
+    var rows=document.getElementById('tiUSDHealth'); if(!rows) return;
+    rows.innerHTML='<tr><td>TiUSD 流通量（供應）</td><td>'+num(d.supply)+'</td></tr>'+
+      '<tr><td>累計鑄造（抵押產生）</td><td>'+num(d.total_minted)+'</td></tr>'+
+      '<tr><td>累計銷毀（還款回收）</td><td>'+num(d.total_burned)+'</td></tr>'+
+      '<tr><td>錨定價格</td><td>1 TiUSD ≈ '+esc(d.peg_price||'1.0')+' USDT</td></tr>';
+  }).catch(function(){});
   get('/api/defi/lending-markets').then(function(d){
     var ms=d.markets||[];
     document.getElementById('markets').innerHTML = ms.map(function(m){
-      return '<tr><td class="pair">'+esc(m.asset)+'</td><td>'+num(m.total_deposit)+'</td><td>'+num(m.total_borrow)+'</td><td class="up">'+(m.deposit_apr*100).toFixed(1)+'%</td><td class="warn">'+(m.borrow_apr*100).toFixed(1)+'%</td><td>'+(m.collateral_factor*100).toFixed(0)+'%</td></tr>';
+      return '<tr><td class="pair">'+esc(dA(m.asset))+'</td><td>'+num(m.total_deposit)+'</td><td>'+num(m.total_borrow)+'</td><td class="up">'+(m.deposit_apr*100).toFixed(1)+'%</td><td class="warn">'+(m.borrow_apr*100).toFixed(1)+'%</td><td>'+(m.collateral_factor*100).toFixed(0)+'%</td></tr>';
     }).join('')||'<tr><td colspan="6" class="sub">暫無市場</td></tr>';
-    var opts=ms.map(function(m){return '<option value="'+esc(m.asset)+'">'+esc(m.asset)+'</option>';}).join('');
+    function dA(a){ return a==='TIUSD' ? 'TiUSD' : a; }
+    var assetSet={}; ms.forEach(function(m){ assetSet[m.asset.toUpperCase()]=m.asset; });
+    ['TACm','TiUSD','USDT'].forEach(function(a){ if(!assetSet[a.toUpperCase()]) assetSet[a.toUpperCase()]=a; });
+    var avail=Object.values(assetSet);
+    var opts=avail.map(function(a){return '<option value="'+esc(a)+'">'+esc(dA(a))+'</option>';}).join('');
     document.getElementById('lendAsset').innerHTML='<option value="">選擇資產…</option>'+opts;
     document.getElementById('colAsset').innerHTML='<option value="">選擇…</option>'+opts;
     document.getElementById('borrowAsset').innerHTML='<option value="">選擇…</option>'+opts;
+    // CDP 只借 TiUSD（穩定幣），borrow 固定 TiUSD
+    document.getElementById('borrowAsset').value='TiUSD';
   });
   if(!me) return;
   get('/api/defi/my-liquidity?address='+encodeURIComponent(me)).then(function(d){
@@ -291,10 +376,13 @@ function addLp(){
   var a1=parseFloat(document.getElementById('lpA1').value||TAC_TE('0'));
   if(!pid||a0<=0||a1<=0){ document.getElementById('lpMsg').className='bn-msg err'; document.getElementById('lpMsg').textContent='請選擇池並輸入兩種代幣數量'; return; }
   if(!document.getElementById('lpAck').checked){ document.getElementById('lpMsg').className='bn-msg err'; document.getElementById('lpMsg').textContent=TAC_TE('請先勾選「我已了解並接受無常損失風險」'); return; }
+  var poolName=(document.getElementById('lpPool').selectedOptions[0]||{}).text||('池'+pid);
+  document.getElementById('lpMsg').className='bn-msg'; document.getElementById('lpMsg').textContent='';
   post('/api/defi/add-liquidity',{address:me,pool_id:pid,amount0:a0,amount1:a1}).then(function(d){
-    document.getElementById('lpMsg').className='bn-msg ok'; document.getElementById('lpMsg').textContent=' 添加成功 · 獲得 LP '+num(d.lp_amount);
+    if(!d.lp_amount||d.lp_amount<=0){ document.getElementById('lpMsg').className='bn-msg err'; document.getElementById('lpMsg').textContent=' 添加異常：LP 為 0（池 '+poolName+'）。回應：'+JSON.stringify(d)+' 請回報'; refresh(); return; }
+    document.getElementById('lpMsg').className='bn-msg ok'; document.getElementById('lpMsg').textContent=' 池 '+poolName+' 添加成功 · 獲得 LP '+num(d.lp_amount);
     document.getElementById('lpA0').value=''; document.getElementById('lpA1').value=''; refresh();
-  }).catch(function(e){ document.getElementById('lpMsg').className='bn-msg err'; document.getElementById('lpMsg').textContent=' '+e.message; });
+  }).catch(function(e){ document.getElementById('lpMsg').className='bn-msg err'; document.getElementById('lpMsg').textContent=' '+e.message+'（池 '+poolName+'）'; });
 }
 function claim(id){
   if(!me) return;
@@ -328,6 +416,18 @@ function doBorrow(){
   post('/api/defi/borrow',{address:me,collateral_asset:ca,collateral_amount:camt,borrow_asset:ba,borrow_amount:bamt}).then(function(d){
     document.getElementById('borrowMsg').className='bn-msg ok'; document.getElementById('borrowMsg').textContent=' 借款成功 #'+d.loan_id+' · '+num(d.borrow_amount)+' '+ba; refresh();
   }).catch(function(e){ document.getElementById('borrowMsg').className='bn-msg err'; document.getElementById('borrowMsg').textContent=' '+e.message; });
+}
+function doFlash(){
+  if(!me){ alert('請先登入'); return; }
+  var asset=document.getElementById('flashAsset').value, amt=parseFloat(document.getElementById('flashAmount').value||'0');
+  if(amt<=0){ document.getElementById('flashMsg').className='bn-msg err'; document.getElementById('flashMsg').textContent='請輸入金額'; return; }
+  var body={address:me,asset:asset,amount:amt};
+  var tg=document.getElementById('flashTarget').value.trim(); if(tg) body.target=tg;
+  var cd=document.getElementById('flashCalldata').value.trim(); if(cd) body.calldata=cd;
+  post('/api/defi/flash_loan',body).then(function(d){
+    document.getElementById('flashMsg').className='bn-msg ok';
+    document.getElementById('flashMsg').textContent=' 閃電貸完成 · '+num(d.amount)+' '+asset+' · 費 '+num(d.fee);
+  }).catch(function(e){ document.getElementById('flashMsg').className='bn-msg err'; document.getElementById('flashMsg').textContent=' '+e.message; });
 }
 function repay(id){
   if(!me) return;
@@ -401,8 +501,8 @@ function cdpLiq(id){
   post('/api/defi/cdp/liquidate',{address:me,cdp_id:id}).then(function(d){ alert('清算完成 · 取得 '+num(d.seizable)+' TACm'); refresh(); }).catch(function(e){ alert(' '+e.message); });
 }
 
-setMe();
+setMe(); refresh();
 if(me){ connect(); }
-setInterval(function(){ if(me) refresh(); }, 8000);
+setInterval(function(){ refresh(); }, 8000);
 </script>
 {% endblock %}
