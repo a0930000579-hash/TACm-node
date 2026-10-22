@@ -316,7 +316,7 @@ func TestSimulateCallGasOverrides(t *testing.T) {
 	slotKey.FillBytes(calldata[4:])
 
 	// 無 override：storage[5] = 0。
-	cr, err := m.SimulateCallGasOverrides(addr, creator, calldata, big.NewInt(0), m.DefaultGas(), nil)
+	cr, err := m.SimulateCallGasOverrides(addr, creator, calldata, big.NewInt(0), m.DefaultGas(), nil, false)
 	if err != nil || !cr.OK {
 		t.Fatalf("正常模擬失敗: %+v err=%v", cr, err)
 	}
@@ -332,7 +332,7 @@ func TestSimulateCallGasOverrides(t *testing.T) {
 			"state":   map[string]any{"0x5": "0x2a"},
 		},
 	}
-	cr2, err := m.SimulateCallGasOverrides(addr, creator, calldata, big.NewInt(0), m.DefaultGas(), overrides)
+	cr2, err := m.SimulateCallGasOverrides(addr, creator, calldata, big.NewInt(0), m.DefaultGas(), overrides, false)
 	if err != nil || !cr2.OK {
 		t.Fatalf("override 模擬失敗: %+v err=%v", cr2, err)
 	}

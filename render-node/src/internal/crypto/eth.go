@@ -31,26 +31,42 @@ func Keccak256(parts ...[]byte) []byte {
 // EthTx 為解碼後的 EIP-155 類型 0 交易。
 type EthTx struct {
 	Nonce    *big.Int
-	GasPrice *big.Int // type 0 legacy gas price
+	GasPrice *big.Int // type 0/1 gas price
 	Gas      *big.Int
 	To       []byte // 20 字節；空 = 合約建立
 	Value    *big.Int
 	Data     []byte
-	V        *big.Int // type 0: EIP-155 v；type 2: yParity(0/1)
+	V        *big.Int // type 0: EIP-155 v；type 1/2: yParity(0/1)
 	R        *big.Int
 	S        *big.Int
 	Raw      []byte // 原始 RLP bytes
 	// EIP-1559 type 2（M76 錢包整合：MetaMask 默認交易類型）。
-	TxType         uint8  // 0 = legacy；2 = EIP-1559
+	TxType         uint8  // 0 = legacy；1 = EIP-2930；2 = EIP-1559
 	ChainID        *big.Int
 	MaxPriorityFee *big.Int
 	MaxFee         *big.Int
+	// EIP-2930 type 1：accessList 原始 RLP bytes（空 list 為 0xC0）。
+	AccessList []byte
 }
 
 // Payload 返回簽名哈希輸入（不含 v/r/s）。
-// type 0：RLP 前 6 欄；type 2：0x02 || RLP 前 9 欄（含 chainId/accessList）。
+// type 0：RLP 前 6 欄；type 1：0x01 || RLP 8 欄（含 chainId/accessList）；
+// type 2：0x02 || RLP 前 9 欄（含 chainId/accessList）。
 func (t *EthTx) Payload() []byte {
-	if t.TxType == 2 {
+	switch t.TxType {
+	case 1:
+		body := rlpEncodeList(
+			rlpEncodeInt(t.ChainID),
+			rlpEncodeInt(t.Nonce),
+			rlpEncodeInt(t.GasPrice),
+			rlpEncodeInt(t.Gas),
+			rlpEncodeBytes(t.To),
+			rlpEncodeInt(t.Value),
+			rlpEncodeBytes(t.Data),
+			rlpAccessList(t.AccessList),
+		)
+		return append([]byte{0x01}, body...)
+	case 2:
 		body := rlpEncodeList(
 			rlpEncodeInt(t.ChainID),
 			rlpEncodeInt(t.Nonce),
@@ -60,7 +76,7 @@ func (t *EthTx) Payload() []byte {
 			rlpEncodeBytes(t.To),
 			rlpEncodeInt(t.Value),
 			rlpEncodeBytes(t.Data),
-			rlpEncodeList(), // accessList（空）
+			rlpAccessList(t.AccessList),
 		)
 		return append([]byte{0x02}, body...)
 	}
@@ -77,6 +93,14 @@ func (t *EthTx) Payload() []byte {
 		rlpEncodeInt(nil),
 		rlpEncodeInt(nil),
 	)
+}
+
+// rlpAccessList 返回 accessList 的 RLP 編碼：nil 時輸出空 list（0xC0）。
+func rlpAccessList(al []byte) []byte {
+	if len(al) == 0 {
+		return rlpEncodeList()
+	}
+	return al
 }
 
 // ---- 簡易 RLP（僅覆蓋 eth 交易所需：bytes/int 與單層 list） ----
@@ -207,10 +231,39 @@ func (it rlpItem) itemInt() *big.Int {
 	return new(big.Int).SetBytes(it.data)
 }
 
-// DecodeEthRawTx 解碼 EIP-155 類型 0 交易 raw bytes。
+// DecodeEthRawTx 解碼 EIP-155 類型 0 / EIP-2930 類型 1 / EIP-1559 類型 2 交易 raw bytes。
 func DecodeEthRawTx(raw []byte) (*EthTx, error) {
 	if len(raw) == 0 {
 		return nil, errors.New("eth: 空交易")
+	}
+	if raw[0] == 0x01 {
+		// EIP-2930 type 1：0x01 || RLP([chainId, nonce, gasPrice, gasLimit, to, value, data, accessList, yParity, r, s])
+		item, err := rlpDecodeItem(raw[1:])
+		if err != nil {
+			return nil, fmt.Errorf("eth: type1 RLP 解碼失敗: %w", err)
+		}
+		if item.list == nil || len(item.list) != 11 {
+			return nil, fmt.Errorf("eth: type1 交易需 11 元素 list，got %d", len(item.list))
+		}
+		al := []byte(nil)
+		if item.list[7].list != nil {
+			al = item.list[7].raw
+		}
+		return &EthTx{
+			TxType:     1,
+			ChainID:    item.list[0].itemInt(),
+			Nonce:      item.list[1].itemInt(),
+			GasPrice:   item.list[2].itemInt(),
+			Gas:        item.list[3].itemInt(),
+			To:         item.list[4].data,
+			Value:      item.list[5].itemInt(),
+			Data:       item.list[6].data,
+			AccessList: al,
+			V:          item.list[8].itemInt(), // yParity
+			R:          item.list[9].itemInt(),
+			S:          item.list[10].itemInt(),
+			Raw:        raw,
+		}, nil
 	}
 	if raw[0] == 0x02 {
 		// EIP-1559 type 2：0x02 || RLP([chainId, nonce, maxPriorityFee, maxFee, gas, to, value, data, accessList, yParity, r, s])

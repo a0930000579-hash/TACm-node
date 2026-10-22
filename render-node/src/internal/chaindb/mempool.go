@@ -1,12 +1,46 @@
 package chaindb
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 )
 
+// ErrMempoolUnderpriced 同 sender+nonce 已有更高手續費交易（Ethereum RBF 語義）：
+// 新交易手續費未高於既有交易時拒絕替換。
+var ErrMempoolUnderpriced = errors.New("chaindb: replacement transaction underpriced")
+
+// rbfCheck 檢查並替換同 from+nonce 的既有交易（Ethereum RBF）：
+//   - 無既有交易 → 可插入（回 true, nil）
+//   - 新 fee > 舊 fee → 刪除舊交易、可插入（回 true, nil）
+//   - 新 fee ≤ 舊 fee → 拒絕（回 false, ErrMempoolUnderpriced）
+func (c *ChainDB) rbfCheck(q *sql.Tx, from string, nonce int64, fee float64) (bool, error) {
+	var oldHash string
+	var oldFee float64
+	err := q.QueryRow(`
+		SELECT tx_hash, CAST(fee AS REAL) FROM mempool
+		WHERE json_extract(payload, '$.from') = ?
+		  AND CAST(json_extract(payload, '$.nonce') AS INTEGER) = ?`,
+		from, nonce).Scan(&oldHash, &oldFee)
+	if errors.Is(err, sql.ErrNoRows) {
+		return true, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if fee > oldFee {
+		if _, err := q.Exec("DELETE FROM mempool WHERE tx_hash = ?", oldHash); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+	return false, ErrMempoolUnderpriced
+}
+
 // AddMempoolTx 將交易加入內存池：先淘汰過期交易，再寫入；
+// 同 sender+nonce 已有交易時依手續費做 RBF 替換（高 fee 取代低 fee）；
 // 容量超限時淘汰手續費最低的交易。
 func (c *ChainDB) AddMempoolTx(txHash string, payload map[string]any, signature, fee string) error {
 	tx, err := c.db.Begin()
@@ -18,6 +52,19 @@ func (c *ChainDB) AddMempoolTx(txHash string, payload map[string]any, signature,
 	cutoff := nowUnix() - MempoolExpireSec
 	if _, err := tx.Exec("DELETE FROM mempool WHERE received_at < ?", cutoff); err != nil {
 		return err
+	}
+	// M161-RBF：同 sender+nonce 高 fee 替換低 fee；低 fee 拒絕（eth_sendRawTransaction 回 underpriced）。
+	from := getString(payload, "from")
+	nonce := getInt64(payload, "nonce")
+	f, ferr := strconv.ParseFloat(fee, 64)
+	if from != "" && ferr == nil {
+		ok, rerr := c.rbfCheck(tx, from, nonce, f)
+		if rerr != nil {
+			return rerr
+		}
+		if !ok {
+			return ErrMempoolUnderpriced
+		}
 	}
 	raw, err := json.Marshal(payload)
 	if err != nil {
@@ -72,6 +119,19 @@ func (c *ChainDB) AddMempoolTxs(entries []MempoolEntry) error {
 	}
 	now := nowUnix()
 	for _, e := range entries {
+		// M161-RBF：同 sender+nonce 高 fee 替換低 fee（批次內與池內既有交易均適用）。
+		from := getString(e.Payload, "from")
+		nonce := getInt64(e.Payload, "nonce")
+		f, ferr := strconv.ParseFloat(e.Fee, 64)
+		if from != "" && ferr == nil {
+			ok, rerr := c.rbfCheck(tx, from, nonce, f)
+			if rerr != nil {
+				return rerr
+			}
+			if !ok {
+				return ErrMempoolUnderpriced
+			}
+		}
 		raw, merr := json.Marshal(e.Payload)
 		if merr != nil {
 			return fmt.Errorf("chaindb: 序列化內存池交易失敗: %w", merr)
@@ -96,6 +156,31 @@ func (c *ChainDB) AddMempoolTxs(entries []MempoolEntry) error {
 		}
 	}
 	return tx.Commit()
+}
+
+// GetMempoolTx 查詢單筆內存池交易（pending）；不存在回 (nil, nil)。
+// 供 eth_getTransactionByHash 回傳 pending 交易（以太坊慣例：已提交未打包仍可查詢）。
+func (c *ChainDB) GetMempoolTx(txHash string) (*MempoolPendingTx, error) {
+	row := c.db.QueryRow(
+		"SELECT tx_hash, payload, signature, fee, received_at FROM mempool WHERE tx_hash = ?",
+		txHash)
+	var m MempoolPendingTx
+	if err := row.Scan(&m.TxHash, &m.Payload, &m.Signature, &m.Fee, &m.ReceivedAt); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("chaindb: 查內存池交易失敗: %w", err)
+	}
+	return &m, nil
+}
+
+// MempoolPendingTx 內存池單筆交易（pending，eth_getTransactionByHash 用）。
+type MempoolPendingTx struct {
+	TxHash     string  `json:"tx_hash"`
+	Payload    string  `json:"payload"`
+	Signature  string  `json:"signature"`
+	Fee        float64 `json:"fee"`
+	ReceivedAt int64   `json:"received_at"`
 }
 
 // GetMempool 返回按手續費降序的內存池交易，每筆補上 tx_hash 與 signature。
@@ -306,6 +391,11 @@ func getInt64(m map[string]any, k string) int64 {
 		return int64(v)
 	case int64:
 		return v
+	case json.Number:
+		n, err := v.Int64()
+		if err == nil {
+			return n
+		}
 	case string:
 		var n int64
 		fmt.Sscanf(v, "%d", &n)

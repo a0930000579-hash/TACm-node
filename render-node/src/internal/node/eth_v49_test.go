@@ -74,6 +74,8 @@ func TestEthSendTransaction(t *testing.T) {
 		_ = n.Close()
 	})
 	admin0x, _ := tx0To0x(admin)
+	// eth_accounts 回 keccak 以太地址；eth_sendTransaction from 必須與之一致。
+	ethFrom, _ := n.keypair.EthAddress()
 	alice0x := "0x" + strings.Repeat("11", 20)
 	const valWei = 5_000_000_000_000_000_000
 
@@ -87,9 +89,9 @@ func TestEthSendTransaction(t *testing.T) {
 		t.Fatalf("非節點金鑰 from 應被拒: %v", bad)
 	}
 
-	// 2. 節點金鑰代簽轉帳（value=5e18 wei）。
+	// 2. 節點金鑰代簽轉帳（value=5e18 wei，from=eth_accounts 同源地址）。
 	out := ethRPC(t, srv, "eth_sendTransaction", map[string]any{
-		"from":  admin0x,
+		"from":  ethFrom,
 		"to":    alice0x,
 		"value": "0x" + strconv.FormatInt(valWei, 16),
 	})

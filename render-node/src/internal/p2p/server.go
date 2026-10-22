@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"bytes"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -33,8 +34,13 @@ type helloResp struct {
 }
 
 func (n *Network) handleHello(w http.ResponseWriter, r *http.Request) {
+	raw, err := n.openBody(r)
+	if err != nil {
+		writeP2PErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	var req helloReq
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := json.NewDecoder(bytes.NewReader(raw)).Decode(&req); err != nil {
 		writeP2PErr(w, http.StatusBadRequest, "invalid JSON")
 		return
 	}
@@ -88,8 +94,13 @@ type ViewChangeMsg struct {
 }
 
 func (n *Network) handleGossip(w http.ResponseWriter, r *http.Request) {
+	raw, err := n.openBody(r)
+	if err != nil {
+		writeP2PErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	var req gossipReq
-	dec := json.NewDecoder(r.Body)
+	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.UseNumber() // 保留數字字面量，避免 tx 的 ts/nonce 變 float64/科學計數破壞簽名重算
 	if err := dec.Decode(&req); err != nil {
 		writeP2PErr(w, http.StatusBadRequest, "invalid JSON")

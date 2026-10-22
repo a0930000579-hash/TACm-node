@@ -6,8 +6,10 @@ package node
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -151,4 +153,60 @@ func TestM117JSONRPCBatchSingle(t *testing.T) {
 		t.Fatalf("單一請求不應錯誤: %v", out)
 	}
 	_ = time.Now()
+}
+
+// TestV57EthBatchSizeLimit v57：JSON-RPC 批處理超過 ethMaxBatch（100）→ 回 -32600
+// 且不進入逐筆分派（防 batch 灌水打掛節點，與主流節點 batch 上限一致）。
+func TestV57EthBatchSizeLimit(t *testing.T) {
+	n := benchNodeT(t, 1)
+	srv := httptest.NewServer(NewRPCServer(n).Handler())
+	defer srv.Close()
+
+	// 101 筆（> ethMaxBatch=100）。
+	parts := make([]string, 0, 101)
+	for i := 0; i < 101; i++ {
+		parts = append(parts, `{"jsonrpc":"2.0","id":`+strconv.Itoa(i)+`,"method":"net_version","params":[]}`)
+	}
+	body := "[" + strings.Join(parts, ",") + "]"
+	resp, err := http.Post(srv.URL+"/eth", "application/json", bytes.NewReader([]byte(body)))
+	if err != nil {
+		t.Fatalf("POST: %v", err)
+	}
+	defer resp.Body.Close()
+	var out map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		t.Fatalf("回應解析: %v", err)
+	}
+	if out["jsonrpc"] != "2.0" {
+		t.Fatalf("jsonrpc 欄位缺失: %v", out)
+	}
+	em, ok := out["error"].(map[string]any)
+	if !ok {
+		t.Fatalf("超限 batch 應回單一錯誤物件，得 %v", out)
+	}
+	if code, _ := em["code"].(float64); int(code) != -32600 {
+		t.Fatalf("應回 -32600 invalid request，得 %v", em)
+	}
+	if !strings.Contains(fmt.Sprint(em["message"]), "batch too large") {
+		t.Fatalf("錯誤訊息應含 batch too large，得 %v", em)
+	}
+	// 恰等於上限（100 筆）仍正常處理（batch 成功、100 筆回應）。
+	parts2 := make([]string, 0, 100)
+	for i := 0; i < 100; i++ {
+		parts2 = append(parts2, `{"jsonrpc":"2.0","id":`+strconv.Itoa(i)+`,"method":"net_version","params":[]}`)
+	}
+	body2 := "[" + strings.Join(parts2, ",") + "]"
+	resp2, err := http.Post(srv.URL+"/eth", "application/json", bytes.NewReader([]byte(body2)))
+	if err != nil {
+		t.Fatalf("POST(100): %v", err)
+	}
+	defer resp2.Body.Close()
+	var out2 []map[string]any
+	if err := json.NewDecoder(resp2.Body).Decode(&out2); err != nil {
+		t.Fatalf("100 筆回應解析: %v", err)
+	}
+	if len(out2) != 100 {
+		t.Fatalf("100 筆 batch 應 100 筆回應，得 %d", len(out2))
+	}
+	t.Log("v57 batch 上限驗證通過：101 筆拒、100 筆正常")
 }

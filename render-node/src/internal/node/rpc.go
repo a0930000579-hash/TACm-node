@@ -3,12 +3,15 @@ package node
 import (
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 
 	"tacm/internal/chaindb"
 	"tacm/internal/crypto"
+	"tacm/internal/wallet"
 )
 
 // route 描述一條 RPC 路由；MountInto 用於將 RPC 路由掛載至外部 mux（Web/RPC 同埠模式）。
@@ -74,6 +77,8 @@ func NewRPCServer(n *Node) *RPCServer {
 	s.addRoute("GET /account/{address}", s.handleAccount)
 	s.addRoute("GET /mempool", s.handleMempool)
 	s.addRoute("GET /wallet/new", s.handleWalletNew)
+	s.addRoute("GET /wallet/hd/new", s.handleWalletHDNew)
+	s.addRoute("POST /wallet/hd/derive", s.handleWalletHDDerive)
 	s.addRoute("GET /finality", s.handleFinality)
 	s.addRoute("GET /validators", s.handleValidators)
 	s.addRoute("GET /finality-proof/{height}", s.handleFinalityProof)
@@ -528,6 +533,94 @@ func (s *RPCServer) handleWalletNew(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, ex)
+}
+
+// handleWalletHDNew GET /wallet/hd/new — v58：標準 BIP-39 助記詞＋BIP-44 首帳戶
+// （m/44'/60'/0'/0/0，MetaMask 等主流錢包可直接導入）。
+func (s *RPCServer) handleWalletHDNew(w http.ResponseWriter, r *http.Request) {
+	mnemonic, err := wallet.GenerateMnemonic(128)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	seed, err := crypto.MnemonicToSeed(mnemonic, "")
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	kp, err := crypto.DeriveBIP44Key(seed, 0, 0)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	ex, err := kp.Export()
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"ok": true, "mnemonic": mnemonic,
+		"path":    crypto.HDPathBIP44 + "/0'/0/0",
+		"account": ex,
+	})
+}
+
+// handleWalletHDDerive POST /wallet/hd/derive — v58：由助記詞＋路徑派生帳戶
+// （預設 BIP-44：m/44'/60'/{account}'/0/{index}）。
+func (s *RPCServer) handleWalletHDDerive(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Mnemonic   string `json:"mnemonic"`
+		Passphrase string `json:"passphrase"`
+		Path       string `json:"path"`
+		Account    int    `json:"account"`
+		Index      int    `json:"index"`
+	}
+	dec := json.NewDecoder(r.Body)
+	dec.UseNumber()
+	if err := dec.Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+	if strings.TrimSpace(body.Mnemonic) == "" {
+		writeErr(w, http.StatusBadRequest, "mnemonic required")
+		return
+	}
+	seed, err := crypto.MnemonicToSeed(body.Mnemonic, body.Passphrase)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	path := strings.TrimSpace(body.Path)
+	if path == "" {
+		if body.Account < 0 || body.Index < 0 {
+			writeErr(w, http.StatusBadRequest, "account/index must be >= 0")
+			return
+		}
+		path = fmt.Sprintf("%s/%d'/0/%d", crypto.HDPathBIP44, body.Account, body.Index)
+	}
+	master, err := crypto.MasterKeyFromSeed(seed)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	node, err := master.ChildPath(path)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	kp, err := node.KeyPair()
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	ex, err := kp.Export()
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"ok": true, "path": path, "account": ex,
+	})
 }
 
 func (s *RPCServer) handleTxSubmit(w http.ResponseWriter, r *http.Request) {

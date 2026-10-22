@@ -98,6 +98,12 @@ type Node struct {
 	precommitMu    sync.Mutex
 	precommitVotes map[int64]map[string]bft.Vote
 
+	// v54：失聯驗證人接管——輪值 proposer 提議超時（創世節點/主鏈掛機）時，
+	// 在線驗證人接管該高度出塊，鏈不中斷（參照比特幣：部分礦工離線其餘照挖）。
+	takeoverMu     sync.Mutex
+	takeover       map[int64]bool
+	takeoverActive bool // 接管狀態持續生效（後續高度免等待），收到網絡塊後清除
+
 	// M13 錢包帳本（多資產：TACm/TiUSD/USDT；隨鏈上區塊同步）。
 	walletSvc    *wallet.Service
 	exchangeSvc  *exchange.Service
@@ -183,6 +189,7 @@ func New(cfg *config.Config, nodeID string, baseDifficulty int) (*Node, error) {
 		heartbeatInterval: hbRefresh,
 		verifyMeta:        map[string]ContractMeta{},
 		metaPath:          filepath.Join(dataDir, "contracts_meta.json"),
+		takeover:          map[int64]bool{},
 	}
 	n.loadContractMeta()
 
@@ -655,6 +662,55 @@ func (n *Node) StartDistributed() {
 	go n.consensusLoop()
 	go n.runBFT()
 	go n.minerHeartbeatLoop()
+	// v56：分布式驗證人與單節點同等服務——動態驗證人集週期重建
+	// （鏈上新增質押的驗證人最遲 60s 納入輪值，對應主流鏈 epoch 式驗證人輪換）、
+	// 帳本自癒、鏈上預言機、帳戶抽象 Bundler。
+	n.StartDynamicValidators() // 內部自行 wg.Add(1)
+	go n.healWalletSync()      // 帳本/chain_stats 自癒（落後補同步＋產出計數修正）
+	n.oracleSvc = oracle.New()
+	n.oracleSvc.Start(context.Background(), 60*time.Second)
+	if addr, aerr := n.keypair.Address(); aerr == nil {
+		n.aaSvc = aa.New(addr)
+	}
+}
+
+// SuspendConsensus 暫停出塊/共識循環（保留 DB 與鏈狀態），供節點下線/維護，
+// 亦用於測試模擬主鏈整機掛機。重啟時以 ResumeConsensus 恢復；恢復後若本機
+// tip 落後於網路，catch-up sync 會以較長鏈規則自動追平。
+func (n *Node) SuspendConsensus() {
+	n.mu.Lock()
+	if !n.running {
+		n.mu.Unlock()
+		return
+	}
+	n.running = false
+	close(n.stopCh)
+	n.stopCh = make(chan struct{})
+	n.mu.Unlock()
+	n.wg.Wait() // 等待出塊/BFT/心跳循環退出
+}
+
+// ResumeConsensus 恢復被 SuspendConsensus 暫停的出塊/共識循環。
+func (n *Node) ResumeConsensus() {
+	n.mu.Lock()
+	if n.running {
+		n.mu.Unlock()
+		return
+	}
+	n.running = true
+	// v54 修復：直接讀 distributed 欄位（已持 n.mu），勿呼叫
+	// isDistributed()——後者會再次 Lock 造成非重入死鎖。
+	if n.distributed {
+		n.wg.Add(3)
+		go n.consensusLoop()
+		go n.runBFT()
+		go n.minerHeartbeatLoop()
+	} else {
+		n.wg.Add(2)
+		go n.runBFT()
+		go n.minerHeartbeatLoop()
+	}
+	n.mu.Unlock()
 }
 
 // Close 停止出塊循環並關閉數據庫。
@@ -764,8 +820,22 @@ func (n *Node) consensusLoop() {
 		// 分佈式 BFT：提議超時 → view change；新輪次到來時立即重試出塊。
 		n.advanceConsensusRound(cs)
 
+		// v54：接管期間若網路實質落後（peer 領先 ≥2 塊）先追平再出塊，
+		// 避免恢復/接管期同高度雙塊競賽（參照比特幣：未同步完成的節點不參與挖礦）。
+		// 正常輪值（無接管標記）不攔截——短暫落後屬廣播延遲，proposer 照常出塊，
+		// 否則 4 節點 BFT 的輪值節奏會被破壞（M12 回歸）。
+		if n.TakeoverActive() && n.isBehindNetwork() {
+			continue // 等 sync tick 追平（p2p sync 較長鏈優先）
+		}
+
 		if err := n.produceBlock(); err != nil {
 			if errors.Is(err, errNotProposer) {
+				// v54：失聯驗證人接管——輪值 proposer 提議超時（主鏈/創世節點
+				// 掛機）且 view-change 無法聚合多數時，在線驗證人接管出塊，
+				// 鏈不中斷；主鏈恢復後以較長鏈優先規則合併（M86-B）。
+				if n.takeOverIfProposerOffline(cs) {
+					continue // 已接管（本輪已嘗試出塊或接管標記生效）
+				}
 				continue // 非本輪提議者，回到頂部等待網絡塊/view-change
 			}
 			// 單輪失敗不致命，下一輪重試。
@@ -775,11 +845,135 @@ func (n *Node) consensusLoop() {
 	}
 }
 
+// isBehindNetwork 回報本機 tip 是否落後於在線 peer 的最高高度。
+// v54：恢復/追同步期間僅由 catch-up sync 拉較長鏈，本節點暫不出塊，
+// 追上後才恢復輪值出塊（參照比特幣：未同步完成的節點不參與挖礦）。
+func (n *Node) isBehindNetwork() bool {
+	if n.p2pNet == nil {
+		return false
+	}
+	tip := n.db.GetTipHeight()
+	for _, p := range n.p2pNet.PeerSnapshot() {
+		// 領先 ≥2 塊才算實質落後：1 塊差距屬正常傳播延遲（proposer 剛出塊、
+		// 其他節點尚未收到/應用），不攔截本節點輪值出塊。
+		if p.Height > tip+1 {
+			return true
+		}
+	}
+	return false
+}
+
+// setTakeover 標記本節點接管指定高度出塊（失聯 proposer 補位）。
+func (n *Node) setTakeover(height int64) {
+	n.takeoverMu.Lock()
+	defer n.takeoverMu.Unlock()
+	n.takeover[height] = true
+	// 只保留近期接管標記，避免無限增長。
+	for h := range n.takeover {
+		if h < height-1000 {
+			delete(n.takeover, h)
+		}
+	}
+}
+
+// isTakeover 查詢本節點是否已接管指定高度。
+func (n *Node) isTakeover(height int64) bool {
+	n.takeoverMu.Lock()
+	defer n.takeoverMu.Unlock()
+	return n.takeover[height]
+}
+
+// takeOverIfProposerOffline 判定並接管失聯 proposer 的高度：
+//   - 僅分佈式 BFT 模式（多驗證人網路）且本節點在共識驗證人集內
+//     （vset 視圖成員＝有出塊資格；對應鏈上質押驗證人/創世驗證人）；
+//   - 目標高度自進入起已超過 consensusTimeout（proposer 未出塊、view-change 無進展）；
+//   - 或本節點已處接管狀態（takeoverActive）——後續高度免等待持續出塊。
+//
+// 條件成立則標記接管並返回 true——consensusLoop 下輪 produceBlock 將繞過
+// proposer 檢查直接出塊（該高度原 proposer 失聯的補位，等同比特幣礦工
+// 離線後其餘節點繼續產出）。主鏈恢復（收到網絡塊推進 tip）後，新高度會
+// 重置 offlineSince 並由收塊路徑清除 takeoverActive，自動回到正常輪值。
+func (n *Node) takeOverIfProposerOffline(cs *consensusState) bool {
+	if !n.isDistributed() {
+		return false
+	}
+	if n.vset == nil || n.vset.Get(n.nodeAddress) == nil {
+		return false // 本節點不在共識驗證人集內，無接管出塊資格
+	}
+	tip := n.db.GetTipHeight()
+	target := tip + 1
+
+	// 原 proposer/主鏈已恢復（peer 在線重連且其高度已達接管目標）→ 結束接管，
+	// 回到正常輪值；恢復節點靠接管期缺口觸發的 catch-up 追平較長鏈
+	// （isBehindNetwork 暫不出塊），追平後由輪值 proposer 正常出塊，
+	// 避免同高度雙塊分叉競賽。
+	if n.p2pNet != nil {
+		for _, p := range n.p2pNet.PeerSnapshot() {
+			if p.Online && p.Height >= target {
+				n.takeoverMu.Lock()
+				if n.takeoverActive {
+					n.takeoverActive = false
+				}
+				n.takeoverMu.Unlock()
+				return false
+			}
+		}
+	}
+	_, round, _ := n.bftNode.RoundInfo()
+
+	n.takeoverMu.Lock()
+	if n.takeoverActive {
+		n.takeover[target] = true
+		n.takeoverMu.Unlock()
+		return true
+	}
+	n.takeoverMu.Unlock()
+
+	// 提議尚未超時 → 不接管（給原 proposer 正常時間窗）；正常輪值未超時
+	// 不觸發任何對端刷新，避免每輪 HTTP hello 干擾 BFT 節奏。
+	if time.Since(cs.offlineSince) <= n.consensusTimeout(round) {
+		return false
+	}
+	// v54：接管僅在「本節點是唯一在線驗證人」時觸發（主鏈/創世節點掛機、
+	// 無其他驗證人可輪值接棒的少數場景）；有其他在線驗證人時交給 view change
+	// 正常輪值接棒，避免接管與 view-change 同時出塊造成分叉（4 節點 BFT 回歸）。
+	if n.vset != nil && n.p2pNet != nil {
+		for _, p := range n.p2pNet.PeerSnapshot() {
+			if p.Online && n.vset.Get(p.Owner) != nil {
+				return false
+			}
+		}
+	}
+	// 超時（proposer 可能失聯）：主動刷新對端高度再判定一次——peer 高度快照
+	// 可能滯後（心跳 15s），正常在線 proposer（僅廣播/心跳滯後）不得被誤判
+	// 失聯而接管雙出（曾導致 4 節點 BFT 於 view-change 後分叉）。
+	if n.p2pNet != nil {
+		n.p2pNet.RefreshHeights()
+		for _, p := range n.p2pNet.PeerSnapshot() {
+			if p.Online && p.Height >= target {
+				n.takeoverMu.Lock()
+				if n.takeoverActive {
+					n.takeoverActive = false
+				}
+				n.takeoverMu.Unlock()
+				return false
+			}
+		}
+	}
+	n.takeoverMu.Lock()
+	n.takeoverActive = true
+	n.takeover[target] = true
+	n.takeoverMu.Unlock()
+	return true
+}
+
 // consensusState 為 consensusLoop 跨輪保留的輪次計時狀態。
 type consensusState struct {
 	target    int64
 	since     time.Time
 	lastRound int32
+	// v54：進入該高度的時刻（獨立於 view-change 計時；用於失聯 proposer 接管判定）。
+	offlineSince time.Time
 }
 
 // waitConsensus 等待下一個出塊時機；分佈式模式下可被 view-change 喚醒。
@@ -847,6 +1041,7 @@ func (n *Node) advanceConsensusRound(cs *consensusState) {
 		// 進入新高度：重置計時。
 		cs.target = target
 		cs.since = time.Now()
+		cs.offlineSince = time.Now() // v54：新高度開始計失聯時長
 		cs.lastRound = -1
 	}
 	if target <= 0 {
@@ -902,10 +1097,11 @@ func (n *Node) produceBlock() error {
 
 	// 分佈式 BFT：僅輪值 proposer 出塊，其餘節點等待網絡傳來的提議。
 	// 使用當前 BFT round（view change 後由下一個 proposer 接棒）。
+	// v54：接管高度（原 proposer 失聯補位）由在線驗證人出塊。
 	if n.isDistributed() {
 		_, round, _ := n.bftNode.RoundInfo()
 		proposer := n.vset.Proposer(height, round)
-		if proposer == nil || proposer.Address != n.nodeAddress {
+		if proposer == nil || (proposer.Address != n.nodeAddress && !n.isTakeover(height)) {
 			return errNotProposer
 		}
 	}

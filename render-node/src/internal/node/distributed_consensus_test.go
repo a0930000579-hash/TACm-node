@@ -74,7 +74,7 @@ func launchCluster(t *testing.T, dn []*distNode, launch []bool) {
 		if firstURL != "" {
 			boot = []string{firstURL}
 		}
-		netw, err := d.n.AttachP2P(url, boot)
+		netw, err := d.n.AttachP2P(url, boot, false)
 		if err != nil {
 			t.Fatal(err)
 		}

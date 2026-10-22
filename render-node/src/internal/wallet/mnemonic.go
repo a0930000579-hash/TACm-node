@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
 	"embed"
 	"fmt"
@@ -38,6 +39,42 @@ func init() {
 	}
 }
 
+// GenerateMnemonic 產生標準 BIP-39 助記詞：entropyBits=128/160/192/224/256 →
+// 12/15/18/21/24 詞（含 checksum）。可用 MnemonicToSeed 轉種子後以 BIP-32/44 派生帳戶。
+func GenerateMnemonic(entropyBits int) (string, error) {
+	if entropyBits%32 != 0 || entropyBits < 128 || entropyBits > 256 {
+		return "", fmt.Errorf("wallet: entropy bits = %d, want 128/160/192/224/256", entropyBits)
+	}
+	entropy := make([]byte, entropyBits/8)
+	if _, err := rand.Read(entropy); err != nil {
+		return "", fmt.Errorf("wallet: 產生熵失敗: %w", err)
+	}
+	return entropyToMnemonic(entropy)
+}
+
+// entropyToMnemonic 以 BIP-39 標準將熵（16/20/24/28/32 字節）編碼為助記詞。
+func entropyToMnemonic(entropy []byte) (string, error) {
+	ent := len(entropy) * 8
+	if ent%32 != 0 || ent < 128 || ent > 256 {
+		return "", fmt.Errorf("wallet: 熵位數 = %d, want 128~256 且為 32 倍數", ent)
+	}
+	csBits := ent / 32
+	sum := sha256.Sum256(entropy)
+	bits := make([]byte, 0, ent+csBits)
+	bits = appendBits(bits, entropy, ent)
+	bits = appendBits(bits, sum[:], csBits)
+	wordCount := (ent + csBits) / 11
+	words := make([]string, wordCount)
+	for i := 0; i < wordCount; i++ {
+		idx := 0
+		for b := 0; b < 11; b++ {
+			idx = (idx << 1) | int(bits[i*11+b])
+		}
+		words[i] = bip39Words[idx]
+	}
+	return strings.Join(words, " "), nil
+}
+
 // PrivateKeyToMnemonic 以私鑰（32 字節）為 entropy 編碼 BIP39 助記詞（24 詞，含 checksum）。
 // 雙向可逆：助記詞即私鑰的完整備份，可直接還原 WIF 與地址。
 func PrivateKeyToMnemonic(privateKey []byte) (string, error) {
@@ -46,22 +83,7 @@ func PrivateKeyToMnemonic(privateKey []byte) (string, error) {
 	}
 	entropy := make([]byte, 32)
 	copy(entropy, privateKey)
-
-	// checksum = SHA256(entropy) 前 ENT/32 bit（ENT=256 → 8 bit）
-	sum := sha256.Sum256(entropy)
-	bits := make([]byte, 0, 264)
-	bits = appendBits(bits, entropy, 256)
-	bits = appendBits(bits, sum[:1], 8)
-
-	words := make([]string, 24)
-	for i := 0; i < 24; i++ {
-		idx := 0
-		for b := 0; b < 11; b++ {
-			idx = (idx << 1) | int(bits[i*11+b])
-		}
-		words[i] = bip39Words[idx]
-	}
-	return strings.Join(words, " "), nil
+	return entropyToMnemonic(entropy)
 }
 
 // MnemonicToPrivateKey 解析 BIP39 助記詞回私鑰（驗證字表 + checksum）。

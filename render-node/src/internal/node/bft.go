@@ -308,6 +308,17 @@ func (n *Node) FinalizedHeight() int64 {
 // ValidatorSet 返回驗證人集。
 func (n *Node) ValidatorSet() *bft.ValidatorSet { return n.vset }
 
+// IsDistributed 回報本節點是否以分布式 BFT（輪值出塊）模式運行。
+func (n *Node) IsDistributed() bool { return n.isDistributed() }
+
+// TakeoverActive 回報本節點是否正處於失聯驗證人接管狀態（主鏈/輪值
+// proposer 失聯、本節點補位出塊中）。
+func (n *Node) TakeoverActive() bool {
+	n.takeoverMu.Lock()
+	defer n.takeoverMu.Unlock()
+	return n.takeoverActive
+}
+
 // FinalityInfo 為最終性狀態。
 type FinalityInfo struct {
 	FinalizedHeight int64 `json:"finalized_height"`

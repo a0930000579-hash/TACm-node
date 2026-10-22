@@ -111,6 +111,10 @@ func (h *p2pHost) OnIncomingBlock(b *chaindb.Block, txs []chaindb.Transaction) e
 	if err := n.syncWallet(b.Height, txs); err != nil {
 		return fmt.Errorf("錢包同步 h=%d: %w", b.Height, err)
 	}
+	// v54：收到網絡塊（主鏈恢復）→ 結束失聯接管，回到正常輪值。
+	n.takeoverMu.Lock()
+	n.takeoverActive = false
+	n.takeoverMu.Unlock()
 	n.onNewBlock(b.Height, b.Hash)
 	return nil
 }

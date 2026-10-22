@@ -103,9 +103,19 @@ func (s *Server) handleNodePanelAPI(w http.ResponseWriter, r *http.Request) {
 	v["validator_total"] = vs.Len()
 	v["validator_power"] = vs.TotalPower()
 	v["validator_quorum"] = vs.QuorumPower()
+	// v54：驗證人/接管狀態——質押節點以分布式 BFT 輪值出塊；proposer 失聯時接管出塊。
+	v["is_validator"] = s.n.IsValidator()
+	v["takeover_active"] = s.n.TakeoverActive()
+	v["consensus_mode"] = "distributed"
+	if !s.n.IsDistributed() {
+		v["consensus_mode"] = "follower"
+	}
 	v["consensus_note"] = ""
 	if fh <= 0 {
 		v["consensus_note"] = "尚未達成 BFT 2/3 最終化：最終化需 >2/3 驗證人對同一區塊提交 precommit；單/雙驗證人網路屬正常狀態，不影響出塊與同步"
+	}
+	if v["takeover_active"].(bool) {
+		v["consensus_note"] = "主鏈/輪值驗證人失聯，本節點已接管出塊（創世節點故障時鏈仍持續運行）"
 	}
 	peers := []map[string]any{}
 	if pn := s.n.P2PNet(); pn != nil {

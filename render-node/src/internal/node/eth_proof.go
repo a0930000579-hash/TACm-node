@@ -8,10 +8,14 @@ package node
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"math/big"
+	"sort"
 	"strconv"
+	"strings"
 
+	"tacm/internal/chaindb"
 	"tacm/internal/crypto"
 )
 
@@ -124,4 +128,107 @@ func tacmToWeiHexBig(bal string) string {
 		new(big.Int).Mul(rat.Num(), new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)),
 		rat.Denom())
 	return wei.Text(16)
+}
+
+// debugStorageRangeAt 依 geth debug 面：枚舉指定帳號儲存槽（分頁）。
+// params: [blockHash, txIndex, address, startKey(0x hex), maxStorage]
+// 回 {storage: {key: value}, nextKey: 下一分頁鍵或 null}。
+func (s *RPCServer) debugStorageRangeAt(params []any) (map[string]any, error) {
+	blockRef := paramString(params, 0)
+	txIdx := 0
+	var b *chaindb.Block
+	if strings.HasPrefix(blockRef, "0x") && len(blockRef) == 66 {
+		bb, err := s.node.db.GetBlockByHash(strip0x(blockRef))
+		if err != nil || bb == nil {
+			return nil, errors.New("debug: 區塊不存在: " + blockRef)
+		}
+		b = bb
+	} else {
+		latest, err := s.node.db.GetLatestBlock()
+		if err != nil || latest == nil {
+			return nil, errors.New("debug: 無區塊")
+		}
+		if blockRef == "latest" || blockRef == "pending" || blockRef == "" {
+			b = latest
+		} else if h := parseEthBlock(blockRef, latest.Height); h >= 0 {
+			bb, berr := s.node.db.GetBlock(h)
+			if berr != nil || bb == nil {
+				return nil, errors.New("debug: 區塊不存在: " + blockRef)
+			}
+			b = bb
+		} else {
+			return nil, errors.New("debug: 區塊參數無法解析: " + blockRef)
+		}
+	}
+	// params[1] = tx index（數量），僅驗證範圍。
+	if len(params) > 1 {
+		if n, ok := params[1].(float64); ok {
+			txIdx = int(n)
+		} else if st, ok2 := params[1].(string); ok2 {
+			txIdx, _ = strconv.Atoi(st)
+		}
+	}
+	txs, err := s.node.db.GetTransactionsByBlock(b.Height)
+	if err != nil {
+		return nil, err
+	}
+	if txIdx < 0 || txIdx >= len(txs) {
+		return nil, errors.New("debug: tx index 超出區塊範圍")
+	}
+	addr, err := s.node.normalizeEthAddr(paramString(params, 2))
+	if err != nil {
+		return nil, err
+	}
+	addr0x, err := tx0To0x(addr)
+	if err != nil {
+		return nil, err
+	}
+	startKey := ""
+	if len(params) > 3 {
+		startKey = paramString(params, 3)
+	}
+	maxStorage := 1024
+	if len(params) > 4 {
+		if n, ok := params[4].(float64); ok && n > 0 {
+			maxStorage = int(n)
+		}
+	}
+	if maxStorage > 10000 {
+		maxStorage = 10000
+	}
+	entries, err := s.node.contracts.StorageEntries(addr0x)
+	if err != nil {
+		return nil, err
+	}
+	// 排序 keys（32 字節 hex 字典序＝數值序）。
+	keys := make([]string, 0, len(entries))
+	for k := range entries {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	startNorm := strings.TrimPrefix(startKey, "0x")
+	begun := startNorm == ""
+	storage := map[string]any{}
+	var nextKey any
+	collected := 0
+	for _, k := range keys {
+		if !begun {
+			if k >= startNorm {
+				begun = true
+			} else {
+				continue
+			}
+		}
+		if collected < maxStorage {
+			storage["0x"+k] = "0x" + storageValueHex(entries[k])
+			collected++
+			continue
+		}
+		nextKey = "0x" + k
+		break
+	}
+	if collected < maxStorage {
+		nextKey = nil
+	}
+	return map[string]any{"storage": storage, "nextKey": nextKey}, nil
 }

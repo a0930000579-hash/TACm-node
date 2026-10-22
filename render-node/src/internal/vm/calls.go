@@ -64,8 +64,9 @@ func inheritBlock(dst, src *ExecutionContext) {
 }
 
 // doMessageCall 執行消息調用；失敗（回滾/深度/餘額）返回 false。
+// v136：執行級 call-frame 捕獲——以 named return + defer 統一填寫 trace。
 func (in *Interpreter) doMessageCall(toBig, value *big.Int,
-	inOff, inSize uint64, requestedGas uint64, kind CallKind) bool {
+	inOff, inSize uint64, requestedGas uint64, kind CallKind) (ok bool) {
 
 	to := NormalizeAddress(toBig)
 
@@ -87,6 +88,23 @@ func (in *Interpreter) doMessageCall(toBig, value *big.Int,
 	if in.depth >= MaxCallDepth {
 		return false
 	}
+
+	// v136：trace frame 開始（type/from/to/value/gas/input）。
+	callType := "call"
+	switch kind {
+	case CallKindCallCode:
+		callType = "callcode"
+	case CallKindDelegate:
+		callType = "delegatecall"
+	case CallKindStatic:
+		callType = "staticcall"
+	}
+	from0x := in.ctx.Address // vm 內部地址一律 0x 格式（NormalizeAddress）
+	to0x := NormalizeAddress(execAddr)
+	prevCur := in.ctx.curTrace
+	frameIdx := in.ctx.BeginTrace(callType, from0x, to0x,
+		toBigInt(callValue), requestedGas, input)
+	defer func() { in.ctx.EndTrace(frameIdx, prevCur, in.lastReturnData, in.gasUsed, !ok) }()
 
 	snap := in.world.Snapshot()
 
@@ -137,9 +155,13 @@ func (in *Interpreter) doMessageCall(toBig, value *big.Int,
 	childCtx.CallValue = toBigInt(callValue)
 	childCtx.Gas = stipend
 
+	childCtx.Trace = in.ctx.Trace
+		childCtx.CollectSteps = in.ctx.CollectSteps // 共享 trace 底層（子調用 frame 直接 append 進同一樹）
+	childCtx.curTrace = frameIdx
 	child := NewInterpreter(childCtx, in.world, in.depth+1,
 		in.static || kind == CallKindStatic)
 	result := child.Execute(nil, nil)
+	in.ctx.Trace = childCtx.Trace // 取最新 header（append 可能 realloc）
 	in.lastReturnData = result.ReturnData
 
 	if err := in.addChildGas(result.GasUsed); err != nil {
@@ -196,8 +218,9 @@ func (in *Interpreter) writeCallOutput(offset, size uint64) {
 }
 
 // createContract 執行 CREATE/CREATE2；返回合約地址（失敗為 0）。
+// v136：trace frame（type=create）捕獲。
 func (in *Interpreter) createContract(value *big.Int, offset, size uint64,
-	salt *big.Int) (*big.Int, error) {
+	salt *big.Int) (addr *big.Int, err error) {
 
 	if err := in.memoryExtend(offset, size); err != nil {
 		return nil, err
@@ -213,6 +236,14 @@ func (in *Interpreter) createContract(value *big.Int, offset, size uint64,
 	} else {
 		contractAddr = Create2Address(creator, salt, initCode)
 	}
+
+	prevCur := in.ctx.curTrace
+	frameIdx := in.ctx.BeginTrace("create", creator, contractAddr,
+		toBigInt(value), uint64(in.remainingGas()), initCode)
+	defer func() {
+		reverted := addr == nil || addr.Sign() == 0
+		in.ctx.EndTrace(frameIdx, prevCur, in.lastReturnData, in.gasUsed, reverted)
+	}()
 
 	snap := in.world.Snapshot()
 
@@ -241,9 +272,12 @@ func (in *Interpreter) createContract(value *big.Int, offset, size uint64,
 	childCtx.Origin = in.ctx.Origin
 	childCtx.CallValue = toBigInt(value)
 	childCtx.Gas = stipend
+	childCtx.Trace = in.ctx.Trace
+	childCtx.curTrace = frameIdx
 
 	child := NewInterpreter(childCtx, in.world, in.depth+1, false)
 	result := child.Execute(nil, nil)
+	in.ctx.Trace = childCtx.Trace
 
 	if err := in.addChildGas(result.GasUsed); err != nil {
 		return big.NewInt(0), nil

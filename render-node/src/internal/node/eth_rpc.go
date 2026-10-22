@@ -126,6 +126,20 @@ func (s *RPCServer) dispatchEthRPC(req ethRPCRequest) ethRPCResponse {
 		} else {
 			result = out
 		}
+	case "personal_importRawKey":
+		out, err := s.personalImportRawKey(req.Params)
+		if err != nil {
+			rpcErr = ethError(-32602, err.Error())
+		} else {
+			result = out
+		}
+	case "debug_getBadBlocks":
+		out, err := s.debugGetBadBlocks(req.Params)
+		if err != nil {
+			rpcErr = ethError(-32603, err.Error())
+		} else {
+			result = out
+		}
 	case "eth_blobBaseFee":
 		result = "0x0" // 本鏈無 blob 支援，回 0（EIP-4844 相容）
 	case "web3_sha3":
@@ -189,6 +203,13 @@ func (s *RPCServer) dispatchEthRPC(req ethRPCRequest) ethRPCResponse {
 		}
 	case "eth_call":
 		out, err := s.ethCall(req.Params)
+		if err != nil {
+			rpcErr = ethError(-32602, err.Error())
+		} else {
+			result = out
+		}
+	case "eth_simulateV1":
+		out, err := s.ethSimulateV1(req.Params)
 		if err != nil {
 			rpcErr = ethError(-32602, err.Error())
 		} else {
@@ -258,6 +279,14 @@ func (s *RPCServer) dispatchEthRPC(req ethRPCRequest) ethRPCResponse {
 		}
 	case "admin_peers":
 		out, err := s.adminPeers(req.Params)
+		if err != nil {
+			rpcErr = ethError(-32603, err.Error())
+		} else {
+			result = out
+		}
+	case "admin_addPeer":
+		// v129：手動加入 P2P 對等節點（節點運維管理面）。
+		out, err := s.adminAddPeer(req.Params)
 		if err != nil {
 			rpcErr = ethError(-32603, err.Error())
 		} else {
@@ -428,6 +457,37 @@ func (s *RPCServer) dispatchEthRPC(req ethRPCRequest) ethRPCResponse {
 		} else {
 			result = out
 		}
+	case "debug_storageRangeAt":
+		out, err := s.debugStorageRangeAt(req.Params)
+		if err != nil {
+			rpcErr = ethError(-32603, err.Error())
+		} else {
+			result = out
+		}
+	case "debug_getRawReceipts":
+		// v136：geth debug 面——依區塊哈希回該塊全部交易收據原始 JSON。
+		out, err := s.debugGetRawReceipts(req.Params)
+		if err != nil {
+			rpcErr = ethError(-32603, err.Error())
+		} else {
+			result = out
+		}
+	case "trace_filter":
+		// v135：Parity 風格歷史 trace 索引（依區塊範圍/位址過濾，分頁）。
+		out, err := s.traceFilter(req.Params)
+		if err != nil {
+			rpcErr = ethError(-32603, err.Error())
+		} else {
+			result = out
+		}
+	case "trace_block":
+		// v129：Parity/OpenEthereum 風格別名——依區塊號碼回區塊內全部交易的 trace。
+		out, err := s.debugTraceBlock(req.Params, false)
+		if err != nil {
+			rpcErr = ethError(-32603, err.Error())
+		} else {
+			result = out
+		}
 	case "debug_traceBlockByNumber":
 		out, err := s.debugTraceBlock(req.Params, false)
 		if err != nil {
@@ -449,6 +509,48 @@ func (s *RPCServer) dispatchEthRPC(req ethRPCRequest) ethRPCResponse {
 		} else {
 			result = out
 		}
+	case "trace_replayBlockTransactions": // v138：Parity 區塊重放 trace 樹。
+		out, err := s.traceReplayBlockTransactions(req.Params)
+		if err != nil {
+			rpcErr = ethError(-32603, err.Error())
+		} else {
+			result = out
+		}
+	case "trace_replayTransaction": // v138：Parity 單筆重放。
+		out, err := s.traceReplayTransaction(req.Params)
+		if err != nil {
+			rpcErr = ethError(-32603, err.Error())
+		} else {
+			result = out
+		}
+	case "trace_rawTransaction": // v139：未上鏈 raw 交易重放。
+		out, err := s.traceRawTransaction(req.Params)
+		if err != nil {
+			rpcErr = ethError(-32603, err.Error())
+		} else {
+			result = out
+		}
+	case "trace_callMany": // v139：Parity 批次模擬呼叫。
+		out, err := s.traceCallMany(req.Params)
+		if err != nil {
+			rpcErr = ethError(-32603, err.Error())
+		} else {
+			result = out
+		}
+	case "trace_transaction": // v138：Parity 單筆 trace 樹。
+		out, err := s.traceTransaction(req.Params)
+		if err != nil {
+			rpcErr = ethError(-32603, err.Error())
+		} else {
+			result = out
+		}
+	case "trace_call": // v137：Parity 標準名別名（同 debug_traceCall 模擬呼叫追蹤）。
+		out, err := s.debugTraceCall(req.Params)
+		if err != nil {
+			rpcErr = ethError(-32603, err.Error())
+		} else {
+			result = out
+		}
 	case "debug_traceCall": // M151e：主流調試工具（hardhat/viem/Remix）模擬呼叫追蹤
 		out, err := s.debugTraceCall(req.Params)
 		if err != nil {
@@ -465,6 +567,7 @@ func (s *RPCServer) dispatchEthRPC(req ethRPCRequest) ethRPCResponse {
 
 // handleEthBatch 處理 JSON-RPC 2.0 陣列請求（M117）：以 Goroutine 並行分派各筆，
 // 依輸入順序回傳結果陣列；單筆解析失敗僅影響該筆（-32700）。
+// v57：批處理單次請求數上限 ethMaxBatch（防 batch 灌水——主流節點如 geth 亦限 batch 大小）。
 func (s *RPCServer) handleEthBatch(w http.ResponseWriter, raw []byte) {
 	var items []json.RawMessage
 	if err := json.Unmarshal(raw, &items); err != nil {
@@ -474,6 +577,11 @@ func (s *RPCServer) handleEthBatch(w http.ResponseWriter, raw []byte) {
 	if len(items) == 0 {
 		// 空陣列：JSON-RPC 2.0 規範回單一錯誤物件。
 		writeEthErr(w, nil, -32600, "invalid request")
+		return
+	}
+	if len(items) > ethMaxBatch {
+		writeEthErr(w, nil, -32600,
+			"batch too large: max "+strconv.Itoa(ethMaxBatch)+" requests per call")
 		return
 	}
 	responses := make([]ethRPCResponse, len(items))
@@ -646,7 +754,7 @@ func (s *RPCServer) ethCall(params []any) (string, error) {
 			}
 		}
 	}
-	r, err := s.node.contracts.SimulateCallGasOverrides(to0x, caller0x, calldata, callValue, s.node.contracts.DefaultGas(), overrides)
+	r, err := s.node.contracts.SimulateCallGasOverrides(to0x, caller0x, calldata, callValue, s.node.contracts.DefaultGas(), overrides, false)
 	if err != nil {
 		return "", err
 	}
@@ -654,6 +762,101 @@ func (s *RPCServer) ethCall(params []any) (string, error) {
 		return "", errors.New("eth: call reverted: " + r.RevertReason)
 	}
 	return "0x" + strings.TrimPrefix(r.ReturnData, "0x"), nil
+}
+
+// ethSimulateV1 模擬一組調用（eth_simulateV1 官方規格相容面，主流水錢包/工具用）：
+// 參數：[{blockStateCalls:[{calls:[{from?,to,data?,value?,gas?}]}]}]；
+// 回傳：[{stateDiff:{}, returnData:["0x..."], logs:[{address,topics,data}]}]。
+// 每筆 call 以只讀 VM 模擬執行（快照→回滾，不寫鏈），logs 彙整全部 call。
+func (s *RPCServer) ethSimulateV1(params []any) ([]map[string]any, error) {
+	if len(params) < 1 {
+		return nil, errors.New("eth: simulateV1 需要參數")
+	}
+	reqs, ok := params[0].([]any)
+	if !ok {
+		return nil, errors.New("eth: params[0] 需為 blockStateCalls 陣列")
+	}
+	out := make([]map[string]any, 0, len(reqs))
+	for _, r := range reqs {
+		obj, ok := r.(map[string]any)
+		if !ok {
+			continue
+		}
+		callsAny, _ := obj["calls"].([]any)
+		returns := []string{}
+		logs := []any{}
+		for _, c := range callsAny {
+			co, ok := c.(map[string]any)
+			if !ok {
+				continue
+			}
+			to := getStringFieldAny(co, "to")
+			from := getStringFieldAny(co, "from")
+			data := getStringFieldAny(co, "data")
+			value := getStringFieldAny(co, "value")
+			gasStr := getStringFieldAny(co, "gas")
+
+			toTx0, err := s.node.normalizeEthAddr(to)
+			if err != nil {
+				returns = append(returns, "0x")
+				continue
+			}
+			to0x, err := tx0To0x(toTx0)
+			if err != nil {
+				returns = append(returns, "0x")
+				continue
+			}
+			caller0x := "0x0000000000000000000000000000000000000000"
+			if from != "" {
+				fTx0, ferr := s.node.normalizeEthAddr(from)
+				if ferr != nil {
+					returns = append(returns, "0x")
+					continue
+				}
+				caller0x, err = tx0To0x(fTx0)
+				if err != nil {
+					returns = append(returns, "0x")
+					continue
+				}
+			}
+			calldata, err := hexInput(data)
+			if err != nil {
+				returns = append(returns, "0x")
+				continue
+			}
+			callValue := new(big.Int)
+			if value != "" {
+				if v, okv := new(big.Int).SetString(strings.TrimPrefix(value, "0x"), 16); okv {
+					callValue = v
+				}
+			}
+			gasLimit := s.node.contracts.DefaultGas()
+			if gasStr != "" {
+				if g, okg := new(big.Int).SetString(strings.TrimPrefix(gasStr, "0x"), 16); okg {
+					gasLimit = g.Uint64()
+				}
+			}
+			cr, cerr := s.node.contracts.SimulateCallGasOverrides(to0x, caller0x, calldata, callValue, gasLimit, nil, false)
+			if cerr != nil || cr == nil {
+				returns = append(returns, "0x")
+				continue
+			}
+			returns = append(returns, "0x"+strings.TrimPrefix(cr.ReturnData, "0x"))
+			for _, lg := range cr.Logs {
+				logs = append(logs, map[string]any{
+					"address": lg.Address,
+					"topics":  lg.Topics,
+					"data":    "0x" + strings.TrimPrefix(lg.Data, "0x"),
+				})
+			}
+		}
+		out = append(out, map[string]any{
+			"stateDiff":  map[string]any{},
+			"returnData": returns,
+			"logs":       logs,
+		})
+	}
+	return out, nil
 }
 
 // ethGetBlockByNumber 回區塊資訊；第二參數 true 時回完整交易物件（MetaMask 慣例）。
@@ -861,28 +1064,30 @@ func (s *RPCServer) ethSendTransaction(params []any) (string, error) {
 
 // SubmitEthRawTx 接收標準以太坊 RLP 交易（EIP-155 類型 0），驗證 EIP-155
 // 簽名後映射為 TAC 鏈上交易並提交。合約建立交易（to 為空）暫不支援。
-func (n *Node) SubmitEthRawTx(rawHex string) (string, error) {
+// rawHexToTxMap 解析 eth raw 交易（hex）→ 已驗證的 chain tx map（不入池）。
+// 供 eth_sendRawTransaction 提交與 trace_rawTransaction 模擬重用（v139）。
+func (n *Node) rawHexToTxMap(rawHex string) (map[string]any, error) {
 	rawHex = strings.TrimPrefix(strings.TrimSpace(rawHex), "0x")
 	raw, err := hex.DecodeString(rawHex)
 	if err != nil {
-		return "", fmt.Errorf("eth: raw hex 錯誤: %w", err)
+		return nil, fmt.Errorf("eth: raw hex 錯誤: %w", err)
 	}
 	et, err := crypto.DecodeEthRawTx(raw)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if len(et.To) == 0 {
-		return "", errors.New("eth: 合約建立交易不支援；請用 POST /contract/deploy")
+		return nil, errors.New("eth: 合約建立交易不支援；請用 POST /contract/deploy")
 	}
 	if et.Gas.Int64() > int64(n.contracts.DefaultGas()) {
-		return "", fmt.Errorf("eth: gas %d 超過節點上限 %d", et.Gas.Int64(), n.contracts.DefaultGas())
+		return nil, fmt.Errorf("eth: gas %d 超過節點上限 %d", et.Gas.Int64(), n.contracts.DefaultGas())
 	}
 	// 驗證簽名並恢復簽名者：type 1/2 用 yParity（recid）；type 0 用 EIP-155 v。
 	payload := et.Payload()
 	var pub *btcec.PublicKey
 	if et.TxType == 1 || et.TxType == 2 {
 		if et.ChainID == nil || et.ChainID.Int64() != crypto.EthChainID {
-			return "", fmt.Errorf("eth: chainId %v 不匹配本鏈 %d", et.ChainID, crypto.EthChainID)
+			return nil, fmt.Errorf("eth: chainId %v 不匹配本鏈 %d", et.ChainID, crypto.EthChainID)
 		}
 		pub, err = crypto.RecoverEthSignerType2(payload, et.R, et.S, et.V)
 	} else {
@@ -893,19 +1098,19 @@ func (n *Node) SubmitEthRawTx(rawHex string) (string, error) {
 		pub, err = crypto.RecoverEthSigner(payload, et.R, et.S, et.V, chainID)
 	}
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	fromHash := crypto.Hash160(pub.SerializeCompressed())
 	from := crypto.Hash160ToAddress(fromHash)
 
 	// EIP-3607：禁止合約地址作為交易簽名者（防碰撞/濫用，與主流節點一致）。
 	if err := n.rejectContractSender(from); err != nil {
-		return "", err
+		return nil, err
 	}
 
 	to, err := evmToTx0("0x" + hex.EncodeToString(et.To))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	// memo：data 非空 → vm:call:<gas>:<data>（鏈上合約呼叫）；空 → 普通轉帳。
@@ -981,6 +1186,14 @@ func (n *Node) SubmitEthRawTx(rawHex string) (string, error) {
 		tx["max_fee"] = maxFeeStr
 		tx["priority_fee"] = prioStr
 		tx["gas_limit"] = et.Gas.Int64()
+	}
+	return tx, nil
+}
+
+func (n *Node) SubmitEthRawTx(rawHex string) (string, error) {
+	tx, err := n.rawHexToTxMap(rawHex)
+	if err != nil {
+		return "", err
 	}
 	return n.SubmitTransaction(tx)
 }
@@ -1720,4 +1933,28 @@ func (s *RPCServer) adminPeers(params []any) (any, error) {
 		})
 	}
 	return out, nil
+}
+
+// adminAddPeer（admin 面）：手動加入 P2P 對等節點（admin_addPeer）。
+// 參數：["http://host:port"]；回 {ok, base_url, peers}。
+func (s *RPCServer) adminAddPeer(params []any) (any, error) {
+	if s.node.p2pNet == nil {
+		return nil, errors.New("admin_addPeer: p2p 未啟用")
+	}
+	if len(params) < 1 {
+		return nil, errors.New("admin_addPeer: 需要節點 URL 參數（[url]）")
+	}
+	raw, ok := params[0].(string)
+	if !ok || strings.TrimSpace(raw) == "" {
+		return nil, errors.New("admin_addPeer: URL 參數必須為字串")
+	}
+	if !strings.HasPrefix(raw, "http://") && !strings.HasPrefix(raw, "https://") {
+		return nil, errors.New("admin_addPeer: URL 需以 http:// 或 https:// 開頭")
+	}
+	added := s.node.p2pNet.AddPeerByURL(raw)
+	return map[string]any{
+		"ok":       added,
+		"base_url": strings.TrimRight(strings.TrimSpace(raw), "/"),
+		"peers":    len(s.node.p2pNet.PeerSnapshot()),
+	}, nil
 }

@@ -52,7 +52,15 @@ func (n *Network) syncLoop(ctx context.Context) {
 			if progress {
 				interval = base
 			} else {
-				interval = 60 * time.Second
+				// v54：無進展時先主動刷新對端高度快照（心跳 15s 滯後，恢復節點
+				// 可能因快照未更新而誤判「已追平」）再試一次；仍無進展才退避。
+				// 追平窗口由此縮短到單個 tick，避免「主鏈恢復→追平」拖到 60s+。
+				n.refreshPeerHeights()
+				if n.syncOnce() {
+					interval = base
+				} else {
+					interval = 60 * time.Second
+				}
 			}
 			ticker.Reset(interval)
 		}

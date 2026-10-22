@@ -145,7 +145,11 @@ func (n *Network) post(url string, body []byte) {
 	if n.ctx == nil {
 		return
 	}
-	httpReq, err := http.NewRequestWithContext(n.ctx, http.MethodPost, url, bytes.NewReader(body))
+	sealed, err := n.sealBody(url, body)
+	if err != nil {
+		return
+	}
+	httpReq, err := http.NewRequestWithContext(n.ctx, http.MethodPost, url, bytes.NewReader(sealed))
 	if err != nil {
 		return
 	}

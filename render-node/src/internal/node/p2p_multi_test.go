@@ -40,6 +40,51 @@ func startFullNode(t *testing.T, id string, bootstrap []string, follower bool, a
 	return startFullNodeHb(t, id, bootstrap, follower, alice, 0)
 }
 
+// startFullNodeEnc 同 startFullNode 但啟用 P2P 訊息層加密（全網同時開啟）。
+func startFullNodeEnc(t *testing.T, id string, bootstrap []string, follower bool, alice string) *fullNode {
+	return startFullNodeHbEnc(t, id, bootstrap, follower, alice, 0)
+}
+
+func startFullNodeHbEnc(t *testing.T, id string, bootstrap []string, follower bool, alice string, hbInterval time.Duration) *fullNode {
+	l, port := listenPort(t)
+	cfg := config.Default()
+	cfg.DataDir = t.TempDir()
+	cfg.BlockTime = 1
+
+	n, err := New(cfg, id, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hbInterval > 0 {
+		n.heartbeatInterval = hbInterval
+	}
+	if alice != "" {
+		insertGenesisWithAlloc(t, n, alice)
+	} else {
+		insertGenesis(t, n)
+	}
+
+	url := fmt.Sprintf("http://127.0.0.1:%d", port)
+	netw, err := n.AttachP2P(url, bootstrap, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	root := http.NewServeMux()
+	root.Handle("/p2p/", netw.Handler())
+	root.Handle("/", NewRPCServer(n).Handler())
+	srv := &http.Server{Handler: root}
+	go func() { _ = srv.Serve(l) }()
+
+	netw.Start(context.Background())
+	if follower {
+		n.StartAsFollower()
+	} else {
+		n.Start()
+	}
+	return &fullNode{n: n, url: url, srv: srv}
+}
+
 // startFullNodeHb 同 startFullNode，但可注入礦工心跳間隔（hbInterval>0 時），
 // 供 M61 自動續命測試以較短間隔快速、確定地驗證 minerHeartbeatLoop。
 func startFullNodeHb(t *testing.T, id string, bootstrap []string, follower bool, alice string, hbInterval time.Duration) *fullNode {
@@ -62,7 +107,7 @@ func startFullNodeHb(t *testing.T, id string, bootstrap []string, follower bool,
 	}
 
 	url := fmt.Sprintf("http://127.0.0.1:%d", port)
-	netw, err := n.AttachP2P(url, bootstrap)
+	netw, err := n.AttachP2P(url, bootstrap, false)
 	if err != nil {
 		t.Fatal(err)
 	}

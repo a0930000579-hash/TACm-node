@@ -109,6 +109,42 @@ func (s *Server) dispatchEthRead(req ethReadReq) ethReadResp {
 func (s *Server) ethReadMethod(method string, params []any) (any, error) {
 	st := s.n.GetStatus()
 	switch method {
+	case "trace_filter":
+		out, err := s.rpc.TraceFilterPublic(params)
+		return out, err
+	case "trace_block", "debug_traceBlockByNumber":
+		out, err := s.rpc.DebugTraceBlockPublic(params, false)
+		return out, err
+	case "debug_traceBlockByHash":
+		out, err := s.rpc.DebugTraceBlockPublic(params, true)
+		return out, err
+	case "trace_replayBlockTransactions":
+		out, err := s.rpc.TraceReplayBlockPublic(params)
+		return out, err
+	case "trace_replayTransaction":
+		out, err := s.rpc.TraceReplayTransactionPublic(params)
+		return out, err
+	case "trace_rawTransaction":
+		out, err := s.rpc.TraceRawTransactionPublic(params)
+		return out, err
+	case "trace_callMany":
+		out, err := s.rpc.TraceCallManyPublic(params)
+		return out, err
+	case "trace_transaction":
+		out, err := s.rpc.TraceTransactionPublic(params)
+		return out, err
+	case "debug_traceCall", "trace_call":
+		out, err := s.rpc.DebugTraceCallPublic(params)
+		return out, err
+	case "debug_traceTransaction":
+		out, err := s.rpc.DebugTraceTransactionPublic(params)
+		return out, err
+	case "debug_getRawReceipts":
+		out, err := s.rpc.DebugGetRawReceiptsPublic(params)
+		return out, err
+	case "debug_storageRangeAt":
+		out, err := s.rpc.DebugStorageRangeAtPublic(params)
+		return out, err
 	case "web3_clientVersion":
 		return "tacm-go/1.0", nil
 	case "net_version", "eth_chainId":

@@ -18,6 +18,10 @@ const (
 	rpcRateWriteLimit = 60
 )
 
+// ethMaxBatch 為 JSON-RPC 2.0 批處理單次請求數上限（v57：防 batch 灌水——
+// 主流節點如 geth 亦限制 batch 大小；單筆超過上限直接回 -32600）。
+const ethMaxBatch = 100
+
 // ipWindow 記錄某 IP 在當前視窗內的請求計數（讀/寫分離，避免寫入額度被讀取耗盡）。
 type ipWindow struct {
 	read    int

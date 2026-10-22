@@ -41,6 +41,22 @@ func (n *Node) SubmitTransaction(tx map[string]any) (string, error) {
 	return n.submitVerified(tx)
 }
 
+// rejectContractSender EIP-3607：合約地址不得作為交易簽名者。
+// eth_sendRawTransaction 與 SubmitTransactions（單筆/批量）共用同一檢查。
+func (n *Node) rejectContractSender(from string) error {
+	if n.contracts == nil {
+		return nil
+	}
+	from0x, err := tx0To0x(from)
+	if err != nil {
+		return nil
+	}
+	if len(n.contracts.GetCode(from0x)) > 0 {
+		return errors.New("sender is contract address (EIP-3607)")
+	}
+	return nil
+}
+
 // validateVerified 已驗簽交易的驗證核心（哈希/nonce/餘額/EIP-1559/合約模擬）。
 // 不落池、不佔用 pending nonce——由呼叫端負責（單筆：AddMempoolTx＋pendingTxInc；
 // 批量：AddMempoolTxs 一次落池）。extraPending 供批量路徑計入「同批已驗證筆數」，
@@ -59,6 +75,10 @@ func (n *Node) validateVerified(tx map[string]any, extraPending int) (string, er
 	signature := getString(tx, "signature")
 	if !crypto.IsValidAddress(from) {
 		return "", errors.New("invalid from address")
+	}
+	// EIP-3607：禁止合約地址作為交易簽名者（與 eth_sendRawTransaction 一致）。
+	if err := n.rejectContractSender(from); err != nil {
+		return "", err
 	}
 	if to != chaindb.PosStakePoolAddr && !crypto.IsValidAddress(to) {
 		return "", errors.New("invalid to address")

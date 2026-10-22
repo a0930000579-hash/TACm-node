@@ -147,6 +147,15 @@ func (s *Store) markSynced(height int64) error {
 // SyncedHeight 返回錢包已同步高度（供診斷）。
 func (s *Service) SyncedHeight() (int64, error) { return s.st.syncedHeight() }
 
+// MarkSynced 設定錢包已同步高度（v57：快照導入後對齊——帳戶狀態已含至該高度，
+// 否則後續 ApplyBlock 因嚴格連續檢查（last+1）跳號拒絕、錢包帳本永久停滯）。
+func (s *Service) MarkSynced(height int64) error {
+	if s.st == nil {
+		return fmt.Errorf("wallet: store 未初始化")
+	}
+	return s.st.markSynced(height)
+}
+
 // ApplyBlockRelaxed M103：補同步專用——正常 ApplyBlock；單塊失敗時仍推進
 // 同步高度（記 log 由呼叫方負責），避免 wallet 帳本因單塊異常而永久卡死。
 // 注意：跳過的塊不會進入本地 ledger，鏈上資料不受影響；全鏈審計會顯示差異。

@@ -25,6 +25,10 @@ type Network struct {
 	seenViewCh map[string]struct{}
 	seenBridge map[string]struct{}
 
+	// M162：P2P 訊息層加密（cfg.Encrypt=true 時啟用）。
+	Secure      *Secure
+	peerPubKeys sync.Map // baseURL -> peer pubkey hex（加密握手緩存）
+
 	wg     sync.WaitGroup
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -68,6 +72,13 @@ func New(cfg Config, host Host) (*Network, error) {
 		seenViewCh: make(map[string]struct{}),
 		seenBridge: make(map[string]struct{}),
 	}
+	if cfg.Encrypt {
+		sec, err := NewSecure()
+		if err != nil {
+			return nil, err
+		}
+		n.Secure = sec
+	}
 	for _, url := range cfg.Bootstrap {
 		n.addPeerByURL(url)
 	}
@@ -78,6 +89,7 @@ func New(cfg Config, host Host) (*Network, error) {
 func (n *Network) registerRoutes() {
 	n.mux.HandleFunc("POST /p2p/hello", n.handleHello)
 	n.mux.HandleFunc("POST /p2p/gossip", n.handleGossip)
+	n.mux.HandleFunc("GET /p2p/pubkey", n.handlePubKey) // M162：加密握手用
 	n.mux.HandleFunc("GET /p2p/block/{height}", n.handleBlockFetch)
 	n.mux.HandleFunc("GET /p2p/blocks", n.handleBlocksFetch) // M86：批量同步（catch-up）
 	n.mux.HandleFunc("GET /p2p/peers", n.handlePeers)

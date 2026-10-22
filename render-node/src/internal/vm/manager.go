@@ -53,6 +53,8 @@ type CallResult struct {
 	Reverted     bool       `json:"reverted"`
 	RevertReason string     `json:"revert_reason,omitempty"`
 	Error        string     `json:"error,omitempty"`
+	Steps        []*ExecStep // v137：模擬執行收集的逐 opcode 步驟（僅 collect=true）
+	Trace        []*TraceFrame // v138：模擬執行收集的 call-frame 樹（子 frame；根層由呼叫端構）
 }
 
 // ContractManager 管理合約代碼/存儲的執行與持久化。
@@ -291,12 +293,12 @@ func (m *ContractManager) SimulateDeployGas(addr0x, creator0x string,
 // runCall 為調用核心（不加鎖、不持久化）。
 func (m *ContractManager) runCall(addr0x, caller0x string,
 	calldata []byte, callValue *big.Int) *CallResult {
-	return m.runCallWithGas(addr0x, caller0x, calldata, callValue, m.defaultGas)
+	return m.runCallWithGas(addr0x, caller0x, calldata, callValue, m.defaultGas, false)
 }
 
 // runCallWithGas 調用核心（指定 gas，不加鎖、不持久化）。
 func (m *ContractManager) runCallWithGas(addr0x, caller0x string,
-	calldata []byte, callValue *big.Int, gas uint64) *CallResult {
+	calldata []byte, callValue *big.Int, gas uint64, collect bool) *CallResult {
 	addr := NormalizeAddress(addr0x)
 	caller := NormalizeAddress(caller0x)
 	if callValue == nil {
@@ -306,6 +308,7 @@ func (m *ContractManager) runCallWithGas(addr0x, caller0x string,
 	// M151c：precompile 地址（0x01-0x09）可直接呼叫（如 eth_call 至 0x09 VRF），無需合約碼。
 	if tb := addrToInt(addr); tb != nil && tb.Sign() > 0 && tb.Uint64() <= 9 {
 		ctx := m.newCtxGas(addr, caller, caller, callValue, gas)
+		ctx.CollectSteps = collect
 		out, matched, pcGas, perr := runPrecompile(ctx, tb, calldata)
 		if matched {
 			if perr != nil {
@@ -319,6 +322,7 @@ func (m *ContractManager) runCallWithGas(addr0x, caller0x string,
 	}
 
 	ctx := m.newCtxGas(addr, caller, caller, callValue, gas)
+	ctx.CollectSteps = collect
 	interp := NewInterpreter(ctx, m.world, 0, false)
 	res := interp.Execute(m.world.GetCode(addr), calldata)
 
@@ -327,10 +331,14 @@ func (m *ContractManager) runCallWithGas(addr0x, caller0x string,
 			OK: false, Reverted: true, GasUsed: res.GasUsed,
 			ReturnData:   hex.EncodeToString(res.ReturnData),
 			RevertReason: firstStr(res.Err, res.RevertReason),
+			Steps:        ctx.Steps,
+			Trace:        ctx.Trace,
 		}
 	}
 	return &CallResult{
-		OK: true, GasUsed: res.GasUsed, Logs: res.Logs,
+		OK: true, GasUsed: res.GasUsed,
+		Steps:       ctx.Steps, Logs: res.Logs,
+		Trace:       ctx.Trace,
 		ReturnData: hex.EncodeToString(res.ReturnData),
 	}
 }
@@ -347,7 +355,7 @@ func (m *ContractManager) ApplyCallGas(addr0x, caller0x string,
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	snap := m.world.Snapshot()
-	r := m.runCallWithGas(addr0x, caller0x, calldata, callValue, gas)
+	r := m.runCallWithGas(addr0x, caller0x, calldata, callValue, gas, false)
 	if !r.OK {
 		m.world.Revert(snap)
 		return r, nil
@@ -367,7 +375,7 @@ func (m *ContractManager) SimulateCall(addr0x, caller0x string,
 // SimulateCallGas 同 SimulateCall，但指定 gas 上限（RPC gas_limit 用）。
 func (m *ContractManager) SimulateCallGas(addr0x, caller0x string,
 	calldata []byte, callValue *big.Int, gas uint64) (*CallResult, error) {
-	return m.SimulateCallGasOverrides(addr0x, caller0x, calldata, callValue, gas, nil)
+	return m.SimulateCallGasOverrides(addr0x, caller0x, calldata, callValue, gas, nil, false)
 }
 
 // SimulateCallGasOverrides 同 SimulateCallGas，但支援 eth_call 第三參數 state override
@@ -376,7 +384,7 @@ func (m *ContractManager) SimulateCallGas(addr0x, caller0x string,
 // overrides：0x 地址 → {balance?, nonce?, code?, state?, stateDiff?}；state/stateDiff 為
 // key→value 的 0x hex 映射（state 取代、stateDiff 同語義直接設定，與主流節點一致）。
 func (m *ContractManager) SimulateCallGasOverrides(addr0x, caller0x string,
-	calldata []byte, callValue *big.Int, gas uint64, overrides map[string]map[string]any) (*CallResult, error) {
+	calldata []byte, callValue *big.Int, gas uint64, overrides map[string]map[string]any, collectSteps bool) (*CallResult, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	snap := m.world.Snapshot()
@@ -414,7 +422,7 @@ func (m *ContractManager) SimulateCallGasOverrides(addr0x, caller0x string,
 			}
 		}
 	}
-	r := m.runCallWithGas(addr0x, caller0x, calldata, callValue, gas)
+	r := m.runCallWithGas(addr0x, caller0x, calldata, callValue, gas, collectSteps)
 	return r, nil
 }
 
@@ -496,6 +504,23 @@ func (m *ContractManager) StorageAt(addr0x string, key *big.Int) *big.Int {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.world.GetStorage(addr0x, key)
+}
+
+// StorageEntries 枚舉帳號全部儲存槽（key=32 字節 hex 無 0x、value 原始）。
+// v136：debug_storageRangeAt 用。
+func (m *ContractManager) StorageEntries(addr0x string) (map[string]*big.Int, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	a := NormalizeAddress(addr0x)
+	acc, ok := m.world.accounts[a]
+	if !ok {
+		return map[string]*big.Int{}, nil
+	}
+	out := make(map[string]*big.Int, len(acc.Storage))
+	for k, v := range acc.Storage {
+		out[k] = new(big.Int).Set(v)
+	}
+	return out, nil
 }
 
 // Close 關閉數據庫。

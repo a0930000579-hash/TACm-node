@@ -38,7 +38,11 @@ type Config struct {
 	// RequestTimeout 單次 HTTP 請求整體上限（含大 JSON 下載）。
 	// 與 DialTimeout 分離：撥號快速失敗（2s），大範圍區塊拉取給足時間（預設 60s）。
 	RequestTimeout time.Duration
-	MaxPeers          int
+	MaxPeers      int
+	// Encrypt 啟用 P2P 訊息層加密（secp256k1 ECDH + AES-256-GCM）。
+	// 開啟後 /p2p/hello 與 /p2p/gossip 的 body 均加密傳輸；需全網節點
+	// 同時開啟（與 v44 舊版節點混跑時保持 false）。
+	Encrypt bool
 }
 
 // Host 抽象 P2P 所需的節點能力，由節點層實現（適配），避免網絡層與節點強耦合。

@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -22,10 +23,44 @@ import (
 //go:embed templates static
 var assets embed.FS
 
+// nodeUIDownloadsDir v71：下載中心目錄。cmd/nodeweb 啟動時以 TACM_DOWNLOADS_DIR
+// 指向 dataDir/downloads；未設定時預設 /var/tac/downloads（Render 部署用）。
+func nodeUIDownloadsDir() string {
+	if d := os.Getenv("TACM_DOWNLOADS_DIR"); d != "" {
+		return d
+	}
+	return "/var/tac/downloads"
+}
+
+// seedNodeUIDownloads v71：啟動時將內嵌一鍵安裝腳本同步到 downloads 目錄，
+// 保證任何節點的下載中心都提供最新 install-node.sh（Render 另有 Dockerfile COPY nodeweb）。
+func seedNodeUIDownloads() {
+	dir := nodeUIDownloadsDir()
+	sub, err := fs.Sub(assets, "static/downloads")
+	if err != nil {
+		return
+	}
+	entries, err := fs.ReadDir(sub, ".")
+	if err != nil {
+		return
+	}
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		data, derr := fs.ReadFile(sub, e.Name())
+		if derr != nil {
+			continue
+		}
+		_ = os.WriteFile(dir+"/"+e.Name(), data, 0o755)
+	}
+}
+
 // Server 為節點品牌 UI 的 HTTP 服務器；直接持 *node.Node（本機視角），
 // 不走主網 DataSource 介面——節點儀表讀取的是節點自身鏈/網/共識狀態。
 type Server struct {
 	n          *node.Node
+	rpc        *node.RPCServer // v136：只讀 trace/debug 面（trace_filter 等放行）
 	mainnetURL string
 	nodeID     string
 	started    time.Time
@@ -42,7 +77,7 @@ func New(n *node.Node, mainnetURL, nodeID string) *Server {
 	if nodeID == "" {
 		nodeID = "node"
 	}
-	s := &Server{n: n, mainnetURL: strings.TrimRight(mainnetURL, "/"), nodeID: nodeID, started: time.Now(), hub: newWSHub()}
+	s := &Server{n: n, rpc: node.NewRPCServer(n), mainnetURL: strings.TrimRight(mainnetURL, "/"), nodeID: nodeID, started: time.Now(), hub: newWSHub()}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -69,6 +104,11 @@ func New(n *node.Node, mainnetURL, nodeID string) *Server {
 	mux.HandleFunc("POST /api/node/bootstrap", s.handleNodeBootstrapAPI) // M149m-2 節點引導獎勵
 	mux.HandleFunc("POST /api/node/register", s.handleNodeRegisterAPI) // M149m-9 PoT 節點註冊
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(mustSub(assets, "static")))))
+	// v71：下載中心——Render/任何節點都可提供 nodeweb/install-node.sh（繞過主鏈外部 502）。
+	// v71：下載中心——Render/任何節點都可提供 nodeweb/install-node.sh（繞過主鏈外部 502）。
+	_ = os.MkdirAll(nodeUIDownloadsDir(), 0o755)
+	seedNodeUIDownloads()
+	mux.Handle("GET /downloads/", http.StripPrefix("/downloads/", http.FileServer(http.Dir(nodeUIDownloadsDir()))))
 	s.mux = mux
 	// v53-C5：啟動 WS 推送循環（新區塊/交易池變化輪詢廣播）。
 	go s.wsPump(s.stopCh)

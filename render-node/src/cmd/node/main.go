@@ -111,7 +111,7 @@ func main() {
 		}
 	}
 	selfURL := fmt.Sprintf("http://127.0.0.1:%d", *port)
-	p2pNet, err := n.AttachP2P(selfURL, bootstrap)
+	p2pNet, err := n.AttachP2P(selfURL, bootstrap, false)
 	if err != nil {
 		log.Fatalf("接入 P2P 網絡失敗: %v", err)
 	}

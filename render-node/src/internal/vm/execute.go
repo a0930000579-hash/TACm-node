@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"fmt"
 	"encoding/hex"
 	"math/big"
 	"strings"
@@ -73,6 +74,25 @@ func (in *Interpreter) Execute(code, calldata []byte) *ExecutionResult {
 		}
 		if err := in.consumeGas(name); err != nil {
 			return failResult(in, err)
+		}
+		if in.ctx.CollectSteps {
+			gasLeft := uint64(0)
+			if in.ctx.Gas > in.gasUsed {
+				gasLeft = in.ctx.Gas - in.gasUsed
+			}
+			st := make([]string, 0, 4)
+			for i := len(in.stack) - 1; i >= 0 && len(st) < 4; i-- {
+				st = append(st, "0x"+in.stack[i].Text(16))
+			}
+			in.ctx.Steps = append(in.ctx.Steps, &ExecStep{
+				PC:      uint64(in.pc),
+				Op:      fmt.Sprintf("0x%02x", op),
+				OpName:  name,
+				Gas:     gasLeft,
+				GasCost: GasCost(name),
+				Depth:   len(in.ctx.Trace),
+				Stack:   st,
+			})
 		}
 
 		advance := true
@@ -322,8 +342,51 @@ func (in *Interpreter) Execute(code, calldata []byte) *ExecutionResult {
 			}
 		case 0x3A: // GASPRICE
 			_ = in.push(in.ctx.GasPrice)
+		case 0x3B: // EXTCODESIZE: address → code 長度（無碼 0）
+			a, _ := in.pop()
+			_ = in.push(big.NewInt(int64(len(in.world.GetCode(NormalizeAddress(a))))))
+		case 0x3C: // EXTCODECOPY: address(頂), offset, size → 拷 code 至 memory
+			a, _ := in.pop()
+			offsetBig, _ := in.pop()
+			sizeBig, _ := in.pop()
+			sz := u64(sizeBig)
+			if err := in.memoryExtend(u64(offsetBig), sz); err != nil {
+				return failResult(in, err)
+			}
+			code := in.world.GetCode(NormalizeAddress(a))
+			dst := u64(offsetBig)
+			for i := uint64(0); i < sz; i++ {
+				if i < uint64(len(code)) {
+					in.memory[dst+i] = code[i]
+				} else {
+					in.memory[dst+i] = 0
+				}
+			}
+		case 0x3F: // EXTCODEHASH: address → keccak(code)；無碼 0（EIP-1052）
+			a, _ := in.pop()
+			code := in.world.GetCode(NormalizeAddress(a))
+			if len(code) == 0 {
+				_ = in.push(big.NewInt(0))
+			} else {
+				_ = in.push(BytesToInt(Keccak256(code)))
+			}
 		case 0x3D: // RETURNDATASIZE
 			_ = in.push(big.NewInt(int64(len(in.lastReturnData))))
+		case 0x3E: // RETURNDATACOPY: dest, offset, size（EIP-211，越界填 0）
+			dest, _ := in.pop()
+			offset, _ := in.pop()
+			size, _ := in.pop()
+			dst, off, sz := u64(dest), u64(offset), u64(size)
+			if err := in.memoryExtend(dst, sz); err != nil {
+				return failResult(in, err)
+			}
+			for i := uint64(0); i < sz; i++ {
+				if off+i < uint64(len(in.lastReturnData)) {
+					in.memory[dst+i] = in.lastReturnData[off+i]
+				} else {
+					in.memory[dst+i] = 0
+				}
+			}
 
 		// ---- 0x4 區塊 ----
 		case 0x40: // BLOCKHASH（簡化 0）
@@ -345,6 +408,8 @@ func (in *Interpreter) Execute(code, calldata []byte) *ExecutionResult {
 			_ = in.push(in.world.GetBalance(in.ctx.Address))
 		case 0x48: // BASEFEE
 			_ = in.push(in.ctx.BaseFee)
+		case 0x4A: // BLOBBASEFEE（EIP-7516）：本鏈無 blob，回 0（與 eth_blobBaseFee 一致）
+			_ = in.push(big.NewInt(0))
 
 		// ---- 0x5 存儲/執行 ----
 		case 0x50: // POP
@@ -405,6 +470,43 @@ func (in *Interpreter) Execute(code, calldata []byte) *ExecutionResult {
 			_ = in.push(big.NewInt(int64(in.remainingGas())))
 		case 0x5B: // JUMPDEST
 			// 無操作
+		case 0x5C: // TLOAD（EIP-1153）：key → 瞬態值（tx 內共享，無→0）
+			k, _ := in.pop()
+			slot := in.ctx.TransientSlot(in.ctx.Address, k)
+			_ = in.push(slot)
+		case 0x5D: // TSTORE（EIP-1153）：key, value（key 頂）→ 瞬態寫
+			if in.static {
+				return failResult(in, ErrStaticState)
+			}
+			k, _ := in.pop()
+			v, _ := in.pop()
+			in.ctx.TransientStore(in.ctx.Address, k, v)
+		case 0x5E: // MCOPY（EIP-5656）：dst(頂), src, size → memory 內部複製
+			dstBig, _ := in.pop()
+			srcBig, _ := in.pop()
+			sizeBig, _ := in.pop()
+			sz := u64(sizeBig)
+			dst, src := u64(dstBig), u64(srcBig)
+			if err := in.memoryExtend(dst, sz); err != nil {
+				return failResult(in, err)
+			}
+			if err := in.memoryExtend(src, sz); err != nil {
+				return failResult(in, err)
+			}
+			// 逐 byte 拷貝（相容重疊：src<dst 時從尾開始）。
+			if src < dst {
+				for i := sz; i > 0; i-- {
+					in.memory[dst+i-1] = in.memory[src+i-1]
+				}
+			} else {
+				for i := uint64(0); i < sz; i++ {
+					in.memory[dst+i] = in.memory[src+i]
+				}
+			}
+		case 0x5F: // PUSH0（EIP-3855，Shanghai）
+			if err := in.push(big.NewInt(0)); err != nil {
+				return failResult(in, err)
+			}
 
 		// ---- PUSH ----
 		case 0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67,
@@ -501,6 +603,7 @@ func (in *Interpreter) Execute(code, calldata []byte) *ExecutionResult {
 			if remaining.Sign() > 0 {
 				in.world.Transfer(in.ctx.Address, beneficiary, remaining)
 			}
+			in.world.DeleteAccount(in.ctx.Address) // v135：清 code/storage/nonce（餘額已轉出）
 			in.ctx.SelfDestructed = true
 			in.ctx.Stopped = true
 			return in.finish(false)

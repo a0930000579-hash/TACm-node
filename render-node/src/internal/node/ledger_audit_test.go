@@ -262,3 +262,63 @@ func TestLedgerAudit_EmptyChain(t *testing.T) {
 		t.Fatalf("空鏈不應有交易: %+v", la)
 	}
 }
+
+// TestLedgerAudit_SystemGovTxNoSig v55 回歸：治理系統交易（memo=gov:treasury:N）
+// 由出塊引擎依治理決議自動建單、無簽名——語意同 coinbase，不應被標為「簽名驗證失敗」。
+func TestLedgerAudit_SystemGovTxNoSig(t *testing.T) {
+	aliceKP, _ := crypto.GenerateKeyPair()
+	alice := m71Addr(t, aliceKP)
+	bobKP, _ := crypto.GenerateKeyPair()
+	bob := m71Addr(t, bobKP)
+	n := m71Node(t, alice, "1000")
+
+	m71InsertBlock(t, n, 1, n.Address(), m71CoinbaseTxs(1, alice, n.Address()))
+	// h=2：治理金庫撥款 10 給 bob（from=治理來源地址、無 signature/pubkey，與出塊引擎建單一致）。
+	m71InsertBlock(t, n, 2, n.Address(), []chaindb.Transaction{
+		{TxHash: "gov-tx-1", FromAddr: alice, ToAddr: bob, Amount: "10",
+			Fee: "0", Nonce: 0, Ts: time.Now().Unix(), Memo: "gov:treasury:5"},
+	})
+
+	la, err := n.VerifyLedgerOnChain()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if la.TxSigFail != 0 {
+		t.Fatalf("治理系統交易無簽名屬合法，不應誤報 SigFail: %+v", la)
+	}
+	if la.OK == false {
+		t.Fatalf("含治理系統交易的鏈應通過審計: %+v", la)
+	}
+}
+
+// TestLedgerAudit_LegacyContractNoGas v55 回歸：舊格式合約 memo（vm:deploy:<hex>，
+// 無 gas 段）gas 天然為 0——屬早期合法格式，不應被標為「合約 gas 為 0」。
+// 帶 gas 段的新格式若 gas=0 仍必須抓出（保留原資源治理檢查）。
+func TestLedgerAudit_LegacyContractNoGas(t *testing.T) {
+	aliceKP, _ := crypto.GenerateKeyPair()
+	alice := m71Addr(t, aliceKP)
+	bobKP, _ := crypto.GenerateKeyPair()
+	bob := m71Addr(t, bobKP)
+	n := m71Node(t, alice, "1000")
+
+	m71InsertBlock(t, n, 1, n.Address(), m71CoinbaseTxs(1, alice, n.Address()))
+	// h=2：舊格式合約部署（vm:deploy:<hex>，無 gas 段）——合法。
+	m71InsertBlock(t, n, 2, n.Address(), []chaindb.Transaction{
+		m71SignedTx(t, aliceKP, bob, "1", "0.1", 0, "vm:deploy:33600a"),
+	})
+	// h=3：帶 gas 段的新格式且 gas=0——仍屬資源治理問題，必須抓出。
+	m71InsertBlock(t, n, 3, n.Address(), []chaindb.Transaction{
+		m71SignedTx(t, aliceKP, bob, "1", "0.1", 1, "vm:call:0:6000"),
+	})
+
+	la, err := n.VerifyLedgerOnChain()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if la.ContractFail != 1 {
+		t.Fatalf("舊格式 deploy 不應誤報、新格式 gas=0 應抓出（各 1 筆）: %+v", la)
+	}
+	if la.OK {
+		t.Fatal("含 gas=0 新格式合約的鏈不應 OK")
+	}
+}

@@ -103,6 +103,9 @@
       <div class="cg"><small>驗證人總數</small><b id="cVals">—</b></div>
       <div class="cg"><small>驗證人總權重</small><b id="cPower">—</b></div>
       <div class="cg"><small>最終化門檻（2/3）</small><b id="cQuorum">—</b></div>
+      <div class="cg"><small>本節點驗證人資格</small><b id="cVal">—</b></div>
+      <div class="cg"><small>共識模式</small><b id="cMode">—</b></div>
+      <div class="cg"><small>接管出塊</small><b id="cTake">—</b></div>
     </div>
     <p class="muted" id="cNote" style="margin-top:8px"></p>
     <div style="margin:12px 0 6px"><b>P2P 對等節點（admin_peers）</b></div>
@@ -144,7 +147,16 @@
       show('#cVals', d.validator_total != null ? d.validator_total : '—');
       show('#cPower', d.validator_power != null ? d.validator_power : '—');
       show('#cQuorum', d.validator_quorum != null ? d.validator_quorum : '—');
-      show('#cNote', d.consensus_note || '');
+      // v54：驗證人資格／共識模式／接管狀態
+      show('#cVal', d.is_validator ? '是（輪值出塊）' : '否（跟隨同步）');
+      show('#cMode', d.consensus_mode === 'distributed' ? '分布式 BFT 輪值' : '跟隨節點');
+      var take = d.takeover_active ? '接管中' : '正常';
+      show('#cTake', take);
+      var cN = document.getElementById('cNote');
+      if (cN) {
+        cN.style.color = d.takeover_active ? '#c0392b' : '';
+        cN.textContent = d.consensus_note || '';
+      }
       var pb = box('#peersBox');
       if (Array.isArray(d.peers) && d.peers.length > 0) {
         var rows = d.peers.map(function (p) {
