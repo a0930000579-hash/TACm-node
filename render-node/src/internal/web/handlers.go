@@ -2,6 +2,7 @@ package web
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -181,6 +182,22 @@ type nodeStatusResp struct {
 
 // probeSeed 探測單一 seed 節點（M64）：GET {seed}/status、2 秒超時。
 // 並行探測由呼叫方以 Goroutine 執行（Go 慣用併發寫法），本函式只做單點探測。
+// handleSnapshotInfo GET /api/snapshot/info — 快照元資訊（輕量，不帶帳戶資料）——v126 版本化。
+func (s *Server) handleSnapshotInfo(w http.ResponseWriter, r *http.Request) {
+	sd, err := s.ds.Snapshot()
+	if err != nil {
+		writeJSON(w, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	writeJSON(w, map[string]any{
+		"ok":          true,
+		"version":     sd.Version,
+		"height":      sd.Height,
+		"genesis_hash": sd.GenesisHash,
+		"tip_hash":    sd.TipHash,
+	})
+}
+
 // handleSnapshotAPI GET /api/snapshot — 導出狀態快照（供新節點 -snapshot-url 導入）。
 func (s *Server) handleSnapshotAPI(w http.ResponseWriter, r *http.Request) {
 	sd, err := s.ds.Snapshot()
@@ -188,7 +205,17 @@ func (s *Server) handleSnapshotAPI(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	writeJSON(w, sd)
+	// v68：快照 SHA256 校驗和——回應帶 X-Snapshot-SHA256 header，
+	// 導入端（-snapshot-url）下載後重算比對，防傳輸損壞/竄改。
+	raw, err := json.Marshal(sd)
+	if err != nil {
+		http.Error(w, "snapshot: marshal 失敗", http.StatusInternalServerError)
+		return
+	}
+	sum := sha256.Sum256(raw)
+	w.Header().Set("X-Snapshot-SHA256", hex.EncodeToString(sum[:]))
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(raw)
 }
 
 func probeSeed(sd SeedInfo) map[string]any {
@@ -448,6 +475,12 @@ func (s *Server) handleSignTool(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "sign_tool.html", pongo2.Context{})
 }
 
+// handleZkTool GET /zk — ZK＋VRF 工具台（批次證明/承諾/Nullifier/可驗證隨機數）。
+// 後端 RPC 見 internal/node/zk_rpc.go、vrf_rpc.go；前端直接 POST 節點。
+func (s *Server) handleZkTool(w http.ResponseWriter, r *http.Request) {
+	s.render(w, "zk.html", pongo2.Context{})
+}
+
 // handleContracts GET /contracts — 合約驗證中心（M139）。
 // 列表/read 互動由前端直接讀取節點 RPC（POST /contract/read 走 ABI 編碼）。
 func (s *Server) handleContracts(w http.ResponseWriter, r *http.Request) {
@@ -478,10 +511,21 @@ func (s *Server) handleAA(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "aa.html", pongo2.Context{})
 }
 
+// handleSdk GET /sdk — 開發者 SDK 主網範例（tacjs 連接與查詢 demo）。
+func (s *Server) handleSdk(w http.ResponseWriter, r *http.Request) {
+	s.render(w, "sdk.html", pongo2.Context{})
+}
+
 // handleAPIDocs GET /api-docs — 索引 API（Indexer）文檔頁。
 // 端點本體在節點 RPC /api/v1/*；此頁為開發者查詢指引。
 func (s *Server) handleAPIDocs(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "api_docs.html", pongo2.Context{})
+}
+
+// handleLiquidStaking GET /liquid-staking — 流動性質押（Lido 模式，stTACm 憑證）。
+// 實時數據由前端直接讀取節點 RPC（/api/liquidstake/*）。
+func (s *Server) handleLiquidStaking(w http.ResponseWriter, r *http.Request) {
+	s.render(w, "liquidstaking.html", pongo2.Context{})
 }
 
 // handleStake GET /stake — 質押委託（Staking Delegation）頁。
@@ -499,6 +543,16 @@ func (s *Server) handleDefi(w http.ResponseWriter, r *http.Request) {
 
 // handleTokens GET /tokens — 代幣工作室（Token Studio）：鏈上標準代幣發行
 // （節點官方金鑰代簽）＋列表/詳情/轉帳，App 化。實時數據由前端讀取 RPC。
+// handleAssets GET /assets — 資產中心（TACm＋TiUSD 雙分頁監控台）。
+func (s *Server) handleAssets(w http.ResponseWriter, r *http.Request) {
+	s.render(w, "assets.html", pongo2.Context{})
+}
+
+// handleTiUSD GET /tiusd — 相容舊網址，導向資產中心。
+func (s *Server) handleTiUSD(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, "/assets", http.StatusFound)
+}
+
 func (s *Server) handleTokens(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "tokens.html", pongo2.Context{})
 }
@@ -513,6 +567,11 @@ func (s *Server) handleNFTs(w http.ResponseWriter, r *http.Request) {
 // 與 Token Studio 打通（發幣→建池→交易閉環）。實時數據由前端讀取 RPC。
 func (s *Server) handleDex(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "dex.html", pongo2.Context{})
+}
+
+// handleENS GET /ens — 鏈上域名（ENS 對標）：.tac 註冊/解析/反向解析。
+func (s *Server) handleENS(w http.ResponseWriter, r *http.Request) {
+	s.render(w, "ens.html", pongo2.Context{})
 }
 
 // handleBridge GET /bridge — 跨鏈橋中心（M149w）：BSC 橋狀態、資產映射、

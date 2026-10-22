@@ -9,12 +9,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"sync"
 	"time"
 
+	"tacm/internal/aa"
 	bridgepkg "tacm/internal/bridge"
 	"tacm/internal/c2c"
 	"tacm/internal/chaindb"
@@ -26,9 +29,10 @@ import (
 	"tacm/internal/crypto"
 	"tacm/internal/defi"
 	"tacm/internal/dex"
+	"tacm/internal/ens"
 	"tacm/internal/exchange"
 	"tacm/internal/governance"
-	"tacm/internal/aa"
+	"tacm/internal/liquidstake"
 	"tacm/internal/oracle"
 	"tacm/internal/p2p"
 	"tacm/internal/rollup"
@@ -86,14 +90,14 @@ type Node struct {
 	consensusWake chan struct{}
 
 	// BFT 即時最終性
-	vset           *bft.ValidatorSet
-	bftNode        *bft.BFTNode
-	finalityLog    *bft.FinalityLog
+	vset        *bft.ValidatorSet
+	bftNode     *bft.BFTNode
+	finalityLog *bft.FinalityLog
 
 	// M140 合約 ABI/Source 驗證元資料（data-dir 持久化）。
-	metaMu     sync.Mutex
-	verifyMeta map[string]ContractMeta
-	metaPath   string
+	metaMu         sync.Mutex
+	verifyMeta     map[string]ContractMeta
+	metaPath       string
 	finalizedH     int64
 	precommitMu    sync.Mutex
 	precommitVotes map[int64]map[string]bft.Vote
@@ -109,11 +113,19 @@ type Node struct {
 	exchangeSvc  *exchange.Service
 	communitySvc *community.Store
 	defiSvc      *defi.Store
+	ensSvc       *ens.Store
 	c2cSvc       *c2c.Store
 	authSvc      *AuthService
 
 	// M40 鏈上治理（提案/投票/參數執行；高度驅動）。
 	gov *governance.Governance
+	ls  *liquidstake.LiquidStake
+
+	// v129 鏈上多簽錢包（Gnosis Safe 模式；N-of-M 門檻批准後執行）。
+	ms *MultisigManager
+
+	// v130 鏈上拍賣（Auction；掛單/競價/結算）。
+	auc *AuctionManager
 
 	// M12 view-change 硬化：多數認證票集（>2/3 驗證人簽名才切輪）。
 	vcMu         sync.Mutex
@@ -153,9 +165,9 @@ type Node struct {
 
 	// 跨鏈橋（可選；nil=不啟用）
 	bridge          *bridgepkg.Bridge
-	relays          map[string]*bridgepkg.Relayer      // M150h：多鏈中繼實例（chainName→Relayer；bsc 向後相容）
-	relayCancels    map[string]context.CancelFunc      // M150h：多鏈中繼取消（chainName→CancelFunc）
-	bridgeNetworked bool // 已配置守衛網絡（跨鏈提案經 P2P 傳播聚合多簽）
+	relays          map[string]*bridgepkg.Relayer // M150h：多鏈中繼實例（chainName→Relayer；bsc 向後相容）
+	relayCancels    map[string]context.CancelFunc // M150h：多鏈中繼取消（chainName→CancelFunc）
+	bridgeNetworked bool                          // 已配置守衛網絡（跨鏈提案經 P2P 傳播聚合多簽）
 }
 
 // New 創建節點：打開數據庫、重放動態難度、載入或生成節點密鑰。
@@ -234,6 +246,27 @@ func New(cfg *config.Config, nodeID string, baseDifficulty int) (*Node, error) {
 	}
 	gs.SetApplyFunc(n.applyGovernanceParam)
 	n.gov = gs
+	// v129 鏈上多簽錢包：multisig.db（Gnosis Safe 模式）。
+	ms, merr := NewMultisigManager(filepath.Join(dataDir, "multisig.db"))
+	if merr != nil {
+		_ = db.Close()
+		return nil, merr
+	}
+	n.ms = ms
+	// v130 鏈上拍賣：auction.db（掛單/競價/結算）。
+	am, aerr := NewAuctionManager(filepath.Join(dataDir, "auction.db"))
+	if aerr != nil {
+		_ = db.Close()
+		return nil, aerr
+	}
+	n.auc = am
+	// v73 流動性質押：liquidstake.db（存款→stTACm 憑證，匯率制）。
+	ls, lserr := liquidstake.New(filepath.Join(dataDir, "liquidstake.db"))
+	if lserr != nil {
+		_ = db.Close()
+		return nil, lserr
+	}
+	n.ls = ls
 	// M151c-v2：重啟後套用既有治理參數——手續費預留同步至錢包帳本。
 	if n.walletSvc != nil {
 		n.walletSvc.SetTreasuryFeeBps(int(gs.Config().TreasuryFeeBps))
@@ -251,6 +284,14 @@ func New(cfg *config.Config, nodeID string, baseDifficulty int) (*Node, error) {
 		_ = db.Close()
 		return nil, err
 	}
+
+	// ENS 鏈上域名（.tac）：ens.db。
+	ensSt, err := ens.Open(dataDir)
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	n.ensSvc = ensSt
 
 	// C2C 場外交易：c2c.db。
 	cs2, err := c2c.Open(dataDir)
@@ -332,7 +373,38 @@ func New(cfg *config.Config, nodeID string, baseDifficulty int) (*Node, error) {
 		}
 	}
 
+	// v102：TiUSD 市值錨定——TACm 市價注入（訂單簿最後成交價）＋市值上限自動銷毀。
+	// 無成交（未上市）時市價維持 0 → 上限按 1:0.330 兜底。
+	go n.priceCapLoop()
+
 	return n, nil
+}
+
+// priceCapLoop v102：每 30 秒注入 TACm 市價（TACm/USDT 最後成交價）並執行
+// TiUSD 市值上限自動銷毀（流通 > 市值 → 銷毀至市值，確保不超額膨脹）。
+func (n *Node) priceCapLoop() {
+	t := time.NewTicker(30 * time.Second)
+	defer t.Stop()
+	for range t.C {
+		if n.walletSvc == nil {
+			continue
+		}
+		if n.exchangeSvc != nil {
+			m := exchange.Market{Base: exchange.AssetTACm, Quote: exchange.AssetUSDT}
+			if trs, terr := n.exchangeSvc.RecentTrades(m, 1); terr == nil && len(trs) > 0 {
+				if p, perr := strconv.ParseFloat(trs[0].PriceStr, 64); perr == nil {
+					n.walletSvc.SetTACMPrice(p)
+				} else {
+					n.walletSvc.SetTACMPrice(0)
+				}
+			} else {
+				n.walletSvc.SetTACMPrice(0)
+			}
+		}
+		if _, cerr := n.walletSvc.EnsureTiUSDCap(); cerr != nil {
+			fmt.Printf("[tacm] v102 priceCapLoop: %v\n", cerr)
+		}
+	}
 }
 
 // seedDefiLiquidity 為 DeFi 池與借貸市場注資初始流動性（Reward 鑄造、帳戶為空才執行，冪等）。
@@ -379,7 +451,12 @@ func (n *Node) seedAccountIfEmpty(account, asset string, amount float64, memo st
 	if err != nil {
 		return fmt.Errorf("defi: 查詢注資帳戶 %s: %w", account, err)
 	}
-	amts, err := wallet.NewAmount(amountStr(amount), wallet.Asset(asset))
+	// v90：先 normalize 為 wallet canonical Asset，避免 db 大小寫殘留導致精度誤判。
+	canon, ok := wallet.NormalizeAsset(asset)
+	if !ok {
+		return fmt.Errorf("defi: 未知注資資產 %s", asset)
+	}
+	amts, err := wallet.NewAmount(amountStr(amount), canon)
 	if err != nil {
 		return fmt.Errorf("defi: 注資金額無效 %s/%s: %w", account, asset, err)
 	}
@@ -471,6 +548,12 @@ func (n *Node) Auth() *AuthService { return n.authSvc }
 
 // Governance 回傳鏈上治理管理器。
 func (n *Node) Governance() *governance.Governance { return n.gov }
+
+// Multisig 回傳鏈上多簽錢包管理器（v129；Gnosis Safe 模式）。
+func (n *Node) Multisig() *MultisigManager { return n.ms }
+
+// Auction 回傳鏈上拍賣管理器（v130）。
+func (n *Node) Auction() *AuctionManager { return n.auc }
 
 // applyGovernanceParam 治理參數執行回調：熱更新可運行時套用的參數。
 // block_time/difficulty 立即生效；其餘參數儲存供 API 查詢與重啟後讀取。
@@ -777,6 +860,9 @@ func (n *Node) Close() error {
 	if n.gov != nil {
 		_ = n.gov.Close()
 	}
+	if n.ls != nil {
+		_ = n.ls.Close()
+	}
 	return n.db.Close()
 }
 
@@ -873,6 +959,52 @@ func (n *Node) setTakeover(height int64) {
 		if h < height-1000 {
 			delete(n.takeover, h)
 		}
+	}
+}
+
+// TakeoverStats 回傳本節點近期接管出塊統計（失聯 proposer 補位高度）。
+// BlockProductionRate 本節點出塊率——掃最近 window 個區塊，統計 proposer=本節點 的比例（v127）。
+func (n *Node) BlockProductionRate(window int) (mined, expected int64, rate float64, err error) {
+	if window <= 0 {
+		window = 100
+	}
+	blocks, err := n.db.GetBlocks(window, 0)
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("node: 統計出塊率: %w", err)
+	}
+	addr := n.Address()
+	for _, b := range blocks {
+		if b.ProposerAddress != "" && b.ProposerAddress == addr {
+			mined++
+		}
+	}
+	expected = int64(len(blocks))
+	if expected > 0 {
+		rate = float64(mined) / float64(expected)
+	}
+	return mined, expected, rate, nil
+}
+
+func (n *Node) TakeoverStats() map[string]any {
+	n.takeoverMu.Lock()
+	defer n.takeoverMu.Unlock()
+	heights := make([]int64, 0, len(n.takeover))
+	for h := range n.takeover {
+		heights = append(heights, h)
+	}
+	sort.Slice(heights, func(i, j int) bool { return heights[i] > heights[j] })
+	count := len(heights)
+	var latest int64
+	if count > 0 {
+		latest = heights[0]
+	}
+	if len(heights) > 20 {
+		heights = heights[:20]
+	}
+	return map[string]any{
+		"takeover_count":         count,
+		"latest_takeover_height": latest,
+		"takeover_heights":       heights,
 	}
 }
 
@@ -1137,12 +1269,17 @@ func (n *Node) produceBlock() error {
 
 	// coinbase 增發交易置於首位（height>0），其哈希進入 Merkle 根。
 	// 供應模型：TACM_MAX_SUPPLY 設定後依年衰減發行（上限 52,003,300）；未設定維持減半模式。
+	// 硬煞車（方案 B）：每塊 reward = min(模型獎勵, 剩餘可挖)；剩餘 ≤ 0 → 0，
+	// 總供應永不高於上限，與出塊速度無關（reorg.go 驗證側共用 ComputeCappedReward）。
 	// M58：coinbase 瓜分明細（礦工按算力 + 獎勵池 15%）寫入區塊 → 全網節點照單執行，帳本一致。
 	if height > 0 {
-		reward := chaindb.BlockReward(height)
-		if cfg, err := chaindb.LoadEmission(int64(n.cfg.BlockTime)); err == nil && cfg.Model == "annual_decay" {
-			reward = chaindb.EmissionAmount(height, int64(n.cfg.BlockTime))
+		var minedWei *big.Int
+		if n.walletSvc != nil {
+			if mw, merr := n.walletSvc.ChainMinedTacm(); merr == nil {
+				minedWei = mw
+			}
 		}
+		reward := chaindb.ComputeCappedReward(height, int64(n.cfg.BlockTime), minedWei)
 		var splits []chaindb.CoinbaseSplit
 		var onlineNodes []string // M149m-7：鏈上在線節點集（含 0 算力），瓜分 45% 節點獎勵
 		if n.walletSvc != nil {
@@ -1203,6 +1340,14 @@ func (n *Node) produceBlock() error {
 							delegRewards[addr] = list
 						}
 					}
+					// v75：流動質押池獎勵注入（主鏈本地服務）——池視為本節點委託人，
+					// 按 池質押/(節點自質押+池質押) 分得本節點出塊獎勵份額；僅影響本地池匯率。
+					if n.ls != nil {
+						selfStake := stakeByAddr[n.nodeAddress]
+						if share := n.ls.PoolShare(selfStake, nodeShare); share > 1e-9 {
+							_ = n.ls.AddRewards(share)
+						}
+					}
 				}
 			}
 		}
@@ -1220,7 +1365,7 @@ func (n *Node) produceBlock() error {
 					TxHash:   chaindb.CoinbaseSplitTxHash(height, len(txs), u.Delegator, u.Amount, ts),
 					FromAddr: "", ToAddr: u.Delegator,
 					Amount: chaindb.FormatFloat(u.Amount), Fee: "0", Nonce: 0, Ts: ts,
-					Memo: chaindb.UnbondingMemo + ":" + u.Delegator + ":" + u.Validator,
+					Memo:   chaindb.UnbondingMemo + ":" + u.Delegator + ":" + u.Validator,
 					Status: "confirmed",
 				}
 				txs = append(txs, ubTx)

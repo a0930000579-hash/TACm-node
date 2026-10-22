@@ -1,0 +1,853 @@
+{% extends "base.html" %}
+{% block title %}Assets Center · TACm & TiUSD Monitor{% endblock %}
+{% block content %}
+<style>
+@media (max-width:640px){
+  .table-wrap table{min-width:0 !important;font-size:12px}
+  .table-wrap th:nth-child(4),.table-wrap td:nth-child(4),
+  .table-wrap th:nth-child(5),.table-wrap td:nth-child(5){display:none}
+}
+  :root { --bn-bg:#f7f8fb; --bn-card:#ffffff; --bn-card2:#f2f4f9; --bn-line:#e2e6ee;
+          --bn-txt:#14161a; --bn-sub:#5d6778; --bn-yellow:#fcd535; --bn-green:#0ecb81;
+          --bn-red:#f6465d; --bn-blue:#3d8cff; }
+  * { box-sizing:border-box; }
+  body { background:var(--bn-bg); color:var(--bn-txt); margin:0; font-family:-apple-system,"PingFang TC","Noto Sans TC",sans-serif; }
+  .bn-top { display:flex; align-items:center; gap:12px; padding:14px 16px; border-bottom:1px solid var(--bn-line); position:sticky; top:0; background:var(--bn-bg); z-index:5; flex-wrap:wrap; }
+  .bn-logo { font-weight:800; font-size:20px; letter-spacing:.5px; }
+  .bn-logo b { color:var(--bn-yellow); }
+  .bn-nav { display:flex; gap:8px; flex-wrap:wrap; }
+  .bn-nav a { color:var(--bn-sub); text-decoration:none; font-size:13px; padding:6px 12px; border-radius:8px; }
+  .bn-nav a.on { background:var(--bn-yellow); color:#181a20; font-weight:700; }
+  .wrap { max-width:1180px; margin:0 auto; padding:16px; }
+  .tabs { display:flex; gap:8px; margin:14px 0 12px; }
+  .tab { flex:1; text-align:center; padding:12px 0; border-radius:12px; border:1px solid var(--bn-line); background:var(--bn-card); font-weight:700; font-size:15px; color:var(--bn-sub); cursor:pointer; user-select:none; }
+  .tab.on { background:#181a20; color:var(--bn-yellow); border-color:#181a20; }
+  .tab small { display:block; font-weight:400; font-size:11px; opacity:.75; margin-top:2px; }
+  .pane { display:none; }
+  .pane.on { display:block; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:12px; }
+  .card { background:var(--bn-card); border:1px solid var(--bn-line); border-radius:14px; padding:14px; }
+  .card h3 { margin:0 0 10px; font-size:14px; color:var(--bn-sub); display:flex; align-items:center; gap:6px; }
+  .kpi { display:flex; justify-content:space-between; align-items:baseline; padding:7px 0; border-bottom:1px dashed var(--bn-line); }
+  .kpi:last-child { border-bottom:0; }
+  .kpi .lb { font-size:12px; color:var(--bn-sub); }
+  .kpi .vl { font-weight:700; font-size:15px; word-break:break-all; text-align:right; }
+  .health { display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:700; }
+  .health.ok { background:#e6f9f0; color:var(--bn-green); }
+  .health.near_cap { background:#fdf5e3; color:#c99400; }
+  .health.over_cap, .health.cap_disabled, .health.halving_mode { background:#fdecef; color:var(--bn-red); }
+  .health.unlisted { background:#eef1f7; color:#5d6778; }
+  .bar { height:8px; background:var(--bn-card2); border-radius:99px; overflow:hidden; margin:8px 0 4px; }
+  .bar i { display:block; height:100%; background:linear-gradient(90deg,var(--bn-green),var(--bn-yellow)); border-radius:99px; }
+  .table-wrap { overflow-x:auto; margin-top:12px; }
+  table { width:100%; border-collapse:collapse; background:var(--bn-card); border:1px solid var(--bn-line); border-radius:14px; font-size:13px; }
+  th { background:var(--bn-card2); color:var(--bn-sub); text-align:left; padding:9px 12px; font-size:12px; white-space:nowrap; }
+  td { padding:8px 12px; border-top:1px solid var(--bn-line); }
+  .pos { color:var(--bn-green); font-weight:700; }
+  .neg { color:var(--bn-red); font-weight:700; }
+  .chip { display:inline-block; background:var(--bn-card2); border:1px solid var(--bn-line); border-radius:99px; padding:1px 8px; font-size:11px; color:var(--bn-sub); margin-left:6px; }
+  .st { color:var(--bn-sub); font-size:12px; margin:2px 0 12px; }
+  .mono { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px; word-break:break-all; }
+  .mini { color:var(--bn-sub); font-size:12px; line-height:1.6; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:700; }
+  .b-in { background:#e6f9f0; color:var(--bn-green); }
+  .b-out { background:#fdecef; color:var(--bn-red); }
+  .b-pend { background:#fdf5e3; color:#c99400; }
+</style>
+
+<div class="bn-top">
+  <div class="bn-logo"><b>Assets</b> Center <span class="chip">v101</span></div>
+  <nav class="bn-nav">
+    <a href="/defi">DeFi</a>
+    <a href="/exchange">Exchange</a>
+    <a href="/bridge">Bridge</a>
+    <a href="/wallet">Wallet</a>
+  </nav>
+</div>
+
+<div class="wrap">
+  <h2 style="margin:2px 0 0" data-i18n="assets.title">資產中心</h2>
+  <div class="st" data-i18n="assets.sub">鏈上資產總覽：供應 · 儲備 · 流向 · 跨鏈明細 —— 確保無超額膨脹</div>
+
+  <div class="tabs">
+    <div class="tab on" id="tab-tacm" data-tab="tacm"><span data-i18n="assets.tabTacm">TACm</span><small data-i18n="assets.tabTacmSub">原生幣 · 出塊獎勵</small></div>
+    <div class="tab" id="tab-tiusd" data-tab="tiusd"><span data-i18n="assets.tabTiUSD">TiUSD</span><small data-i18n="assets.tabTiUSDSub">穩定幣 · 1:1 錨定 USDT</small></div>
+  </div>
+
+  <div class="card" style="margin-top:12px">
+    <h3 data-i18n="assets.secTitle">錢包安全與多簽（Wallet Security & Multisig）</h3>
+    <div class="mini" style="margin-bottom:6px" data-i18n="assets.secNote">已支援 EIP-191 / EIP-712 標準簽名與 MetaMask 級多幣種管理；多簽（Multisig）採用閾值簽名方案，交易需指定數量簽署人共同授權。</div>
+    <div class="mini" style="font-size:12px;color:var(--bn-sub);line-height:1.8" data-i18n="assets.secList">• 簽名工具：訊息 / TypedData 簽名與驗證<br>• 多簽設定：可在 Web3 錢包建立 2/3、3/5 等多簽帳戶<br>• 硬體錢包：支援 Ledger 風格離線簽名（簽名僅本地產生，私鑰永不離機）</div>
+  </div>
+
+  <div class="card" style="margin-top:12px">
+    <h3 data-i18n="oracle.native">價格預言機（原生資產）</h3>
+    <div class="mini" style="margin-bottom:6px" data-i18n="oracle.note">TACm 市價＝交易所最後成交（未上市按 1:0.330 兜底）；TiUSD 穩定幣 1:1 錨定 USDT。</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th data-i18n="oracle.asset">資產</th><th data-i18n="oracle.price">價格 (USDT)</th><th data-i18n="oracle.decimals">精度</th><th data-i18n="oracle.source">來源</th><th data-i18n="oracle.updated">更新</th></tr></thead>
+        <tbody id="oracleRows"><tr><td colspan="5" style="color:var(--bn-sub)">載入中…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:12px">
+    <h3 data-i18n="assets.tools">開發者工具</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a class="btn" href="/sign" data-i18n="assets.signTool">簽名工具台 (EIP-191/712)</a>
+      <a class="btn" href="/tokens" data-i18n="assets.tokenStudio">代幣工作室 (Token Studio)</a>
+      <a class="btn" href="/contracts" data-i18n="assets.contractVerify">合約驗證中心 (Contract Verifier)</a>
+      <a class="btn" href="/explorer" data-i18n="assets.blockExplorer">區塊瀏覽器</a>
+      <a class="btn" href="/api-docs" data-i18n="assets.rpcDocs">API 文檔</a>
+    </div>
+  </div>
+
+  <!-- ============ TACm 分頁 ============ -->
+  <div class="pane on" id="pane-tacm">
+    <div id="a-warnbar" class="warnbar" style="display:none"></div>
+    <div style="padding:6px 2px 0"><a class="btn" href="/api/tacm/export.csv" data-i18n="assets.export">匯出帳本 CSV</a></div>
+    <div class="grid">
+      <div class="card">
+        <h3 data-i18n="assets.tacmOverview">TACm 總覽</h3>
+        <div class="kpi"><span class="lb" data-i18n="assets.mined">已出塊產出（全鏈）</span><span class="vl" id="a-mined">—</span></div>
+        <div class="kpi"><span class="lb" data-i18n="assets.cap2">總供應上限</span><span class="vl" id="a-cap">—</span></div>
+        <div class="kpi"><span class="lb" data-i18n="assets.remaining2">剩餘可挖</span><span class="vl" id="a-rem">—</span></div>
+        <div class="kpi"><span class="lb" data-i18n="assets.util2">開採進度</span><span class="vl" id="a-util">—</span></div>
+        <div class="bar"><i id="a-bar" style="width:0%"></i></div>
+        <div class="kpi"><span class="lb" data-i18n="assets.health2">膨脹檢查</span><span class="vl"><span class="health" id="a-health">—</span></span></div>
+        <div class="kpi"><span class="lb" data-i18n="assets.tacmPrice">市場價</span><span class="vl" id="a-price">—</span></div>
+        <div class="kpi"><span class="lb" data-i18n="assets.tacmUpdated">更新時間</span><span class="vl" id="a-upd" style="font-size:12px">—</span></div>
+        <div class="mini" style="margin-top:8px" data-i18n="assets.tacmNote">TACm 為原生幣：出塊獎勵（coinbase）產生——節點 45% / 獎勵池 15% / 礦工 40%。</div>
+      </div>
+
+      <div class="card">
+        <h3 data-i18n="assets.reserves2">儲備／鎖倉池</h3>
+        <div style="font-weight:700;font-size:13px;margin-bottom:4px" data-i18n="assets.rewardPool">鏈上獎勵池 (reward_pool)</div>
+        <div class="kpi"><span class="lb">TACm</span><span class="vl" id="a-rp-tacm">—</span></div>
+        <div class="kpi"><span class="lb">TiUSD</span><span class="vl" id="a-rp-tiusd">—</span></div>
+        <div style="font-weight:700;font-size:13px;margin:10px 0 4px" data-i18n="assets.cdpVault">CDP 抵押託管 (defi_cdp)</div>
+        <div class="kpi"><span class="lb">TACm</span><span class="vl" id="a-cd-tacm">—</span></div>
+        <div class="kpi"><span class="lb">TiUSD</span><span class="vl" id="a-cd-tiusd">—</span></div>
+        <div style="font-weight:700;font-size:13px;margin:10px 0 4px" data-i18n="assets.feePool2">手續費池 (fee)</div>
+        <div class="kpi"><span class="lb">TACm</span><span class="vl" id="a-fe-tacm">—</span></div>
+        <div class="kpi"><span class="lb">TiUSD</span><span class="vl" id="a-fe-tiusd">—</span></div>
+        <div style="font-weight:700;font-size:13px;margin:12px 0 4px" data-i18n="assets.tacmPoolOps">資金池近期操作（TACm）</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th data-i18n="assets.time2">時間</th><th data-i18n="assets.poolAcct2">池帳戶</th><th data-i18n="assets.amount2">金額</th><th data-i18n="assets.memo2">Memo</th></tr></thead>
+            <tbody id="a-poolOpsRows"><tr><td colspan="4" style="color:var(--bn-sub)">載入中…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 data-i18n="assets.flow2">TACm 流向統計（帳本分類）</h3>
+        <div class="table-wrap" style="margin-top:0">
+          <table>
+            <thead><tr><th data-i18n="assets.category2">來源 / 流向</th><th data-i18n="assets.inflow2">流入 (TACm)</th><th data-i18n="assets.outflow2">流出 (TACm)</th></tr></thead>
+            <tbody id="a-flow"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <h3 data-i18n="assets.tacmTrend">已出塊產出 vs 供應上限趨勢</h3>
+      <div class="mini" style="margin-bottom:6px" data-i18n="assets.tacmTrendNote">累計產出（ledger mint/reward 累加）對照供應上限——確認開採進度。</div>
+      <svg id="a-chart" viewBox="0 0 320 140" style="width:100%;height:140px"></svg>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <h3 data-i18n="assets.tacmPie">開採來源占比</h3>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center" id="a-pie-legend"></div>
+      <svg id="a-pie" viewBox="0 0 140 140" style="width:120px;height:120px;margin:4px auto"></svg>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <h3 data-i18n="assets.tacmAlerts">開採進度警報</h3>
+      <div class="mini" style="margin-bottom:6px" id="a-alerts-summary">—</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th data-i18n="tiusd.alertsLevel">等級</th><th data-i18n="tiusd.alertsType">類型</th><th data-i18n="tiusd.alertsDetail">明細</th></tr></thead>
+          <tbody id="a-alertRows"><tr><td colspan="3" style="color:var(--bn-sub)">載入中…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <h3 data-i18n="assets.tacmBridge">跨鏈橋狀態</h3>
+      <div style="display:flex;gap:10px;flex-wrap:wrap" id="a-bridge-status">
+        <div class="kpi"><span class="lb" data-i18n="tiusd.bridgePending">待處理</span><span class="vl" id="a-bs-pending">—</span></div>
+        <div class="kpi"><span class="lb" data-i18n="tiusd.bridgeChains">支援鏈數</span><span class="vl" id="a-bs-chains">—</span></div>
+        <div class="kpi"><span class="lb" data-i18n="tiusd.bridgeFee">手續費率</span><span class="vl" id="a-bs-fee">—</span></div>
+        <div class="kpi"><span class="lb" data-i18n="tiusd.bridgePaused">暫停中</span><span class="vl" id="a-bs-paused">—</span></div>
+      </div>
+      <div style="font-weight:700;font-size:13px;margin:10px 0 4px" data-i18n="assets.bridgeChainPending">分鏈待處理明細</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th data-i18n="assets.bridgeChainName">鏈</th><th data-i18n="assets.bridgeChainId">Chain ID</th><th data-i18n="assets.bridgeChainPending2">待處理</th></tr></thead>
+          <tbody id="a-chainRows"><tr><td colspan="3" style="color:var(--bn-sub)">載入中…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <h3 data-i18n="assets.bridge2">跨鏈轉出 / 轉入明細（TACm）</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th data-i18n="assets.dir2">方向</th><th data-i18n="assets.route2">鏈路由</th><th data-i18n="assets.amount2">金額</th><th data-i18n="assets.status2">狀態</th><th data-i18n="assets.addr2">地址</th><th data-i18n="assets.txhash2">交易哈希</th></tr></thead>
+          <tbody id="a-bridge"><tr><td colspan="7" style="color:var(--bn-sub)">載入中…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <h3 data-i18n="assets.recent2">近期 TACm 流水（帳本）</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th data-i18n="assets.time2">時間</th><th data-i18n="assets.account2">帳戶</th><th data-i18n="assets.amount3">金額</th><th data-i18n="assets.memo2">Memo</th></tr></thead>
+          <tbody id="a-recent"><tr><td colspan="4" style="color:var(--bn-sub)">載入中…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ TiUSD 分頁 ============ -->
+  <div class="pane" id="pane-tiusd">
+    <div id="o-warnbar" class="warnbar" style="display:none"></div>
+    <div style="padding:6px 2px 0"><a class="btn" href="/api/tiusd/export.csv" data-i18n="tiusd.export">匯出帳本 CSV</a></div>
+    <div class="grid">
+      <div class="card">
+        <h3 data-i18n="tiusd.overview">總覽</h3>
+        <div class="kpi"><span class="lb" data-i18n="tiusd.supply">流通供應 (TiUSD)</span><span class="vl" id="o-supply">—</span></div>
+        <div class="kpi"><span class="lb" data-i18n="tiusd.cap">市值上限 (1:1 市值)</span><span class="vl" id="o-cap">—</span></div>
+        <div class="kpi"><span class="lb" data-i18n="tiusd.mcap">市值規則</span><span class="vl" id="o-mcap" style="font-size:12px">—</span></div>
+        <div class="kpi"><span class="lb" data-i18n="tiusd.floor">供應下限 (33%)</span><span class="vl" id="o-floor">—</span></div>
+        <div class="kpi"><span class="lb" data-i18n="tiusd.remaining">剩餘可鑄</span><span class="vl" id="o-rem">—</span></div>
+        <div class="kpi"><span class="lb" data-i18n="tiusd.util">供應利用率</span><span class="vl" id="o-util">—</span></div>
+        <div class="bar"><i id="o-bar" style="width:0%"></i></div>
+        <div class="kpi"><span class="lb" data-i18n="tiusd.peg">錨定價格</span><span class="vl" id="o-peg">—</span></div>
+        <div class="kpi"><span class="lb" data-i18n="tiusd.health">膨脹檢查</span><span class="vl"><span class="health" id="o-health">—</span></span></div>
+      </div>
+
+      <div class="card">
+        <h3 data-i18n="tiusd.reserves">真實儲備</h3>
+        <div style="font-weight:700;font-size:13px;margin-bottom:4px" data-i18n="tiusd.stablePool">兌換儲備池 (stable-pool)</div>
+        <div class="kpi"><span class="lb">USDT</span><span class="vl" id="r-sp-usdt">—</span></div>
+        <div class="kpi"><span class="lb">TiUSD</span><span class="vl" id="r-sp-tiusd">—</span></div>
+        <div class="kpi"><span class="lb">TACm</span><span class="vl" id="r-sp-tacm">—</span></div>
+        <div style="font-weight:700;font-size:13px;margin:10px 0 4px" data-i18n="tiusd.feePool">手續費池 (fee)</div>
+        <div class="kpi"><span class="lb">USDT</span><span class="vl" id="r-fe-usdt">—</span></div>
+        <div class="kpi"><span class="lb">TiUSD</span><span class="vl" id="r-fe-tiusd">—</span></div>
+        <div class="kpi"><span class="lb">TACm</span><span class="vl" id="r-fe-tacm">—</span></div>
+        <div class="mini" style="margin-top:10px" data-i18n="tiusd.reserveNote">TiUSD 有真實儲備背書（USDT/TACm）才可兌換；無儲備時僅能 TACm 閃兌。</div>
+        <div style="font-weight:700;font-size:13px;margin:12px 0 4px" data-i18n="tiusd.poolOps">資金池近期操作（TiUSD）</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th data-i18n="tiusd.time">時間</th><th data-i18n="tiusd.poolAcct">池帳戶</th><th data-i18n="tiusd.amount">金額</th><th data-i18n="tiusd.memo">備註</th></tr></thead>
+            <tbody id="poolOpsRows"><tr><td colspan="4" style="color:var(--bn-sub)">載入中…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 data-i18n="tiusd.mint">鑄造與銷毀</h3>
+        <div class="kpi"><span class="lb" data-i18n="tiusd.totalMinted">累計鑄造</span><span class="vl" id="o-minted">—</span></div>
+        <div class="kpi"><span class="lb" data-i18n="tiusd.totalBurned">累計銷毀</span><span class="vl" id="o-burned">—</span></div>
+        <div class="kpi"><span class="lb" data-i18n="tiusd.net">淨鑄造</span><span class="vl" id="o-net">—</span></div>
+        <div class="kpi"><span class="lb" data-i18n="tiusd.updated">更新時間</span><span class="vl" id="o-upd" style="font-size:12px">—</span></div>
+        <div class="mini" style="margin-top:10px" data-i18n="tiusd.mintNote">產生途徑：CDP 抵押借貸、native-swap TACm 閃兌、stable-swap（受儲備限制）、供給層補鑄；還款即銷毀。</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <h3 data-i18n="tiusd.chart">供應 vs 市值上限趨勢</h3>
+      <div class="mini" style="margin-bottom:4px" data-i18n="tiusd.chartNote">累計鑄造（ledger mint 累加）對照市值上限——確認無超額膨脹。</div>
+      <svg id="tiusd-chart" viewBox="0 0 320 140" style="width:100%;height:140px"></svg>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <h3 data-i18n="tiusd.reserveChart">儲備 vs 供應趨勢</h3>
+      <div class="mini" style="margin-bottom:4px" data-i18n="tiusd.reserveChartNote">發行方資金池（stable-pool · defi_cdp · fee）累計 TiUSD 對照流通供應——透明度核心指標。</div>
+      <svg id="tiusd-reserve-chart" viewBox="0 0 320 140" style="width:100%;height:140px"></svg>
+      <div class="mini" id="reserve-ratio" style="margin-top:4px">—</div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <h3 data-i18n="tiusd.pie">供應來源占比</h3>
+      <svg id="tiusd-pie" viewBox="0 0 140 140" style="width:120px;height:120px;margin:4px auto"></svg>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center" id="pie-legend"></div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <h3 data-i18n="tiusd.positions">借款頭寸（全鏈 DeFi）</h3>
+      <div class="mini" style="margin-bottom:6px" id="pos-totals">—</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th data-i18n="tiusd.addr2">地址</th><th data-i18n="tiusd.collateral">抵押</th><th data-i18n="tiusd.borrow2">借出</th><th>LTV</th><th data-i18n="tiusd.status2">狀態</th></tr></thead>
+          <tbody id="posRows"><tr><td colspan="5" style="color:var(--bn-sub)">載入中…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <h3 data-i18n="tiusd.alerts">近期警報事件（30 天）<span style="float:right;cursor:pointer;font-weight:700" onclick="openAlertCfg()" data-i18n="tiusd.alertsCfg">⚙ 配置</span></h3>
+      <div class="mini" style="margin-bottom:6px" id="alerts-summary">—</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th data-i18n="tiusd.alertsLevel">等級</th><th data-i18n="tiusd.alertsType">類型</th><th data-i18n="tiusd.alertsDetail">明細</th><th data-i18n="tiusd.alertsTime">時間</th></tr></thead>
+          <tbody id="alertRows"><tr><td colspan="4" style="color:var(--bn-sub)">載入中…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <h3 data-i18n="tiusd.flow">TiUSD 流向統計（帳本分類）</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th data-i18n="tiusd.category">來源 / 流向</th><th data-i18n="tiusd.inflow">流入 (TiUSD)</th><th data-i18n="tiusd.outflow">流出 (TiUSD)</th><th data-i18n="tiusd.net2">淨額</th></tr></thead>
+          <tbody id="flowRows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <h3 data-i18n="tiusd.bridgeStatus">跨鏈橋狀態</h3>
+      <div style="display:flex;gap:10px;flex-wrap:wrap" id="bridge-status">
+        <div class="kpi"><span class="lb" data-i18n="tiusd.bridgePending">待處理</span><span class="vl" id="bs-pending">—</span></div>
+        <div class="kpi"><span class="lb" data-i18n="tiusd.bridgeChains">支援鏈數</span><span class="vl" id="bs-chains">—</span></div>
+        <div class="kpi"><span class="lb" data-i18n="tiusd.bridgeFee">手續費率</span><span class="vl" id="bs-fee">—</span></div>
+        <div class="kpi"><span class="lb" data-i18n="tiusd.bridgePaused">暫停中</span><span class="vl" id="bs-paused">—</span></div>
+      </div>
+      <div style="font-weight:700;font-size:13px;margin:10px 0 4px" data-i18n="assets.bridgeChainPending">分鏈待處理明細</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th data-i18n="assets.bridgeChainName">鏈</th><th data-i18n="assets.bridgeChainId">Chain ID</th><th data-i18n="assets.bridgeChainPending2">待處理</th></tr></thead>
+          <tbody id="chainRows"><tr><td colspan="3" style="color:var(--bn-sub)">載入中…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <h3 data-i18n="tiusd.bridgeTitle">跨鏈轉出 / 轉入明細（TiUSD）</h3>
+      <div class="mini" style="margin-bottom:6px" id="bridge-net">—</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th data-i18n="tiusd.dir">方向</th><th data-i18n="tiusd.route">鏈路由</th><th data-i18n="tiusd.amount">金額</th><th data-i18n="tiusd.status">狀態</th><th data-i18n="tiusd.time">時間</th><th data-i18n="tiusd.addr">地址</th><th data-i18n="tiusd.txhash">交易哈希</th></tr></thead>
+          <tbody id="bridgeRows"><tr><td colspan="8" style="color:var(--bn-sub)">載入中…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <h3 data-i18n="tiusd.recent">近期 TiUSD 流水（帳本）</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th data-i18n="tiusd.time">時間</th><th data-i18n="tiusd.account">帳戶</th><th data-i18n="tiusd.amount">金額</th><th data-i18n="tiusd.memo">Memo</th></tr></thead>
+          <tbody id="recentRows"><tr><td colspan="4" style="color:var(--bn-sub)">載入中…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function fetchJSON(url, tries){
+  // 連線健壯性：6s 超時 + 自動重試（伺服器短暫重啟/網路抖動時自動恢復，不顯示 Load failed）。
+  var t = tries || 2;
+  return new Promise(function(res, rej){
+    var done = false;
+    var attempt = function(n){
+      var ctl = new AbortController();
+      var to = setTimeout(function(){ ctl.abort(); }, 6000);
+      fetch(url, {cache:'no-store', signal:ctl.signal}).then(function(r){
+        return r.json().catch(function(){ return null; });
+      }).then(function(d){
+        clearTimeout(to);
+        if(done) return; done = true; res(d);
+      }).catch(function(e){
+        clearTimeout(to);
+        if(n > 0){ setTimeout(function(){ attempt(n-1); }, 1200); }
+        else { if(done) return; done = true; rej(e); }
+      });
+    };
+    attempt(t-1);
+  });
+}
+
+(function(){
+  'use strict';
+  var T = function(k, zh, en){ try { if (window.TAC_I18N && TAC_I18N.cur() === 'en') { return en; } } catch (e) {} return zh; };
+  var esc = function(x){ return String(x == null ? '' : x).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); };
+  var fmtN = function(v){ return v == null ? '—' : Number(v).toLocaleString('en-US', {maximumFractionDigits:6}); };
+  var ts = function(sec){ if(!sec) return '—'; var d = new Date(sec*1000); var p=function(n){return (n<10?'0':'')+n;}; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes()); };
+  var set = function(id, v){ var e = document.getElementById(id); if (e) e.textContent = v; };
+  // v105：供應利用率警報條（critical 紅 / warn 黃）。
+  function warnBar(id, level, util){
+    var el = document.getElementById(id); if (!el) return;
+    if (level === 'critical'){
+      el.style.display = 'block';
+      el.className = 'warnbar warn-critical';
+      el.textContent = T('assets.warnCrit','⚠ 供應利用率 ',(util!=null?Math.min(util*100,999.99).toFixed(1)+'%':'—')) + T('assets.warnCrit2',' — 接近/超過市值上限，將觸發自動銷毀',' — near/over cap, auto-burn may trigger');
+    } else if (level === 'warn'){
+      el.style.display = 'block';
+      el.className = 'warnbar warn-warn';
+      el.textContent = T('assets.warn','⚠ 供應利用率 ',(util!=null?Math.min(util*100,999.99).toFixed(1)+'%':'—')) + T('assets.warn2',' — 接近上限 (>80%)',' — approaching cap (>80%)');
+    } else {
+      el.style.display = 'none';
+    }
+  }
+  function healthBadge(h, t){
+    var map = { 'ok': ['ok', T('tiusd.h.ok','健康 · 未超額','Healthy · Within Cap')],
+                'near_cap': ['near_cap', T('tiusd.h.near','接近上限 (>95%)','Near Cap (>95%)')],
+                'over_cap': ['over_cap', T('tiusd.h.over','已超上限！','OVER CAP!')],
+                'cap_disabled': ['cap_disabled', T('tiusd.h.dis','未設上限 (未啟用)','Cap Disabled (not set)')],
+                'halving_mode': ['halving_mode', T('assets.halving','減半模式 (未設上限)','Halving Mode (no cap set)')],
+                'unlisted': ['unlisted', T('tiusd.h.unlisted','未上市 · 0.330 基準','Unlisted · 0.330 basis')] };
+    var e = map[h] || ['halving_mode', h];
+    return '<span class="health ' + e[0] + '">' + (t || e[1]) + '</span>';
+  }
+  function bridgeRows(txs, emptyKey, zhEmpty, enEmpty){
+    if (!txs || !txs.length) return '<tr><td colspan="7" style="color:var(--bn-sub)">' + T(emptyKey, zhEmpty, enEmpty) + '</td></tr>';
+    return txs.map(function(t, i){
+      var badge = t.direction === 'in' ? '<span class="badge b-in">' + T('tiusd.din','轉入','IN') + '</span>' : '<span class="badge b-out">' + T('tiusd.dout','轉出','OUT') + '</span>';
+      var st = t.status === 'completed' || t.status === 'confirmed' ? '<span class="badge b-in">'+esc(t.status)+'</span>' : (t.status === 'pending' || t.status === 'processing' ? '<span class="badge b-pend">'+esc(t.status)+'</span>' : esc(t.status));
+      var feeTxt = (t.fee && parseFloat(t.fee) > 0) ? ' · fee '+fmtN(t.fee) : '';
+      return '<tr><td>'+(i+1)+'</td><td>'+badge+'</td><td class="mono">'+esc(t.source_chain)+' → '+esc(t.target_chain)+'</td><td>'+fmtN(t.amount)+'</td><td>'+st+feeTxt+'</td><td class="mono">'+ts(t.created_at)+'</td><td class="mono">'+esc(t.source_address||t.target_address||'')+'</td><td class="mono">'+(t.source_tx_hash||t.target_tx_hash||'—')+'</td></tr>';
+    }).join('');
+  }
+  function ledgerRows(list, emptyKey, zhEmpty, enEmpty){
+    if (!list || !list.length) return '<tr><td colspan="4" style="color:var(--bn-sub)">' + T(emptyKey, zhEmpty, enEmpty) + '</td></tr>';
+    return list.map(function(t){
+      var v = parseFloat(t.delta);
+      return '<tr><td>' + ts(t.ts) + '</td><td class="mono">' + esc(t.account) + '</td><td class="' + (v>=0?'pos':'neg') + '">' + (v>=0?'+':'') + t.delta + '</td><td class="mono">' + esc(t.memo || '') + '</td></tr>';
+    }).join('');
+  }
+
+  // ---- TACm ----
+  var A_FLOW = [
+    ['coinbase_node',  T('assets.f.cbNode','節點獎勵 (45%)','Node Reward (45%)')],
+    ['coinbase_pool',  T('assets.f.cbPool','獎勵池挹注 (15%)','Reward Pool (15%)')],
+    ['coinbase_miner', T('assets.f.cbMiner','礦工獎勵 (40%)','Miner Reward (40%)')],
+    ['block_reward',   T('assets.f.blockReward','出塊獎勵 (coinbase)','Block Reward (coinbase)')],
+    ['swap',           T('assets.f.swap','兌換 (swap)','Swap')],
+    ['borrow',         T('assets.f.borrow','借款 / 還款 (CDP)','Borrow / Repay (CDP)')],
+    ['staking',        T('assets.f.staking','質押 / 委託','Staking / Delegation')],
+    ['cdp_lock',       T('assets.f.cdp','CDP 抵押鎖倉','CDP Collateral Lock')],
+    ['lp',             T('assets.f.lp','流動性 (LP)','Liquidity (LP)')],
+    ['yield_farm',     T('assets.f.yieldFarm','流動性挖礦','Liquidity Farm')],
+    ['ido',            T('assets.f.ido','IDO 發行 / 回購','IDO Launch / Repurchase')],
+    ['bridge',         T('assets.f.bridge','跨鏈橋','Cross-chain Bridge')],
+    ['transfer',       T('assets.f.transfer','一般轉帳','Transfer')],
+    ['other',          T('assets.f.other','其他 (未分類)','Other (uncategorized)')]
+  ];
+  function loadTacm(){
+    fetchJSON('/api/tacm/dashboard').then(function(d){
+      var fail = document.getElementById('a-flow');
+      if(!d || !d.ok){ if(fail) fail.innerHTML = '<tr><td colspan="3" style="color:var(--bn-red)">Load failed</td></tr>'; return; }
+      var o = d.overview || {};
+      set('a-mined', o.mined + ' TACm');
+      set('a-cap', o.cap_enabled ? fmtN(o.cap) + ' TACm' : T('tiusd.na','未啟用 (減半模式)','Disabled (halving mode)'));
+      set('a-rem', o.cap_enabled ? o.remaining + ' TACm' : '—');
+      set('a-util', o.cap_enabled ? (o.utilization*100).toFixed(2) + '%' : '—');
+      var ah = document.getElementById('a-health'); if (ah) ah.innerHTML = healthBadge(o.health);
+      warnBar('a-warnbar', o.util_warning, o.utilization);
+      var bar = document.getElementById('a-bar'); if (bar) bar.style.width = Math.min(100, o.utilization*100).toFixed(1) + '%';
+      var R = d.reserves || {};
+      ['reward_pool','defi_cdp','fee'].forEach(function(a){
+        var p = R[a] || {};
+        var id = a === 'reward_pool' ? 'a-rp' : (a === 'defi_cdp' ? 'a-cd' : 'a-fe');
+        set(id+'-tacm', p.tacm != null ? p.tacm : '0');
+        set(id+'-tiusd', p.tiusd != null ? p.tiusd : '0');
+      });
+      var fr = document.getElementById('a-flow');
+      if (fr){
+        var fmap = {}; (d.flow || []).forEach(function(f){ fmap[f.category] = f; });
+        fr.innerHTML = A_FLOW.map(function(f){
+          var v = fmap[f[0]] || {in:'0',out:'0'};
+          return '<tr><td>' + f[1] + '</td><td class="pos">' + v.in + '</td><td class="neg">' + v.out + '</td></tr>';
+        }).join('');
+      }
+      var br = document.getElementById('a-bridge'); if (br) br.innerHTML = bridgeRows(d.bridge, 'tiusd.noBridge','尚無 TACm 跨鏈記錄','No TACm bridge records yet');
+      var rr = document.getElementById('a-recent'); if (rr) rr.innerHTML = ledgerRows(d.recent, 'tiusd.noLedger','尚無 TACm 流水','No TACm ledger entries yet');
+      var up = document.getElementById('a-upd'); if (up) up.textContent = new Date().toISOString().replace('T',' ').slice(0,19) + ' UTC';
+      var pr = document.getElementById('a-price');
+      if (pr) pr.textContent = o.listed ? '$' + o.tacm_price + ' (listed)' : T('tiusd.unlisted','未上市 · 按 1:0.330 計算','Unlisted · 1:0.330 basis');
+      renderPie('a-pie', d.flow, 'a-pie-legend');
+      loadTacmAlertsFrom(o);
+      loadTacmPoolOpsFrom(d.recent);
+    }).catch(function(){ var t=document.getElementById('a-flow'); if(t) t.innerHTML='<tr><td colspan="3" style="color:var(--bn-red)">Load failed</td></tr>'; });
+  }
+
+  // ---- TiUSD ----
+  var FLOW = [
+    ['cdp_mint',  T('tiusd.f.cdp','CDP 抵押借貸鑄造','CDP Collateral Mint')],
+    ['repay_burn',T('tiusd.f.repay','還款 / 銷毀','Repay / Burn')],
+    ['stable_swap',T('tiusd.f.stable','穩定幣兌換 stable-swap','Stable Swap')],
+    ['native_swap',T('tiusd.f.native','TACm 閃兌 native-swap','Native Swap (TACm)')],
+    ['pool_seed', T('tiusd.f.seed','池創世注資 (鏈上鑄造)','Pool Genesis Seed (on-chain mint)')],
+    ['floor_topup',T('tiusd.f.floor','供給層補鑄 (下限)','Supply Floor Top-up')],
+    ['bridge',    T('tiusd.f.bridge','跨鏈橋','Cross-chain Bridge')],
+    ['transfer',  T('tiusd.f.transfer','一般轉帳','Transfer')],
+    ['other',     T('tiusd.f.other','其他 (未分類)','Other (uncategorized)')]
+  ];
+  function loadTiUSD(){
+    fetchJSON('/api/tiusd/dashboard').then(function(d){
+      var fail = document.getElementById('flowRows');
+      if(!d || !d.ok){ if(fail) fail.innerHTML = '<tr><td colspan="4" style="color:var(--bn-red)">Load failed</td></tr>'; return; }
+      var o = d.overview || {};
+      set('o-supply', o.supply + ' TiUSD');
+      set('o-cap', (o.cap_enabled ? o.cap + ' TiUSD' : T('tiusd.na','未啟用 (未設 TACM_MAX_SUPPLY)','Disabled (no TACM_MAX_SUPPLY)')));
+      set('o-floor', o.floor + ' TiUSD');
+      set('o-rem', (o.cap_enabled ? o.remaining + ' TiUSD' : '—'));
+      set('o-util', (o.cap_enabled ? Math.min(o.utilization*100, 999.99).toFixed(2) + '%' : '—'));
+      set('o-peg', o.peg_price + ' USDT');
+      set('o-minted', o.total_minted);
+      set('o-burned', o.total_burned);
+      set('o-net', o.net_minted);
+      set('o-upd', ts(o.updated_ts));
+      var mcapTxt = T('tiusd.unlisted','未上市 · 按 1:0.330 計算','Unlisted · 1:0.330 basis');
+      if (o.listed) mcapTxt = T('tiusd.listed','已上市 · 市價 $') + (o.tacm_price != null ? Number(o.tacm_price).toFixed(6) : '—') + ' (1:1 市值)';
+      set('o-mcap', mcapTxt);
+      var oh = document.getElementById('o-health'); if (oh) oh.innerHTML = healthBadge(o.health);
+      warnBar('o-warnbar', o.util_warning, o.utilization);
+      var bar = document.getElementById('o-bar'); if (bar) bar.style.width = Math.min(100, o.utilization*100).toFixed(1) + '%';
+      var R = d.reserves || {};
+      ['stable-pool','fee'].forEach(function(a){
+        var p = R[a] || {};
+        ['usdt','tiusd','tacm'].forEach(function(ass){
+          set('r-' + (a === 'fee' ? 'fe' : 'sp') + '-' + ass, p[ass] != null ? p[ass] : '0');
+        });
+      });
+      var fr = document.getElementById('flowRows');
+      if (fr){
+        var fmap = {}; (d.flow || []).forEach(function(f){ fmap[f.category] = f; });
+        fr.innerHTML = FLOW.map(function(f){
+          var v = fmap[f[0]] || {in:0,out:0,net:0};
+          return '<tr><td>' + f[1] + '</td><td class="pos">' + fmtN(v.in) + '</td><td class="neg">' + fmtN(v.out) + '</td><td>' + fmtN(v.net) + '</td></tr>';
+        }).join('');
+      }
+      var br = document.getElementById('bridgeRows'); if (br) br.innerHTML = bridgeRows(d.bridge, 'tiusd.noBridge','尚無 TiUSD 跨鏈記錄','No TiUSD bridge records yet');
+      var rr = document.getElementById('recentRows'); if (rr) rr.innerHTML = ledgerRows(d.recent, 'tiusd.noLedger','尚無 TiUSD 流水','No TiUSD ledger entries yet');
+      var bn = document.getElementById('bridge-net');
+      if (bn){
+        var bs = d.bridge_summary || {};
+        bn.textContent = T('tiusd.bridgeNet','跨鏈淨流入 (轉入−轉出)：','Bridge net inflow (in−out):') + ' ' + (bs.net || '0') + ' TiUSD · ' + T('tiusd.bridgeDone','已完成','completed') + ' ' + (bs.done || 0) + ' 筆';
+      }
+      renderPie('tiusd-pie', d.flow);
+    }).catch(function(){ var t=document.getElementById('flowRows'); if(t) t.innerHTML='<tr><td colspan="4" style="color:var(--bn-red)">Load failed</td></tr>'; });
+  }
+
+  // ---- v104：供應趨勢圖（SVG line：累計鑄造 vs 市值上限）----
+  var fmtBig = function(v){
+    if (v >= 1e12) return (v/1e12).toFixed(2) + 'T';
+    if (v >= 1e9) return (v/1e9).toFixed(2) + 'B';
+    if (v >= 1e6) return (v/1e6).toFixed(2) + 'M';
+    return Math.round(v).toLocaleString('en-US');
+  };
+  function renderChart(svgId, points, capNum){
+    var svg = document.getElementById(svgId); if(!svg) return;
+    var W=320, H=140, P=8;
+    var vals = (points||[]).map(function(p){ return parseFloat(String(p.minted).replace(/,/g,'')); });
+    if (vals.length < 2) {
+      svg.innerHTML = '<text x="160" y="72" font-size="11" fill="#848e9c" text-anchor="middle">' + T('tiusd.chartWait','暫無鑄造歷史','No mint history yet') + '</text>';
+      return;
+    }
+    var maxV = Math.max(capNum||0, Math.max.apply(null, vals), 1);
+    var x = function(i){ return P + i*(W-2*P)/(vals.length-1); };
+    var y = function(v){ return H-P-4 - (v/maxV)*(H-2*P-8); };
+    var pts = vals.map(function(v,i){ return x(i).toFixed(1)+','+y(v).toFixed(1); }).join(' ');
+    var html = '';
+    if (capNum > 0) html += '<line x1="'+P+'" y1="'+y(capNum).toFixed(1)+'" x2="'+(W-P)+'" y2="'+y(capNum).toFixed(1)+'" stroke="#f0b90b" stroke-width="1.5" stroke-dasharray="4 3"/>';
+    html += '<polyline points="'+pts+'" fill="none" stroke="#0ecb81" stroke-width="2"/>';
+    html += '<text x="'+(W-58)+'" y="'+Math.max(10, y(capNum)-6).toFixed(1)+'" font-size="9" fill="#f0b90b">cap ' + fmtBig(capNum||0) + '</text>';
+    html += '<text x="'+(W-70)+'" y="'+(y(maxV)+8).toFixed(1)+'" font-size="9" fill="#848e9c">' + fmtBig(maxV) + '</text>';
+    svg.innerHTML = html;
+  }
+
+  // ---- v104：供應來源占比（SVG pie）----
+  var PIE_COLORS = ['#0ecb81','#f0b90b','#f6465d','#3a7cff','#a367ff','#12b5d0','#848e9c','#f7a600'];
+  function renderPie(svgId, flow, legendId){
+    var svg = document.getElementById(svgId); if(!svg) return;
+    var items = (flow||[]).map(function(f){
+      return { k: f.category, v: Math.abs(parseFloat(f.in)||0) + Math.abs(parseFloat(f.out)||0) };
+    }).filter(function(it){ return it.v > 0; });
+    var total = items.reduce(function(s, it){ return s + it.v; }, 0);
+    if (total <= 0) { svg.innerHTML = '<text x="70" y="74" font-size="10" fill="#848e9c" text-anchor="middle">—</text>'; return; }
+    var cx=70, cy=70, r=56, ang=0, seg='';
+    items.forEach(function(it, i){
+      var a = it.v/total*360;
+      var a1 = ang*Math.PI/180, a2 = (ang+a)*Math.PI/180;
+      var x1 = cx+r*Math.cos(a1), y1 = cy+r*Math.sin(a1);
+      var x2 = cx+r*Math.cos(a2), y2 = cy+r*Math.sin(a2);
+      var large = a > 180 ? 1 : 0;
+      seg += '<path d="M'+cx+','+cy+' L'+x1.toFixed(1)+','+y1.toFixed(1)+' A'+r+','+r+' 0 '+large+' 1 '+x2.toFixed(1)+','+y2.toFixed(1)+' Z" fill="'+PIE_COLORS[i%PIE_COLORS.length]+'" opacity="0.92"/>';
+      ang += a;
+    });
+    svg.innerHTML = seg + '<circle cx="'+cx+'" cy="'+cy+'" r="18" fill="#fff"/>';
+    var lg = document.getElementById(legendId || 'pie-legend');
+    if (lg){
+      lg.innerHTML = items.map(function(it, i){
+        var nm = it.k;
+        try { nm = T('tiusd.f.' + it.k, it.k, it.k); } catch(e){}
+        return '<span style="font-size:11px;margin-right:8px;white-space:nowrap;color:var(--bn-text)"><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:'+PIE_COLORS[i%PIE_COLORS.length]+';margin-right:3px"></i>' + esc(nm) + ' ' + Math.round(it.v/total*100) + '%</span>';
+      }).join('');
+    }
+  }
+
+  // ---- v104：TiUSD 歷史＋借款頭寸 ----
+  function renderDualChart(svgId, points){
+    var svg = document.getElementById(svgId); if(!svg) return;
+    var W=320, H=140, P=8;
+    if (!points || points.length < 2) {
+      svg.innerHTML = '<text x="160" y="72" font-size="11" fill="#848e9c" text-anchor="middle">' + T('tiusd.chartWait','暫無歷史數據','No history yet') + '</text>';
+      return;
+    }
+    var rs = points.map(function(p){ return parseFloat(String(p.reserve).replace(/,/g,'')); });
+    var ss = points.map(function(p){ return parseFloat(String(p.supply).replace(/,/g,'')); });
+    var maxV = Math.max(Math.max.apply(null, rs), Math.max.apply(null, ss), 1);
+    var x = function(i){ return P + i*(W-2*P)/(points.length-1); };
+    var y = function(v){ return H-P-4 - (v/maxV)*(H-2*P-8); };
+    var rp = rs.map(function(v,i){ return x(i).toFixed(1)+','+y(v).toFixed(1); }).join(' ');
+    var sp = ss.map(function(v,i){ return x(i).toFixed(1)+','+y(v).toFixed(1); }).join(' ');
+    svg.innerHTML =
+      '<polyline points="'+sp+'" fill="none" stroke="#4f7cff" stroke-width="2"/>' +
+      '<polyline points="'+rp+'" fill="none" stroke="#0ecb81" stroke-width="2"/>' +
+      '<text x="8" y="10" font-size="9" fill="#4f7cff">' + T('tiusd.supplyLine','供應','Supply') + '</text>' +
+      '<text x="58" y="10" font-size="9" fill="#0ecb81">' + T('tiusd.reserveLine','儲備','Reserve') + '</text>' +
+      '<text x="'+(W-80)+'" y="'+(y(maxV)+8).toFixed(1)+'" font-size="9" fill="#848e9c">' + fmtBig(maxV) + '</text>';
+  }
+  function loadBridgeStatus(prefix){
+    var P = prefix || 'bs-';
+    fetchJSON('/bridge/stats').then(function(d){
+      if (!d) return;
+      setT(P+'pending', (d.pending_count===undefined?'—':d.pending_count));
+      setT(P+'chains', (d.supported_chains===undefined?'—':d.supported_chains));
+      setT(P+'fee', (d.fee_rate===undefined?'—':d.fee_rate));
+      setT(P+'paused', d.paused ? T('tiusd.yes','是','Yes') : T('tiusd.no','否','No'));
+    }).catch(function(){});
+  }
+  function loadReserveHistory(){
+    fetchJSON('/api/tiusd/reserve-history').then(function(d){
+      if (!d || !d.ok) return;
+      renderDualChart('tiusd-reserve-chart', d.points);
+      var c = d.current;
+      var rt = document.getElementById('reserve-ratio');
+      if (rt) rt.textContent = T('tiusd.reserveRatio','儲備/供應 比例：','Reserve/Supply ratio:') + ' ' + c.reserve + ' / ' + c.supply + ' = ' + (c.ratio*100).toFixed(1) + '%';
+    }).catch(function(){});
+  }
+  function loadHistory(){
+    fetchJSON('/api/tiusd/history?points=48').then(function(h){
+      if (!h || !h.ok) return;
+      var c = h.current || {};
+      renderChart('tiusd-chart', h.points, c.cap_enabled ? parseFloat(String(c.cap).replace(/,/g,'')) : 0);
+    });
+  }
+  // ---- v109：TACm 已出塊產出 vs 供應上限趨勢 ----
+  function loadTacmHistory(){
+    fetchJSON('/api/tacm/reserve-history?points=48').then(function(h){
+      if (!h || !h.ok) return;
+      var c = h.current || {};
+      renderChart('a-chart', h.points, c.cap_enabled ? parseFloat(String(c.cap).replace(/,/g,'')) : 0);
+    }).catch(function(){});
+  }
+  // ---- v109：TACm 開採進度警報（即時，基於 dashboard util）----
+  function loadTacmAlertsFrom(o){
+    var sm = document.getElementById('a-alerts-summary');
+    var tr = document.getElementById('a-alertRows');
+    if (!sm || !tr) return;
+    if (!o || !o.cap_enabled){
+      sm.textContent = T('assets.tacmAlertsDisabled','未設上限（減半模式）——警報停用','No cap (halving mode) — alerts disabled');
+      tr.innerHTML = '<tr><td colspan="3" style="color:var(--bn-sub)">—</td></tr>';
+      return;
+    }
+    var u = o.utilization || 0;
+    var cfg = window._alertCfg || {near:0.95, over:0.99};
+    sm.textContent = T('assets.tacmAlertsSummary','開採進度：','Mining progress:') + (u*100).toFixed(2) + '% · ' + T('assets.tacmAlertsNearLb','WARN 閾值：','WARN:') + ' ' + (cfg.near*100).toFixed(0) + '% · ' + T('assets.tacmAlertsOverLb','CRIT 閾值：','CRIT:') + ' ' + (cfg.over*100).toFixed(0) + '%';
+    var rows = [];
+    if (u >= cfg.over) rows.push('<tr><td><span class="badge b-out">CRIT</span></td><td>utilization</td><td>'+T('assets.tacmAlertsOverDetail','已超過 CRIT 閾值——接近或超過供應上限','Over CRIT threshold — near/over supply cap')+'</td></tr>');
+    else if (u >= cfg.near) rows.push('<tr><td><span class="badge" style="background:var(--bn-warn,#f0b90b)">WARN</span></td><td>utilization</td><td>'+T('assets.tacmAlertsNearDetail','接近 WARN 閾值——剩餘可挖有限','Near WARN threshold — limited remaining')+'</td></tr>');
+    else rows.push('<tr><td><span class="badge b-in">OK</span></td><td>utilization</td><td>'+T('assets.tacmAlertsOk','開採進度健康','Mining progress healthy')+'</td></tr>');
+    tr.innerHTML = rows.join('');
+  }
+  // ---- v109：TACm 資金池近期操作（reward_pool/defi_cdp/fee）----
+  function loadTacmPoolOpsFrom(recent){
+    var tr = document.getElementById('a-poolOpsRows'); if (!tr) return;
+    var pools = {reward_pool:1, defi_cdp:1, fee:1};
+    var rows = (recent || []).filter(function(e){ return pools[e.account]; }).slice(0, 8);
+    if (!rows.length){ tr.innerHTML = '<tr><td colspan="4" style="color:var(--bn-sub)">'+T('tiusd.noLedger','尚無流水','No entries yet')+'</td></tr>'; return; }
+    tr.innerHTML = rows.map(function(e){
+      var cls = String(e.delta).indexOf('-') === 0 ? 'neg' : 'pos';
+      return '<tr><td class="mono" style="font-size:11px">' + esc(e.ts) + '</td><td class="mono">' + esc(e.account) + '</td><td class="'+cls+'">' + esc(e.delta) + '</td><td>' + esc((e.memo||'').slice(0,40)) + '</td></tr>';
+    }).join('');
+  }
+  function loadPositions(){
+    var tr = document.getElementById('posRows'); if (!tr) return;
+    fetchJSON('/api/tiusd/positions').then(function(d){
+      if (!d || !d.ok) { tr.innerHTML = '<tr><td colspan="5" style="color:var(--bn-sub)">' + T('tiusd.noPos','尚無借款頭寸','No loans yet') + '</td></tr>'; return; }
+      var tl = document.getElementById('pos-totals');
+      if (tl) tl.textContent = T('tiusd.posTotals','全鏈總借款：','Total borrow:') + ' ' + (d.totals.total_borrow||'0') + ' TiUSD · ' + T('tiusd.posColl','總抵押價值：','Total collateral:') + ' $' + (d.totals.total_collateral||'0') + ' · ' + T('tiusd.posActive','活躍：','Active:') + ' ' + (d.totals.active_loans||0) + ' 筆';
+      if (!d.positions || !d.positions.length) { tr.innerHTML = '<tr><td colspan="5" style="color:var(--bn-sub)">' + T('tiusd.noPos','尚無借款頭寸','No loans yet') + '</td></tr>'; return; }
+      tr.innerHTML = d.positions.map(function(l){
+        var st = l.status === 'active' ? '<span class="badge b-in">'+esc(l.status)+'</span>' : '<span class="badge b-out">'+esc(l.status)+'</span>';
+        return '<tr><td class="mono">' + esc(l.address) + '</td><td>' + fmtN(l.collateral_amount) + ' ' + esc(l.collateral_asset) + '</td><td class="pos">' + fmtN(l.borrow_amount) + ' ' + esc(l.borrow_asset) + '</td><td>' + (l.ltv != null ? (Number(l.ltv)*100).toFixed(0) + '%' : '—') + '</td><td>' + st + '</td></tr>';
+      }).join('');
+    }).catch(function(){ tr.innerHTML = '<tr><td colspan="5" style="color:var(--bn-red)">Load failed</td></tr>'; });
+  }
+  // v108：資金池近期操作（stable-pool/defi_cdp/fee，TiUSD）。
+  function loadPoolOps(){
+    fetchJSON('/api/tiusd/dashboard').then(function(d){
+      var tr = document.getElementById('poolOpsRows'); if (!tr) return;
+      if (!d || !d.recent || !d.recent.length){ tr.innerHTML = '<tr><td colspan="4" style="color:var(--bn-sub)">—</td></tr>'; return; }
+      var pools = { 'stable-pool':1, 'defi_cdp':1, 'fee':1 };
+      var rows = (d.recent||[]).filter(function(x){ return pools[x.account]; }).slice(0,8).map(function(x){
+        var v = parseFloat(x.delta);
+        return '<tr><td class="mono">'+ts(x.ts)+'</td><td class="mono">'+esc(x.account)+'</td><td class="'+(v>=0?'pos':'neg')+'">'+(v>=0?'+':'')+x.delta+'</td><td class="mono">'+esc(x.memo||'')+'</td></tr>';
+      }).join('');
+      tr.innerHTML = rows || '<tr><td colspan="4" style="color:var(--bn-sub)">—</td></tr>';
+    }).catch(function(){});
+  }
+  // v106：警報事件列表（30 天內；WS 出塊時自動重載）。
+  function hookLine(d){
+    var n = (d && typeof d.webhook_pending === 'number') ? d.webhook_pending : null;
+    if (n == null) return '';
+    var f = (d && typeof d.webhook_failed === 'number' && d.webhook_failed > 0) ? ' · ' + T('tiusd.hookFailed','重試佇列 ','retry queue ') + d.webhook_failed : '';
+    return ' · ' + T('tiusd.hookPending','Webhook 待投遞 ','Webhook pending ') + n + f;
+  }
+  function loadAlerts(){
+    fetchJSON('/api/alerts').then(function(d){
+      var tr = document.getElementById('alertRows'); if (!tr) return;
+      var sm = document.getElementById('alerts-summary');
+      if (!d || !d.ok || !d.alerts || !d.alerts.length){
+        tr.innerHTML = '<tr><td colspan="4" style="color:var(--bn-sub)">' + T('tiusd.alertsNone','尚無警報事件','No alerts') + '</td></tr>';
+        if (sm) sm.textContent = T('tiusd.alertsUpd','更新於：','Updated:') + ' ' + new Date().toISOString().slice(11,19) + ' UTC' + hookLine(d);
+        return;
+      }
+      var crit=0, warn=0;
+      d.alerts.forEach(function(a){ if(a.level==='critical') crit++; else if(a.level==='warn') warn++; });
+      if (sm) sm.textContent = T('tiusd.alertsUpd','更新於：','Updated:') + ' ' + new Date().toISOString().slice(11,19) + ' UTC · CRIT ' + crit + ' · WARN ' + warn;
+      tr.innerHTML = d.alerts.slice(0,8).map(function(a){
+        var lv = a.level === 'critical' ? '<span style="color:#f6465d;font-weight:700">CRIT</span>' : (a.level === 'warn' ? '<span style="color:#f0b90b;font-weight:700">WARN</span>' : '<span style="color:#68BE8D">OK</span>');
+        var dt = new Date(a.ts*1000);
+        var ts = dt.toISOString().replace('T',' ').slice(5,16) + ' UTC';
+        return '<tr><td>' + lv + '</td><td class="mono">' + esc(a.type) + '</td><td>' + esc((a.message||'') + (a.detail?(' — '+a.detail):'')) + '</td><td class="mono">' + ts + '</td></tr>';
+      }).join('');
+    }).catch(function(){});
+  }
+  // ---- v110-A：警報閾值配置 modal（Webhook URL＋Secret HMAC） ----
+  function loadAlertCfg(){
+    fetchJSON('/api/alerts/config').then(function(d){
+      if (!d || !d.ok || !d.config) return;
+      window._alertCfg = d.config;
+      var c = d.config;
+      setV('ac-near', c.near != null ? c.near : 0.95);
+      setV('ac-over', c.over != null ? c.over : 0.99);
+      setV('ac-webhook', c.webhook_url || '');
+      setV('ac-secret', c.webhook_secret || '');
+    }).catch(function(){});
+  }
+  function openAlertCfg(){
+    document.getElementById('alertCfgModal').style.display = 'flex';
+    loadAlertCfg();
+  }
+  function closeAlertCfg(){
+    document.getElementById('alertCfgModal').style.display = 'none';
+  }
+  function saveAlertCfg(){
+    var body = {
+      near: parseFloat(document.getElementById('ac-near').value) || 0.95,
+      over: parseFloat(document.getElementById('ac-over').value) || 0.99,
+      webhook_url: document.getElementById('ac-webhook').value.trim(),
+      webhook_secret: document.getElementById('ac-secret').value.trim()
+    };
+    fetch('/api/alerts/config', {method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)})
+      .then(function(r){ return r.json().catch(function(){ return null; }); })
+      .then(function(d){
+        var st = document.getElementById('cfgStatus');
+        if (!st) return;
+        if (d && d.ok) { st.textContent = T('tiusd.alertsSaved','已保存','Saved'); st.style.color = '#0ecb81'; }
+        else { st.textContent = T('tiusd.alertsFail','保存失敗：','Failed: ') + (d && d.error ? d.error : '?'); st.style.color = '#f6465d'; }
+      }).catch(function(){ var st = document.getElementById('cfgStatus'); if (st){ st.textContent = T('tiusd.alertsFail','保存失敗','Failed'); st.style.color = '#f6465d'; } });
+  }
+  function setV(id, v){ var el = document.getElementById(id); if (el) el.value = v; }
+  // ---- v110-B：原生資產價格預言機 ----
+  function loadOracleNative(){
+    fetchJSON('/api/oracle/native').then(function(d){
+      var tr = document.getElementById('oracleRows'); if (!tr) return;
+      if (!d || !d.ok){ tr.innerHTML = '<tr><td colspan="5" style="color:var(--bn-red)">Load failed</td></tr>'; return; }
+      tr.innerHTML = (d.prices || []).map(function(p){
+        var st = p.listed ? '<span class="badge b-in">listed</span>' : '<span class="badge b-out">unlisted</span>';
+        return '<tr><td><b>'+esc(p.asset)+'</b> '+st+'</td><td class="pos">$' + (p.price||0).toFixed(p.decimals === 18 ? 6 : 4) + '</td><td>' + p.decimals + '</td><td>' + esc(p.source) + '</td><td class="mono" style="font-size:11px">' + new Date((p.updated_at||0)*1000).toISOString().slice(0,19).replace('T',' ') + '</td></tr>';
+      }).join('');
+    }).catch(function(){});
+  }
+  // ---- v110-C：跨鏈橋分鏈 pending 明細 ----
+  function loadBridgeChains(prefix){
+    var P = prefix || '';
+    var tr = document.getElementById(P + 'chainRows'); if (!tr) return;
+    fetchJSON('/api/bridge/chains').then(function(d){
+      if (!d || !d.ok){ tr.innerHTML = '<tr><td colspan="3" style="color:var(--bn-sub)">—</td></tr>'; return; }
+      tr.innerHTML = (d.chains || []).map(function(c){
+        var cnt = c.pending || 0;
+        var cls = cnt > 0 ? 'class="neg"' : 'class="pos"';
+        return '<tr><td><b>'+esc(c.name)+'</b> <span style="color:var(--bn-sub,#848e9c);font-size:11px">('+esc(c.chain)+')</span></td><td class="mono">' + c.chain_id + '</td><td '+cls+'>' + cnt + '</td></tr>';
+      }).join('');
+    }).catch(function(){ tr.innerHTML = '<tr><td colspan="3" style="color:var(--bn-red)">Load failed</td></tr>'; });
+  }
+
+  function refreshAll(){
+    loadTacm(); loadTacmHistory(); loadTiUSD(); loadHistory(); loadPositions(); loadAlerts(); loadReserveHistory(); loadBridgeStatus(); loadBridgeStatus('a-bs-'); loadPoolOps(); loadOracleNative(); loadBridgeChains(''); loadBridgeChains('a-'); loadAlertCfg();
+  }
+
+  // ---- v104：WS 即時推送（新區塊 → 自動刷新）----
+  function wsConnect(){
+    try {
+      var proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
+      var ws = new WebSocket(proto + location.host + '/ws');
+      ws.onopen = function(){ try { ws.send(JSON.stringify({jsonrpc:'2.0', id:1, method:'eth_subscribe', params:['dashboard']})); } catch(e){} };
+      ws.onmessage = function(ev){
+        try {
+          var m = JSON.parse(ev.data);
+          if (m && m.method === 'eth_subscription') refreshAll();
+        } catch(e){}
+      };
+      ws.onclose = function(){ setTimeout(wsConnect, 8000); };
+      ws.onerror = function(){ try { ws.close(); } catch(e){} };
+    } catch(e){}
+  }
+
+  // ---- Tab 切換 ----
+  function show(tab){
+    document.querySelectorAll('.tab').forEach(function(t){ t.classList.toggle('on', t.dataset.tab === tab); });
+    document.querySelectorAll('.pane').forEach(function(p){ p.classList.toggle('on', p.id === 'pane-' + tab); });
+    if (tab === 'tacm') { loadTacm(); loadTacmHistory(); } else { loadTiUSD(); }
+  }
+  document.querySelectorAll('.tab').forEach(function(t){
+    t.addEventListener('click', function(){ show(t.dataset.tab); });
+  });
+  show('tacm');
+  loadHistory(); loadPositions(); loadAlerts(); loadReserveHistory(); loadBridgeStatus(); loadPoolOps(); loadOracleNative(); loadBridgeChains(''); loadBridgeChains('a-'); loadAlertCfg();
+  wsConnect();
+  var iv = setInterval(function(){
+    var cur = document.querySelector('.tab.on');
+    if (cur && cur.dataset.tab === 'tacm') loadTacm(); else loadTiUSD();
+  }, 10000);
+  window.addEventListener('tac-lang-changed', function(){ A_FLOW = A_FLOW; FLOW = FLOW; show(document.querySelector('.tab.on') ? document.querySelector('.tab.on').dataset.tab : 'tacm'); });
+})();
+</script>
+<div id="alertCfgModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99;align-items:center;justify-content:center">
+  <div style="background:var(--bn-card,#181a20);border:1px solid var(--bn-border,#2b3139);border-radius:12px;padding:18px;width:min(92vw,360px)">
+    <div style="font-weight:700;margin-bottom:10px" data-i18n="tiusd.alertsCfgTitle">警報閾值配置</div>
+    <label style="font-size:12px;color:var(--bn-sub,#848e9c)"><span data-i18n="tiusd.alertsNear">WARN 閾值（0-1）：</span><input id="ac-near" type="number" min="0" max="1" step="0.01" style="width:100%;margin:4px 0 10px;padding:6px;border:1px solid var(--bn-border,#2b3139);border-radius:6px;background:#1e2329;color:#eaecef"></label>
+    <label style="font-size:12px;color:var(--bn-sub,#848e9c)"><span data-i18n="tiusd.alertsOver">CRIT 閾值（0-1）：</span><input id="ac-over" type="number" min="0" max="1" step="0.01" style="width:100%;margin:4px 0 10px;padding:6px;border:1px solid var(--bn-border,#2b3139);border-radius:6px;background:#1e2329;color:#eaecef"></label>
+    <label style="font-size:12px;color:var(--bn-sub,#848e9c)"><span data-i18n="tiusd.alertsWebhook">Webhook 通知 URL：</span><input id="ac-webhook" type="url" placeholder="https://…" style="width:100%;margin:4px 0 10px;padding:6px;border:1px solid var(--bn-border,#2b3139);border-radius:6px;background:#1e2329;color:#eaecef"></label>
+    <label style="font-size:12px;color:var(--bn-sub,#848e9c)"><span data-i18n="tiusd.alertsSecret">Webhook Secret（HMAC 簽名）：</span><input id="ac-secret" type="password" placeholder="••••••" autocomplete="off" style="width:100%;margin:4px 0 10px;padding:6px;border:1px solid var(--bn-border,#2b3139);border-radius:6px;background:#1e2329;color:#eaecef"></label>
+    <div class="mini" data-i18n="tiusd.alertsWebhookNote">警報產生時 POST JSON（{event:'tiusd_alert', alerts:[…]}）到該 URL；設定 Secret 後以 HMAC-SHA256 簽名（X-TAC-Signature: sha256=&lt;hex&gt;）；留空即關閉。</div>
+    <div id="cfgStatus" class="mini" style="margin:8px 0;color:#0ecb81"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="closeAlertCfg()" style="font-size:12px;padding:6px 14px;border:1px solid var(--bn-border,#2b3139);border-radius:8px;background:transparent;color:var(--bn-sub,#848e9c);cursor:pointer" data-i18n="tiusd.cancel">取消</button>
+      <button onclick="saveAlertCfg()" style="font-size:12px;padding:6px 14px;border:0;border-radius:8px;background:#f0b90b;color:#181a20;font-weight:700;cursor:pointer" data-i18n="tiusd.save">保存</button>
+    </div>
+  </div>
+</div>
+{% endblock %}

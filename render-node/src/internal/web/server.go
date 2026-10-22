@@ -4,6 +4,7 @@ import (
 	"embed"
 	"io/fs"
 	"math"
+	"path/filepath"
 	"math/big"
 	"net/http"
 	"os"
@@ -57,6 +58,30 @@ func downloadsDirPath() string {
 		return d
 	}
 	return "/var/tac/downloads"
+}
+
+// seedDownloadAssets v69：啟動時將內嵌下載資產（install-node.sh）同步到 downloads 目錄，
+// 保證下載中心始終提供與 binary 同版本的一鍵安裝腳本（每次啟動覆蓋，腳本隨版本更新）。
+func seedDownloadAssets() {
+	dir := downloadsDirPath()
+	sub, err := fs.Sub(staticFS, "static/downloads")
+	if err != nil {
+		return
+	}
+	entries, err := fs.ReadDir(sub, ".")
+	if err != nil {
+		return
+	}
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		data, derr := fs.ReadFile(sub, e.Name())
+		if derr != nil {
+			continue
+		}
+		_ = os.WriteFile(filepath.Join(dir, e.Name()), data, 0o755)
+	}
 }
 
 // New 構造 Web 服務（mainnet 網段）：加載嵌入模板、註冊 filter 與路由。
@@ -212,10 +237,12 @@ func (s *Server) routes() {
 	// 純節點模式（--serve-dapp=false）與完整模式都掛載；目錄由
 	// cmd/web 以 TACM_DOWNLOADS_DIR 指向 dataDir/downloads（絕對路徑，不隨 cwd 漂移）。
 	os.MkdirAll(downloadsDirPath(), 0o755)
-	s.mux.Handle("GET /downloads/", http.StripPrefix("/downloads/", http.FileServer(http.Dir(downloadsDirPath()))))
+	seedDownloadAssets()
+	s.mux.Handle("GET /downloads/", http.HandlerFunc(s.downloadsHandler))
 	// M148：節點架設者面板——節點管理功能（綁定收款地址／節點獎勵查詢／提領），
 	// 非 DApp：純節點模式與完整模式都掛載，架設者隨時可管理自己的節點。
 	s.mux.HandleFunc("GET /node-panel", s.handleNodePanel)
+	s.mux.HandleFunc("GET /network-health", s.handleNetworkHealth)
 	s.mux.HandleFunc("GET /api/node/panel", s.handleNodePanelAPI)
 	s.mux.HandleFunc("POST /api/node/setup", s.handleNodeSetupAPI)
 	s.mux.HandleFunc("POST /api/node/bind", s.handleNodeBindAPI)
@@ -231,6 +258,7 @@ func (s *Server) routes() {
 	}
 	// M85：以太坊式 WebSocket 訂閱（eth_subscribe / eth_unsubscribe）。
 		s.mux.HandleFunc("GET /api/snapshot", s.handleSnapshotAPI)
+		s.mux.HandleFunc("GET /api/snapshot/info", s.handleSnapshotInfo)
 	s.mux.HandleFunc("GET /ws", s.handleWS)
 	s.mux.HandleFunc("GET /", s.handleIndex)
 	s.mux.HandleFunc("GET /app", s.handleApp)
@@ -238,6 +266,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /faucet", s.handleFaucet)
 	// M136-C：開發者簽名工具台（personal_sign / EIP-712 / ecRecover）。
 	s.mux.HandleFunc("GET /sign", s.handleSignTool)
+	// v131：ZK 工具台（批次證明/承諾/Nullifier）＋VRF 可驗證隨機數。
+	s.mux.HandleFunc("GET /zk", s.handleZkTool)
 	s.mux.HandleFunc("GET /contracts", s.handleContracts)
 	s.mux.HandleFunc("POST /api/faucet/claim", s.handleFaucetClaimAPI)
 	// M62：公開區塊瀏覽器（公鏈門面）——鏈統計＋搜尋＋最新區塊/交易。
@@ -283,12 +313,17 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /oracle", s.handleOracle)
 	s.mux.HandleFunc("GET /aa", s.handleAA)
 	s.mux.HandleFunc("GET /api-docs", s.handleAPIDocs)
+	s.mux.HandleFunc("GET /sdk", s.handleSdk)
 	s.mux.HandleFunc("GET /stake", s.handleStake)
+	s.mux.HandleFunc("GET /liquid-staking", s.handleLiquidStaking)
 	s.mux.HandleFunc("GET /defi", s.handleDefi)
+	s.mux.HandleFunc("GET /tiusd", s.handleTiUSD)
+	s.mux.HandleFunc("GET /assets", s.handleAssets)
 	s.mux.HandleFunc("GET /bridge", s.handleBridge)
 	s.mux.HandleFunc("GET /tokens", s.handleTokens)
 	s.mux.HandleFunc("GET /nfts", s.handleNFTs)
 	s.mux.HandleFunc("GET /dex", s.handleDex)
+	s.mux.HandleFunc("GET /ens", s.handleENS)
 	s.mux.HandleFunc("GET /auth/login", s.handleAuthLoginPage)
 	s.mux.HandleFunc("GET /auth/register", s.handleAuthRegisterPage)
 	// M39：節點健康檢查與運行指標（商業營運/監控告警必備）。
@@ -377,6 +412,7 @@ func (s *Server) render(w http.ResponseWriter, name string, ctx pongo2.Context) 
 func (s *Server) StartWS() {
 	go s.wsPump(s.wsStop)
 	go s.marketPump(s.wsStop)
+	go s.dashboardPump(s.wsStop)
 }
 
 // CloseWS 停止 WebSocket 推送迴圈。
