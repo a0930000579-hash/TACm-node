@@ -25,6 +25,12 @@ type Result struct {
 	Trace        []Step `json:"trace"`
 	NeedsConfirm bool   `json:"needs_confirm"`
 	Model        string `json:"model"`
+	// Intent 為本輪分類（chat | query | action），供前端顯示與除錯。
+	Intent string `json:"intent,omitempty"`
+	// v165：聯網搜尋 grounding。無內容時序列化為 false / []（方便前端穩定展開）。
+	Searched  bool       `json:"searched"`
+	Queries   []string   `json:"queries"`
+	Citations []Citation `json:"citations"`
 }
 
 // Agent 是 Function-Calling 迴圈主體。
@@ -99,11 +105,38 @@ func NewAgent(provider Provider, registry *Registry, opts ...Option) (*Agent, er
 	return a, nil
 }
 
-// SystemPromptAgent Agent 的系統提示（中英；金融相關自帶風險提示原則）。
-const systemPromptAgent = "You are the TACm AI Agent. You can call tools to query on-chain data " +
-	"and prepare DeFi actions. Do NOT give investment advice or recommend specific trades; " +
-	"always add a risk warning for financial actions. When a tool fails, read the error and try " +
-	"a different approach. Write/trade actions require explicit user confirmation."
+// systemPromptAgent Titan Ai 系統提示詞（v165 通用化人設）。
+//
+// 雙重身分：(1) 通用、人性化 AI 助手；(2) 僅在問題確實關乎 TACm 鏈上數據/DeFi 時，
+// 才動用 function-calling 工具。其餘日常／規劃／寫作／解釋／翻譯／學習一律直接自然回答，
+// 不硬套工具。金融相關自帶風險提示、不報明牌、寫操作需確認閘。
+const systemPromptAgent = "You are Titan Ai (泰坦 Ai), a warm, natural and capable AI assistant on the TAC AI Smart Chain.\n" +
+	"LANGUAGE: reply in the user's language — use Traditional Chinese for Chinese, otherwise English.\n" +
+	"PERSONA: be conversational, concise and human. When a request is ambiguous, ask one short clarifying " +
+	"question instead of guessing. Summarize the key point when helpful, and close with a gentle follow-up " +
+	"only when it moves the conversation forward.\n" +
+	"YOUR SCOPE: you are a general-purpose assistant covering (a) everyday conversation, life advice, common " +
+	"sense and general questions; (b) writing, translation, summarizing, planning and study coaching; and " +
+	"(c) software engineering — writing, reading, explaining, refactoring and debugging code, algorithms and " +
+	"data structures, in Go/Python/JavaScript/SQL and more; provide fenced code blocks with a concise explanation. " +
+	"For all of these, answer directly in natural language and DO NOT call any tool.\n" +
+	"TOOLS: you have on-chain tools (get_balance, get_price, get_recent_txs, get_pool, read_memory, " +
+	"dex_swap, defi_deposit, defi_borrow). CALL A TOOL ONLY when the user's question is genuinely about " +
+	"TACm on-chain data or DeFi actions (wallet address, balances, transactions, TAC price, DEX/DeFi). " +
+	"Everything else — everyday life, general knowledge, writing, translation, learning, or programming — " +
+	"is answered directly without tools.\n" +
+	"FINANCIAL SAFETY: never give investment advice and never name a token as a buy/sell recommendation. " +
+	"Always append a brief risk note for financial/DeFi actions; on-chain and DeFi actions are irreversible " +
+	"and carry market and smart-contract risk. Write/trade actions require the user's explicit confirmation " +
+	"before any transaction is broadcast — the node never signs for the user.\n" +
+	"WEB GROUNDING: you also have web_search and web_fetch. Use web_search ONLY when the user needs " +
+	"up-to-date information (news, current events, macro/global markets, or a fact you cannot know). " +
+	"Do NOT search for static knowledge, everyday chat, or TACm on-chain data (balance/txs/TAC price stay on-chain tools). " +
+	"Prefer on-chain price tool for TAC; treat web market data as reference only. When you use web results, list the " +
+	"source titles/URLs and separate what came from the web vs. your prior knowledge. If web_search returns unavailable, " +
+	"say plainly that you are offline and cannot reach the web — NEVER invent or fabricate links/sources.\n" +
+	"ERRORS: when a tool fails, read the error and try a different approach; if you still cannot help, " +
+	"say so honestly rather than inventing data."
 
 // Run 執行一次 Agent 迴圈。confirm=false 時，所有 RequiresConfirm 工具不會真正執行。
 func (a *Agent) Run(ctx context.Context, userMsg, sessionID string, confirm bool) (*Result, error) {
@@ -115,12 +148,16 @@ func (a *Agent) Run(ctx context.Context, userMsg, sessionID string, confirm bool
 	runCtx, cancel := context.WithTimeout(ctx, a.timeout)
 	defer cancel()
 
-	res := &Result{Model: a.provider.Name()}
+	res := &Result{Model: a.provider.Name(), Queries: []string{}, Citations: []Citation{}}
 
 	// 組裝對話：system + 歷史記憶 + 本輪 user。
+	history := a.memory.Load(sessionID)
 	msgs := []ChatMessage{{Role: "system", Content: systemPromptAgent}}
-	msgs = append(msgs, a.memory.Load(sessionID)...)
+	msgs = append(msgs, history...)
 	msgs = append(msgs, ChatMessage{Role: "user", Content: userMsg})
+
+	// 意圖分類（chat / query / action），供前端標示與除錯；鏈上續問自動併入 query。
+	res.Intent = string(resolveIntent(userMsg, history))
 
 	for iter := 0; iter < a.maxIter; iter++ {
 		turn, err := a.provider.Complete(runCtx, msgs, a.registry.List())
@@ -175,6 +212,7 @@ func (a *Agent) Run(ctx context.Context, userMsg, sessionID string, confirm bool
 				step.Err = oc.Err
 			} else {
 				step.Result = oc.Result.String()
+				res.absorbCitations(oc)
 			}
 			res.Trace = append(res.Trace, step)
 
@@ -205,6 +243,27 @@ func (a *Agent) Run(ctx context.Context, userMsg, sessionID string, confirm bool
 	res.Answer = "I've reached the step limit while working on your request. Please narrow it down or rephrase."
 	res.Trace = append(res.Trace, Step{Kind: "answer", Result: res.Answer, Ts: nowTS()})
 	return res, nil
+}
+
+// absorbCitations 從 web_search 工具結果提取「下過哪些查詢」與「引用來源」。
+// 僅在真的有結果（citations）時才標 Searched=true——離線/零結果不宣稱有來源。
+func (r *Result) absorbCitations(oc ToolCallOutcome) {
+	if oc.Call.Name != "web_search" {
+		return
+	}
+	m, ok := oc.Result.Data.(map[string]any)
+	if !ok {
+		return
+	}
+	if qs, ok := m["queries"].([]string); ok {
+		r.Queries = append(r.Queries, qs...)
+	}
+	if cs, ok := m["citations"].([]SearchResult); ok && len(cs) > 0 {
+		r.Searched = true
+		for _, c := range cs {
+			r.Citations = append(r.Citations, Citation{Title: c.Title, URL: c.URL})
+		}
+	}
 }
 
 // describePlannedAction 把一次被攔截的寫操作描述給使用者看。

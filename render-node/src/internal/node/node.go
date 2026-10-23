@@ -748,6 +748,7 @@ func (n *Node) Start() {
 // 「開機/關機」由 /api/miner/start|stop 控制（開機即發 hb:on、關機即發 hb:off）。
 func (n *Node) minerHeartbeatLoop() {
 	defer n.wg.Done()
+	stop := n.stopChannel()
 	interval := n.heartbeatInterval
 	if interval <= 0 {
 		interval = hbRefresh
@@ -756,7 +757,7 @@ func (n *Node) minerHeartbeatLoop() {
 	defer t.Stop()
 	for {
 		select {
-		case <-n.stopCh:
+		case <-stop:
 			return
 		case <-t.C:
 			n.submitActiveHeartbeats()
@@ -833,6 +834,15 @@ func (n *Node) StartDistributed() {
 	}
 }
 
+// stopChannel 在 n.mu 保護下取當前 stopCh。各共識循環 goroutine 應於啟動時呼叫一次
+// 快照到本地變數再 select，避免與 SuspendConsensus 重建 stopCh（n.stopCh = make(...)）
+// 並發讀寫同一欄位而觸發資料競態（v164 修正既有競態，語義不變）。
+func (n *Node) stopChannel() chan struct{} {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	return n.stopCh
+}
+
 // SuspendConsensus 暫停出塊/共識循環（保留 DB 與鏈狀態），供節點下線/維護，
 // 亦用於測試模擬主鏈整機掛機。重啟時以 ResumeConsensus 恢復；恢復後若本機
 // tip 落後於網路，catch-up sync 會以較長鏈規則自動追平。
@@ -850,6 +860,12 @@ func (n *Node) SuspendConsensus() {
 }
 
 // ResumeConsensus 恢復被 SuspendConsensus 暫停的出塊/共識循環。
+//
+// v165：重啟時先從持久化層（鏈上 pos_validators：pubkey／自質押+委託量與排名／
+// jailed 狀態／slash 後的 total_stake）完整還原動態驗證人集，再啟動共識 goroutine——
+// 避免重啟後記憶體 vset 停在創世靜態集合（流程重開 New() 時 initBFT 只建單節點集），
+// 或 Suspend 期間鏈上質押/jail/slash 變動未反映。還原為純鏈上確定性重建，領導者與
+// follower 路徑結果一致；同時重啟被 Suspend 關 stopCh 殺掉的週期重建 goroutine。
 func (n *Node) ResumeConsensus() {
 	n.mu.Lock()
 	if n.running {
@@ -859,7 +875,16 @@ func (n *Node) ResumeConsensus() {
 	n.running = true
 	// v54 修復：直接讀 distributed 欄位（已持 n.mu），勿呼叫
 	// isDistributed()——後者會再次 Lock 造成非重入死鎖。
-	if n.distributed {
+	distributed := n.distributed
+	n.mu.Unlock()
+
+	// v165：先還原動態驗證人集（此時舊共識 goroutine 已被 Suspend 加入 wg.Wait 退出，
+	// 無並發讀 n.vset/n.bftNode），再啟動新 goroutine——保證 runBFT/consensusLoop
+	// 一上線即以正確驗證人集為 BFT 視圖基準。
+	n.restoreDynamicValidatorsOnResume()
+
+	n.mu.Lock()
+	if distributed {
 		n.wg.Add(3)
 		go n.consensusLoop()
 		go n.runBFT()
@@ -975,10 +1000,11 @@ func (n *Node) Close() error {
 
 // waitFor 可中斷地等待 d；收到停止信號立即返回 false。
 func (n *Node) waitFor(d time.Duration) bool {
+	stop := n.stopChannel()
 	t := time.NewTimer(d)
 	defer t.Stop()
 	select {
-	case <-n.stopCh:
+	case <-stop:
 		return false
 	case <-t.C:
 		return true
@@ -988,10 +1014,11 @@ func (n *Node) waitFor(d time.Duration) bool {
 // consensusLoop 是出塊主循環：動態間隔 → 取池 → PoT → 驗證 → 寫塊 → 調難度。
 func (n *Node) consensusLoop() {
 	defer n.wg.Done()
+	stop := n.stopChannel()
 	cs := &consensusState{lastRound: -1}
 	for {
 		select {
-		case <-n.stopCh:
+		case <-stop:
 			return
 		default:
 		}
@@ -1220,10 +1247,11 @@ func (n *Node) waitConsensus(wait time.Duration) bool {
 	if !n.isDistributed() {
 		return n.waitFor(wait)
 	}
+	stop := n.stopChannel()
 	t := time.NewTimer(wait)
 	defer t.Stop()
 	select {
-	case <-n.stopCh:
+	case <-stop:
 		return false
 	case <-n.consensusWake:
 		return true

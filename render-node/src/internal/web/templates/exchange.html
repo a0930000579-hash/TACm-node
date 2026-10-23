@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+{% include "exchange_chrome.html" %}
 <section class="pg-banner">
   <div class="pg-txt"><h1 data-i18n="bn.exchange">交易所</h1><p data-i18n="bn.exchangeSub">閃兌與訂單</p></div>
   <svg viewBox="0 0 40 40" class="pg-art"><path d="M6 30 h28 M6 30 l6 4 M6 30 l6 -4" fill="none" stroke="#68BE8D" stroke-width="2.2" stroke-linecap="round"/><path d="M10 24 V14 h8 V24 Z" fill="rgba(104,190,141,.25)" stroke="#68BE8D" stroke-width="1.6"/><path d="M22 24 V8 h8 V24 Z" fill="rgba(104,190,141,.45)" stroke="#68BE8D" stroke-width="1.6"/><path d="M34 30 L34 26 M30 30 L30 26 M26 30 L26 26" stroke="#68BE8D" stroke-width="1.6"/></svg>
@@ -120,7 +121,7 @@
         </span>
         <div style="min-width:0">
           <div style="font-weight:700;font-size:14px" data-i18n="ex.walletTitle">交易所錢包</div>
-          <div id="exWalletStatus" class="mono" style="font-size:12px;color:#d93026;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:230px" data-i18n="ex.walletNone">未連結</div>
+          <div id="exWalletStatus" class="mono" style="font-size:12px;color:#d93026;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:230px">未連結</div>
         </div>
       </div>
       <div id="exWalletBtns" style="display:flex;gap:8px;flex-wrap:wrap">
@@ -185,11 +186,11 @@
         <form class="bn-form" id="orderForm">
           <input id="oUid" placeholder="account (tx0...)" autocomplete="off">
           <div class="mini" style="opacity:.65;font-size:11px;margin:2px 0 6px" data-i18n="ex.uidHint">帳戶地址＝登入帳號綁定地址（同主網新鏈）；未登入訪客地址每次瀏覽器可能不同，請登入後再下單。</div>
-          <select id="oMarket" onchange="setMarket(this.value)">
-            <option>TACM/USDT</option><option>TACM/TiUSD</option><option>TiUSD/USDT</option>
-            <option>BTC/USDT</option><option>ETH/USDT</option><option>BNB/USDT</option>
-            <option>SOL/USDT</option><option>ADA/USDT</option>
-          </select>
+          <!-- v165：交易對改唯讀顯示（由左側市場列表點選切換，所見即所交易），不再以下拉選單下錯單 -->
+          <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bn-card2);border:1px solid var(--bn-line);border-radius:8px;padding:9px 11px">
+            <span style="font-size:11px;color:var(--bn-sub)" data-i18n="ex.orderMarket">交易對</span>
+            <b id="oMarket" style="font-size:14px;font-weight:800;color:var(--bn-txt)">TACM/USDT</b>
+          </div>
           <div class="bs-tabs" id="bsTabs">
             <button type="button" class="bs-tab buy on" id="bsBuy" onclick="setBS('buy')">買入</button>
             <button type="button" class="bs-tab sell" id="bsSell" onclick="setBS('sell')">賣出</button>
@@ -833,9 +834,11 @@
       d.markets.forEach(function(m){
         if (m.ref) return; // v79：只顯示鏈上流通資產交易對（TACM/TiUSD/USDT）
         var up = m.chg24h >= 0;
-        html += '<tr><td><a href="/exchange/trade?m='+encodeURIComponent(m.market)+'">'+m.market+'</a></td>'
+        // v165：點選即切換（不換頁），所見即所交易
+        html += '<tr data-mk="'+m.market+'" style="cursor:pointer" onclick="setMarket(\''+m.market+'\')">'
+          + '<td><b style="color:'+(up?'var(--bn-green)':'var(--bn-red)')+'">'+m.market+'</b></td>'
           + '<td class="'+(up?'up':'down')+'">'+fmtN(m.price)+'</td><td>'+m.fee_bps+'bp</td></tr>';
-        picker += '<a class="mkt-tab'+(CUR===m.market?' on':'')+'" href="/exchange/trade?m='+encodeURIComponent(m.market)+'">'+m.market+'</a>';
+        picker += '<a class="mkt-tab'+(CUR===m.market?' on':'')+'" data-mk="'+m.market+'" href="?m='+encodeURIComponent(m.market)+'" onclick="event.preventDefault();setMarket(\''+m.market+'\')">'+m.market+'</a>';
       });
       document.getElementById('marketsBody').innerHTML = html;
       document.getElementById('mktPicker').innerHTML = picker;
@@ -919,13 +922,24 @@
   }
   setInterval(refTick, 5000);
 
-  function setMarket(m){ CUR=m; document.getElementById('mkTitle').textContent=m;
-    document.getElementById('kTitle').textContent=m;
-    var om = document.getElementById('oMarket');
-    for (var i=0;i<om.options.length;i++){ if (om.options[i].value===m){ om.selectedIndex=i; break; } }
-    document.getElementById('ticker').querySelector('.sym').textContent=m;
+  function setMarket(m){
+    if (!m || m===CUR){ /* no-op */ }
+    CUR=m;
+    var mk=document.getElementById('mkTitle'); if(mk) mk.textContent=m;
+    var kt=document.getElementById('kTitle'); if(kt) kt.textContent=m;
+    var om=document.getElementById('oMarket'); if(om) om.textContent=m;
+    var sym=document.getElementById('ticker').querySelector('.sym'); if(sym) sym.textContent=m;
+    // 同步市場列表高亮（所見即所交易）
+    document.querySelectorAll('#marketsBody tr').forEach(function(tr){
+      tr.style.background = (tr.getAttribute('data-mk')===m) ? 'var(--bn-card2)' : '';
+    });
+    document.querySelectorAll('#mktPicker .mkt-tab').forEach(function(a){
+      a.classList.toggle('on', a.getAttribute('data-mk')===m);
+    });
+    if (history && history.replaceState){ try{ history.replaceState(null,'','?m='+encodeURIComponent(m)); }catch(e){} }
     if (WS && WS.readyState === 1){ wsSub(m); }
-    loadBook(); loadCharts(); }
+    loadBook(); loadCharts();
+  }
   // M104-2：買入/賣出分頁切換
   var SIDE = 'buy';
   function setBS(v){
@@ -960,7 +974,7 @@
     if (!requireVerified('oMsg','oUid')) { return; }
     if (!q('oUid')) { show('oMsg','err','請填寫帳號與數量'); return; }
     if (!q('oQty')) { show('oMsg','err','請填寫數量'); return; }
-    var mkt = q('oMarket');
+    var mkt = CUR; // v165：下單一律用目前顯示的交易對（市場列表點選切換），不再讀下拉避免下錯標的
     if (REF[mkt]){
       show('oMsg','err',TAC_T('ex.refDisabled'));
       return;

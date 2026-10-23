@@ -102,6 +102,14 @@
   /* ===== M93 Facebook 化 ===== */
   .cm-topbar{position:sticky;top:0;z-index:50;background:#fff;border-bottom:1px solid #dddfe2;padding:8px 0;margin-bottom:10px;border-radius:0}
   .cm-topbar-in{max-width:1080px;margin:0 auto;display:flex;align-items:center;gap:10px;padding:0 4px}
+  /* v165：窄屏頂欄收斂，防橫向溢出（390/360/320px） */
+  @media (max-width:430px){
+    .cm-topbar-in{gap:6px}
+    .cm-tbl span{display:none}
+    .cm-tb-right{gap:2px}
+    .cm-tb-btn{padding:7px 6px}
+    .cm-tb-btn span{display:none}
+  }
   .cm-tbl{display:flex;align-items:center;gap:8px;font-weight:800;font-size:18px;color:#1877f2;flex:none}
   .cm-tbl svg{width:28px;height:28px}
   .cm-search{flex:1;min-width:0;position:relative}

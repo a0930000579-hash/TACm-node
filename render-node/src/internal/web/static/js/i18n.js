@@ -16,13 +16,18 @@
       'ls.how2': '池內資產參與節點委託，委託獎勵每區塊自動注入池中（v75），匯率逐步上升——你的 stTACm 贖回值隨之增長。',
       'ls.how3': '隨時依現行匯率贖回 TACm；stTACm 也可用於其他 DeFi 協議。',
       'wallet.onchain': ' 我的鏈上紀錄', 'nav.exchange': '交易所', 'nav.dash': '儀表板',
-      'nav.mining': '挖礦', 'nav.community': '社群', 'nav.ai': 'TAC Ai', 'nav.tokens': '代幣', 'nav.nfts': 'NFT', 'nav.defi': 'DeFi', 'nav.tiusd': 'TiUSD 監控', 'nav.ls': '質押', 'nav.governance': '治理',
+      'nav.mining': '挖礦', 'nav.community': '社群', 'nav.ai': 'Titan Ai', 'nav.tokens': '代幣', 'nav.nfts': 'NFT', 'nav.defi': 'DeFi', 'nav.tiusd': 'TiUSD 監控', 'nav.ls': '質押', 'nav.governance': '治理',
       'nav.dapp': 'DApp 商店', 'nav.agent': 'AI Agent', 'pill.dapp': 'DApp 商店', 'pill.agent': 'AI Agent',
       'nh.title': '網路健康',
       'nh.sub': '全網節點健康儀表 · 在線狀態 / 最後心跳 / 出塊接管',
       'tx.logs': '事件日誌', 'tx.logAddr': '合約地址', 'tx.decodedEvents': '事件解碼（ABI）', 'tx.gasUsed': 'Gas 使用量', 'tx.transfers': '代幣轉移', 'tx.tContract': '合約', 'tx.tValue': '數量 / Token ID', 'tx.tBlock': '區塊', 'tx.hash': '交易哈希', 'addr.transfers': '代幣轉移', 'fc.title': '測試幣水龍頭', 'fc.sub': '開發者生態：為你的地址免費領取測試 TACm', 'fc.claim': '領取測試幣', 'fc.limit': '每地址每日 {{ limit }} TACm', 'fc.disabled': '主網已停用（免費資產不再發放）', 'fc.guide': 'TiUSD / USDT 流通', 'fc.guide1': '① 水龍頭領 TACm → 交易所賣 TACM/TiUSD 買 TiUSD（穩定幣 1:1 錨定 USDT）。', 'fc.guide2': '② DeFi 借貸（CDP）：抵押 TACm 鑄造 TiUSD。', 'fc.guide3': '③ TACm/TiUSD → USDT：交易所 TACM/USDT、TiUSD/USDT 市場（掛單/市價/閃兌）。', 'fc.guide4': '④ 跨鏈：TACM/TiUSD/USDT 皆可經多鏈橋轉移至 BSC/Ethereum 等主流鏈。', 'fc.limitNote': '每地址每日限額', 'fc.addrLabel': '你的 tx0 地址', 'fc.claimBtn': '領取', 'fc.how': '如何使用', 'fc.step1': '填入你的錢包地址後點擊領取', 'fc.step2': '交易由節點金鑰簽發並在數秒內上鏈', 'fc.step3': '到錢包或區塊瀏覽器確認到帳（每日一次）',
-      'pill.ai': 'TAC Ai',
-      'ai_assistant': 'TAC Ai', 'ai_sub': 'TAC Ai —— 鏈上智能助手，問鏈上數據即時回答',
+      'pill.ai': 'Titan Ai',
+      'ai_assistant': 'Titan Ai', 'ai_sub': '泰坦 Ai —— 鏈上智能助手，問鏈上數據即時回答',
+      'ai.compliance': '寫操作需你確認才執行 · 節點不代簽 · 投資有風險',
+      'ai.modeAssist': '助手', 'ai.modeAgent': 'Agent',
+      'ai.marketCard': 'AI 模型市場', 'ai.marketCardSub': '鏈上註冊／訂閱／呼叫模型',
+      'ai.verifyCard': '跨鏈 AI 驗證', 'ai.verifyCardSub': '推理結果驗證網路',
+      'ai.wallet': '錢包：', 'ai.engine': 'AI 引擎：', 'ai.probing': '偵測中…',
       'ai_suggest_status': '節點狀態', 'ai_suggest_block': '最新區塊', 'ai_suggest_audit': '鏈上審計',
       'ai_suggest_reward': '獎勵分潤', 'ai_suggest_miner': '在線礦工', 'ai_suggest_supply': '總供應',
       'ai_suggest_join': '加入節點', 'ai_suggest_transfer': '轉帳指引',
@@ -96,7 +101,7 @@
       'ex.hot': '熱門市場', 'ex.tapTrade': '點選幣種即可交易', 'ex.ref': '參考',
       'ex.onchain': '鏈上', 'ex.live': '即時', 'ex.refDisabled': '已停用：僅鏈上資產（TACM/TiUSD/USDT）可交易', 'ex.fee': '手續費',
       'ex.verifyBtn': '驗證地址', 'ex.verifyUn': '未驗證', 'ex.verifyOK': '地址已驗證：', 'ex.verifyNeedLogin': '請先登入會員以驗證綁定的礦機錢包地址', 'ex.verifyFail': '驗證失敗，請稍後再試', 'ex.verifyFirst': '請先點「驗證地址」綁定當前礦機錢包', 'ex.verifyChanged': '帳戶地址已變更，請重新驗證',
-      'ex.walletTitle': '交易所錢包', 'ex.walletNone': '未連結，請先連結錢包', 'ex.walletMiner': '連結礦工錢包', 'ex.walletNew': '新建 Web3 錢包', 'ex.walletChange': '更換', 'ex.walletMinerOK': '已連結礦工錢包（同當前鏈）：', 'ex.walletNeedLogin': '請先登入會員，才能連結礦工錢包', 'ex.walletNewConfirm': '將為你建立一組全新 Web3 錢包，建立後請立即備份私鑰。是否繼續？', 'ex.walletNewOK': '已建立全新 Web3 錢包地址：', 'ex.walletWifLabel': '私鑰 WIF（請立即離線備份，遺失無法找回）：', 'ex.walletWifWarn': '請立即抄寫並離線保存私鑰，切勿外洩；換裝置時需用私鑰恢復。', 'ex.walletNewFail': '新建 Web3 錢包失敗，請稍後再試', 'ex.walletChangeConfirm': '確定要更換交易所錢包嗎？目前欄位將清空。',
+      'ex.walletTitle': '交易所錢包', 'ex.walletNone': '未連結，請先連結錢包', 'ex.walletMiner': '連結礦工錢包', 'ex.walletNew': '新建 Web3 錢包', 'ex.walletChange': '更換', 'ex.walletMinerOK': '已連結礦工錢包（同當前鏈）：', 'ex.walletNeedLogin': '請先登入會員，才能連結礦工錢包', 'ex.walletNewConfirm': '將為你建立一組全新 Web3 錢包，建立後請立即備份私鑰。是否繼續？', 'ex.walletNewOK': '已建立全新 Web3 錢包地址：', 'ex.walletWifLabel': '私鑰 WIF（請立即離線備份，遺失無法找回）：', 'ex.walletWifWarn': '請立即抄寫並離線保存私鑰，切勿外洩；換裝置時需用私鑰恢復。', 'ex.walletNewFail': '新建 Web3 錢包失敗，請稍後再試', 'ex.walletChangeConfirm': '確定要更換交易所錢包嗎？目前欄位將清空。', 'ex.orderMarket': '交易對',
       'ex.refBook': '參考行情（估值對映）· 無訂單簿',
       'ex.refDepth': '主流幣估值行情 · 無真實訂單簿',
       'ex.best': '最優',
@@ -142,11 +147,11 @@
       'br.lockBtn': '鎖定並發送', 'br.history': '跨鏈歷史', 'br.historyHint': '依地址',
       'br.query': '查詢', 'br.historyPh': '輸入地址查看跨鏈交易',
       'bn.nfts': 'NFT 收藏', 'bn.nftsSub': '數位收藏',
-      'bn.ai': 'TAC Ai', 'bn.aiSub': '鏈上問答',
+      'bn.ai': 'Titan Ai', 'bn.aiSub': '鏈上智能助手 · 單一 AI 入口',
       'bn.explorer': '區塊瀏覽', 'bn.explorerSub': '鏈上搜尋',
       'index.heroTag': 'AI 原生區塊鏈 · EVM 相容 · EIP-1559 · L2 Rollup · BSC 跨鏈橋',
       'feat.wallet': '資產與轉帳', 'feat.mining': '算力與獎勵', 'feat.explorer': '鏈上搜尋',
-      'feat.exchange': '交易所', 'feat.community': '社群', 'feat.dex': 'DEX', 'feat.nfts': 'NFT', 'feat.ai': 'TAC Ai',
+      'feat.exchange': '交易所', 'feat.community': '社群', 'feat.dex': 'DEX', 'feat.nfts': 'NFT', 'feat.ai': 'Titan Ai',
       'index.v1t': '你的資產屬於你', 'index.v1s': '你的銀行帳戶只是別人資料庫裡的一筆記錄。TAC 是另一個網絡——你直接持有資產，不經第三方。',
       'index.v2t': '隱私至上', 'index.v2s': '沒有與你名字綁定的帳戶、沒有公司監看你的餘額。你的鏈上活動由你掌控。',
       'index.v3t': '永不離線', 'index.v3s': '多節點去中心化網絡，100% 正常運行。沒有單一伺服器可以關閉你的鏈。',
@@ -347,11 +352,16 @@
       'ls.how2': 'Pooled assets are delegated to validators; rewards are auto-injected every block (v75) and the rate rises — your stTACm redeem value grows.',
       'ls.how3': 'Redeem TACm anytime at the current rate; stTACm also works across other DeFi protocols.',
       'wallet.onchain': ' My On-chain History', 'nav.exchange': 'Exchange', 'nav.dash': 'Dashboard',
-      'nav.mining': 'Mining', 'nav.community': 'Community', 'nav.ai': 'TAC Ai', 'nav.tokens': 'Tokens', 'nav.nfts': 'NFT', 'nav.defi': 'DeFi', 'nav.tiusd': 'TiUSD Monitor', 'nav.ls': 'Staking', 'nav.governance': 'Governance',
+      'nav.mining': 'Mining', 'nav.community': 'Community', 'nav.ai': 'Titan Ai', 'nav.tokens': 'Tokens', 'nav.nfts': 'NFT', 'nav.defi': 'DeFi', 'nav.tiusd': 'TiUSD Monitor', 'nav.ls': 'Staking', 'nav.governance': 'Governance',
       'nav.dapp': 'DApp Store', 'nav.agent': 'AI Agent', 'pill.dapp': 'DApp Store', 'pill.agent': 'AI Agent',
       'tx.logs': 'Event Logs', 'tx.logAddr': 'Contract Address', 'tx.decodedEvents': 'Decoded Events (ABI)', 'tx.gasUsed': 'Gas Used', 'tx.transfers': 'Token Transfers', 'tx.tContract': 'Contract', 'tx.tValue': 'Amount / Token ID', 'tx.tBlock': 'Block', 'tx.hash': 'Tx Hash', 'addr.transfers': 'Token Transfers', 'fc.title': 'Test Token Faucet', 'fc.sub': 'Developer ecosystem — free test TACm for your address', 'fc.claim': 'Claim Test Tokens', 'fc.limit': 'Daily limit per address', 'fc.addrLabel': 'Your tx0 address', 'fc.claimBtn': 'Claim', 'fc.how': 'How to use', 'fc.step1': 'Enter your wallet address and click claim', 'fc.step2': 'The tx is signed by the node key and lands on-chain in seconds', 'fc.step3': 'Check Wallet or Explorer to confirm (once per address per day)', 'fc.disabled': 'Disabled on mainnet (free assets no longer distributed)', 'fc.guide': 'TiUSD / USDT Circulation', 'fc.guide1': '① Claim TACm from the faucet → buy TiUSD on the exchange (TACM/TiUSD pair; stablecoin pegged 1:1 to USDT).', 'fc.guide2': '② DeFi lending (CDP): collateralize TACm to mint TiUSD.', 'fc.guide3': '③ TACm/TiUSD → USDT: trade on TACM/USDT and TiUSD/USDT markets (limit/market/swap).', 'fc.guide4': '④ Cross-chain: TACM/TiUSD/USDT can be bridged to BSC/Ethereum and other major chains.',
-      'pill.ai': 'TAC Ai',
-      'ai_assistant': 'TAC Ai', 'ai_sub': 'On-chain assistant — ask about the chain, get instant answers',
+      'pill.ai': 'Titan Ai',
+      'ai_assistant': 'Titan Ai', 'ai_sub': 'Titan Ai — on-chain assistant, instant answers',
+      'ai.compliance': 'Write actions need your confirmation · node never signs for you · investment has risk',
+      'ai.modeAssist': 'Assistant', 'ai.modeAgent': 'Agent',
+      'ai.marketCard': 'AI Model Market', 'ai.marketCardSub': 'Register / subscribe / call on-chain models',
+      'ai.verifyCard': 'Cross-chain AI Verify', 'ai.verifyCardSub': 'Inference result verification network',
+      'ai.wallet': 'Wallet: ', 'ai.engine': 'AI engine: ', 'ai.probing': 'Probing…',
       'ai_suggest_status': 'Node status', 'ai_suggest_block': 'Latest block', 'ai_suggest_audit': 'On-chain audit',
       'ai_suggest_reward': 'Rewards', 'ai_suggest_miner': 'Online miners', 'ai_suggest_supply': 'Supply',
       'ai_suggest_join': 'Join network', 'ai_suggest_transfer': 'Transfer guide',
@@ -425,7 +435,7 @@
       'ex.hot': 'Hot Markets', 'ex.tapTrade': 'Tap a coin to trade', 'ex.ref': 'Ref',
       'ex.onchain': 'On-chain', 'ex.live': 'Live', 'ex.refDisabled': 'Disabled: only on-chain assets (TACM/TiUSD/USDT) are tradable', 'ex.fee': 'Fee',
       'ex.verifyBtn': 'Verify Address', 'ex.verifyUn': 'Not verified', 'ex.verifyOK': 'Address verified: ', 'ex.verifyNeedLogin': 'Please log in as a member to verify your bound miner wallet address', 'ex.verifyFail': 'Verification failed, please try again later', 'ex.verifyFirst': 'Please tap "Verify Address" to bind the current miner wallet first', 'ex.verifyChanged': 'Account address changed, please re-verify',
-      'ex.walletTitle': 'Exchange Wallet', 'ex.walletNone': 'Not connected — please link a wallet', 'ex.walletMiner': 'Link Miner Wallet', 'ex.walletNew': 'New Web3 Wallet', 'ex.walletChange': 'Change', 'ex.walletMinerOK': 'Miner wallet linked (current chain): ', 'ex.walletNeedLogin': 'Please log in as a member to link your miner wallet', 'ex.walletNewConfirm': 'A brand-new Web3 wallet will be created. Back up the private key immediately afterwards. Continue?', 'ex.walletNewOK': 'New Web3 wallet created: ', 'ex.walletWifLabel': 'Private key WIF (back up offline now; it cannot be recovered): ', 'ex.walletWifWarn': 'Write it down and keep it offline. Never share it; use it to restore the wallet on other devices.', 'ex.walletNewFail': 'Failed to create Web3 wallet, please try again later', 'ex.walletChangeConfirm': 'Change the exchange wallet? Current fields will be cleared.',
+      'ex.walletTitle': 'Exchange Wallet', 'ex.walletNone': 'Not connected — please link a wallet', 'ex.walletMiner': 'Link Miner Wallet', 'ex.walletNew': 'New Web3 Wallet', 'ex.walletChange': 'Change', 'ex.walletMinerOK': 'Miner wallet linked (current chain): ', 'ex.walletNeedLogin': 'Please log in as a member to link your miner wallet', 'ex.walletNewConfirm': 'A brand-new Web3 wallet will be created. Back up the private key immediately afterwards. Continue?', 'ex.walletNewOK': 'New Web3 wallet created: ', 'ex.walletWifLabel': 'Private key WIF (back up offline now; it cannot be recovered): ', 'ex.walletWifWarn': 'Write it down and keep it offline. Never share it; use it to restore the wallet on other devices.', 'ex.walletNewFail': 'Failed to create Web3 wallet, please try again later', 'ex.walletChangeConfirm': 'Change the exchange wallet? Current fields will be cleared.', 'ex.orderMarket': 'Market',
       'ex.refBook': 'Reference quote (valuation mirror) · no order book',
       'ex.refDepth': 'Reference quote · no live order book',
       'ex.best': 'Best',
@@ -471,11 +481,11 @@
       'br.lockBtn': 'Lock & Send', 'br.history': 'Bridge History', 'br.historyHint': 'by address',
       'br.query': 'Query', 'br.historyPh': 'Enter an address to view bridge transactions',
       'bn.nfts': 'NFT Gallery', 'bn.nftsSub': 'Digital Collectibles',
-      'bn.ai': 'TAC Ai', 'bn.aiSub': 'On-chain Q&A',
+      'bn.ai': 'Titan Ai', 'bn.aiSub': 'On-chain assistant · single AI entry',
       'bn.explorer': 'Explorer', 'bn.explorerSub': 'On-chain Search',
       'index.heroTag': 'AI-native blockchain · EVM compatible · EIP-1559 · L2 Rollup · BSC Bridge',
       'feat.wallet': 'Assets & Transfer', 'feat.mining': 'Hashrate & Rewards', 'feat.explorer': 'On-chain Search',
-      'feat.exchange': 'Exchange', 'feat.community': 'Community', 'feat.dex': 'DEX', 'feat.nfts': 'NFT', 'feat.ai': 'TAC Ai',
+      'feat.exchange': 'Exchange', 'feat.community': 'Community', 'feat.dex': 'DEX', 'feat.nfts': 'NFT', 'feat.ai': 'Titan Ai',
       'index.v1t': 'Your Assets Are Yours', 'index.v1s': 'Your bank account is an entry in someone else\'s database. TAC is an alternative network where you hold your assets directly.',
       'index.v2t': 'Privacy by Default', 'index.v2s': 'No account tied to your name, no company watching your balance. Your on-chain activity is yours.',
       'index.v3t': 'Never Offline', 'index.v3s': 'Multi-node decentralized network with 100% uptime. No single server can take your chain down.',
@@ -2282,29 +2292,32 @@ dict.en['sdk.endpointDesc'] = 'The following endpoints can be called by any JSON
     });
     mo.observe(document.body, { childList: true, subtree: true });
   } catch (e) { /* 舊瀏覽器忽略 */ }
+
+  // v165 修復：以下詞條 v164 誤植在 IIFE 外（此時 dict 已脫離作用域 → 每頁 ReferenceError: dict is not defined，
+  // 導致 tiusd/nh/zk/vrf 全部 key 未註冊、後續敘述中斷）。搬回 IIFE 內部，dict 仍在作用域、TAC_T 可查。
+  dict.zh['tiusd.hookPending']='Webhook 待投遞 ';
+  dict.en['tiusd.hookPending']='Webhook pending ';
+
+  dict.zh['nh.priceTitle']='資產行情（Oracle）';
+  dict.en['nh.priceTitle']='Asset Prices (Oracle)';
+  dict.zh['nh.listed']='已上市';
+  dict.en['nh.listed']='Listed';
+  dict.zh['nh.unlisted']='未上市（0.330 兜底）';
+  dict.en['nh.unlisted']='Unlisted (0.330 floor)';
+  dict.zh['tiusd.hookFailed']='重試佇列 ';
+  dict.en['tiusd.hookFailed']='retry queue ';
+  dict.zh['zk.title']='ZK／VRF 工具台'; dict.zh['zk.sub']='零知識原語 — 狀態批次證明 · 承諾 · Nullifier · 可驗證隨機數';
+  dict.zh['zk.batch']='ZK-Rollup 批次證明'; dict.zh['zk.old']='舊狀態根'; dict.zh['zk.new']='新狀態根';
+  dict.zh['zk.prove']='產生證明'; dict.zh['zk.verify']='驗證';
+  dict.zh['zk.commitTitle']='隱私承諾與 Nullifier'; dict.zh['zk.commitSub']='隱藏性＋綁定性 · 防雙花';
+  dict.zh['zk.msg']='金額/訊息'; dict.zh['zk.commit']='產生承諾';
+  dict.zh['vrf.title']='可驗證隨機函數（ECVRF）'; dict.zh['vrf.sub']='公平抽籤 · 節點選舉 · 白名單';
+  dict.zh['vrf.keygen']='產生密鑰'; dict.zh['vrf.msg']='訊息'; dict.zh['vrf.prove']='產生證明'; dict.zh['vrf.verify']='驗證';
+  dict.en['zk.title']='ZK &amp; VRF Toolkit'; dict.en['zk.sub']='Zero-Knowledge primitives — state batch proof · commitment · nullifier · verifiable randomness';
+  dict.en['zk.batch']='ZK-Rollup Batch Proof'; dict.en['zk.old']='old state root'; dict.en['zk.new']='new state root';
+  dict.en['zk.prove']='Prove'; dict.en['zk.verify']='Verify';
+  dict.en['zk.commitTitle']='Privacy Commitment &amp; Nullifier'; dict.en['zk.commitSub']='hiding + binding · double-spend guard';
+  dict.en['zk.msg']='amount/message'; dict.en['zk.commit']='Commit';
+  dict.en['vrf.title']='Verifiable Random Function (ECVRF)'; dict.en['vrf.sub']='fair lottery · node election · whitelist';
+  dict.en['vrf.keygen']='Generate Key'; dict.en['vrf.msg']='message'; dict.en['vrf.prove']='Prove'; dict.en['vrf.verify']='Verify';
 })();
-
-dict.zh['tiusd.hookPending']='Webhook 待投遞 ';
-dict.en['tiusd.hookPending']='Webhook pending ';
-
-dict.zh['nh.priceTitle']='資產行情（Oracle）';
-dict.en['nh.priceTitle']='Asset Prices (Oracle)';
-dict.zh['nh.listed']='已上市';
-dict.en['nh.listed']='Listed';
-dict.zh['nh.unlisted']='未上市（0.330 兜底）';
-dict.en['nh.unlisted']='Unlisted (0.330 floor)';
-dict.zh['tiusd.hookFailed']='重試佇列 ';
-dict.en['tiusd.hookFailed']='retry queue ';dict.zh['zk.title']='ZK／VRF 工具台'; dict.zh['zk.sub']='零知識原語 — 狀態批次證明 · 承諾 · Nullifier · 可驗證隨機數';
-dict.zh['zk.batch']='ZK-Rollup 批次證明'; dict.zh['zk.old']='舊狀態根'; dict.zh['zk.new']='新狀態根';
-dict.zh['zk.prove']='產生證明'; dict.zh['zk.verify']='驗證';
-dict.zh['zk.commitTitle']='隱私承諾與 Nullifier'; dict.zh['zk.commitSub']='隱藏性＋綁定性 · 防雙花';
-dict.zh['zk.msg']='金額/訊息'; dict.zh['zk.commit']='產生承諾';
-dict.zh['vrf.title']='可驗證隨機函數（ECVRF）'; dict.zh['vrf.sub']='公平抽籤 · 節點選舉 · 白名單';
-dict.zh['vrf.keygen']='產生密鑰'; dict.zh['vrf.msg']='訊息'; dict.zh['vrf.prove']='產生證明'; dict.zh['vrf.verify']='驗證';
-dict.en['zk.title']='ZK &amp; VRF Toolkit'; dict.en['zk.sub']='Zero-Knowledge primitives — state batch proof · commitment · nullifier · verifiable randomness';
-dict.en['zk.batch']='ZK-Rollup Batch Proof'; dict.en['zk.old']='old state root'; dict.en['zk.new']='new state root';
-dict.en['zk.prove']='Prove'; dict.en['zk.verify']='Verify';
-dict.en['zk.commitTitle']='Privacy Commitment &amp; Nullifier'; dict.en['zk.commitSub']='hiding + binding · double-spend guard';
-dict.en['zk.msg']='amount/message'; dict.en['zk.commit']='Commit';
-dict.en['vrf.title']='Verifiable Random Function (ECVRF)'; dict.en['vrf.sub']='fair lottery · node election · whitelist';
-dict.en['vrf.keygen']='Generate Key'; dict.en['vrf.msg']='message'; dict.en['vrf.prove']='Prove'; dict.en['vrf.verify']='Verify';

@@ -41,6 +41,7 @@ type DApp struct {
 	FavCount    int64   `json:"fav_count"`
 	Views       int64   `json:"views"`
 	Featured    bool    `json:"featured"`
+	Status      string  `json:"status"` // pending | approved | featured
 	CreatedAt   int64   `json:"created_at"`
 	UpdatedAt   int64   `json:"updated_at"`
 }
@@ -70,6 +71,9 @@ type ListParams struct {
 	Size       int    // 每頁（預設 24，上限 100）
 	Deployer   string // 若指定：只回該部署者（我的 DApp）
 	ForAddress string // 若指定：該 address 的收藏狀態併回傳
+	// IncludeUnreviewed 為 true 時連同 pending 狀態一起回傳（僅供 deployer 本人「我的 DApp」使用）。
+	// 公開列表一律只回 approved/featured。
+	IncludeUnreviewed bool
 }
 
 // ListResult 列表回傳。
@@ -82,8 +86,9 @@ type ListResult struct {
 
 // Store DApp 商店持久化。
 type Store struct {
-	db *sql.DB
-	mu sync.Mutex
+	db     *sql.DB
+	mu     sync.Mutex
+	nonces map[string]dappNonceEntry // 簽名一次性 nonce（記憶體、TTL）
 }
 
 // Open 開啟 dapp.db（WAL、單連線）並建表。
@@ -115,6 +120,7 @@ CREATE TABLE IF NOT EXISTS dapps (
   fav_count INTEGER NOT NULL DEFAULT 0,
   views INTEGER NOT NULL DEFAULT 0,
   featured INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'pending',
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
   UNIQUE(deployer, name)
@@ -153,12 +159,53 @@ CREATE TABLE IF NOT EXISTS dapp_categories (
 		_ = db.Close()
 		return nil, fmt.Errorf("dapp: 初始化 schema: %w", err)
 	}
-	s := &Store{db: db}
+	s := &Store{db: db, nonces: map[string]dappNonceEntry{}}
+	// v165 遷移：舊庫無 status 欄位時補上，並把已 featured 的列標為 featured、其餘標 approved。
+	if err := s.migrateStatusColumn(); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("dapp: 遷移 status: %w", err)
+	}
 	if err := s.seedCategories(); err != nil {
 		_ = db.Close()
 		return nil, err
 	}
 	return s, nil
+}
+
+// migrateStatusColumn 為舊資料庫補上 status 欄位（SQLite 無 IF NOT EXISTS for ALTER）。
+func (s *Store) migrateStatusColumn() error {
+	rows, err := s.db.Query(`PRAGMA table_info(dapps)`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	hasStatus := false
+	for rows.Next() {
+		var cid int
+		var name, ctype string
+		var notnull, pk int
+		var dflt any
+		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk); err != nil {
+			return err
+		}
+		if name == "status" {
+			hasStatus = true
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	if hasStatus {
+		return nil
+	}
+	if _, err := s.db.Exec(`ALTER TABLE dapps ADD COLUMN status TEXT NOT NULL DEFAULT 'pending'`); err != nil {
+		return err
+	}
+	// 舊資料：featured=1 → featured；其餘既有列視為已 approved（公開可見）。
+	if _, err := s.db.Exec(`UPDATE dapps SET status = CASE WHEN featured=1 THEN 'featured' ELSE 'approved' END`); err != nil {
+		return err
+	}
+	return nil
 }
 
 // Close 關閉資料庫。
@@ -190,23 +237,26 @@ func validURL(raw string) bool {
 }
 
 const dappCols = `id, deployer, name, category, description, url, icon, contract, tags,
-	version, rating_avg, rating_count, fav_count, views, featured, created_at, updated_at`
+	version, rating_avg, rating_count, fav_count, views, featured, status, created_at, updated_at`
 
 func scanDApp(sc interface{ Scan(...any) error }) (*DApp, error) {
 	var d DApp
 	var featured int
 	if err := sc.Scan(&d.Id, &d.Deployer, &d.Name, &d.Category, &d.Description,
 		&d.URL, &d.Icon, &d.Contract, &d.Tags, &d.Version, &d.RatingAvg, &d.RatingCount,
-		&d.FavCount, &d.Views, &featured, &d.CreatedAt, &d.UpdatedAt); err != nil {
+		&d.FavCount, &d.Views, &featured, &d.Status, &d.CreatedAt, &d.UpdatedAt); err != nil {
 		return nil, err
 	}
 	d.Featured = featured == 1
+	if d.Status == "" {
+		d.Status = "approved"
+	}
 	return &d, nil
 }
 
 // Register 註冊／更新 DApp（同名同 deployer 視為更新，version 遞增）。
-// deployer 必填且應為合法地址（合法性由呼叫端保證；此處只做非空）。
-func (s *Store) Register(deployer, name, category, description, dappURL, icon, contract, tags string, featured bool) (*DApp, error) {
+// 新註冊一律為 pending（待審核）；更新既有列時保留審核狀態，deployer 無法自我上架為 featured。
+func (s *Store) Register(deployer, name, category, description, dappURL, icon, contract, tags string) (*DApp, error) {
 	deployer = strings.TrimSpace(deployer)
 	name = strings.TrimSpace(name)
 	category = strings.TrimSpace(category)
@@ -239,12 +289,8 @@ func (s *Store) Register(deployer, name, category, description, dappURL, icon, c
 	defer s.mu.Unlock()
 
 	now := time.Now().Unix()
-	featuredFlag := 0
-	if featured {
-		featuredFlag = 1
-	}
 
-	// 同名同 deployer → 更新並版本遞增。
+	// 同名同 deployer → 更新並版本遞增（保留 status / featured）。
 	var id int64
 	var ver int64
 	row := s.db.QueryRow(`SELECT id, version FROM dapps WHERE deployer=? AND name=?`, deployer, name)
@@ -252,9 +298,9 @@ func (s *Store) Register(deployer, name, category, description, dappURL, icon, c
 	switch {
 	case err == sql.ErrNoRows:
 		res, insErr := s.db.Exec(`INSERT INTO dapps
-			(deployer, name, category, description, url, icon, contract, tags, version, featured, created_at, updated_at)
-			VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`,
-			deployer, name, category, description, dappURL, icon, contract, tags, 1, featuredFlag, now, now)
+			(deployer, name, category, description, url, icon, contract, tags, version, featured, status, created_at, updated_at)
+			VALUES(?,?,?,?,?,?,?,?,?,?, 'pending', ?, ?)`,
+			deployer, name, category, description, dappURL, icon, contract, tags, 1, 0, now, now)
 		if insErr != nil {
 			return nil, fmt.Errorf("dapp: 寫入 DApp: %w", insErr)
 		}
@@ -263,11 +309,38 @@ func (s *Store) Register(deployer, name, category, description, dappURL, icon, c
 		return nil, fmt.Errorf("dapp: 查詢既有 DApp: %w", err)
 	default:
 		next := ver + 1
+		// 更新不變動 status（審核狀態由管理端 SetStatus 控管）。
 		if _, updErr := s.db.Exec(`UPDATE dapps SET category=?, description=?, url=?, icon=?, contract=?,
-			tags=?, version=?, featured=?, updated_at=? WHERE id=?`,
-			category, description, dappURL, icon, contract, tags, next, featuredFlag, now, id); updErr != nil {
+			tags=?, version=?, updated_at=? WHERE id=?`,
+			category, description, dappURL, icon, contract, tags, next, now, id); updErr != nil {
 			return nil, fmt.Errorf("dapp: 更新 DApp: %w", updErr)
 		}
+	}
+	return s.getLocked(id)
+}
+
+// SetStatus 由管理端變更上架狀態：pending | approved | featured。
+// featured=true 同步維護 featured 旗標，供舊版 featured 排序相容。
+func (s *Store) SetStatus(id int64, status string) (*DApp, error) {
+	status = strings.TrimSpace(strings.ToLower(status))
+	switch status {
+	case "pending", "approved", "featured":
+	default:
+		return nil, fmt.Errorf("dapp: 非法狀態 %q（僅 pending/approved/featured）", status)
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	feat := 0
+	if status == "featured" {
+		feat = 1
+	}
+	res, err := s.db.Exec(`UPDATE dapps SET status=?, featured=?, updated_at=? WHERE id=?`,
+		status, feat, time.Now().Unix(), id)
+	if err != nil {
+		return nil, fmt.Errorf("dapp: 更新狀態: %w", err)
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return nil, fmt.Errorf("dapp: DApp 不存在 (id=%d)", id)
 	}
 	return s.getLocked(id)
 }
@@ -324,6 +397,10 @@ func (s *Store) List(p ListParams) (*ListResult, error) {
 	if d := strings.TrimSpace(p.Deployer); d != "" {
 		where = append(where, `deployer = ?`)
 		args = append(args, d)
+	}
+	// 公開列表只顯示已審核（approved/featured）；pending 僅 deployer 本人經 IncludeUnreviewed 可見。
+	if !p.IncludeUnreviewed {
+		where = append(where, `status IN ('approved','featured')`)
 	}
 	whereSQL := ""
 	if len(where) > 0 {
@@ -492,7 +569,8 @@ func (s *Store) Favorites(address string) ([]DApp, error) {
 	defer s.mu.Unlock()
 	rows, err := s.db.Query(`SELECT `+prefixedDAppCols("d")+`
 		FROM dapp_favorites f JOIN dapps d ON d.id=f.dapp_id
-		WHERE f.address=? ORDER BY f.id DESC LIMIT 200`, address)
+		WHERE f.address=? AND d.status IN ('approved','featured')
+		ORDER BY f.id DESC LIMIT 200`, address)
 	if err != nil {
 		return nil, fmt.Errorf("dapp: 收藏列表: %w", err)
 	}
@@ -513,7 +591,7 @@ func prefixedDAppCols(alias string) string {
 	return alias + `.id, ` + alias + `.deployer, ` + alias + `.name, ` + alias + `.category, ` +
 		alias + `.description, ` + alias + `.url, ` + alias + `.icon, ` + alias + `.contract, ` +
 		alias + `.tags, ` + alias + `.version, ` + alias + `.rating_avg, ` + alias + `.rating_count, ` +
-		alias + `.fav_count, ` + alias + `.views, ` + alias + `.featured, ` + alias + `.created_at, ` +
+		alias + `.fav_count, ` + alias + `.views, ` + alias + `.featured, ` + alias + `.status, ` + alias + `.created_at, ` +
 		alias + `.updated_at`
 }
 

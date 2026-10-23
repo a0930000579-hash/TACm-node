@@ -3,9 +3,11 @@ package node
 import (
 	"fmt"
 	"math"
+	"net/http"
 	"sort"
 	"time"
 
+	"strconv"
 	"tacm/internal/chaindb"
 	"tacm/internal/consensus/bft"
 	"tacm/internal/consensus/pos"
@@ -39,7 +41,7 @@ func (n *Node) RebuildValidatorSetFromPOS() error {
 	}
 	cfg := pos.DefaultConfig()
 	minStk := cfg.ValidatorMinStk // 1,000 TACm
-	count := cfg.ValidatorCount    // 21
+	count := cfg.ValidatorCount   // 21
 	act := make([]chaindb.PosValidator, 0, len(vals))
 	for _, v := range vals {
 		if v.Status != "active" || v.TotalStake < minStk {
@@ -105,8 +107,25 @@ func (n *Node) mergePotNodes(bv []bft.Validator, act []chaindb.PosValidator, tip
 	if err != nil {
 		return fmt.Errorf("node: 讀在線節點失敗: %w", err)
 	}
-	potPowerInterval := int64(6 * 3600) // 每在線 6 小時 +1 權重
-	const potPowerCap = 10             // 上限 10（≈1,000 TACm 質押等價），防止純時間節點無限膨脹
+	// v117：PoT 權重參數化治理——每在線小時數與權重上限可經 settings 覆寫
+	// （pot.weight_interval_hours 預設 6、pot.weight_cap 預設 10），未設定用原常量。
+	potIntervalHours := 6.0
+	potCap := 10.0
+	if n.walletSvc != nil {
+		st := n.walletSvc.Store()
+		if v, err := st.GetSetting("pot.weight_interval_hours"); err == nil && v != "" {
+			if f, ferr := strconv.ParseFloat(v, 64); ferr == nil && f >= 1 {
+				potIntervalHours = f
+			}
+		}
+		if v, err := st.GetSetting("pot.weight_cap"); err == nil && v != "" {
+			if f, ferr := strconv.ParseFloat(v, 64); ferr == nil && f >= 1 {
+				potCap = f
+			}
+		}
+	}
+	potPowerInterval := int64(potIntervalHours * 3600)
+	potPowerCap := int(potCap) // 上限（≈100×權重 TACm 質押等價），防止純時間節點無限膨脹
 	for addr := range online {
 		if staked[addr] {
 			continue
@@ -150,11 +169,12 @@ func (n *Node) StartDynamicValidators() {
 	n.wg.Add(1)
 	go func() {
 		defer n.wg.Done()
+		stop := n.stopChannel()
 		tk := time.NewTicker(60 * time.Second)
 		defer tk.Stop()
 		for {
 			select {
-			case <-n.stopCh:
+			case <-stop:
 				return
 			case <-tk.C:
 				if err := n.RebuildValidatorSetFromPOS(); err != nil {
@@ -163,6 +183,29 @@ func (n *Node) StartDynamicValidators() {
 			}
 		}
 	}()
+}
+
+// restoreDynamicValidatorsOnResume v165：節點從 SuspendConsensus 恢復（ResumeConsensus）時，
+// 從持久化層完整還原動態驗證人集，避免重啟後停留在創世靜態集合。
+//
+// 資料來源為鏈上 pos_validators（任何節點同步同一條鏈即得一致視圖，M149m 去中心化語義）：
+//   - pubkey：驗證人 BFT 簽名公鑰（bft.NewValidator 校驗地址派生一致）；
+//   - total_stake：自質押＋委託合併的出塊權重，決定入集前 ValidatorCount 名與排名；
+//   - status='jailed'：jail（監禁）驗證人自動排除出集；
+//   - slash（罰沒）已於鏈上 SlashPosValidator 比例扣減 total_stake，隨之還原。
+//
+// RebuildValidatorSetFromPOS 為純函式（輸入全來自鏈上：tip 區塊時間、節點註冊表、質押狀態），
+// 故領導者（distributed）與 follower 路徑重建結果完全一致；重建後經 ReplaceValidatorSet 以同一
+// 集合建構 BFTNode，proposer 輪替基準（view/validator set）與重啟前一致。
+//
+// SuspendConsensus 關閉 stopCh 時 StartDynamicValidators 的 60s 重建 goroutine 已隨之退出，
+// 此處一併重啟，恢復後新增質押/jail/slash 仍能最遲 60s 生效（posStore==nil 時其自身為 no-op）。
+func (n *Node) restoreDynamicValidatorsOnResume() {
+	// 同步重建一次：把記憶體驗證人集從鏈上持久化狀態完整還原（流程重開時 initBFT 僅建
+	// 創世單節點集）。失敗不致命——保留現有集合，下個週期 tick 重試（對應既有重建語義）。
+	_ = n.RebuildValidatorSetFromPOS()
+	// 重啟週期重建 goroutine（Suspend 已殺掉）；posStore==nil 時此呼叫自身 early-return。
+	n.StartDynamicValidators()
 }
 
 // applySlashing 對雙重簽名驗證人執行罰沒：監禁（jail）＋按 SlashRate 扣減質押，
@@ -181,4 +224,9 @@ func (n *Node) applySlashing(ev *bft.SlashingEvidence) {
 	_ = n.db.JailPosValidator(ev.Validator)
 	_ = n.db.SlashPosValidator(ev.Validator, pos.DefaultConfig().SlashRate)
 	_ = n.RebuildValidatorSetFromPOS()
+}
+
+// handleValidatorTakeovers GET /api/validators/takeovers — 本節點接管出塊統計。
+func (s *RPCServer) handleValidatorTakeovers(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "stats": s.node.TakeoverStats()})
 }

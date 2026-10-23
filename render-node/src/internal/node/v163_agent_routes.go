@@ -99,5 +99,9 @@ func (s *RPCServer) handleAIAgent(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"ok": true, "answer": result.Answer, "model": result.Model,
 		"needs_confirm": result.NeedsConfirm, "trace": steps,
+		"intent":    result.Intent,
+		"searched":  result.Searched,
+		"queries":   result.Queries,
+		"citations": result.Citations,
 	})
 }

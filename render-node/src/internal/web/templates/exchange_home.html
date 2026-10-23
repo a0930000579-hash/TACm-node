@@ -1,7 +1,8 @@
 {% extends "base.html" %}
 {% block content %}
+{% include "exchange_chrome.html" %}
 <section class="pg-banner">
-  <div class="pg-txt"><h1 data-i18n="bn.exchange">交易所</h1><p>一站式現貨交易 · 閃兌 · 自動機器人 · 資金池</p></div>
+  <div class="pg-txt"><h1 data-i18n="bn.exchange">交易所</h1><p>一站式現貨交易 · 閃兌 · 自動機器人 · 資金池 · DeFi · NFT</p></div>
   <svg viewBox="0 0 40 40" class="pg-art"><path d="M6 30 h28 M6 30 l6 4 M6 30 l6 -4" fill="none" stroke="#68BE8D" stroke-width="2.2" stroke-linecap="round"/><path d="M10 24 V14 h8 V24 Z" fill="rgba(104,190,141,.25)" stroke="#68BE8D" stroke-width="1.6"/><path d="M22 24 V8 h8 V24 Z" fill="rgba(104,190,141,.45)" stroke="#68BE8D" stroke-width="1.6"/><path d="M34 30 L34 26 M30 30 L30 26 M26 30 L26 26" stroke="#68BE8D" stroke-width="1.6"/></svg>
 </section>
 <style>
@@ -63,7 +64,7 @@
         </span>
         <div style="min-width:0">
           <div style="font-weight:700;font-size:14px" data-i18n="ex.walletTitle">交易所錢包</div>
-          <div id="exWalletStatus" class="mono" style="font-size:12px;color:#f6465d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:230px" data-i18n="ex.walletNone">未連結</div>
+          <div id="exWalletStatus" class="mono" style="font-size:12px;color:#f6465d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:230px">未連結</div>
         </div>
       </div>
       <div id="exWalletBtns" style="display:flex;gap:8px;flex-wrap:wrap"></div>
@@ -78,6 +79,8 @@
     <a class="ec-card" href="/exchange/bot"><span class="ic"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="9" width="14" height="9" rx="2"/><path d="M9 5h6M12 5v4M9 13h.01M15 13h.01"/></svg></span>自動交易</a>
     <a class="ec-card" href="/exchange/orders"><span class="ic"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span>我的訂單</a>
     <a class="ec-card" href="/exchange/pool"><span class="ic"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 9l9-5 9 5"/><path d="M4 10h16v3H4z"/><path d="M6 13v6M10 13v6M14 13v6M18 13v6M3 19h18"/></svg></span>資金池</a>
+    <a class="ec-card" href="/exchange/defi"><span class="ic"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3c3 5 6 8 6 11a6 6 0 0 1-12 0c0-3 3-6 6-11z"/></svg></span>DeFi</a>
+    <a class="ec-card" href="/exchange/nft"><span class="ic"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M3 17l5-5 3 3 4-4 6 6"/></svg></span>NFT</a>
   </div>
 
   <!-- 市場行情（M104：幣安式熱門列表——鏈上＋主流幣，點選即交易） -->

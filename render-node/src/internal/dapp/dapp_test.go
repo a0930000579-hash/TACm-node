@@ -31,7 +31,7 @@ func TestRegisterAndUpdate(t *testing.T) {
 	s := testStore(t)
 	addr := validDeployer(t)
 
-	d, err := s.Register(addr, "MySwap", "DeFi", "desc", "https://example.com", "", "", "swap,defi", false)
+	d, err := s.Register(addr, "MySwap", "DeFi", "desc", "https://example.com", "", "", "swap,defi")
 	if err != nil {
 		t.Fatalf("register: %v", err)
 	}
@@ -40,7 +40,7 @@ func TestRegisterAndUpdate(t *testing.T) {
 	}
 
 	// 同名同 deployer → 更新且版本遞增。
-	d2, err := s.Register(addr, "MySwap", "DeFi", "desc v2", "https://example.com", "", "", "swap", false)
+	d2, err := s.Register(addr, "MySwap", "DeFi", "desc v2", "https://example.com", "", "", "swap")
 	if err != nil {
 		t.Fatalf("update: %v", err)
 	}
@@ -65,11 +65,11 @@ func TestRegisterValidation(t *testing.T) {
 		{"N", "DeFi", strings.Repeat("x", 1001), "https://x.com"}, // 描述過長
 	}
 	for _, c := range cases {
-		if _, err := s.Register(addr, c.name, c.cat, c.desc, c.url, "", "", "", false); err == nil {
+		if _, err := s.Register(addr, c.name, c.cat, c.desc, c.url, "", "", ""); err == nil {
 			t.Fatalf("expected error for %+v", c)
 		}
 	}
-	if _, err := s.Register("", "N", "DeFi", "d", "https://x.com", "", "", "", false); err == nil {
+	if _, err := s.Register("", "N", "DeFi", "d", "https://x.com", "", "", ""); err == nil {
 		t.Fatal("expected missing deployer error")
 	}
 }
@@ -78,10 +78,19 @@ func TestListSearchCategorySort(t *testing.T) {
 	s := testStore(t)
 	a1 := validDeployer(t)
 	a2 := "0x" + strings.Repeat("b", 40)
-	if _, err := s.Register(a1, "SwapDEX", "DeFi", "a dex", "https://a.com", "", "", "swap", false); err != nil {
+	d1, err := s.Register(a1, "SwapDEX", "DeFi", "a dex", "https://a.com", "", "", "swap")
+	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.Register(a2, "GameNFT", "Game", "an nft game", "https://b.com", "", "", "nft", true); err != nil {
+	d2, err := s.Register(a2, "GameNFT", "Game", "an nft game", "https://b.com", "", "", "nft")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// 公開列表只顯示已審核；先核准，GameNFT 並設為 featured。
+	if _, err := s.SetStatus(d1.Id, "approved"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.SetStatus(d2.Id, "featured"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -108,6 +117,22 @@ func TestListSearchCategorySort(t *testing.T) {
 	if r.Total != 1 || r.Items[0].Deployer != a2 {
 		t.Fatalf("deployer filter: %+v", r)
 	}
+	// 未審核（pending）預設不出現在公開列表。
+	pd, _ := s.Register(a1, "HiddenDApp", "Tools", "pending one", "https://h.com", "", "", "")
+	if pd.Status != "pending" {
+		t.Fatalf("new register should be pending: %+v", pd)
+	}
+	r, _ = s.List(ListParams{})
+	for _, it := range r.Items {
+		if it.Name == "HiddenDApp" {
+			t.Fatalf("pending dapp leaked into public list: %+v", r)
+		}
+	}
+	// 但 deployer 本人經 IncludeUnreviewed 可見。
+	r, _ = s.List(ListParams{Deployer: a1, IncludeUnreviewed: true})
+	if r.Total != 2 {
+		t.Fatalf("deployer should see own pending: %+v", r)
+	}
 }
 
 func TestCategories(t *testing.T) {
@@ -124,7 +149,7 @@ func TestCategories(t *testing.T) {
 func TestRateNoDoubleCount(t *testing.T) {
 	s := testStore(t)
 	addr := validDeployer(t)
-	d, _ := s.Register(addr, "R1", "DeFi", "d", "https://x.com", "", "", "", false)
+	d, _ := s.Register(addr, "R1", "DeFi", "d", "https://x.com", "", "", "")
 
 	r, err := s.Rate(d.Id, addr, 5, "good")
 	if err != nil {
@@ -157,7 +182,10 @@ func TestRateNoDoubleCount(t *testing.T) {
 func TestFavoriteToggle(t *testing.T) {
 	s := testStore(t)
 	addr := validDeployer(t)
-	d, _ := s.Register(addr, "F1", "DeFi", "d", "https://x.com", "", "", "", false)
+	d, _ := s.Register(addr, "F1", "DeFi", "d", "https://x.com", "", "", "")
+	if _, err := s.SetStatus(d.Id, "approved"); err != nil {
+		t.Fatal(err)
+	}
 
 	fav, got, err := s.FavoriteToggle(d.Id, addr)
 	if err != nil {
@@ -190,7 +218,7 @@ func TestFavoriteToggle(t *testing.T) {
 func TestAddView(t *testing.T) {
 	s := testStore(t)
 	addr := validDeployer(t)
-	d, _ := s.Register(addr, "V1", "DeFi", "d", "https://x.com", "", "", "", false)
+	d, _ := s.Register(addr, "V1", "DeFi", "d", "https://x.com", "", "", "")
 	_ = s.AddView(d.Id)
 	_ = s.AddView(d.Id)
 	got, _ := s.Get(d.Id)

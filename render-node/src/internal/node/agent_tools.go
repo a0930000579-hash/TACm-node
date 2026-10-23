@@ -22,6 +22,17 @@ func sharedAgentMemory() *ai.MemoryStore {
 	return agentMemory
 }
 
+// v165：聯網搜尋 provider（免金鑰，SearXNG 類端點由 TAC_SEARCH_URL 設定；未設定＝永遠降級）。
+var (
+	searchProviderOnce sync.Once
+	searchProvider     ai.SearchProvider
+)
+
+func sharedSearchProvider() ai.SearchProvider {
+	searchProviderOnce.Do(func() { searchProvider = ai.NewHTTPSearchProviderFromEnv() })
+	return searchProvider
+}
+
 // v163：把 TACm 既有服務包成 Agent 工具（ai.Registry）。
 // 嚴禁重寫業務邏輯——唯讀工具直接呼叫 s.node.db / oracle / dex / defi 既有查詢；
 // 寫操作工具標 RequiresConfirm，由 Agent 層把關（未 confirm 不執行 Run，亦即不簽/不廣播任何交易）。
@@ -240,6 +251,83 @@ func (s *RPCServer) buildAgentRegistry(memReader func() string) *ai.Registry {
 				Summary: fmt.Sprintf("DeFi borrow prepared for %s asset=%s amount=%s. CDP liquidation risk applies; execution requires wallet signature.",
 					addr, args["asset"], args["amount"]),
 				Data: map[string]any{"prepared": true, "address": addr, "asset": args["asset"], "amount": args["amount"]},
+			}, nil
+		},
+	})
+
+	// --- v165：聯網搜尋 grounding（唯讀，不需確認閘） ---
+	reg.MustRegister(&ai.Tool{
+		Name:        "web_search",
+		Description: "Search the web for LATEST/time-sensitive info (news, current events, macro/global markets, unknown facts). Use ONLY when the user needs up-to-date information; not for static knowledge, chit-chat, or TACm on-chain data. Returns titles/URLs/snippets. Chinese queries are recalled in zh+english and merged.",
+		Parameters: map[string]any{
+			"type":     "object",
+			"required": []any{"query"},
+			"properties": map[string]any{
+				"query": map[string]any{"type": "string", "description": "search query"},
+				"lang":  map[string]any{"type": "string", "description": "hint language: zh | en"},
+			},
+		},
+		Run: func(ctx context.Context, args map[string]any) (ai.ToolResult, error) {
+			query, _ := args["query"].(string)
+			query = strings.TrimSpace(query)
+			if query == "" {
+				return ai.ToolResult{}, fmt.Errorf("query is required")
+			}
+			lang, _ := args["lang"].(string)
+			if lang == "" {
+				lang = "en"
+			}
+			out, err := ai.RunSearch(ctx, sharedSearchProvider(), query, lang)
+			if err != nil {
+				// 誠實降級：不回錯誤以讓迴圈繼續，明確告知無法連線、不編造來源（跟隨語言）。
+				return ai.ToolResult{
+					Summary: ai.WebUnavailableNote(lang),
+					Data:    map[string]any{"queries": []string{query}, "citations": []ai.SearchResult{}},
+				}, nil
+			}
+			// 摘要：列出前幾筆標題＋網址（給模型；前端另從 citations 渲染；跟隨語言）。
+			var b strings.Builder
+			if lang == "zh" {
+				fmt.Fprintf(&b, "召回 %d 筆結果，查詢：%s。\n", len(out.Results), strings.Join(out.Queries, "；"))
+			} else {
+				fmt.Fprintf(&b, "Recalled %d result(s) via queries: %s.\n", len(out.Results), strings.Join(out.Queries, "; "))
+			}
+			for i, r := range out.Results {
+				if i >= 5 {
+					break
+				}
+				fmt.Fprintf(&b, "- %s\n  %s\n  %s\n", r.Title, r.URL, r.Snippet)
+			}
+			return ai.ToolResult{
+				Summary: b.String(),
+				Data:    map[string]any{"queries": out.Queries, "citations": out.Results},
+			}, nil
+		},
+	})
+
+	reg.MustRegister(&ai.Tool{
+		Name:        "web_fetch",
+		Description: "Fetch and extract the main text body of a specific URL returned by web_search. Use only when a snippet is not enough; caps length and strips HTML.",
+		Parameters: map[string]any{
+			"type":     "object",
+			"required": []any{"url"},
+			"properties": map[string]any{
+				"url": map[string]any{"type": "string", "description": "http(s) URL to fetch"},
+			},
+		},
+		Run: func(ctx context.Context, args map[string]any) (ai.ToolResult, error) {
+			u, _ := args["url"].(string)
+			u = strings.TrimSpace(u)
+			if u == "" {
+				return ai.ToolResult{}, fmt.Errorf("url is required")
+			}
+			text, err := sharedSearchProvider().Fetch(ctx, u)
+			if err != nil {
+				return ai.ToolResult{}, fmt.Errorf("fetch failed: %w", err)
+			}
+			return ai.ToolResult{
+				Summary: text,
+				Data:    map[string]any{"url": u},
 			}, nil
 		},
 	})

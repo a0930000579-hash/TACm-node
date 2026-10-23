@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}TAC DEX V3{% endblock %}
 {% block content %}
-<a href="/exchange" style="display:inline-flex;align-items:center;gap:6px;margin:2px 2px 12px;padding:7px 13px;border-radius:999px;background:#fff;border:1px solid #e2e6ee;color:#5d6778;font-size:12px;font-weight:600;text-decoration:none"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span data-i18n="ex.back">返回交易所</span></a>
+{% include "exchange_chrome.html" %}
 <style>
   .dx-wrap{max-width:1080px;margin:0 auto;padding:14px 12px 90px}
   .dx-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 2px 14px}

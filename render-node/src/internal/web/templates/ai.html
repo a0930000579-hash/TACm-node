@@ -1,76 +1,167 @@
 {% extends "base.html" %}
-{% block title %}TAC Ai Assistant{% endblock %}
+{% block title %}Titan Ai{% endblock %}
 {% block content %}
 <section class="pg-banner">
-  <div class="pg-txt"><h1 data-i18n="bn.ai">AI 助手</h1><p data-i18n="bn.aiSub">鏈上問答</p></div>
-  <svg viewBox="0 0 40 40" class="pg-art"><rect x="8" y="10" width="24" height="16" rx="6" fill="none" stroke="#68BE8D" stroke-width="2.2"/><circle cx="14" cy="18" r="2" fill="#68BE8D"/><circle cx="20" cy="18" r="2" fill="#68BE8D"/><circle cx="26" cy="18" r="2" fill="#68BE8D"/><path d="M14 26 h12 M16 26 v4 M24 26 v4" stroke="#68BE8D" stroke-width="1.8" stroke-linecap="round"/></svg>
+  <div class="pg-txt"><h1 data-i18n="bn.ai">Titan Ai</h1><p data-i18n="bn.aiSub">鏈上智能助手 · 單一 AI 入口</p></div>
+  <svg viewBox="0 0 40 40" class="pg-art" aria-hidden="true"><rect x="8" y="10" width="24" height="16" rx="6" fill="none" stroke="#68BE8D" stroke-width="2.2"/><circle cx="14" cy="18" r="2" fill="#68BE8D"/><circle cx="20" cy="18" r="2" fill="#68BE8D"/><circle cx="26" cy="18" r="2" fill="#68BE8D"/><path d="M14 26 h12 M16 26 v4 M24 26 v4" stroke="#68BE8D" stroke-width="1.8" stroke-linecap="round"/></svg>
 </section>
 <style>
-  /* M73-A：AI 助手頁（鏈上智能助手，App 化） */
+  /* v164：Titan Ai（泰坦 Ai）單一 AI 入口——助手模式 + Agent 模式合併為一。 */
   body { background: linear-gradient(180deg,#e8f7ee 0,#ffffff 40%,#f0f2f5 40%); min-height:100vh; }
   .ai-wrap{max-width:860px;margin:0 auto;padding-bottom:90px}
-  .ai-head{background:linear-gradient(135deg,#1877f2,#0f9df5);border-radius:18px;padding:20px 22px;color:#fff;display:flex;align-items:center;gap:14px;margin:14px 0;box-shadow:0 6px 20px rgba(15,120,240,.25)}
-  .ai-logo{width:52px;height:52px;border-radius:14px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800}
-  .ai-head h2{margin:0;font-size:19px;font-weight:800}
-  .ai-head .ai-sub{font-size:12px;opacity:.88;margin-top:3px}
-  .ai-chips{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+  .ai-head{background:linear-gradient(135deg,#1877f2,#0f9df5);border-radius:18px;padding:18px 20px;color:#fff;display:flex;align-items:center;gap:14px;margin:14px 0;box-shadow:0 6px 20px rgba(15,120,240,.25)}
+  .ai-logo{width:50px;height:50px;flex:none;border-radius:14px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center}
+  .ai-head h2{margin:0;font-size:19px;font-weight:800;display:flex;align-items:center;gap:8px}
+  .ai-head .ai-sub{font-size:12px;opacity:.9;margin-top:3px}
+  .ai-badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;border:1px solid rgba(255,255,255,.4);border-radius:999px;padding:3px 10px;margin-top:7px}
+
+  /* 模式切換（助手 / Agent）——行動優先 segmented control */
+  .ai-mode{display:flex;background:#eef2f8;border-radius:12px;padding:4px;gap:4px;margin:0 0 12px}
+  .ai-mode button{flex:1;border:none;background:transparent;border-radius:9px;padding:9px 8px;font-size:13px;font-weight:700;color:#5d6778;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s}
+  .ai-mode button.on{background:#fff;color:#1877f2;box-shadow:0 1px 4px rgba(0,0,0,.1)}
+  .ai-mode button svg{flex:none}
+
+  /* Titan Ai 生態分頁入口卡片（ai-market / ai-verify） */
+  .ai-ecosys{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 12px}
+  .ai-ecosys a{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:11px 13px;text-decoration:none;color:#1c1e21}
+  .ai-ecosys a:hover{border-color:#1877f2;box-shadow:0 2px 8px rgba(24,119,242,.12)}
+  .ai-ecosys .ico{flex:none;width:30px;height:30px;border-radius:9px;background:#eef4fd;display:flex;align-items:center;justify-content:center;color:#1877f2}
+  .ai-ecosys .tt{font-size:13px;font-weight:800}
+  .ai-ecosys .ss{font-size:11px;color:#6b7280;margin-top:1px}
+
+  .ai-addrin{margin:0 0 12px;font-size:12px;color:#3a4658;background:#fff;border:1px solid #d6e4f5;border-radius:10px;padding:8px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .ai-addrin b{color:#1877f2;word-break:break-all}
   .ai-model{margin:0 0 12px;font-size:11px;color:#5d6778;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .ai-model .tag{display:inline-flex;align-items:center;gap:5px;border:1px solid #d6e4f5;border-radius:999px;padding:3px 10px;background:#f7fafd}
   .ai-model .tag b{color:#1877f2;font-weight:600}
   .ai-model .dot{width:8px;height:8px;border-radius:50%;background:#b9bec7;display:inline-block}
   .ai-model .dot.on{background:#0ecb81}
+  .ai-chips{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
   .ai-chip{background:#fff;border:1px solid #d6e4f5;color:#1877f2;border-radius:999px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s}
   .ai-chip:hover{background:#1877f2;color:#fff;border-color:#1877f2}
   .ai-card{background:#fff;border:1px solid #e4e6eb;border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
   .ai-hist{margin:8px 12px 0;padding:8px 10px;background:#f0fbf4;border:1px solid #bfe8cf;border-radius:12px;font-size:12px}
-  .ai-hist .hist-title{color:#1b8a3a;font-weight:700;margin-bottom:4px}
+  .ai-hist .hist-title{color:#1b8a3a;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:4px}
   .ai-hist .hist-item{display:flex;justify-content:space-between;gap:6px;padding:3px 6px;border-radius:8px;cursor:pointer;color:#374151}
   .ai-hist .hist-item:hover{background:#e3f5ea}
   .ai-hist .hist-q{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .ai-hist .hist-x{color:#9ca3af;font-weight:700;padding:0 4px}
   .ai-hist .hist-clear{margin-top:4px;background:none;border:none;color:#b45309;cursor:pointer;font-size:12px}
-  .ai-chat{max-height:52vh;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
-  .ai-msg{max-width:86%;padding:10px 14px;border-radius:14px;font-size:13.5px;line-height:1.7;white-space:pre-wrap;word-break:break-word}
+  .ai-chat{max-height:54vh;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+  .ai-msg{max-width:88%;padding:10px 14px;border-radius:14px;font-size:13.5px;line-height:1.7;white-space:pre-wrap;word-break:break-word}
   .ai-msg.user{align-self:flex-end;background:#1877f2;color:#fff;border-bottom-right-radius:4px}
   .ai-msg.bot{align-self:flex-start;background:#f0f4fa;color:#1c1e21;border-bottom-left-radius:4px;border:1px solid #e4e6eb}
   .ai-msg.err{align-self:flex-start;background:#fdecea;color:#c0392b;border:1px solid #f5c6c0;border-bottom-left-radius:4px}
+  /* Agent 工具呼叫軌跡 */
+  .ai-trace{margin:6px 0 2px;border:1px dashed #c9d6e8;border-radius:10px;background:#f8fbff;overflow:hidden;align-self:flex-start;max-width:88%}
+  .ai-trace summary{cursor:pointer;padding:8px 12px;font-size:12px;color:#3a6ea8;list-style:none;display:flex;align-items:center;gap:6px}
+  .ai-trace summary::-webkit-details-marker{display:none}
+  .ai-step{padding:7px 12px;border-top:1px solid #eaf1fb;font-size:12px;color:#374151;display:flex;gap:8px;align-items:flex-start}
+  .ai-step .ico{flex:none;width:16px;height:16px;margin-top:2px}
+  .ai-step .lbl{font-weight:700;color:#1877f2}
+  .ai-step.err .lbl{color:#c0392b}
+  .ai-step.confirm .lbl{color:#b45309}
+  .ai-step pre{margin:4px 0 0;white-space:pre-wrap;word-break:break-all;font-size:11px;background:#eef4fb;border-radius:6px;padding:6px 8px;overflow:auto}
+  .ai-confirm{margin:8px 12px;padding:10px 12px;background:#fff8e6;border:1px solid #f0d58a;border-radius:10px;font-size:12.5px;color:#7a5b00;align-self:flex-start;max-width:88%}
+  .ai-confirm .row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .ai-confirm button{border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer}
+  .ai-confirm .ok{background:#0ecb81;color:#fff}
+  .ai-confirm .cancel{background:#e5e7eb;color:#374151}
   .ai-input{display:flex;gap:10px;padding:12px 16px;border-top:1px solid #e4e6eb}
   .ai-input input{flex:1;min-width:0;border:1px solid #d6e4f5;border-radius:10px;padding:11px 14px;font-size:14px;background:#f7fafd;color:#1c1e21}
   .ai-input button{background:#1877f2;color:#fff;border:none;border-radius:10px;padding:0 22px;font-size:14px;font-weight:700;cursor:pointer;flex:none}
-  .ai-typing{color:#65676b;font-size:12px;padding:2px 4px}
+  /* v165：載入/打字指示器（三點動畫氣泡） */
+  .ai-typing{display:inline-flex;align-items:center;gap:5px;padding:12px 14px;background:#f0f4fa;border:1px solid #e4e6eb;border-radius:14px;border-bottom-left-radius:4px;align-self:flex-start}
+  .ai-typing i{width:6px;height:6px;border-radius:50%;background:#8a93a3;animation:aiBlink 1.2s infinite}
+  .ai-typing i:nth-child(2){animation-delay:.18s}
+  .ai-typing i:nth-child(3){animation-delay:.36s}
+  @keyframes aiBlink{0%,80%,100%{opacity:.25;transform:translateY(0)}40%{opacity:1;transform:translateY(-2px)}}
+  /* v165：意圖標籤（閒聊/查詢/操作） */
+  .ai-intent{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;border-radius:999px;padding:2px 9px;background:#eef4fd;color:#1877f2;margin-left:6px}
+  .ai-intent.query{background:#eafaf1;color:#1b8a3a}
+  .ai-intent.action{background:#fff3e0;color:#b45309}
+  /* v165：聯網搜尋來源（可收合） */
+  .ai-src{margin:4px 0 2px;border:1px solid #cfe3fb;border-radius:10px;background:#f4f9ff;overflow:hidden;align-self:flex-start;max-width:88%}
+  .ai-src summary{cursor:pointer;padding:7px 12px;font-size:12px;color:#1d6fd6;list-style:none;display:flex;align-items:center;gap:6px}
+  .ai-src summary::-webkit-details-marker{display:none}
+  .ai-src .sq{padding:4px 12px 2px;font-size:11px;color:#5d6778}
+  .ai-src ol{margin:2px 0 8px;padding-left:26px}
+  .ai-src li{font-size:12px;margin:4px 0;word-break:break-all}
+  .ai-src li a{color:#1877f2;text-decoration:none}
+  .ai-src li a:hover{text-decoration:underline}
+  @media (max-width:520px){
+    .ai-ecosys{grid-template-columns:1fr}
+    .ai-head{padding:14px 16px}
+    .ai-msg,.ai-trace,.ai-confirm{max-width:100%}
+    .ai-input button{padding:0 16px}
+  }
+  /* v165：行動版 390/360/320 不破版、不溢出 */
+  @media (max-width:400px){
+    .ai-wrap{padding-left:8px;padding-right:8px}
+    .ai-head{padding:12px 13px;gap:10px;border-radius:14px}
+    .ai-logo{width:42px;height:42px}
+    .ai-head h2{font-size:16px}
+    .ai-head .ai-sub{font-size:11px}
+    .ai-mode button{font-size:12px;padding:8px 4px;gap:4px}
+    .ai-msg{font-size:13px;padding:9px 11px;line-height:1.6}
+    .ai-card{border-radius:12px}
+    .ai-chat{padding:12px;max-height:60vh}
+    .ai-input{padding:10px;gap:8px}
+    .ai-input input{font-size:13px;padding:10px 11px}
+    .ai-input button{padding:0 13px;font-size:13px}
+    .ai-chip{font-size:11px;padding:6px 10px}
+    .ai-step{padding:6px 10px;font-size:11px}
+  }
 </style>
 
 <div class="ai-wrap">
   <div class="ai-head">
-    <div class="ai-logo">泰</div>
+    <div class="ai-logo">
+      <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a4 4 0 0 1 4 4v1a4 4 0 0 1 0 8v1a4 4 0 0 1-8 0v-1a4 4 0 0 1 0-8V7a4 4 0 0 1 4-4z"/><path d="M9 10h.01M15 10h.01"/></svg>
+    </div>
     <div>
-      <h2 data-i18n="ai_assistant">AI 助手</h2>
-      <div class="ai-sub" data-i18n="ai_sub">鏈上智能助手 —— 問鏈上數據，即時回答</div>
+      <h2 data-i18n="ai_assistant">Titan Ai</h2>
+      <div class="ai-sub" data-i18n="ai_sub">泰坦 Ai —— 鏈上智能助手，問鏈上數據即時回答</div>
+      <span class="ai-badge" data-i18n="ai.compliance">寫操作需你確認才執行 · 節點不代簽 · 投資有風險</span>
     </div>
   </div>
 
-  <a href="/agent" style="display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#0ecb81,#0aa56a);color:#fff;border-radius:14px;padding:14px 18px;margin:0 0 12px;text-decoration:none;box-shadow:0 4px 14px rgba(14,203,129,.25)">
-    <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#fff" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>
-    <div style="flex:1">
-      <div style="font-weight:800;font-size:15px" data-i18n="agent.pill">AI Agent（Function Calling）</div>
-      <div style="font-size:12px;opacity:.9;margin-top:2px" data-i18n="agent.pillSub">The agent that calls on-chain tools and asks before any transaction →</div>
-    </div>
-  </a>
+  <!-- 模式切換：助手（/api/ai/ask）/ Agent（/api/ai/agent，function calling） -->
+  <div class="ai-mode" role="tablist">
+    <button id="modeAssist" class="on" type="button" role="tab" aria-selected="true">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span data-i18n="ai.modeAssist">助手</span>
+    </button>
+    <button id="modeAgent" type="button" role="tab" aria-selected="false">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>
+      <span data-i18n="ai.modeAgent">Agent</span>
+    </button>
+  </div>
+
+  <!-- Titan Ai 生態分頁入口：鏈上模型市場 / 跨鏈 AI 驗證（仍各自獨立路由） -->
+  <div class="ai-ecosys">
+    <a href="/ai-market">
+      <span class="ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-6 9 6v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 21V12h6v9"/></svg></span>
+      <span><div class="tt" data-i18n="ai.marketCard">AI 模型市場</div><div class="ss" data-i18n="ai.marketCardSub">鏈上註冊／訂閱／呼叫模型</div></span>
+    </a>
+    <a href="/ai-verify">
+      <span class="ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 4v6c0 4.4-3.4 7.4-8 9-4.6-1.6-8-4.6-8-9V7z"/><path d="M9 12l2 2 4-4"/></svg></span>
+      <span><div class="tt" data-i18n="ai.verifyCard">跨鏈 AI 驗證</div><div class="ss" data-i18n="ai.verifyCardSub">推理結果驗證網路</div></span>
+    </a>
+  </div>
+
+  <!-- Agent 模式才顯示：目前作用錢包（function calling 用） -->
+  <div class="ai-addrin" id="aiAddrRow" style="display:none">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#1877f2" stroke-width="1.8" aria-hidden="true"><path d="M4 6h16v12H4z"/><path d="M4 10h16"/></svg>
+    <span data-i18n="ai.wallet">錢包：</span> <b id="aiAddrVal">—</b>
+  </div>
 
   <div class="ai-model" id="aiModel">
-    <span class="tag"><span class="dot"></span> AI 引擎：<b>偵測中…</b></span>
+    <span class="tag"><span class="dot"></span> <span data-i18n="ai.engine">AI 引擎：</span><b data-i18n="ai.probing">偵測中…</b></span>
+    <span id="aiIntent"></span>
   </div>
 
-  <div class="ai-chips" id="aiChips">
-    <button class="ai-chip" data-i18n="ai_suggest_status">節點狀態</button>
-    <button class="ai-chip" data-i18n="ai_suggest_block">最新區塊</button>
-    <button class="ai-chip" data-i18n="ai_suggest_audit">鏈上審計</button>
-    <button class="ai-chip" data-i18n="ai_suggest_reward">獎勵分潤</button>
-    <button class="ai-chip" data-i18n="ai_suggest_miner">在線礦工</button>
-    <button class="ai-chip" data-i18n="ai_suggest_supply">總供應</button>
-    <button class="ai-chip" data-i18n="ai_suggest_join">加入節點</button>
-    <button class="ai-chip" data-i18n="ai_suggest_transfer">轉帳指引</button>
-  </div>
+  <div class="ai-chips" id="aiChips"></div>
 
   <div class="ai-card">
     <div class="ai-hist" id="aiHist"></div>
@@ -84,87 +175,295 @@
 
 <script>
 (function(){
-  // M102-4：本地 AI 模型狀態（model=llama → 本地大模型；model=rule → 規則式回退）。
-  function showModel(m){
-    var el = document.getElementById('aiModel');
-    if (!el) return;
-    if (m === 'llama'){
-      el.innerHTML = '<span class="tag"><span class="dot on"></span> AI 引擎：<b>本地大模型（Qwen · llama.cpp）</b></span>';
-    } else if (m === 'rule'){
-      el.innerHTML = '<span class="tag"><span class="dot"></span> AI 引擎：<b>規則式助手</b> <span style="color:#b9bec7">（安裝本地模型請執行 scripts/install-llama.sh）</span></span>';
-    }
-  }
+  "use strict";
+  // v164：Titan Ai 單一對話介面。
+  //  - 助手模式：GET  /api/ai/ask?q=&lang=&ctx=        （鏈上問答，多輪記憶）
+  //  - Agent 模式：POST /api/ai/agent {message,address,lang,session_id,confirm}
+  //               （function calling 8 工具，顯示工具呼叫軌跡；寫操作強制確認閘）
+  // 同源呼叫；?rpc= 可覆蓋 apiBase（與全站一致）。免金鑰 fallback 由後端處理，前端不繞過。
 
-  // M73-A：AI 助手前端。同源 /api/ai/ask；?rpc= 可覆蓋（與其他頁一致）。
-  var apiBase = '';
-  var m = (location.search||'').match(/[?&]rpc=([^&]+)/);
-  if (m) apiBase = decodeURIComponent(m[1]);
-  var chat = document.getElementById('aiChat');
-  renderHist();
-  var q = document.getElementById('aiQ');
-  var send = document.getElementById('aiSend');
-
-  function curLang(){ return (window.__TAC_LANG__ === 'zh') ? 'zh' : 'en'; }
-
-  function addMsg(text, who){
-    var div = document.createElement('div');
-    div.className = 'ai-msg ' + who;
-    div.textContent = text;
-    chat.appendChild(div);
-    chat.scrollTop = chat.scrollHeight;
+  function curLang(){
+    try { if (window.TAC_I18N && TAC_I18N.cur()) return TAC_I18N.cur(); } catch(e){}
+    return 'en';
   }
-
-  // M90：多輪記憶——最近 3 輪問答存 localStorage，隨 ctx 帶入，支援「追問」上下文。
-  function getHistory(){ try { return JSON.parse(localStorage.getItem('tac_ai_hist') || '[]'); } catch(e){ return []; } }
-  function saveTurn(q, a){
-    var h = getHistory(); h.push({q:q, a:(a||'').slice(0,180)});
-    if(h.length > 6) h = h.slice(-6);
-    try { localStorage.setItem('tac_ai_hist', JSON.stringify(h)); } catch(e){}
-    renderHist();
-  }
-  function renderHist(){
-    var el = document.getElementById('aiHist');
-    var h = getHistory();
-    el.innerHTML = (h.length ? '<div class="hist-title">'+((curLang()==='zh')?'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 1v4M15 1v4M9 19v4M15 19v4M1 9h4M1 15h4M19 9h4M19 15h4"/></svg> 多輪記憶（近 '+h.length+' 輪）':'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 1v4M15 1v4M9 19v4M15 19v4M1 9h4M1 15h4M19 9h4M19 15h4"/></svg> Multi-turn memory (last '+h.length+')')+'</div>' : '') +
-      h.map(function(t,i){
-        return '<div class="hist-item" onclick="reask('+(h.length-1-i)+')"><span class="hist-q">'+t.q.slice(0,24)+'</span><span class="hist-x" onclick="event.stopPropagation();delHist('+(h.length-1-i)+')">×</span></div>';
-      }).join('') +
-      (h.length ? '<button class="hist-clear" onclick="clearHist()">'+((curLang()==='zh')?'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg> 清除記憶':'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg> Clear')+'</button>' : '');
-  }
-  function reask(i){ var h = getHistory(); if(h[i]){ document.getElementById('aiInput').value = h[i].q; document.getElementById('aiInput').focus(); } }
-  function delHist(i){ var h = getHistory(); h.splice(i,1); try { localStorage.setItem('tac_ai_hist', JSON.stringify(h)); } catch(e){} renderHist(); }
-  function clearHist(){ try { localStorage.removeItem('tac_ai_hist'); } catch(e){} renderHist(); }
-  function ask(text){
-    if(!text) return;
-    addMsg(text, 'user');
-    var d = document.createElement('div');
-    d.className = 'ai-typing';
-    d.textContent = (curLang()==='zh') ? '思考中…' : 'Thinking…';
-    chat.appendChild(d); chat.scrollTop = chat.scrollHeight;
-    var h = getHistory();
-    var ctx = h.slice(-3).map(function(t){ return 'Q:'+t.q+' A:'+t.a; }).join('\n');
-    var url = apiBase + '/api/ai/ask?q=' + encodeURIComponent(text) + '&lang=' + curLang() + '&ctx=' + encodeURIComponent(ctx);
-    showModel('probe');
-    fetch(url).then(function(r){ return r.json(); }).then(function(j){
-      if(d.parentNode) d.parentNode.removeChild(d);
-      if(j && j.ok){ showModel(j.model || 'rule'); addMsg(j.answer || '', 'bot'); saveTurn(text, j.answer || ''); }
-      else { addMsg((j && j.error) ? j.error : 'error', 'err'); }
-    }).catch(function(e){
-      if(d.parentNode) d.parentNode.removeChild(d);
-      addMsg('Error: ' + e, 'err');
+  function t(zh,en){ return curLang()==='zh' ? zh : en; }
+  function escapeHtml(s){
+    return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
     });
   }
 
-  send.addEventListener('click', function(){ var v=q.value.trim(); q.value=''; ask(v); });
-  q.addEventListener('keydown', function(e){ if(e.key==='Enter'){ var v=q.value.trim(); q.value=''; ask(v);} });
+  var apiBase='';
+  var m=(location.search||'').match(/[?&]rpc=([^&]+)/);
+  if(m) apiBase=decodeURIComponent(m[1]);
 
-  var chips = document.querySelectorAll('.ai-chip');
-  for(var i=0;i<chips.length;i++){
-    chips[i].addEventListener('click', function(){ ask(this.textContent.trim()); });
+  var chat=document.getElementById('aiChat');
+  var q=document.getElementById('aiQ');
+  var send=document.getElementById('aiSend');
+  var modeAssist=document.getElementById('modeAssist');
+  var modeAgent=document.getElementById('modeAgent');
+  var addrRow=document.getElementById('aiAddrRow');
+
+  var mode='ask';           // 'ask' | 'agent'
+  var walletAddr='';
+  var SESSION='web-'+Date.now();
+
+  // ---- 模式建議 chips ----
+  var ASSIST_CHIPS=[
+    {zh:'節點狀態',en:'Node status'},
+    {zh:'最新區塊',en:'Latest block'},
+    {zh:'鏈上審計',en:'On-chain audit'},
+    {zh:'獎勵分潤',en:'Rewards'},
+    {zh:'總供應',en:'Supply'},
+    {zh:'加入節點',en:'Join network'}
+  ];
+  var AGENT_CHIPS=[
+    {zh:'我的餘額是多少？',en:'What is my balance?'},
+    {zh:'TAC 現在多少價格？',en:'What is the TAC price?'},
+    {zh:'顯示我最近的交易。',en:'Show my recent transactions.'},
+    {zh:'幫我寫一封週報',en:'Help me write a weekly report'},
+    {zh:'解釋什麼是 PoS',en:'Explain what PoS is'},
+    {zh:'（示範）把空閒 TAC 換成穩定幣',en:'(demo) swap idle TAC to a stablecoin'}
+  ];
+  function renderChips(){
+    var box=document.getElementById('aiChips');
+    var list=(mode==='agent')?AGENT_CHIPS:ASSIST_CHIPS;
+    box.innerHTML='';
+    list.forEach(function(c){
+      var b=document.createElement('button');
+      b.className='ai-chip';
+      b.textContent=(curLang()==='zh')?c.zh:c.en;
+      b.addEventListener('click',function(){ routeSend(b.textContent); });
+      box.appendChild(b);
+    });
   }
 
-  // 歡迎訊息
-  addMsg((curLang()==='zh') ? '你好，我是 TAC Ai，TAC Ai 智能鏈上智能助手。問我節點狀態、區塊、審計、獎勵、餘額等鏈上數據吧！' : "Hi, I'm TAC Ai, the TAC Ai Smart Chain on-chain assistant. Ask me about node status, blocks, audit, rewards, balances and more!", 'bot');
+  // ---- 訊息渲染 ----
+  function addMsg(text,who){
+    var div=document.createElement('div');
+    div.className='ai-msg '+(who||'bot');
+    div.textContent=text;
+    chat.appendChild(div); chat.scrollTop=chat.scrollHeight;
+    return div;
+  }
+
+  // v165：載入/打字指示器（三點動畫）。
+  function mkTyping(){
+    var d=document.createElement('div');
+    d.className='ai-typing';
+    d.setAttribute('aria-label',t('思考中','Thinking'));
+    d.innerHTML='<i></i><i></i><i></i>';
+    chat.appendChild(d); chat.scrollTop=chat.scrollHeight;
+    return d;
+  }
+  function rmTyping(el){ if(el && el.parentNode) el.parentNode.removeChild(el); }
+
+  // SVG icons per trace step kind（禁 emoji）。
+  function stepIcon(kind){
+    var stroke='#1877f2', path="<circle cx='12' cy='12' r='8'/>";
+    if(kind==='tool') path="<path d='M13 2L4 14h6l-1 8 9-12h-6z'/>";
+    else if(kind==='thought') path="<circle cx='12' cy='12' r='8'/><circle cx='12' cy='12' r='2'/>";
+    else if(kind==='error'){ stroke='#c0392b'; path="<circle cx='12' cy='12' r='8'/><path d='M9 9l6 6M15 9l-6 6'/>"; }
+    else if(kind==='needs_confirm'){ stroke='#b45309'; path="<path d='M12 3l9 16H3z'/><path d='M12 10v4M12 17v.5'/>"; }
+    return "<svg class='ico' viewBox='0 0 24 24' fill='none' stroke='"+stroke+"' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'>"+path+"</svg>";
+  }
+  function renderTrace(trace){
+    if(!trace||!trace.length) return;
+    var det=document.createElement('details');
+    det.className='ai-trace';
+    // v165：預設收合，僅在出現需確認步驟時自動展開。
+    var needConfirm=false;
+    trace.forEach(function(st){ if(st.kind==='needs_confirm') needConfirm=true; });
+    det.open=needConfirm;
+    var sum=document.createElement('summary');
+    sum.innerHTML=stepIcon('thought')+'<span>'+escapeHtml(t('工具呼叫軌跡','Tool-call trace'))+' ('+trace.length+')</span>';
+    det.appendChild(sum);
+    trace.forEach(function(st){
+      var row=document.createElement('div');
+      row.className='ai-step '+(st.kind==='error'?'err':st.kind==='needs_confirm'?'confirm':'');
+      var label=st.tool||st.kind||'';
+      var html=stepIcon(st.kind)+"<div><span class='lbl'>"+escapeHtml(label)+"</span>";
+      if(st.thought) html+="<div>"+escapeHtml(st.thought)+"</div>";
+      if(st.args && Object.keys(st.args).length) html+="<pre>"+escapeHtml(JSON.stringify(st.args))+"</pre>";
+      if(st.result) html+="<pre>"+escapeHtml(st.result)+"</pre>";
+      if(st.error) html+="<pre style='color:#c0392b'>"+escapeHtml(st.error)+"</pre>";
+      html+="</div>";
+      row.innerHTML=html;
+      det.appendChild(row);
+    });
+    chat.appendChild(det); chat.scrollTop=chat.scrollHeight;
+  }
+
+  // v165：聯網搜尋來源（查詢詞＋引用連結，可收合）。
+  function renderCitations(queries, citations){
+    if(!citations || !citations.length) return;
+    var det=document.createElement('details');
+    det.className='ai-src'; det.open=false;
+    var n=citations.length;
+    det.innerHTML='<summary>'+stepIcon('thought')+'<span>'+escapeHtml(t('已聯網搜尋','Web search'))+' ('+n+')</span></summary>';
+    if(queries && queries.length){
+      var sq=document.createElement('div');
+      sq.className='sq';
+      sq.textContent=t('搜尋詞：','Queries: ')+queries.join(' · ');
+      det.appendChild(sq);
+    }
+    var ol=document.createElement('ol');
+    citations.forEach(function(c){
+      var li=document.createElement('li');
+      var a=document.createElement('a');
+      a.href=c.url; a.target='_blank'; a.rel='noopener';
+      a.textContent=c.title||c.url;
+      li.appendChild(a);
+      ol.appendChild(li);
+    });
+    det.appendChild(ol);
+    chat.appendChild(det); chat.scrollTop=chat.scrollHeight;
+  }
+
+  // ---- 多輪記憶（僅助手模式） ----
+  function getHist(){ try{ return JSON.parse(localStorage.getItem('tac_ai_hist')||'[]'); }catch(e){ return []; } }
+  function saveTurn(qq,aa){
+    var h=getHist(); h.push({q:qq,a:(aa||'').slice(0,180)});
+    if(h.length>6) h=h.slice(-6);
+    try{ localStorage.setItem('tac_ai_hist',JSON.stringify(h)); }catch(e){}
+    renderHist();
+  }
+  function renderHist(){
+    var el=document.getElementById('aiHist');
+    // v165：歷史會話在兩種模式都顯示。
+    var h=getHist();
+    el.innerHTML=(h.length?'<div class="hist-title">'+escapeHtml(t('多輪記憶（近 ','Multi-turn memory (last ')+h.length+')')+'</div>':'')+
+      h.map(function(tp,i){
+        return '<div class="hist-item" onclick="reask('+(h.length-1-i)+')"><span class="hist-q">'+escapeHtml(tp.q.slice(0,24))+'</span><span class="hist-x" onclick="event.stopPropagation();delHist('+(h.length-1-i)+')">×</span></div>';
+      }).join('')+
+      (h.length?'<button class="hist-clear" onclick="clearHist()">'+escapeHtml(t('清除記憶','Clear'))+'</button>':'');
+  }
+  window.reask=function(i){ var h=getHist(); if(h[i]){ q.value=h[i].q; q.focus(); } };
+  window.delHist=function(i){ var h=getHist(); h.splice(i,1); try{localStorage.setItem('tac_ai_hist',JSON.stringify(h));}catch(e){} renderHist(); };
+  window.clearHist=function(){ try{localStorage.removeItem('tac_ai_hist');}catch(e){} renderHist(); };
+
+  // ---- AI 引擎狀態標籤 ----
+  function showModel(mm){
+    var el=document.getElementById('aiModel');
+    if(!el) return;
+    if(mm==='llama') el.innerHTML='<span class="tag"><span class="dot on"></span> '+escapeHtml(t('AI 引擎：','AI engine: '))+'<b>'+escapeHtml(t('本地大模型（Qwen · llama.cpp）','Local LLM (Qwen · llama.cpp)'))+'</b></span>';
+    else if(mm==='rule') el.innerHTML='<span class="tag"><span class="dot"></span> '+escapeHtml(t('AI 引擎：','AI engine: '))+'<b>'+escapeHtml(t('規則式助手（免金鑰 fallback）','Rule-based (keyless fallback)'))+'</b></span>';
+  }
+
+  // ---- 助手模式：GET /api/ai/ask ----
+  function askSend(text){
+    var typing=mkTyping();
+    var h=getHist();
+    var ctx=h.slice(-3).map(function(tp){ return 'Q:'+tp.q+' A:'+tp.a; }).join('\n');
+    var url=apiBase+'/api/ai/ask?q='+encodeURIComponent(text)+'&lang='+curLang()+'&ctx='+encodeURIComponent(ctx);
+    fetch(url).then(function(r){ return r.json(); }).then(function(j){
+      rmTyping(typing);
+      if(j && j.ok){ showModel(j.model||'rule'); addMsg(j.answer||'','bot'); saveTurn(text,j.answer||''); }
+      else addMsg((j&&j.error)?j.error:'error','err');
+    }).catch(function(e){
+      rmTyping(typing);
+      addMsg('Error: '+e,'err');
+    });
+  }
+
+  // v165：意圖標籤（chat 閒聊 / query 查詢 / action 操作）。
+  function showIntent(it){
+    var el=document.getElementById('aiIntent');
+    if(!el) return;
+    var label, cls='';
+    if(it==='query'){ label=t('鏈上查詢','On-chain query'); cls='query'; }
+    else if(it==='action'){ label=t('寫操作（待確認）','Write action (confirm)'); cls='action'; }
+    else if(it==='chat'){ label=t('一般對話','General chat'); cls=''; }
+    else { el.innerHTML=''; return; }
+    el.innerHTML='<span class="ai-intent '+cls+'">'+escapeHtml(label)+'</span>';
+  }
+
+  // ---- Agent 模式：POST /api/ai/agent（含確認閘） ----
+  function agentSend(text,confirm,pendingBox){
+    var typing=mkTyping();
+    var body={message:text,address:walletAddr,lang:curLang(),session_id:SESSION,confirm:!!confirm};
+    fetch(apiBase+'/api/ai/agent',{
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
+    }).then(function(r){ return r.json().then(function(j){ return {status:r.status,body:j}; }); })
+      .then(function(res){
+        rmTyping(typing);
+        if(pendingBox && pendingBox.parentNode) pendingBox.parentNode.removeChild(pendingBox);
+        if(res.status!==200 || !res.body || !res.body.ok){
+          addMsg((res.body&&res.body.error)?res.body.error:t('發生錯誤','Error'),'err');
+          return;
+        }
+        showModel(res.body.model||'rule');
+        showIntent(res.body.intent);
+        renderTrace(res.body.trace);
+        if(res.body.needs_confirm){
+          // 寫操作確認閘：未按「確認執行」不送出 confirm=true，節點不代簽。
+          var box=document.createElement('div');
+          box.className='ai-confirm';
+          box.innerHTML='<div>'+escapeHtml(res.body.answer||t('需要確認','Confirmation required'))+'</div>'+
+            '<div class="row"><button class="ok">'+escapeHtml(t('確認執行','Confirm & execute'))+'</button>'+
+            '<button class="cancel">'+escapeHtml(t('取消','Cancel'))+'</button></div>';
+          chat.appendChild(box); chat.scrollTop=chat.scrollHeight;
+          box.querySelector('.ok').addEventListener('click',function(){
+            box.querySelector('.ok').disabled=true;
+            agentSend(text,true,box);
+          });
+          box.querySelector('.cancel').addEventListener('click',function(){ if(box.parentNode) box.parentNode.removeChild(box); });
+          return;
+        }
+        addMsg(res.body.answer||'','bot');
+        renderCitations(res.body.queries, res.body.citations);
+        saveTurn(text,res.body.answer||'');
+      }).catch(function(e){
+        rmTyping(typing);
+        addMsg('Error: '+e,'err');
+      });
+  }
+
+  function routeSend(text){
+    if(!text) return;
+    addMsg(text,'user');
+    if(mode==='agent') agentSend(text,false,null);
+    else askSend(text);
+  }
+
+  send.addEventListener('click',function(){ var v=q.value.trim(); q.value=''; routeSend(v); });
+  q.addEventListener('keydown',function(e){ if(e.key==='Enter'){ var v=q.value.trim(); q.value=''; routeSend(v); } });
+
+  // ---- 模式切換 ----
+  function setMode(next){
+    if(next===mode) return;
+    mode=next;
+    var isAgent=(mode==='agent');
+    modeAssist.classList.toggle('on',!isAgent);
+    modeAgent.classList.toggle('on',isAgent);
+    modeAssist.setAttribute('aria-selected',(!isAgent)?'true':'false');
+    modeAgent.setAttribute('aria-selected',isAgent?'true':'false');
+    addrRow.style.display=isAgent?'flex':'none';
+    document.getElementById('aiQ').placeholder=isAgent
+      ? t('對 Agent 提問…（例如：我的餘額是多少？）','Ask the agent… e.g. what is my balance?')
+      : t('輸入問題…（例如：節點狀態）','Ask anything about TACm… (e.g. node status)');
+    renderChips(); renderHist();
+    addMsg(isAgent
+      ? t('你好，我是 Titan Ai。我能陪你對話、寫作、規劃與解釋，也能查詢你的鏈上餘額、行情、最近交易；任何 DEX 兌換／DeFi 動作都會先請你確認——節點不會代你簽名。',
+          "Hi, I'm Titan Ai. I can chat, write, plan and explain, and also read your on-chain balance, prices and recent transactions; any DEX swap / DeFi action waits for your confirmation — the node never signs for you.")
+      : t('你好，我是 Titan Ai（泰坦 Ai）。問我節點狀態、區塊、審計、獎勵、餘額等鏈上數據，或任何日常問題都可以。',
+          "Hi, I'm Titan Ai. Ask me about node status, blocks, audit, rewards, balances — or just ask me anything. "),'bot');
+  }
+  modeAssist.addEventListener('click',function(){ setMode('ask'); });
+  modeAgent.addEventListener('click',function(){ setMode('agent'); });
+
+  // ---- 初始化錢包（Agent 模式 function calling 用） ----
+  if(typeof ensureGuestAddr==='function'){
+    ensureGuestAddr().then(function(addr){
+      walletAddr=addr||'';
+      document.getElementById('aiAddrVal').textContent=walletAddr||'—';
+    }).catch(function(){});
+  }
+
+  // ---- 歡迎訊息 ----
+  renderChips(); renderHist(); showModel('probe');
+  addMsg(t('你好，我是 Titan Ai（泰坦 Ai）。我不只是鏈上助手——日常對話、規劃、寫作、解釋、翻譯、學習都可以找我；需要鏈上數據時（餘額、行情、交易），我會自動呼叫工具，任何寫操作都會先請你確認。',
+    "Hi, I'm Titan Ai. I'm more than an on-chain assistant — chat, planning, writing, explaining, translating and learning all work. When you need on-chain data (balance, prices, transactions) I call the right tool, and I always ask before any write action."),'bot');
 })();
 </script>
 {% endblock %}
