@@ -242,15 +242,29 @@
 
 <script>
   // M161：自動帶入我的錢包——登入會員優先，否則訪客地址（與全站 ensureGuestAddr 同源）。
+  // M156-fix：登入會員一律以後端 /api/auth/me 的 wallet_addr 為「唯一權威地址」，
+  // 強制覆蓋 localStorage 可能殘留的舊訪客/舊鏈地址（否則 me 仍指向無餘額的舊地址 → 餘額不足）。
   (function () {
-    function afill(ids) {
-      function fill(a) { if (!a) return; ids.forEach(function (id) { var el = document.getElementById(id); if (el && !el.value.trim()) el.value = a; }); }
-      fetch('/api/auth/me', { cache: 'no-store' }).then(function (r) { return r.json().catch(function () { return null; }); }).then(function (j) {
-        if (j && j.ok && j.logged_in && j.user && j.user.wallet_addr) { fill(j.user.wallet_addr); return; }
-        if (window.ensureGuestAddr) { ensureGuestAddr().then(fill).catch(function () {}); }
-      }).catch(function () { if (window.ensureGuestAddr) { ensureGuestAddr().then(fill).catch(function () {}); } });
+    function adopt(a) {
+      if (!a) return;
+      me = a;                                                    // 強制覆蓋全域變數（關鍵：舊 fill 只動 DOM、沒更新 me）
+      try { localStorage.setItem('tac_defi_addr', a); } catch (e) {}
+      var el = document.getElementById('me'); if (el) el.value = a;
+      var ta = document.getElementById('topAddr'); if (ta) ta.textContent = a ? a.slice(0, 10) + '…' + a.slice(-6) : '未連接';
+      refresh();
     }
-    afill(['me']);
+    // v160：交易所錢包中心的顯式選擇為最高優先（含連結礦工/新建 Web3）
+    try {
+      var ex0 = localStorage.getItem('tac_ex_wallet');
+      if (ex0){
+        var eo0 = JSON.parse(ex0);
+        if (eo0 && eo0.addr && eo0.addr.indexOf('tx0') === 0){ adopt(eo0.addr); return; }
+      }
+    } catch (e0) {}
+    fetch('/api/auth/me', { cache: 'no-store' }).then(function (r) { return r.json().catch(function () { return null; }); }).then(function (j) {
+      if (j && j.ok && j.logged_in && j.user && j.user.wallet_addr) { adopt(j.user.wallet_addr); return; }
+      if (!me && window.ensureGuestAddr) { ensureGuestAddr().then(adopt).catch(function () {}); }
+    }).catch(function () { if (!me && window.ensureGuestAddr) { ensureGuestAddr().then(adopt).catch(function () {}); } });
   })();
 
 var me = localStorage.getItem('tac_defi_addr') || '';
@@ -262,12 +276,13 @@ function _fetch(u,opt,retry){
   var ctrl=new AbortController(), to=setTimeout(function(){ctrl.abort();},10000);
   return fetch(api+u,Object.assign({},opt,{signal:ctrl.signal})).then(function(r){
     clearTimeout(to);
-    return r.json().then(function(d){ if(d&&(d.ok===false||d.error)) throw new Error(d.error||'API error'); return d; }).catch(function(e){
+    return r.json().then(function(d){ if(d&&(d.ok===false||d.error)){ var err=new Error(d.error||'API error'); err.isApiError=true; throw err; } return d; }).catch(function(e){
       if(e instanceof SyntaxError){ throw new Error('Invalid API response'); }
       throw e;
     });
   }).catch(function(e){
     clearTimeout(to);
+    if(e && e.isApiError){ throw e; }   // M156-fix：業務錯誤（API 已回明確訊息，如「餘額不足」）直接回傳——不重試、不附加「·連線失敗」
     if(retry>0){ return new Promise(function(res){ setTimeout(function(){ res(_fetch(u,opt,retry-1)); }, 2000); }); }
     throw new Error((e&&e.name==='AbortError')?'連線逾時（10秒），請檢查節點':((e&&e.message)||'Load failed')+' · 連線失敗');
   });

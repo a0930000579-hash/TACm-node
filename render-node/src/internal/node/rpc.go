@@ -222,6 +222,7 @@ func NewRPCServer(n *Node) *RPCServer {
 	s.addRoute("GET /api/exchange/klines", s.handleExchangeKlines)
 	s.addRoute("GET /api/exchange/mytrades", s.handleExchangeMyTrades)
 	s.addRoute("POST /api/exchange/stable-swap", s.handleStableSwap)
+	s.addRoute("POST /api/exchange/verify-address", s.handleExchangeVerifyAddress)
 	s.addRoute("POST /api/exchange/native-swap", s.handleNativeSwap)
 	s.addRoute("GET /api/exchange/stable-info", s.handleStableInfo)
 	s.addRoute("POST /api/exchange/order", s.handleExchangeOrder)

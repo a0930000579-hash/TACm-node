@@ -2,7 +2,7 @@
 {% block title %}TAC Ai Smart Chain · Mainnet{% endblock %}
 {% block content %}
 
-<!-- M79：TAC 品牌首頁 v3（ethereum.org 風格：雙欄 hero＋SVG 菱體插圖＋統計條＋價值主張卡） -->
+<!-- M79：TAC 品牌首頁 v3（雙欄 hero＋SVG 菱體插圖＋統計條＋價值主張卡） -->
 <section class="hero">
   <div class="hero-inner">
     <div class="hero-badge">Mainnet · Chain ID 1337 (0x539) · TACM</div>
@@ -61,7 +61,7 @@
   </svg>
 </section>
 
-<!-- 統計條（ethereum.org 風大數字） -->
+<!-- 統計條（大數字） -->
 <section class="stat-band">
   <div class="sb"><b id="stHeight">{{ status.Height }}</b><small data-i18n="index.height">鏈頂高度</small></div>
   <div class="sb"><b id="stMiners">{{ chain.OnlineMiners }}</b><small>在線礦工</small></div>
@@ -69,7 +69,7 @@
   <div class="sb"><b id="stMined">{{ chain.TotalMinedTacm }}</b><small data-i18n="chain.mined">全鏈總產出 TACm</small></div>
 </section>
 
-<!-- 價值主張（THE USER-OWNED INTERNET 風） -->
+<!-- 價值主張 -->
 <section class="value-grid">
   <div class="val">
     <svg viewBox="0 0 48 48" class="vi"><path d="M24 4 L40 14 V34 L24 44 L8 34 V14 Z" fill="none" stroke="#68BE8D" stroke-width="2.2"/><path d="M24 4 L40 14 L24 24 L8 14 Z" fill="#68BE8D" opacity=".25"/><circle cx="24" cy="34" r="5" fill="#68BE8D" opacity=".6"/></svg>
@@ -103,6 +103,18 @@
   <a class="feat" href="/explorer"><svg viewBox="0 0 40 40" class="fi"><circle cx="17" cy="17" r="10" fill="none" stroke="#68BE8D" stroke-width="2.4"/><path d="M25 25 L34 34" stroke="#68BE8D" stroke-width="2.8" stroke-linecap="round"/><path d="M17 12 v10 M12 17 h10" stroke="#68BE8D" stroke-width="1.6"/></svg><b data-i18n="index.ctaExplorer">區塊瀏覽</b><small data-i18n="feat.explorer">鏈上搜尋</small></a>
   <a class="feat" href="/nfts"><svg viewBox="0 0 40 40" class="fi"><rect x="6" y="8" width="28" height="24" rx="4" fill="none" stroke="#68BE8D" stroke-width="2.2"/><circle cx="14" cy="16" r="3.5" fill="#68BE8D" opacity=".45"/><path d="M8 30 L20 18 L32 30" fill="none" stroke="#68BE8D" stroke-width="2.2" stroke-linejoin="round"/></svg><b>NFT</b><small>數位收藏</small></a>
   <a class="feat" href="/ai"><svg viewBox="0 0 40 40" class="fi"><rect x="8" y="10" width="24" height="16" rx="6" fill="none" stroke="#68BE8D" stroke-width="2.2"/><circle cx="14" cy="18" r="2" fill="#68BE8D"/><circle cx="20" cy="18" r="2" fill="#68BE8D"/><circle cx="26" cy="18" r="2" fill="#68BE8D"/><path d="M14 26 h12 M16 26 v4 M24 26 v4" stroke="#68BE8D" stroke-width="1.8" stroke-linecap="round"/></svg><b>AI 助手</b><small>鏈上問答</small></a>
+  <a class="feat" href="/dexv3"><svg viewBox="0 0 40 40" class="fi"><circle cx="13" cy="14" r="7" fill="none" stroke="#68BE8D" stroke-width="2.2"/><circle cx="27" cy="14" r="7" fill="none" stroke="#68BE8D" stroke-width="2.2"/><circle cx="20" cy="28" r="7" fill="none" stroke="#68BE8D" stroke-width="2.2"/><path d="M13 21 L16 23 M27 21 L24 23 M16 14 h8" stroke="#68BE8D" stroke-width="1.6" stroke-linecap="round"/></svg><b data-i18n="hz.dexv3">DEX V3</b><small data-i18n="hz.dexv3s">集中流動性兌換</small></a>
+  <a class="feat" href="/perp"><svg viewBox="0 0 40 40" class="fi"><path d="M22 6 L12 22 h7 l-3 12 L26 18 h-7 l3 -12 Z" fill="#68BE8D" opacity=".25" stroke="#68BE8D" stroke-width="2" stroke-linejoin="round"/><path d="M30 10 v6 M30 10 l-3 3 M30 10 l3 3 M30 24 v6 M30 30 l-3 -3 M30 30 l3 -3" stroke="#68BE8D" stroke-width="1.8" stroke-linecap="round"/></svg><b data-i18n="hz.perp">永續合約</b><small data-i18n="hz.perps">槓桿多空交易</small></a>
+  <a class="feat" href="/ai-market"><svg viewBox="0 0 40 40" class="fi"><rect x="10" y="10" width="20" height="20" rx="3" fill="none" stroke="#68BE8D" stroke-width="2.2"/><rect x="15" y="15" width="10" height="10" rx="1.5" fill="#68BE8D" opacity=".3"/><path d="M14 10 v-4 M20 10 v-4 M26 10 v-4 M14 30 v4 M20 30 v4 M26 30 v4 M10 14 h-4 M10 20 h-4 M10 26 h-4 M30 14 h4 M30 20 h4 M30 26 h4" stroke="#68BE8D" stroke-width="1.8" stroke-linecap="round"/></svg><b data-i18n="hz.aimarket">AI 模型市場</b><small data-i18n="hz.aimarkets">部署與呼叫模型</small></a>
+  <a class="feat" href="/orderbook"><svg viewBox="0 0 40 40" class="fi"><rect x="6" y="22" width="6" height="12" rx="1.5" fill="#68BE8D" opacity=".3"/><rect x="14" y="16" width="6" height="18" rx="1.5" fill="#68BE8D" opacity=".5"/><rect x="22" y="10" width="6" height="24" rx="1.5" fill="#68BE8D" opacity=".7"/><rect x="30" y="18" width="6" height="16" rx="1.5" fill="#68BE8D" opacity=".35"/><path d="M6 34 h30" stroke="#68BE8D" stroke-width="1.8" stroke-linecap="round"/></svg><b data-i18n="hz.orderbook">訂單簿</b><small data-i18n="hz.orderbooks">掛單深度交易</small></a>
+  <a class="feat" href="/ai-verify"><svg viewBox="0 0 40 40" class="fi"><path d="M20 5 L33 10 V22 C33 30 27 35 20 37 C13 35 7 30 7 22 V10 Z" fill="none" stroke="#68BE8D" stroke-width="2.2" stroke-linejoin="round"/><path d="M14 21 l4 4 l8 -9" fill="none" stroke="#68BE8D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><b data-i18n="hz.aiverify">AI 驗證</b><small data-i18n="hz.aiverifys">內容真實性證明</small></a>
+  <a class="feat" href="/oracle"><svg viewBox="0 0 40 40" class="fi"><path d="M20 12 L14 32 h12 Z" fill="none" stroke="#68BE8D" stroke-width="2.2" stroke-linejoin="round"/><circle cx="20" cy="18" r="2.5" fill="#68BE8D"/><path d="M12 10 a11 11 0 0 1 16 0 M9 6 a16 16 0 0 1 22 0" fill="none" stroke="#68BE8D" stroke-width="1.8" stroke-linecap="round"/><path d="M16 32 h8" stroke="#68BE8D" stroke-width="2.2" stroke-linecap="round"/></svg><b data-i18n="hz.oracle">預言機</b><small data-i18n="hz.oracles">鏈上價格餵送</small></a>
+  <a class="feat" href="/zk"><svg viewBox="0 0 40 40" class="fi"><rect x="11" y="17" width="18" height="15" rx="3" fill="none" stroke="#68BE8D" stroke-width="2.2"/><path d="M14 17 v-4 a6 6 0 0 1 12 0 v4" fill="none" stroke="#68BE8D" stroke-width="2.2"/><circle cx="20" cy="24" r="2.5" fill="#68BE8D"/><path d="M20 26 v3" stroke="#68BE8D" stroke-width="1.8" stroke-linecap="round"/></svg><b data-i18n="hz.zk">ZK/VRF</b><small data-i18n="hz.zks">零知識與可驗證隨機</small></a>
+  <a class="feat" href="/faucet"><svg viewBox="0 0 40 40" class="fi"><path d="M20 6 C20 6 11 17 11 24 a9 9 0 0 0 18 0 C29 17 20 6 20 6 Z" fill="#68BE8D" opacity=".25" stroke="#68BE8D" stroke-width="2.2" stroke-linejoin="round"/><path d="M16 25 a4 4 0 0 0 4 4" fill="none" stroke="#68BE8D" stroke-width="1.8" stroke-linecap="round"/></svg><b data-i18n="hz.faucet">水龍頭</b><small data-i18n="hz.faucets">測試代幣領取</small></a>
+  <a class="feat" href="/ens"><svg viewBox="0 0 40 40" class="fi"><circle cx="20" cy="20" r="13" fill="none" stroke="#68BE8D" stroke-width="2.2"/><path d="M14 17 v6 a3 3 0 0 0 6 0 v-3" fill="none" stroke="#68BE8D" stroke-width="2" stroke-linecap="round"/><circle cx="27" cy="19" r="2.5" fill="none" stroke="#68BE8D" stroke-width="1.8"/><path d="M20 20 a3 3 0 1 1 -3 -3" fill="none" stroke="#68BE8D" stroke-width="1.6"/></svg><b data-i18n="hz.ens">ENS 域名</b><small data-i18n="hz.enss">鏈上域名解析</small></a>
+  <a class="feat" href="/contracts"><svg viewBox="0 0 40 40" class="fi"><path d="M14 12 L6 20 L14 28" fill="none" stroke="#68BE8D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M26 12 L34 20 L26 28" fill="none" stroke="#68BE8D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 9 L17 31" stroke="#68BE8D" stroke-width="2" stroke-linecap="round"/></svg><b data-i18n="hz.contracts">合約驗證</b><small data-i18n="hz.contractss">原始碼驗證</small></a>
+  <a class="feat" href="/sdk"><svg viewBox="0 0 40 40" class="fi"><circle cx="20" cy="20" r="6" fill="none" stroke="#68BE8D" stroke-width="2.2"/><path d="M20 6 v5 M20 29 v5 M6 20 h5 M29 20 h5 M10 10 l3.5 3.5 M26.5 26.5 L30 30 M30 10 l-3.5 3.5 M13.5 26.5 L10 30" stroke="#68BE8D" stroke-width="2.2" stroke-linecap="round"/></svg><b data-i18n="hz.sdk">SDK 開發工具</b><small data-i18n="hz.sdks">開發者套件</small></a>
+  <a class="feat" href="/sign"><svg viewBox="0 0 40 40" class="fi"><path d="M28 6 L34 12 L16 30 L10 32 L12 26 Z" fill="none" stroke="#68BE8D" stroke-width="2.2" stroke-linejoin="round"/><path d="M24 10 L30 16" stroke="#68BE8D" stroke-width="2.2"/><path d="M6 36 h28" stroke="#68BE8D" stroke-width="1.8" stroke-linecap="round"/></svg><b data-i18n="hz.sign">簽名工具</b><small data-i18n="hz.signs">訊息簽章</small></a>
 </section>
 
 <section class="stat-cards">

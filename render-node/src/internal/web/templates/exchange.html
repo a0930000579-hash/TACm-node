@@ -124,6 +124,25 @@
     <a href="/nfts"><span class="ic"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1.6"/><path d="M5 17l5-5 3 3 4-4 2 2"/></svg></span>NFT 市場</a>
     <a href="/tokens"><span class="ic"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 9.5c0-1.4 1.3-2 3-2s3 .6 3 2-1.2 1.6-3 2c-2 .5-3 1-3 2.5s1.3 2 3 2 3-.6 3-2"/></svg></span>代幣工作室</a>
   </div>
+  <!-- v159 交易所錢包中心：連結礦工錢包或新建 Web3 錢包，統一所有交易地址欄位 -->
+  <div class="box" id="exWalletCard" style="margin-bottom:12px;padding:13px 14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:10px;min-width:0">
+        <span style="width:36px;height:36px;border-radius:11px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 36px;background:rgba(252,213,53,.16);color:#c9a200">
+          <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M16 12h2v2h-2z"/><path d="M3 9h18"/></svg>
+        </span>
+        <div style="min-width:0">
+          <div style="font-weight:700;font-size:14px" data-i18n="ex.walletTitle">交易所錢包</div>
+          <div id="exWalletStatus" class="mono" style="font-size:12px;color:#d93026;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:230px" data-i18n="ex.walletNone">未連結</div>
+        </div>
+      </div>
+      <div id="exWalletBtns" style="display:flex;gap:8px;flex-wrap:wrap">
+        <button type="button" class="tab" onclick="connectMinerWallet()" data-i18n="ex.walletMiner">連結礦工錢包</button>
+        <button type="button" class="tab" onclick="createWeb3Wallet()" data-i18n="ex.walletNew">新建 Web3 錢包</button>
+      </div>
+    </div>
+    <div id="exWalletMsg" style="display:none;margin-top:10px;padding:10px 12px;border-radius:10px;font-size:12px;line-height:1.6"></div>
+  </div>
   <div class="ec-grid">
     <a class="ec-card{% if page == 'trade' %} on{% endif %}" href="/exchange/trade"><span class="ic"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 17l5-5 4 3 6-7"/><path d="M14 8h4v4"/></svg></span>現貨交易</a>
     <a class="ec-card{% if page == 'assets' %} on{% endif %}" href="/exchange/assets"><span class="ic"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h3M16 14h1"/></svg></span>資產餘額</a>
@@ -178,6 +197,7 @@
         <div class="mini">下單</div>
         <form class="bn-form" id="orderForm">
           <input id="oUid" placeholder="account (tx0...)" autocomplete="off">
+          <div class="mini" style="opacity:.65;font-size:11px;margin:2px 0 6px" data-i18n="ex.uidHint">帳戶地址＝登入帳號綁定地址（同主網新鏈）；未登入訪客地址每次瀏覽器可能不同，請登入後再下單。</div>
           <select id="oMarket" onchange="setMarket(this.value)">
             <option>TACM/USDT</option><option>TACM/TiUSD</option><option>TiUSD/USDT</option>
             <option>BTC/USDT</option><option>ETH/USDT</option><option>BNB/USDT</option>
@@ -255,6 +275,21 @@
         <button class="bn-btn" onclick="flashSwap()">兌換</button>
         <div class="bn-msg" id="fMsg"></div>
       </div>
+    </div>
+    <div class="box" style="margin-top:12px">
+      <h3><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px" aria-hidden="true"><path d="M12 2l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6z"/><path d="M8 12l2.5 2.5L16 9"/></svg> <span data-i18n="ss.title">穩定幣兌換（TiUSD ↔ USDT）</span></h3>
+      <p class="sub" data-i18n="ss.sub">1:1 錨定兌換 · 0.5% 手續費入庫 · 治理可調（比照 Curve 穩定幣兌換所）</p>
+      <div class="bn-form">
+        <input id="ssAddr" placeholder="address (tx0...)" autocomplete="off" data-i18n-placeholder="ss.addr">
+        <div class="flow">
+          <div class="f"><label data-i18n="ss.from">從</label><select id="ssFrom"><option>USDT</option><option>TiUSD</option></select></div>
+          <div class="f"><label data-i18n="ss.to">到</label><select id="ssTo"><option>TiUSD</option><option>USDT</option></select></div>
+        </div>
+        <input id="ssAmt" placeholder="amount" autocomplete="off">
+        <button class="bn-btn" onclick="stableSwap()" data-i18n="ss.btn">兌換</button>
+        <div class="bn-msg" id="ssMsg"></div>
+      </div>
+      <p class="sub" style="margin-top:8px" data-i18n="ss.note">提示：TiUSD 為 TACm 鏈穩定幣（peg 1 USDT）。USDT 可經多鏈橋入金；TiUSD 可經 DeFi CDP 抵押 TACm 鑄造。</p>
     </div>
   </div>
 
@@ -337,6 +372,26 @@
   var RPC = (new URLSearchParams(location.search)).get('rpc') || location.port;
   var base = location.protocol + '//' + location.hostname + (RPC ? ':' + RPC : '');
   var PAGE = "{{ page }}"; var CUR = (new URLSearchParams(location.search)).get('m') || 'TACM/USDT';
+  // v78：穩定幣兌換（USDT ↔ TiUSD 1:1，0.5% 費）。
+  function stableSwap() {
+    var addr = document.getElementById('ssAddr').value.trim();
+    var from = document.getElementById('ssFrom').value;
+    var to = document.getElementById('ssTo').value;
+    var amt = document.getElementById('ssAmt').value.trim();
+    var msg = document.getElementById('ssMsg');
+    if (!requireVerified('ssMsg','ssAddr')) { return; }
+    if (!addr || !amt) { msg.textContent = TAC_T('ss.req'); msg.className = 'bn-msg err'; return; }
+    fetch(api + '/api/exchange/stable-swap', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address: addr, from_asset: from, to_asset: to, amount: amt })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d && d.ok) {
+        msg.textContent = TAC_T('ss.ok') + ': ' + d.received + ' ' + d.to_asset + ' (fee ' + d.fee + ' ' + d.from_asset + ')';
+        msg.className = 'bn-msg ok';
+      } else { msg.textContent = (d && d.error) || 'error'; msg.className = 'bn-msg err'; }
+    }).catch(function (e) { msg.textContent = 'network error'; msg.className = 'bn-msg err'; });
+  }
+
   // M104：主流幣參考市場（估值兌換，無真實訂單簿）。
   var REF = {'BTC/USDT':1,'ETH/USDT':1,'BNB/USDT':1,'SOL/USDT':1,'ADA/USDT':1};
   function get(path){ return fetch(base + path).then(function(r){ return r.json(); }); }
@@ -346,6 +401,105 @@
   }
   function show(id, cls, msg){ var el=document.getElementById(id); el.className='bn-msg '+cls; el.textContent=msg; }
   function q(id){ return document.getElementById(id).value.trim(); }
+
+  // v159：交易所錢包中心——連結礦工錢包（會員 wallet_addr，與礦機 M37 同源）
+  // 或新建全新 Web3 錢包（/api/guest/address 生成 secp256k1 金鑰＋WIF 備份）。
+  // 統一所有交易所地址欄位；斷絕舊訪客地址（tac_guest_addr）自動填充。
+  var exVerified = false, exVAddr = '', exVSource = '';
+  var EX_WK = 'tac_ex_wallet';
+  var EX_UID_IDS = ['oUid','dUid','wUid','fUid','btUid','orUid','bUid','ssAddr'];
+  function exWLoad(){ try { var s = localStorage.getItem(EX_WK); return s ? JSON.parse(s) : null; } catch(e){ return null; } }
+  function exWSave(o){ try { localStorage.setItem(EX_WK, JSON.stringify(o)); } catch(e){} }
+  function exWClear(){ try { localStorage.removeItem(EX_WK); } catch(e){} }
+  // v160：連結結果同步全站地址 key（DeFi/DEX/錢包頁顯示同一地址）
+  function exWSyncAll(addr, wif){
+    try {
+      localStorage.setItem('tac_guest_addr', addr);
+      localStorage.setItem('tac_defi_addr', addr);
+      if (wif) localStorage.setItem('tac_guest_wif', wif);
+      else localStorage.removeItem('tac_guest_wif');
+    } catch(e){}
+  }
+  function fillAll(a){
+    EX_UID_IDS.forEach(function(id){
+      var el = document.getElementById(id);
+      if (el){ el.value = a; }
+    });
+    var oUid = document.getElementById('oUid');
+    if (oUid){ oUid.setAttribute('data-bound','1'); oUid.readOnly = true; }
+  }
+  function setExV(ok, addr, source){
+    exVerified = ok; exVAddr = addr;
+    var st = document.getElementById('exWalletStatus');
+    var btns = document.getElementById('exWalletBtns');
+    if (st){
+      if (ok){
+        st.textContent = ((source === 'miner') ? TAC_T('ex.walletMiner') : TAC_T('ex.walletNew')) + '：' + addr;
+        st.style.color = '#16b784';
+        if (btns) btns.innerHTML = '<button type="button" class="tab" onclick="changeExWallet()">'+TAC_T('ex.walletChange')+'</button>';
+      } else {
+        st.textContent = TAC_T('ex.walletNone');
+        st.style.color = '#d93026';
+        if (btns) btns.innerHTML = '<button type="button" class="tab" onclick="connectMinerWallet()">'+TAC_T('ex.walletMiner')+'</button> <button type="button" class="tab" onclick="createWeb3Wallet()">'+TAC_T('ex.walletNew')+'</button>';
+      }
+    }
+  }
+  function exWMsg(html, ok){
+    var m = document.getElementById('exWalletMsg');
+    if (!m) return;
+    if (!html){ m.style.display = 'none'; m.innerHTML = ''; return; }
+    m.style.display = 'block';
+    m.innerHTML = html;
+    m.style.background = ok ? '#e8f8f0' : '#fff8e1';
+    m.style.border = '1px solid ' + (ok ? '#16b784' : '#f5d76e');
+  }
+  function connectMinerWallet(){
+    get('/api/auth/me').then(function(j){
+      if (j && j.ok && j.logged_in && j.user && j.user.wallet_addr){
+        var a = j.user.wallet_addr;
+        exWSave({addr:a, source:'miner'});
+        exWSyncAll(a, '');
+        fillAll(a); setExV(true, a, 'miner');
+        exWMsg(TAC_T('ex.walletMinerOK') + ' <b class="mono" style="word-break:break-all;display:block;margin-top:4px">' + a + '</b>', true);
+      } else {
+        setExV(false, '');
+        exWMsg(TAC_T('ex.walletNeedLogin'), false);
+      }
+    }).catch(function(){ exWMsg(TAC_T('ex.verifyFail'), false); });
+  }
+  function createWeb3Wallet(){
+    if (!window.confirm(TAC_T('ex.walletNewConfirm'))) return;
+    get('/api/guest/address').then(function(j){
+      if (j && j.ok && j.address && j.address.indexOf('tx0') === 0){
+        exWSave({addr:j.address, source:'web3', wif:j.wif || ''});
+        exWSyncAll(j.address, j.wif || '');
+        fillAll(j.address); setExV(true, j.address, 'web3');
+        var html = TAC_T('ex.walletNewOK') + ' <b class="mono" style="word-break:break-all;display:block;margin:4px 0">' + j.address + '</b>';
+        if (j.wif){ html += TAC_T('ex.walletWifLabel') + ' <b class="mono" style="word-break:break-all;display:block;margin:4px 0" id="exWif">' + j.wif + '</b>'; }
+        html += TAC_T('ex.walletWifWarn');
+        exWMsg(html, false);
+      } else { exWMsg(TAC_T('ex.walletNewFail'), false); }
+    }).catch(function(){ exWMsg(TAC_T('ex.walletNewFail'), false); });
+  }
+  function changeExWallet(){
+    if (!window.confirm(TAC_T('ex.walletChangeConfirm'))) return;
+    exWClear();
+    EX_UID_IDS.forEach(function(id){ var el = document.getElementById(id); if (el){ el.value = ''; } });
+    setExV(false, ''); exWMsg('', false);
+  }
+  function requireVerified(fid, uidId){
+    if (!exVerified || !exVAddr){ show(fid,'err',TAC_T('ex.verifyFirst')); return false; }
+    var id = uidId || 'oUid';
+    var el = document.getElementById(id);
+    if (el && el.value.trim() !== exVAddr){ show(fid,'err',TAC_T('ex.verifyChanged')); return false; }
+    return true;
+  }
+  // 頁面載入：只讀交易所專用錢包（不再自動 ensureGuestAddr，斷絕舊鏈地址）
+  (function(){
+    var w = exWLoad();
+    if (w && w.addr && w.addr.indexOf('tx0') === 0){ fillAll(w.addr); setExV(true, w.addr, w.source || ''); }
+    else { setExV(false, ''); }
+  })();
 
   // M102：子頁獨立化，不再用頁籤切換（各 panel 依 PAGE 條件渲染）。
   // 訂單簿
@@ -690,8 +844,9 @@
       if (!d.ok || !d.markets) return;
       var html = '', picker = '';
       d.markets.forEach(function(m){
+        if (m.ref) return; // v79：只顯示鏈上流通資產交易對（TACM/TiUSD/USDT）
         var up = m.chg24h >= 0;
-        html += '<tr><td><a href="/exchange/trade?m='+encodeURIComponent(m.market)+'">'+m.market+'</a>'+(m.ref?' <span class="mk-tag">'+TAC_T(m.live?'ex.live':'ex.ref')+'</span>':'')+'</td>'
+        html += '<tr><td><a href="/exchange/trade?m='+encodeURIComponent(m.market)+'">'+m.market+'</a></td>'
           + '<td class="'+(up?'up':'down')+'">'+fmtN(m.price)+'</td><td>'+m.fee_bps+'bp</td></tr>';
         picker += '<a class="mkt-tab'+(CUR===m.market?' on':'')+'" href="/exchange/trade?m='+encodeURIComponent(m.market)+'">'+m.market+'</a>';
       });
@@ -815,20 +970,12 @@
     e.preventDefault();
     var side = (typeof SIDE !== 'undefined') ? SIDE : 'buy', type = q('oType');
     var price = type==='market' ? '0' : q('oPrice');
+    if (!requireVerified('oMsg','oUid')) { return; }
     if (!q('oUid')) { show('oMsg','err','請填寫帳號與數量'); return; }
     if (!q('oQty')) { show('oMsg','err','請填寫數量'); return; }
     var mkt = q('oMarket');
     if (REF[mkt]){
-      // M104：主流幣估值兌換
-      var qn = parseFloat(q('oQty'));
-      if (!(qn>0)) { show('oMsg','err','數量須大於 0'); return; }
-      post('/api/exchange/ref/trade', {uid:q('oUid'), market:mkt, side:side, qty:qn})
-        .then(function(r){
-          if (r.j.ok){
-            show('oMsg','ok',TAC_T('ex.tradeOk')+': '+(side==='buy'?'買入':'賣出')+' '+r.j.trade.qty+' '+mkt.split('/')[0]+' @ '+r.j.trade.price);
-            loadBook();
-          } else { show('oMsg','err',r.j.error||'兌換失敗'); }
-        }).catch(function(){ show('oMsg','err','連線失敗'); });
+      show('oMsg','err',TAC_T('ex.refDisabled'));
       return;
     }
     post('/api/exchange/order', {uid:q('oUid'), market:mkt, side:side, type:type, price:price, qty:q('oQty')})
@@ -871,11 +1018,13 @@
     });
   }
   function deposit(){
+    if (!requireVerified('dMsg','dUid')) { return; }
     if (!q('dUid') || !q('dAmt')) { show('dMsg','err','請填寫帳號與金額'); return; }
     post('/api/exchange/deposit_from_wallet', {uid:q('dUid'), asset:q('dAsset'), amount:q('dAmt')})
       .then(function(r){ if (r.j.ok){ show('dMsg','ok','入金成功（鏈上手續費 '+r.j.chain_fee+'）'); loadBalances(); } else { show('dMsg','err',r.j.error); } });
   }
   function withdraw(){
+    if (!requireVerified('wMsg','wUid')) { return; }
     if (!q('wUid') || !q('wAmt')) { show('wMsg','err','請填寫帳號與金額'); return; }
     post('/api/exchange/withdraw_to_wallet', {uid:q('wUid'), asset:q('wAsset'), amount:q('wAmt')})
       .then(function(r){ if (r.j.ok){ show('wMsg','ok','提現成功（鏈上手續費 '+r.j.chain_fee+'）'); loadBalances(); } else { show('wMsg','err',r.j.error); } });
@@ -883,6 +1032,7 @@
 
   // 閃兌
   function flashSwap(){
+    if (!requireVerified('fMsg','fUid')) { return; }
     if (!q('fUid') || !q('fAmt')) { show('fMsg','err','請填寫帳號與數量'); return; }
     post('/api/exchange/flash', {uid:q('fUid'), from:q('fFrom'), to:q('fTo'), amount:q('fAmt')})
       .then(function(r){
@@ -904,6 +1054,7 @@
     });
   }
   function startBot(){
+    if (!requireVerified('btMsg','btUid')) { return; }
     if (!q('btUid') || !q('btMid') || !q('btQty')) { show('btMsg','err','請填寫帳號、基準價與數量'); return; }
     post('/api/exchange/bot/start', {
       uid:q('btUid'), market:q('btMarket'), mid_price:q('btMid'),
@@ -940,25 +1091,9 @@
     });
   }
 
-  // M105：登入會員自動綁定鏈上地址至各帳號輸入框（未登入保持手動）
-  function autoBind(){
-    function fill(a){
-      if (!a) return;
-      ['oUid','dUid','wUid','fUid','btUid','orUid','bUid'].forEach(function(id){
-        var el = document.getElementById(id);
-        if (el && !el.value.trim()){ el.value = a; }
-      });
-      var oUid = document.getElementById('oUid');
-      if (oUid){ oUid.setAttribute('data-bound','1'); oUid.readOnly = true; }
-    }
-    get('/api/auth/me').then(function(j){
-      if (j && j.ok && j.logged_in && j.user && j.user.wallet_addr){ fill(j.user.wallet_addr); return; }
-      // 訪客：自動取得獨立地址並綁定（與礦機/錢包同源）
-      if (window.ensureGuestAddr){ ensureGuestAddr().then(fill).catch(function(){}); }
-    }).catch(function(){
-      if (window.ensureGuestAddr){ ensureGuestAddr().then(fill).catch(function(){}); }
-    });
-  }
+  // v159：交易所地址不再自動綁定（避免舊鏈訪客地址殘留）；
+  // 統一由頁面頂部「交易所錢包中心」手動連結礦工錢包或新建 Web3 錢包。
+  function autoBind(){ /* no-op: see exWalletCard */ }
   autoBind();
   if (PAGE === 'trade'){ setMarket(CUR); loadMarkets(); connectWS(); setInterval(loadBook, 1000); setInterval(loadCharts, 3000); }
   if (PAGE === 'assets') loadBalances();

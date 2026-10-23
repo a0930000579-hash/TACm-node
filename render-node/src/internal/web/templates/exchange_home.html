@@ -68,6 +68,22 @@
     <a href="/nfts"><span class="ic"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1.6"/><path d="M5 17l5-5 3 3 4-4 2 2"/></svg></span>NFT 市場</a>
     <a href="/tokens"><span class="ic"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 9.5c0-1.4 1.3-2 3-2s3 .6 3 2-1.2 1.6-3 2c-2 .5-3 1-3 2.5s1.3 2 3 2 3-.6 3-2"/></svg></span>代幣工作室</a>
   </div>
+  <!-- v159 交易所錢包中心：連結礦工錢包或新建 Web3 錢包（選擇於各交易子頁全域生效） -->
+  <div id="exWalletCard" style="margin-bottom:16px;padding:13px 14px;border-radius:14px;background:var(--bn-card);border:1px solid var(--bn-line)">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:10px;min-width:0">
+        <span style="width:36px;height:36px;border-radius:11px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 36px;background:rgba(252,213,53,.16);color:#c9a200">
+          <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M16 12h2v2h-2z"/><path d="M3 9h18"/></svg>
+        </span>
+        <div style="min-width:0">
+          <div style="font-weight:700;font-size:14px" data-i18n="ex.walletTitle">交易所錢包</div>
+          <div id="exWalletStatus" class="mono" style="font-size:12px;color:#f6465d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:230px" data-i18n="ex.walletNone">未連結</div>
+        </div>
+      </div>
+      <div id="exWalletBtns" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+    </div>
+    <div id="exWalletMsg" style="display:none;margin-top:10px;padding:10px 12px;border-radius:10px;font-size:12px;line-height:1.6"></div>
+  </div>
   <!-- 功能列（M127：與 /exchange/{sub} 對應） -->
   <div class="ec-grid">
     <a class="ec-card on" href="/exchange/trade"><span class="ic"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 17l5-5 4 3 6-7"/><path d="M14 8h4v4"/></svg></span>現貨交易</a>
@@ -180,6 +196,77 @@
     w.onclose = function(){ WS = null; setTimeout(function(){ connectWS(); }, 3000); };
     w.onerror = function(){ try{ w.close(); }catch(e){} };
   }
+  // v159 交易所錢包中心（門戶頁；連結結果存 tac_ex_wallet，各交易子頁共用）
+  var EX_WK = 'tac_ex_wallet';
+  function exWLoad(){ try { var s = localStorage.getItem(EX_WK); return s ? JSON.parse(s) : null; } catch(e){ return null; } }
+  function exWSave(o){ try { localStorage.setItem(EX_WK, JSON.stringify(o)); } catch(e){} }
+  function exWClear(){ try { localStorage.removeItem(EX_WK); } catch(e){} }
+  // v160：連結結果同步全站地址 key（DeFi/DEX/錢包頁顯示同一地址）
+  function exWSyncAll(addr, wif){
+    try {
+      localStorage.setItem('tac_guest_addr', addr);
+      localStorage.setItem('tac_defi_addr', addr);
+      if (wif) localStorage.setItem('tac_guest_wif', wif);
+      else localStorage.removeItem('tac_guest_wif');
+    } catch(e){}
+  }
+  function exWRender(w){
+    var st = document.getElementById('exWalletStatus');
+    var btns = document.getElementById('exWalletBtns');
+    if (!st || !btns) return;
+    if (w && w.addr && w.addr.indexOf('tx0') === 0){
+      st.textContent = ((w.source === 'miner') ? TAC_T('ex.walletMiner') : TAC_T('ex.walletNew')) + '：' + w.addr;
+      st.style.color = '#0ecb81';
+      btns.innerHTML = '<button type="button" class="tab" onclick="changeExWallet()">'+TAC_T('ex.walletChange')+'</button>';
+    } else {
+      st.textContent = TAC_T('ex.walletNone');
+      st.style.color = '#f6465d';
+      btns.innerHTML = '<button type="button" class="tab" onclick="connectMinerWallet()">'+TAC_T('ex.walletMiner')+'</button> <button type="button" class="tab" onclick="createWeb3Wallet()">'+TAC_T('ex.walletNew')+'</button>';
+    }
+  }
+  function exWMsg(html, ok){
+    var m = document.getElementById('exWalletMsg');
+    if (!m) return;
+    if (!html){ m.style.display = 'none'; m.innerHTML = ''; return; }
+    m.style.display = 'block';
+    m.innerHTML = html;
+    m.style.background = ok ? '#e8f8f0' : '#fff8e1';
+    m.style.border = '1px solid ' + (ok ? '#0ecb81' : '#f5d76e');
+  }
+  function connectMinerWallet(){
+    fetch(base + '/api/auth/me').then(function(r){ return r.json(); }).then(function(j){
+      if (j && j.ok && j.logged_in && j.user && j.user.wallet_addr){
+        var a = j.user.wallet_addr;
+        exWSave({addr:a, source:'miner'});
+        exWSyncAll(a, '');
+        exWRender({addr:a, source:'miner'});
+        exWMsg(TAC_T('ex.walletMinerOK') + ' <b class="mono" style="word-break:break-all;display:block;margin-top:4px">' + a + '</b>', true);
+      } else {
+        exWRender(null);
+        exWMsg(TAC_T('ex.walletNeedLogin'), false);
+      }
+    }).catch(function(){ exWMsg(TAC_T('ex.verifyFail'), false); });
+  }
+  function createWeb3Wallet(){
+    if (!window.confirm(TAC_T('ex.walletNewConfirm'))) return;
+    fetch(base + '/api/guest/address').then(function(r){ return r.json(); }).then(function(j){
+      if (j && j.ok && j.address && j.address.indexOf('tx0') === 0){
+        exWSave({addr:j.address, source:'web3', wif:j.wif || ''});
+        exWSyncAll(j.address, j.wif || '');
+        exWRender({addr:j.address, source:'web3'});
+        var html = TAC_T('ex.walletNewOK') + ' <b class="mono" style="word-break:break-all;display:block;margin:4px 0">' + j.address + '</b>';
+        if (j.wif){ html += TAC_T('ex.walletWifLabel') + ' <b class="mono" style="word-break:break-all;display:block;margin:4px 0">' + j.wif + '</b>'; }
+        html += TAC_T('ex.walletWifWarn');
+        exWMsg(html, false);
+      } else { exWMsg(TAC_T('ex.walletNewFail'), false); }
+    }).catch(function(){ exWMsg(TAC_T('ex.walletNewFail'), false); });
+  }
+  function changeExWallet(){
+    if (!window.confirm(TAC_T('ex.walletChangeConfirm'))) return;
+    exWClear(); exWRender(null); exWMsg('', false);
+  }
+  exWRender(exWLoad());
+
   mk(); rc(); connectWS(); setInterval(mk, 1000); setInterval(rc, 3000);
 </script>
 {% endblock %}

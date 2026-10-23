@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"math"
 	"math/big"
+	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -105,6 +106,7 @@ func NewWithNetworkMode(ds DataSource, network string, serveDApp bool, blockTime
 	}
 	tplSet := pongo2.NewSet("web", pongo2.NewFSLoader(tplRoot))
 	registerFilters()
+	mime.AddExtensionType(".webmanifest", "application/manifest+json")
 
 	if network == "" {
 		network = "mainnet"

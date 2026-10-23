@@ -4,8 +4,8 @@
   "description": "TAC Ai 智能鏈：區塊鏈瀏覽、錢包、交易所與管理儀表板",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#0b0e11",
-  "theme_color": "#0b0e11",
+  "background_color": "#f7f8fb",
+  "theme_color": "#f7f8fb",
   "orientation": "portrait-primary",
   "icons": [
     { "src": "/static/tacm.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }

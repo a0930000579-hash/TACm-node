@@ -26,6 +26,7 @@ input,textarea,[contenteditable]{-webkit-user-select:auto;user-select:auto}
 @media (hover:hover){
   .panel,.gov-card,.bn-panel,.dex-card,.market-card,.stat-cards .card{transition:box-shadow .18s ease,transform .18s ease}
   .panel:hover,.gov-card:hover,.bn-panel:hover,.dex-card:hover,.market-card:hover,.stat-cards .card:hover{box-shadow:0 8px 24px rgba(16,24,40,.10);transform:translateY(-1px)}
+  .net-badge{margin-left:8px;font-size:10px;font-weight:700;letter-spacing:.5px;padding:2px 8px;border-radius:20px;color:#0B0E11;background:linear-gradient(135deg,#F0B90B,#FCD535);vertical-align:middle}
   .btn,.bn-copy,.gov-tab,.search-btn,.pill{transition:transform .14s ease,box-shadow .14s ease}
   .btn:hover,.bn-copy:hover,.gov-tab:hover,.search-btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(16,24,40,.08)}
   .pill:hover{opacity:.9}
@@ -66,6 +67,7 @@ input,textarea,[contenteditable]{-webkit-user-select:auto;user-select:auto}
 
 <header class="topbar">
   <a class="brand" href="/"><span class="brand-badge" aria-hidden="true"></span>TAC<span>Chain</span></a>
+  <span class="net-badge">{{ network|default:"mainnet" }}</span>
   <nav class="navlinks">
     {% if node_only %}
     <a href="/explorer" data-i18n="nav.home">區塊瀏覽</a>
@@ -85,6 +87,9 @@ input,textarea,[contenteditable]{-webkit-user-select:auto;user-select:auto}
     <a href="/assets" data-i18n="nav.assets">Assets</a>
     <a href="/dex" data-i18n="nav.dex">DEX</a>
     <a href="/orderbook" data-i18n="nav.orderbook">OrderBook</a>
+    <a href="/dexv3" data-i18n="nav.dexv3">DEX V3</a>
+    <a href="/perp" data-i18n="nav.perp">Perpetuals</a>
+    <a href="/ai-market" data-i18n="nav.aimarket">AI Market</a>
     <a href="/liquid-staking" data-i18n="nav.ls">質押</a>
     <a href="/governance" data-i18n="nav.governance">治理</a>
     <a href="/ai-verify" data-i18n="nav.aiv">AI Verify</a>
@@ -117,6 +122,9 @@ input,textarea,[contenteditable]{-webkit-user-select:auto;user-select:auto}
       <a class="pill" href="/dex" rel="noopener" data-i18n="pill.dex">DEX</a>
       <a class="pill" href="/orderbook" rel="noopener" data-i18n="pill.orderbook">OrderBook</a>
       <a class="pill" href="/ai-verify" rel="noopener" data-i18n="pill.aiv">AI Verify</a>
+      <a class="pill" href="/dexv3" rel="noopener" data-i18n="pill.dexv3">DEX V3</a>
+      <a class="pill" href="/perp" rel="noopener" data-i18n="pill.perp">Perpetuals</a>
+      <a class="pill" href="/ai-market" rel="noopener" data-i18n="pill.aimarket">AI Market</a>
       <a class="pill" href="/sign" rel="noopener" data-i18n="pill.sign">Sign Tool</a>
       <a class="pill" href="/zk" rel="noopener" data-i18n="pill.zk">ZK/VRF</a>
       <a class="pill" href="/contracts" rel="noopener" data-i18n="pill.contracts">Contract Verifier</a>
@@ -193,6 +201,21 @@ window.TAC_fmtFee = function (x) {
 // M38：生成時一併回傳並保存 WIF 私鑰；已有備份 WIF 時以 WIF 恢復同一地址（換裝置不丟資產）。
 function ensureGuestAddr(){
   var k = 'tac_guest_addr';
+  // v160：交易所錢包中心的顯式選擇（連結礦工/新建 Web3）為全站權威地址
+  try {
+    var ex = localStorage.getItem('tac_ex_wallet');
+    if (ex){
+      var eo = JSON.parse(ex);
+      if (eo && eo.addr && eo.addr.indexOf('tx0') === 0){
+        try {
+          localStorage.setItem(k, eo.addr);
+          localStorage.setItem('tac_defi_addr', eo.addr);
+          if (eo.wif) localStorage.setItem('tac_guest_wif', eo.wif);
+        } catch (e2) {}
+        return Promise.resolve(eo.addr);
+      }
+    }
+  } catch (e) {}
   try { var a = localStorage.getItem(k); if (a && a.indexOf('tx0') === 0) { return Promise.resolve(a); } } catch (e) {}
   try { var w = localStorage.getItem('tac_guest_wif'); if (w) {
     return fetch('/api/guest/restore', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({wif:w}), cache:'no-store' })

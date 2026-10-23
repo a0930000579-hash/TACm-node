@@ -2,7 +2,7 @@
 {% block title %}TAC Ai Smart Chain · AI-Native Mainnet{% endblock %}
 {% block content %}
 
-<!-- M81：TAC 品牌門戶 v2——Solana 風格（亮色：漸層光暈＋流線抽象插圖＋大圓角卡片） -->
+<!-- M81：TAC 品牌門戶 v2（亮色：漸層光暈＋流線抽象插圖＋大圓角卡片） -->
 <section class="ld-hero">
   <div class="ld-glow g1"></div>
   <div class="ld-glow g2"></div>
@@ -37,7 +37,7 @@
     </defs>
     <!-- 光暈 -->
     <circle cx="210" cy="150" r="150" fill="url(#ldGlow)"/>
-    <!-- Solana 風流線（貝茲曲線，綠→黃漸層） -->
+    <!-- 流線（貝茲曲線，綠→黃漸層） -->
     <g fill="none" stroke-linecap="round">
       <path d="M20 250 C90 210 140 290 210 240 S330 190 400 230" stroke="url(#ldB)" stroke-width="3" opacity=".8"/>
       <path d="M10 180 C80 150 130 220 200 170 S320 130 410 170" stroke="url(#ldG)" stroke-width="2.4" opacity=".55"/>
@@ -53,7 +53,7 @@
     <g fill="#F0B90B" opacity=".8">
       <circle cx="120" cy="130" r="4"/><circle cx="300" cy="160" r="4"/><circle cx="250" cy="300" r="3.5"/>
     </g>
-    <!-- 中央 TAC 菱體（Solana 幾何感：多面＋內發光） -->
+    <!-- 中央 TAC 菱體（幾何感：多面＋內發光） -->
     <path d="M210 40 L320 150 L210 290 L100 150 Z" fill="url(#ldG)" opacity=".18"/>
     <path d="M210 40 L320 150 L210 290 L100 150 Z" fill="none" stroke="url(#ldB)" stroke-width="3" stroke-linejoin="round"/>
     <path d="M210 40 L210 290 M100 150 L320 150" stroke="#68BE8D" stroke-width="1.8" opacity=".6"/>
@@ -71,7 +71,7 @@
   </svg>
 </section>
 
-<!-- 統計條（Solana 大數字） -->
+<!-- 統計條（大數字） -->
 <section class="stat-band">
   <div class="sb"><b>{{ status.Height }}</b><small data-i18n="index.height">鏈頂高度</small></div>
   <div class="sb"><b>{{ chain.OnlineMiners }}</b><small>在線礦工</small></div>
@@ -79,7 +79,7 @@
   <div class="sb"><b>{{ chain.RewardPool }}</b><small data-i18n="chain.pool">獎勵池</small></div>
 </section>
 
-<!-- 區塊鏈優勢詳細：Solana 風大卡 -->
+<!-- 區塊鏈優勢詳細：大卡 -->
 <section class="ld-sec">
   <div class="ld-sec-head">
     <h2 data-i18n="ld.sec1t">為什麼選擇 TAC Ai 智能鏈？</h2>
@@ -157,12 +157,26 @@
     <a class="le" href="/dex"><b>DEX</b><small>流動性與兌換</small></a>
     <a class="le" href="/explorer"><b>區塊瀏覽</b><small>鏈上搜尋</small></a>
     <a class="le" href="/governance"><b>治理</b><small>提案與投票</small></a>
+    <a class="le" href="/liquid-staking"><b>流動質押</b><small>stTACm 憑證</small></a>
+    <a class="le" href="/network-health"><b>網路健康</b><small>節點狀態儀表</small></a>
     <a class="le" href="/join"><b>加入網絡</b><small>運行你的節點</small></a>
+    <a class="le" href="/dexv3"><b data-i18n="hz.dexv3">DEX V3</b><small data-i18n="hz.dexv3s">集中流動性兌換</small></a>
+    <a class="le" href="/perp"><b data-i18n="hz.perp">永續合約</b><small data-i18n="hz.perps">槓桿多空交易</small></a>
+    <a class="le" href="/ai-market"><b data-i18n="hz.aimarket">AI 模型市場</b><small data-i18n="hz.aimarkets">部署與呼叫模型</small></a>
+    <a class="le" href="/orderbook"><b data-i18n="hz.orderbook">訂單簿</b><small data-i18n="hz.orderbooks">掛單深度交易</small></a>
+    <a class="le" href="/ai-verify"><b data-i18n="hz.aiverify">AI 驗證</b><small data-i18n="hz.aiverifys">內容真實性證明</small></a>
+    <a class="le" href="/oracle"><b data-i18n="hz.oracle">預言機</b><small data-i18n="hz.oracles">鏈上價格餵送</small></a>
+    <a class="le" href="/zk"><b data-i18n="hz.zk">ZK/VRF</b><small data-i18n="hz.zks">零知識與可驗證隨機</small></a>
+    <a class="le" href="/faucet"><b data-i18n="hz.faucet">水龍頭</b><small data-i18n="hz.faucets">測試代幣領取</small></a>
+    <a class="le" href="/ens"><b data-i18n="hz.ens">ENS 域名</b><small data-i18n="hz.enss">鏈上域名解析</small></a>
+    <a class="le" href="/contracts"><b data-i18n="hz.contracts">合約驗證</b><small data-i18n="hz.contractss">原始碼驗證</small></a>
+    <a class="le" href="/sdk"><b data-i18n="hz.sdk">SDK 開發工具</b><small data-i18n="hz.sdks">開發者套件</small></a>
+    <a class="le" href="/sign"><b data-i18n="hz.sign">簽名工具</b><small data-i18n="hz.signs">訊息簽章</small></a>
   </div>
 </section>
 
 <style>
-  /* M81：Solana 風格（亮色）——漸層光暈＋流線＋大圓角卡片 */
+  /* M81：（亮色）——漸層光暈＋流線＋大圓角卡片 */
   .ld-hero{display:flex;gap:26px;align-items:center;background:linear-gradient(140deg,#eafaf1 0%,#ffffff 50%,#fdf8e7 100%);border:1px solid rgba(104,190,141,.3);border-radius:24px;padding:44px 36px;margin-bottom:20px;position:relative;overflow:hidden}
   .ld-glow{position:absolute;border-radius:50%;pointer-events:none}
   .ld-glow.g1{width:340px;height:340px;right:-90px;top:-100px;background:radial-gradient(circle,rgba(104,190,141,.28),transparent 68%)}
