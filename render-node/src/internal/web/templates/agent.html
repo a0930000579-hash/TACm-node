@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}TAC AI Agent{% endblock %}
+{% block content %}
+<section class="pg-banner">
+  <div class="pg-txt">
+    <h1 data-i18n="nav.agent">AI Agent</h1>
+    <p data-i18n="agent.sub">Function-Calling agent — it calls tools, shows its work, and asks before any transaction.</p>
+  </div>
+  <svg viewBox="0 0 40 40" class="pg-art" aria-hidden="true">
+    <circle cx="20" cy="20" r="12" fill="none" stroke="#1877f2" stroke-width="2"/>
+    <circle cx="20" cy="20" r="4" fill="#1877f2"/>
+    <path d="M20 4v4M20 32v4M4 20h4M32 20h4" stroke="#1877f2" stroke-width="2" stroke-linecap="round"/>
+  </svg>
+</section>
+<style>
+  body { background: linear-gradient(180deg,#eef4ff 0,#ffffff 45%,#f0f2f5 45%); min-height:100vh; }
+  .ag-wrap{max-width:880px;margin:0 auto;padding-bottom:96px}
+  .ag-head{background:linear-gradient(135deg,#1877f2,#0f9df5);border-radius:18px;padding:20px 22px;color:#fff;display:flex;align-items:center;gap:14px;margin:14px 0;box-shadow:0 6px 20px rgba(15,120,240,.25)}
+  .ag-head h2{margin:0;font-size:19px;font-weight:800}
+  .ag-head .sub{font-size:12px;opacity:.9;margin-top:3px}
+  .ag-badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;border:1px solid rgba(255,255,255,.4);border-radius:999px;padding:3px 10px;margin-top:8px}
+  .ag-addrin{margin:0 0 12px;font-size:12px;color:#3a4658;background:#fff;border:1px solid #d6e4f5;border-radius:10px;padding:8px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .ag-addrin b{color:#1877f2;word-break:break-all}
+  .ag-card{background:#fff;border:1px solid #e4e6eb;border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .ag-chat{max-height:56vh;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+  .ag-msg{max-width:88%;padding:10px 14px;border-radius:14px;font-size:13.5px;line-height:1.7;white-space:pre-wrap;word-break:break-word}
+  .ag-msg.user{align-self:flex-end;background:#1877f2;color:#fff;border-bottom-right-radius:4px}
+  .ag-msg.bot{align-self:flex-start;background:#f0f4fa;color:#1c1e21;border-bottom-left-radius:4px;border:1px solid #e4e6eb}
+  .ag-msg.err{align-self:flex-start;background:#fdecea;color:#c0392b;border:1px solid #f5c6c0;border-bottom-left-radius:4px}
+  .ag-trace{margin:6px 0 2px;border:1px dashed #c9d6e8;border-radius:10px;background:#f8fbff;overflow:hidden}
+  .ag-trace summary{cursor:pointer;padding:8px 12px;font-size:12px;color:#3a6ea8;list-style:none;display:flex;align-items:center;gap:6px}
+  .ag-trace summary::-webkit-details-marker{display:none}
+  .ag-step{padding:7px 12px;border-top:1px solid #eaf1fb;font-size:12px;color:#374151;display:flex;gap:8px;align-items:flex-start}
+  .ag-step .ico{flex:none;width:16px;height:16px;margin-top:2px}
+  .ag-step .lbl{font-weight:700;color:#1877f2}
+  .ag-step.err .lbl{color:#c0392b}
+  .ag-step.confirm .lbl{color:#b45309}
+  .ag-step pre{margin:4px 0 0;white-space:pre-wrap;word-break:break-all;font-size:11px;background:#eef4fb;border-radius:6px;padding:6px 8px;overflow:auto}
+  .ag-confirm{margin:8px 12px;padding:10px 12px;background:#fff8e6;border:1px solid #f0d58a;border-radius:10px;font-size:12.5px;color:#7a5b00}
+  .ag-confirm .row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .ag-confirm button{border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer}
+  .ag-confirm .ok{background:#0ecb81;color:#fff}
+  .ag-confirm .cancel{background:#e5e7eb;color:#374151}
+  .ag-input{display:flex;gap:10px;padding:12px 16px;border-top:1px solid #e4e6eb}
+  .ag-input input{flex:1;min-width:0;border:1px solid #d6e4f5;border-radius:10px;padding:11px 14px;font-size:14px;background:#f7fafd;color:#1c1e21}
+  .ag-input button{background:#1877f2;color:#fff;border:none;border-radius:10px;padding:0 22px;font-size:14px;font-weight:700;cursor:pointer;flex:none}
+  .ag-typing{color:#65676b;font-size:12px;padding:2px 4px}
+  .ag-chips{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+  .ag-chip{background:#fff;border:1px solid #d6e4f5;color:#1877f2;border-radius:999px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer}
+  .ag-chip:hover{background:#1877f2;color:#fff}
+</style>
+
+<div class="ag-wrap">
+  <div class="ag-head">
+    <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="#fff" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>
+    <div>
+      <h2 data-i18n="agent.title">TACm AI Agent</h2>
+      <div class="sub" data-i18n="agent.sub2">Ask in plain language; the agent decides which on-chain tools to call and shows every step.</div>
+      <span class="ag-badge" data-i18n="agent.badge">Write actions require your confirmation — nothing is signed automatically.</span>
+    </div>
+  </div>
+
+  <div class="ag-addrin">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#1877f2" stroke-width="1.8" aria-hidden="true"><path d="M4 6h16v12H4z"/><path d="M4 10h16"/></svg>
+    <span data-i18n="agent.wallet">Wallet:</span> <b id="agAddrVal">—</b>
+  </div>
+
+  <div class="ag-chips">
+    <button class="ag-chip" data-q="What is my balance?">What is my balance?</button>
+    <button class="ag-chip" data-q="What is the TAC price?">TAC price</button>
+    <button class="ag-chip" data-q="Show my recent transactions.">Recent transactions</button>
+    <button class="ag-chip" data-q="Please swap my idle TAC to a stablecoin.">Swap TAC (demo confirm)</button>
+  </div>
+
+  <div class="ag-card">
+    <div class="ag-chat" id="agChat"></div>
+    <div class="ag-input">
+      <input id="agQ" data-i18n-placeholder="agent.placeholder" placeholder="Ask the agent… e.g. what is my balance?" autocomplete="off" />
+      <button id="agSend" data-i18n="agent.send">Send</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/agent.js"></script>
+{% endblock %}

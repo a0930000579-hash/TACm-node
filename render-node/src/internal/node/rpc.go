@@ -200,6 +200,13 @@ func NewRPCServer(n *Node) *RPCServer {
 	// M73-A AI 服務層：鏈上智能助手（規則引擎，無外部依賴）。
 	s.addRoute("GET /api/ai/ask", s.handleAIAssistant)
 
+	// v163 平行支線掛載（實作於各自 v163_*_routes.go，勿於此處內聯，避免支線合併衝突）：
+	//   - DApp 平台（子代理 A）
+	//   - AI Agent / Function Calling（子代理 B）
+	// 整合/交易所去重（子代理 C）請保留以下兩行。
+	s.registerV163DAppRoutes()
+	s.registerV163AgentRoutes()
+
 	// M13 錢包/資產/TiUSD 業務端點。
 	s.addRoute("GET /api/wallet/info", s.handleWalletInfo)
 	s.addRoute("GET /api/wallet/ledger", s.handleWalletLedger)

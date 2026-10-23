@@ -17,6 +17,7 @@
       'ls.how3': '隨時依現行匯率贖回 TACm；stTACm 也可用於其他 DeFi 協議。',
       'wallet.onchain': ' 我的鏈上紀錄', 'nav.exchange': '交易所', 'nav.dash': '儀表板',
       'nav.mining': '挖礦', 'nav.community': '社群', 'nav.ai': 'TAC Ai', 'nav.tokens': '代幣', 'nav.nfts': 'NFT', 'nav.defi': 'DeFi', 'nav.tiusd': 'TiUSD 監控', 'nav.ls': '質押', 'nav.governance': '治理',
+      'nav.dapp': 'DApp 商店', 'nav.agent': 'AI Agent', 'pill.dapp': 'DApp 商店', 'pill.agent': 'AI Agent',
       'nh.title': '網路健康',
       'nh.sub': '全網節點健康儀表 · 在線狀態 / 最後心跳 / 出塊接管',
       'tx.logs': '事件日誌', 'tx.logAddr': '合約地址', 'tx.decodedEvents': '事件解碼（ABI）', 'tx.gasUsed': 'Gas 使用量', 'tx.transfers': '代幣轉移', 'tx.tContract': '合約', 'tx.tValue': '數量 / Token ID', 'tx.tBlock': '區塊', 'tx.hash': '交易哈希', 'addr.transfers': '代幣轉移', 'fc.title': '測試幣水龍頭', 'fc.sub': '開發者生態：為你的地址免費領取測試 TACm', 'fc.claim': '領取測試幣', 'fc.limit': '每地址每日 {{ limit }} TACm', 'fc.disabled': '主網已停用（免費資產不再發放）', 'fc.guide': 'TiUSD / USDT 流通', 'fc.guide1': '① 水龍頭領 TACm → 交易所賣 TACM/TiUSD 買 TiUSD（穩定幣 1:1 錨定 USDT）。', 'fc.guide2': '② DeFi 借貸（CDP）：抵押 TACm 鑄造 TiUSD。', 'fc.guide3': '③ TACm/TiUSD → USDT：交易所 TACM/USDT、TiUSD/USDT 市場（掛單/市價/閃兌）。', 'fc.guide4': '④ 跨鏈：TACM/TiUSD/USDT 皆可經多鏈橋轉移至 BSC/Ethereum 等主流鏈。', 'fc.limitNote': '每地址每日限額', 'fc.addrLabel': '你的 tx0 地址', 'fc.claimBtn': '領取', 'fc.how': '如何使用', 'fc.step1': '填入你的錢包地址後點擊領取', 'fc.step2': '交易由節點金鑰簽發並在數秒內上鏈', 'fc.step3': '到錢包或區塊瀏覽器確認到帳（每日一次）',
@@ -182,6 +183,10 @@
       'nav.dex': 'DEX', 'nav.orderbook': '訂單簿', 'nav.aiv': 'AI 驗證', 'pill.dex': 'DEX', 'pill.orderbook': '訂單簿', 'pill.aiv': 'AI 驗證', 'pill.sign': '簽名工具',
       'nav.dexv3': 'DEX V3', 'nav.perp': '永續合約', 'nav.aimarket': 'AI 模型市場', 'pill.dexv3': 'DEX V3', 'pill.perp': '永續合約', 'pill.aimarket': 'AI 市場',
       'ex.uidHint': '帳戶地址＝登入帳號綁定地址（同主網新鏈）；未登入訪客地址每次瀏覽器可能不同，請登入後再下單。',
+      'ex.back': '返回交易所', 'ex.ecoTitle': '進階交易與生態', 'ex.ecoHint': '統一錢包地址 · 與現貨共用',
+      'ex.dex': 'DEX', 'ex.dexS': 'AMM 流動池 · 即時兌換', 'ex.dexv3': 'DEX V3', 'ex.dexv3S': '集中流動性 · 主動做市',
+      'ex.perp': '永續合約', 'ex.perpS': '槓桿多空 · 資金費率', 'ex.aimarket': 'AI 模型市場', 'ex.aimarketS': '部署與呼叫鏈上模型',
+      'ex.aiverify': 'AI 驗證', 'ex.aiverifyS': '跨鏈推理結果驗證',
       'sign.title': '簽名工具台', 'sign.sub': '開發者簽名工具 — EIP-191 personal_sign · EIP-712 typed data · ecRecover',
       'contract.title': '合約驗證中心', 'contract.sub': '檢視已部署合約並以 ABI 編碼執行只讀互動（不寫鏈）',
       'contract.listTitle': '已部署合約', 'contract.thAddr': '地址', 'contract.thName': '名稱', 'contract.thSymbol': '代號', 'contract.thSupply': '供應量', 'contract.thCode': '代碼',
@@ -343,6 +348,7 @@
       'ls.how3': 'Redeem TACm anytime at the current rate; stTACm also works across other DeFi protocols.',
       'wallet.onchain': ' My On-chain History', 'nav.exchange': 'Exchange', 'nav.dash': 'Dashboard',
       'nav.mining': 'Mining', 'nav.community': 'Community', 'nav.ai': 'TAC Ai', 'nav.tokens': 'Tokens', 'nav.nfts': 'NFT', 'nav.defi': 'DeFi', 'nav.tiusd': 'TiUSD Monitor', 'nav.ls': 'Staking', 'nav.governance': 'Governance',
+      'nav.dapp': 'DApp Store', 'nav.agent': 'AI Agent', 'pill.dapp': 'DApp Store', 'pill.agent': 'AI Agent',
       'tx.logs': 'Event Logs', 'tx.logAddr': 'Contract Address', 'tx.decodedEvents': 'Decoded Events (ABI)', 'tx.gasUsed': 'Gas Used', 'tx.transfers': 'Token Transfers', 'tx.tContract': 'Contract', 'tx.tValue': 'Amount / Token ID', 'tx.tBlock': 'Block', 'tx.hash': 'Tx Hash', 'addr.transfers': 'Token Transfers', 'fc.title': 'Test Token Faucet', 'fc.sub': 'Developer ecosystem — free test TACm for your address', 'fc.claim': 'Claim Test Tokens', 'fc.limit': 'Daily limit per address', 'fc.addrLabel': 'Your tx0 address', 'fc.claimBtn': 'Claim', 'fc.how': 'How to use', 'fc.step1': 'Enter your wallet address and click claim', 'fc.step2': 'The tx is signed by the node key and lands on-chain in seconds', 'fc.step3': 'Check Wallet or Explorer to confirm (once per address per day)', 'fc.disabled': 'Disabled on mainnet (free assets no longer distributed)', 'fc.guide': 'TiUSD / USDT Circulation', 'fc.guide1': '① Claim TACm from the faucet → buy TiUSD on the exchange (TACM/TiUSD pair; stablecoin pegged 1:1 to USDT).', 'fc.guide2': '② DeFi lending (CDP): collateralize TACm to mint TiUSD.', 'fc.guide3': '③ TACm/TiUSD → USDT: trade on TACM/USDT and TiUSD/USDT markets (limit/market/swap).', 'fc.guide4': '④ Cross-chain: TACM/TiUSD/USDT can be bridged to BSC/Ethereum and other major chains.',
       'pill.ai': 'TAC Ai',
       'ai_assistant': 'TAC Ai', 'ai_sub': 'On-chain assistant — ask about the chain, get instant answers',
@@ -506,6 +512,10 @@
       'nav.dex': 'DEX', 'nav.orderbook': 'OrderBook', 'nav.aiv': 'AI Verify', 'pill.dex': 'DEX', 'pill.orderbook': 'OrderBook', 'pill.aiv': 'AI Verify',
       'nav.dexv3': 'DEX V3', 'nav.perp': 'Perpetuals', 'nav.aimarket': 'AI Model Market', 'pill.dexv3': 'DEX V3', 'pill.perp': 'Perpetuals', 'pill.aimarket': 'AI Market',
       'ex.uidHint': 'Account address = login-bound address (same mainnet chain); guest addresses may differ per browser session, please log in before trading.',
+      'ex.back': 'Back to Exchange', 'ex.ecoTitle': 'Advanced Trading & Ecosystem', 'ex.ecoHint': 'Unified wallet · shared with spot',
+      'ex.dex': 'DEX', 'ex.dexS': 'AMM pools · instant swap', 'ex.dexv3': 'DEX V3', 'ex.dexv3S': 'Concentrated liquidity',
+      'ex.perp': 'Perpetuals', 'ex.perpS': 'Leveraged long/short · funding', 'ex.aimarket': 'AI Model Market', 'ex.aimarketS': 'Deploy & call on-chain models',
+      'ex.aiverify': 'AI Verify', 'ex.aiverifyS': 'Cross-chain inference verification',
       'dex.title': 'On-Chain DEX (AMM)', 'dex.sub': 'Constant product · On-chain settlement · 0.3% fee',
       'dex.pools_word': 'pools', 'dex.fee': 'Fee 0.30%',
       'dex.pools': 'Liquidity Pools', 'dex.pools_hint': 'List tokens to create pools', 'dex.empty': 'No pools yet',
@@ -2240,6 +2250,24 @@ dict.en['sdk.endpointDesc'] = 'The following endpoints can be called by any JSON
     return en2zh[s] || s;
   };
   window.TAC_I18N = { cur: cur, apply: apply, toggle: toggle };
+  // v163：頁面級詞條擴充——各新頁（dapp/agent 等）於自身 script 呼叫
+  // window.TAC_LOAD_I18N({zh:{key:'中文'},en:{key:'English'}}) 注入詞條後立即重譯，
+  // 免於直接修改 i18n.js（平行支線互不衝突）。可重複呼叫合併。
+  // 若頁面 script 早於 i18n.js 執行，可先把資料放到 window.TAC_EXTRA_I18N，初始化時會自動合併。
+  window.TAC_LOAD_I18N = function (extra) {
+    try {
+      if (extra && extra.zh) { for (var kz in extra.zh) { dict.zh[kz] = extra.zh[kz]; } }
+      if (extra && extra.en) { for (var ke in extra.en) { dict.en[ke] = extra.en[ke]; } }
+    } catch (e) { /* 忽略壞詞條 */ }
+    apply();
+  };
+  try {
+    if (window.TAC_EXTRA_I18N) {
+      var ex = window.TAC_EXTRA_I18N;
+      if (ex.zh) { for (var kx in ex.zh) { dict.zh[kx] = ex.zh[kx]; } }
+      if (ex.en) { for (var ky in ex.en) { dict.en[ky] = ex.en[ky]; } }
+    }
+  } catch (e) { /* 忽略 */ }
   document.addEventListener('DOMContentLoaded', apply);
   apply();
   // 自動套用：JS 動態渲染（innerHTML/append）後自動翻譯，無需各頁手動呼叫。

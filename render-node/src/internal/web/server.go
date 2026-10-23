@@ -331,6 +331,9 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /ai-market", s.handleAIMarket)
 	s.mux.HandleFunc("GET /orderbook", s.handleOrderBook)
 	s.mux.HandleFunc("GET /ai-verify", s.handleAIVerify)
+	// v163 平行支線頁面（實作於各自 v163_*_page.go，整合/交易所去重請保留這兩行）。
+	s.mux.HandleFunc("GET /dapp", s.handleV163DApp)
+	s.mux.HandleFunc("GET /agent", s.handleV163Agent)
 	s.mux.HandleFunc("GET /auth/login", s.handleAuthLoginPage)
 	s.mux.HandleFunc("GET /auth/register", s.handleAuthRegisterPage)
 	// M39：節點健康檢查與運行指標（商業營運/監控告警必備）。

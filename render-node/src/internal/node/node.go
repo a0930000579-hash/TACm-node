@@ -29,6 +29,7 @@ import (
 	"tacm/internal/consensus/difficulty"
 	"tacm/internal/consensus/pos"
 	"tacm/internal/crypto"
+	"tacm/internal/dapp"
 	"tacm/internal/defi"
 	"tacm/internal/dex"
 	"tacm/internal/dexv3"
@@ -125,6 +126,7 @@ type Node struct {
 	perpSt       *perp.Store
 	aimSt        *aimarket.Store
 	aivSt        *aiverify.Store
+	dappSt       *dapp.Store
 	obSt         *orderbook.Store
 	pruner       *stateprune.Pruner
 	authSvc      *AuthService
@@ -328,6 +330,14 @@ func New(cfg *config.Config, nodeID string, baseDifficulty int) (*Node, error) {
 		return nil, fmt.Errorf("aimarket open: %w", err)
 	}
 	n.aimSt = aimSt
+
+	// v163 DApp 商店（對標 Ethereum DApp 入口）：dapp.db。
+	dappSt, err := dapp.Open(dataDir)
+	if err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("dapp open: %w", err)
+	}
+	n.dappSt = dappSt
 
 	// 鏈上訂單簿式現貨交易（對標 Binance orderbook；公開可驗證、鏈上託管）：orderbook.db。
 	obSt, err := orderbook.Open(dataDir)
@@ -913,6 +923,9 @@ func (n *Node) closeAllStores() {
 	}
 	if n.aimSt != nil {
 		_ = n.aimSt.Close()
+	}
+	if n.dappSt != nil {
+		_ = n.dappSt.Close()
 	}
 	if n.aivSt != nil {
 		_ = n.aivSt.Close()

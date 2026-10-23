@@ -1,0 +1,359 @@
+{% extends "base.html" %}
+{% block title %}TAC DApp Store{% endblock %}
+{% block content %}
+<section class="pg-banner">
+  <div class="pg-txt"><h1 data-i18n="nav.dapp">DApp Store</h1><p data-i18n="dapp.bannerSub">Discover · Deploy · Rate on-chain applications</p></div>
+  <svg viewBox="0 0 40 40" class="pg-art"><rect x="5" y="6" width="30" height="28" rx="4" fill="none" stroke="#68BE8D" stroke-width="2.2"/><rect x="11" y="12" width="7" height="7" rx="1.5" fill="#68BE8D"/><rect x="22" y="12" width="7" height="7" rx="1.5" fill="#68BE8D"/><rect x="11" y="23" width="7" height="7" rx="1.5" fill="#68BE8D"/><rect x="22" y="23" width="7" height="7" rx="1.5" fill="#68BE8D"/></svg>
+</section>
+<style>
+  .dp-wrap{max-width:1180px;margin:0 auto;padding:0 16px 40px;box-sizing:border-box}
+  .dp-head{background:linear-gradient(135deg,#f7f8fb,#eef7f1);border:1px solid #dcefe4;border-radius:16px;padding:16px 18px;color:#14161a;display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:14px 0}
+  .dp-head .logo{width:46px;height:46px;border-radius:12px;background:#68BE8D;color:#f7f8fb;display:flex;align-items:center;justify-content:center;flex:none}
+  .dp-head h2{margin:0;font-size:19px;font-weight:800;color:#2e7d52}
+  .dp-head .sub{font-size:12px;opacity:.75;margin-top:2px}
+  .dp-stats{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+  .dp-stats span{background:rgba(104,190,141,.12);border:1px solid rgba(104,190,141,.35);border-radius:999px;padding:6px 12px;font-size:12px;font-weight:700;color:#2e7d52}
+  .dp-addrbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
+  .dp-addrbar input{flex:1;min-width:220px;box-sizing:border-box;background:#f2f4f9;border:1px solid #e2e6ee;border-radius:10px;color:#14161a;padding:10px 12px;font-size:13px;font-family:ui-monospace,monospace}
+  .dp-addrbar button{background:#68BE8D;color:#f7f8fb;border:none;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:800;cursor:pointer}
+  .dp-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .dp-tabs button{background:#f2f4f9;border:1px solid #e2e6ee;color:#14161a;border-radius:999px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer}
+  .dp-tabs button.on{background:#68BE8D;border-color:#68BE8D;color:#f7f8fb}
+  .dp-toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  .dp-toolbar input,.dp-toolbar select{background:#f2f4f9;border:1px solid #e2e6ee;border-radius:10px;color:#14161a;padding:10px 12px;font-size:13px}
+  .dp-toolbar input{flex:1;min-width:180px;box-sizing:border-box}
+  .dp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media (max-width:980px){.dp-grid{grid-template-columns:1fr 1fr}}
+  @media (max-width:640px){.dp-grid{grid-template-columns:1fr}}
+  .dp-card{background:#f7f8fb;border:1px solid #e2e6ee;border-radius:14px;padding:14px;cursor:pointer;transition:box-shadow .15s,border-color .15s;display:flex;flex-direction:column;gap:8px}
+  .dp-card:hover{border-color:#68BE8D;box-shadow:0 4px 14px rgba(104,190,141,.18)}
+  .dp-card .top{display:flex;gap:10px;align-items:center}
+  .dp-card .ic{width:42px;height:42px;border-radius:10px;background:#eef1f6;color:#2e7d52;display:flex;align-items:center;justify-content:center;flex:none}
+  .dp-card .ic img{width:42px;height:42px;border-radius:10px;object-fit:cover}
+  .dp-card .nm{font-weight:800;color:#14161a;font-size:15px}
+  .dp-card .cat{font-size:10px;color:#5d6778;background:#eef1f6;border-radius:6px;padding:1px 7px;margin-left:6px}
+  .dp-card .ds{font-size:12px;color:#5d6778;line-height:1.4;min-height:34px;max-height:52px;overflow:hidden}
+  .dp-card .st{display:flex;gap:10px;font-size:11px;color:#5d6778;flex-wrap:wrap;align-items:center}
+  .dp-card .stars{color:#e8a93c;font-size:12px}
+  .dp-feat{font-size:10px;font-weight:700;border-radius:6px;padding:2px 6px;background:rgba(232,169,60,.16);color:#b8791b}
+  .dp-panel{background:#f7f8fb;border:1px solid #e2e6ee;border-radius:14px;padding:16px;margin-bottom:16px}
+  .dp-panel h3{margin:0 0 12px;font-size:14px;color:#2e7d52;font-weight:800}
+  .dp-field{margin-bottom:10px}
+  .dp-field label{display:block;font-size:12px;color:#5d6778;margin-bottom:4px}
+  .dp-field input,.dp-field select,.dp-field textarea{width:100%;box-sizing:border-box;background:#f2f4f9;border:1px solid #e2e6ee;border-radius:10px;color:#14161a;padding:10px 12px;font-size:13px}
+  .dp-field textarea{min-height:60px;resize:vertical}
+  .dp-btn{background:#68BE8D;color:#f7f8fb;border:none;border-radius:10px;padding:12px 18px;font-size:14px;font-weight:800;cursor:pointer}
+  .dp-btn.ghost{background:transparent;border:1px solid #e2e6ee;color:#14161a}
+  .dp-msg{font-size:12px;min-height:16px;margin-top:8px}
+  .dp-msg.ok{color:#2e7d52}.dp-msg.err{color:#e06060}
+  .dp-mask{position:fixed;inset:0;background:rgba(10,12,18,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:60}
+  .dp-mask.open{display:flex}
+  .dp-modal{background:#f7f8fb;border-radius:16px;max-width:520px;width:100%;padding:20px;box-sizing:border-box;max-height:90vh;overflow:auto}
+  .dp-modal h3{margin:0 0 6px;font-size:18px;color:#14161a}
+  .dp-modal .meta{font-size:12px;color:#5d6778;margin-bottom:10px}
+  .dp-modal .ds{font-size:13px;color:#14161a;line-height:1.5;margin-bottom:12px}
+  .dp-stars input{display:none}
+  .dp-stars label{font-size:26px;color:#cfd6e0;cursor:pointer}
+  .dp-stars label.on{color:#e8a93c}
+  .dp-row{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px dashed #e2e6ee;font-size:12px;align-items:center}
+  .dp-row:last-child{border-bottom:none}
+  .dp-row .k{color:#5d6778}.dp-row .v{font-weight:700;color:#14161a;font-family:ui-monospace,monospace}
+</style>
+
+<div class="dp-wrap">
+  <div class="dp-head">
+    <div class="logo">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="2"/><rect x="7.5" y="7.5" width="3" height="3" rx="0.5" fill="currentColor"/><rect x="13.5" y="7.5" width="3" height="3" rx="0.5" fill="currentColor"/><rect x="7.5" y="13.5" width="3" height="3" rx="0.5" fill="currentColor"/><rect x="13.5" y="13.5" width="3" height="3" rx="0.5" fill="currentColor"/></svg>
+    </div>
+    <div><h2>TAC DApp Store</h2>
+      <div class="sub" data-i18n="dapp.sub">Register, browse, rate and favorite on-chain DApps</div></div>
+    <div class="dp-stats"><span id="dpCount">0 DApps</span></div>
+  </div>
+
+  <div class="dp-addrbar">
+    <input id="me" placeholder="0x…" value="">
+    <button onclick="dpConnect()">Connect</button>
+    <span id="topAddr" style="font-size:12px;color:#5d6778;font-family:ui-monospace,monospace"></span>
+  </div>
+
+  <div class="dp-tabs">
+    <button id="tabAll" class="on" onclick="dpSwitch('all')">All</button>
+    <button id="tabFeatured" onclick="dpSwitch('featured')">Featured</button>
+    <button id="tabFav" onclick="dpSwitch('fav')">My Favorites</button>
+    <button id="tabMine" onclick="dpSwitch('mine')">My DApps</button>
+  </div>
+
+  <div class="dp-toolbar">
+    <input id="q" placeholder="Search name / description / tags…" oninput="dpLoad()">
+    <select id="category" onchange="dpLoad()"><option value="">All categories</option></select>
+    <select id="sort" onchange="dpLoad()">
+      <option value="new">Newest</option>
+      <option value="popular">Popular</option>
+      <option value="rating">Top rated</option>
+    </select>
+  </div>
+
+  <div id="grid" class="dp-grid"></div>
+
+  <div class="dp-panel" style="margin-top:18px">
+    <h3>Register a DApp</h3>
+    <div class="dp-field"><label>Name *</label><input id="rName"></div>
+    <div class="dp-field"><label>Category</label><select id="rCategory"></select></div>
+    <div class="dp-field"><label>URL (https) *</label><input id="rUrl" placeholder="https://…"></div>
+    <div class="dp-field"><label>Description</label><textarea id="rDesc"></textarea></div>
+    <div class="dp-field"><label>Tags (comma separated)</label><input id="rTags" placeholder="defi, swap"></div>
+    <div class="dp-field"><label>Contract address (optional)</label><input id="rContract" placeholder="0x…"></div>
+    <button class="dp-btn" onclick="dpRegister()">Submit</button>
+    <div id="regMsg" class="dp-msg"></div>
+  </div>
+</div>
+
+<div class="dp-mask" id="mask" onclick="if(event.target===this)dpClose()">
+  <div class="dp-modal">
+    <h3 id="dName"></h3>
+    <div class="meta" id="dMeta"></div>
+    <div class="ds" id="dDesc"></div>
+    <div id="dRows"></div>
+    <div style="margin-top:12px">
+      <label style="font-size:12px;color:#5d6778">Your rating</label>
+      <div class="dp-stars" id="dStars"></div>
+      <input id="dComment" placeholder="comment…" style="width:100%;box-sizing:border-box;margin-top:8px;background:#f2f4f9;border:1px solid #e2e6ee;border-radius:10px;padding:8px;font-size:12px">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+      <button class="dp-btn" id="dOpen" onclick="dpOpen()">Open</button>
+      <button class="dp-btn ghost" id="dFavBtn" onclick="dpFav()">Favorite</button>
+      <button class="dp-btn ghost" onclick="dpClose()">Close</button>
+    </div>
+    <div id="dMsg" class="dp-msg"></div>
+  </div>
+</div>
+
+<script>
+  // i18n 詞條（英文為主、中文可切），由主辦 TAC_LOAD_I18N 機制注入。
+  window.TAC_LOAD_I18N({
+    zh: {
+      'dapp.connectFirst':'請先連接錢包','dapp.noItems':'尚無 DApp','dapp.fav':'收藏','dapp.unfav':'已收藏',
+      'dapp.network':'連線失敗','dapp.regOk':'已註冊'
+    },
+    en: {
+      'dapp.connectFirst':'Connect wallet first','dapp.noItems':'No DApps yet','dapp.fav':'Favorite','dapp.unfav':'Favorited',
+      'dapp.network':'Network failed','dapp.regOk':'Registered'
+    }
+  });
+
+  function tr(key){
+    try{
+      var en = (window.TAC_I18N && TAC_I18N.cur && TAC_I18N.cur()==='en');
+      var dict = (window.TAC_I18N && TAC_I18N.dict) ? TAC_I18N.dict() : null;
+      if(dict && dict[key]){ return en ? (dict[key].en||dict[key].zh) : (dict[key].zh||dict[key].en); }
+    }catch(e){}
+    return key;
+  }
+
+  // 統一錢包權威 key：tac_ex_wallet {addr,source,wif?}。
+  function readWallet(){
+    try{
+      var raw = localStorage.getItem('tac_ex_wallet');
+      if(raw){ var o = JSON.parse(raw); if(o && o.addr) return o.addr; }
+    }catch(e){}
+    return localStorage.getItem('tac_guest_addr') || '';
+  }
+  function writeWallet(addr){
+    try{
+      localStorage.setItem('tac_ex_wallet', JSON.stringify({addr:addr, source:'manual', wif:''}));
+      localStorage.setItem('tac_guest_addr', addr);
+      localStorage.setItem('tac_defi_addr', addr);
+    }catch(e){}
+  }
+
+  var me = readWallet();
+  if(me) document.getElementById('me').value = me;
+
+  function esc(x){ return String(x==null?'':x).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function shortAddr(a){ if(!a) return ''; return a.slice(0,10)+'…'+a.slice(-6); }
+  function fmtTs(ts){ if(!ts) return ''; var d=new Date(ts*1000); var p=function(x){return (x<10?'0':'')+x;}; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+  function stars(r){ if(!r||r<=0) return '☆☆☆☆☆'; var s=''; for(var i=1;i<=5;i++){ s += i<=Math.round(r)?'★':'☆'; } return s; }
+  function show(id,cls,txt){ var e=document.getElementById(id); if(!e) return; e.className='dp-msg '+cls; e.textContent=txt; }
+
+  function fetchJSON(url){
+    return new Promise(function(res,rej){
+      var ctl=new AbortController(); var to=setTimeout(function(){ctl.abort();},8000);
+      fetch(url,{cache:'no-store',signal:ctl.signal}).then(function(r){return r.json().catch(function(){return null;});})
+        .then(function(d){clearTimeout(to);res(d);}).catch(function(e){clearTimeout(to);rej(e);});
+    });
+  }
+  function postJSON(url,body){
+    return new Promise(function(res,rej){
+      var ctl=new AbortController(); var to=setTimeout(function(){ctl.abort();},8000);
+      fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:ctl.signal})
+        .then(function(r){return r.json().catch(function(){return null;});})
+        .then(function(d){clearTimeout(to);res(d);}).catch(function(e){clearTimeout(to);rej(e);});
+    });
+  }
+
+  var curTab = 'all';
+  var curDapp = null;
+
+  function dpConnect(){
+    me = document.getElementById('me').value.trim();
+    if(me){ writeWallet(me); }
+    document.getElementById('topAddr').textContent = me ? shortAddr(me) : '';
+    if(curTab==='fav'||curTab==='mine') dpLoad();
+  }
+
+  function dpSwitch(tab){
+    curTab = tab;
+    ['tabAll','tabFeatured','tabFav','tabMine'].forEach(function(id){ document.getElementById(id).classList.remove('on'); });
+    var map = {all:'tabAll', featured:'tabFeatured', fav:'tabFav', mine:'tabMine'};
+    document.getElementById(map[tab]).classList.add('on');
+    dpLoad();
+  }
+
+  function iconFor(d){
+    if(d.icon && /^https?:\/\//.test(d.icon)){ return '<div class="ic"><img src="'+esc(d.icon)+'" alt=""></div>'; }
+    return '<div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="3" stroke="currentColor" stroke-width="2"/><rect x="9" y="9" width="6" height="6" fill="currentColor"/></svg></div>';
+  }
+
+  function card(d){
+    var feat = d.featured ? '<span class="dp-feat">★ Featured</span>' : '';
+    return '<div class="dp-card" onclick="dpOpenDetail('+d.id+')">'
+      + '<div class="top">'+iconFor(d)+'<div><div class="nm">'+esc(d.name)+'</div>'
+      + '<span class="cat">'+esc(d.category||'Other')+'</span> '+feat+'</div></div>'
+      + '<div class="ds">'+esc(d.description||'')+'</div>'
+      + '<div class="st"><span class="stars">'+stars(d.rating_avg)+'</span>'
+      + '<span>'+Number(d.views||0)+' views</span>'
+      + '<span>'+Number(d.fav_count||0)+' favs</span>'
+      + '<span style="margin-left:auto">v'+(d.version||1)+'</span></div></div>';
+  }
+
+  function dpLoad(){
+    var box = document.getElementById('grid');
+    if(curTab==='fav'){
+      if(!me){ box.innerHTML = '<div style="grid-column:1/-1;color:#5d6778;font-size:13px">'+tr('dapp.connectFirst')+'</div>'; return; }
+      fetchJSON('/api/dapp/favorites?address='+encodeURIComponent(me)).then(function(d){
+        var arr=(d&&d.items)||[];
+        document.getElementById('dpCount').textContent = arr.length+' DApps';
+        box.innerHTML = arr.length ? arr.map(card).join('') : '<div style="grid-column:1/-1;color:#5d6778;font-size:13px">'+tr('dapp.noItems')+'</div>';
+      }).catch(function(){ box.innerHTML='<div style="grid-column:1/-1;color:#e06060">'+tr('dapp.network')+'</div>'; });
+      return;
+    }
+    if(curTab==='mine'){
+      if(!me){ box.innerHTML = '<div style="grid-column:1/-1;color:#5d6778;font-size:13px">'+tr('dapp.connectFirst')+'</div>'; return; }
+      fetchJSON('/api/dapp/mine?deployer='+encodeURIComponent(me)).then(function(d){
+        var res=(d&&d.result)||{}; var arr=res.items||[];
+        document.getElementById('dpCount').textContent = (res.total!=null?res.total:arr.length)+' DApps';
+        box.innerHTML = arr.length ? arr.map(card).join('') : '<div style="grid-column:1/-1;color:#5d6778;font-size:13px">'+tr('dapp.noItems')+'</div>';
+      }).catch(function(){ box.innerHTML='<div style="grid-column:1/-1;color:#e06060">'+tr('dapp.network')+'</div>'; });
+      return;
+    }
+    var params = new URLSearchParams();
+    var q = document.getElementById('q').value.trim();
+    if(q) params.set('q',q);
+    var cat = document.getElementById('category').value;
+    if(cat) params.set('category',cat);
+    params.set('sort', curTab==='featured' ? 'featured' : document.getElementById('sort').value);
+    params.set('size','60');
+    fetchJSON('/api/dapp/list?'+params.toString()).then(function(d){
+      var res=(d&&d.result)||{}; var arr=res.items||[];
+      document.getElementById('dpCount').textContent = (res.total!=null?res.total:arr.length)+' DApps';
+      box.innerHTML = arr.length ? arr.map(card).join('') : '<div style="grid-column:1/-1;color:#5d6778;font-size:13px">'+tr('dapp.noItems')+'</div>';
+    }).catch(function(){ box.innerHTML='<div style="grid-column:1/-1;color:#e06060">'+tr('dapp.network')+'</div>'; });
+  }
+
+  function loadCategories(){
+    fetchJSON('/api/dapp/categories').then(function(d){
+      var arr=(d&&d.categories)||[];
+      var cat=document.getElementById('category');
+      var reg=document.getElementById('rCategory');
+      arr.forEach(function(c){
+        cat.insertAdjacentHTML('beforeend','<option value="'+esc(c)+'">'+esc(c)+'</option>');
+        reg.insertAdjacentHTML('beforeend','<option value="'+esc(c)+'">'+esc(c)+'</option>');
+      });
+    }).catch(function(){});
+  }
+
+  function dpRegister(){
+    if(!me){ show('regMsg','err',tr('dapp.connectFirst')); return; }
+    var body = {
+      address: me,
+      name: document.getElementById('rName').value.trim(),
+      category: document.getElementById('rCategory').value,
+      url: document.getElementById('rUrl').value.trim(),
+      description: document.getElementById('rDesc').value.trim(),
+      tags: document.getElementById('rTags').value.trim(),
+      contract: document.getElementById('rContract').value.trim()
+    };
+    postJSON('/api/dapp/register', body).then(function(d){
+      if(!d||!d.ok){ show('regMsg','err',(d&&d.error)||'failed'); return; }
+      show('regMsg','ok',tr('dapp.regOk')+' #'+d.dapp.id+' v'+d.dapp.version);
+      document.getElementById('rName').value='';document.getElementById('rUrl').value='';
+      document.getElementById('rDesc').value='';document.getElementById('rTags').value='';document.getElementById('rContract').value='';
+      dpLoad();
+    }).catch(function(){ show('regMsg','err',tr('dapp.network')); });
+  }
+
+  function renderStars(selected){
+    var h='';
+    for(var i=1;i<=5;i++){
+      h += '<input type="radio" name="drs" id="dr'+i+'" value="'+i+'"'+(i===selected?' checked':'')+'><label for="dr'+i+'" class="'+(i<=selected?'on':'')+'">★</label>';
+    }
+    document.getElementById('dStars').innerHTML = h;
+  }
+
+  function dpOpenDetail(id){
+    fetchJSON('/api/dapp/detail?id='+id).then(function(d){
+      if(!d||!d.ok){ show('dMsg','err',(d&&d.error)||'failed'); return; }
+      curDapp = d.dapp;
+      document.getElementById('dName').textContent = curDapp.name;
+      document.getElementById('dMeta').textContent = curDapp.category+' · v'+curDapp.version+(curDapp.featured?' · ★ Featured':'');
+      document.getElementById('dDesc').textContent = curDapp.description||'';
+      document.getElementById('dRows').innerHTML =
+        '<div class="dp-row"><span class="k">Deployer</span><span class="v">'+shortAddr(curDapp.deployer)+'</span></div>'
+        +(curDapp.contract?'<div class="dp-row"><span class="k">Contract</span><span class="v">'+shortAddr(curDapp.contract)+'</span></div>':'')
+        +'<div class="dp-row"><span class="k">Rating</span><span class="v">'+stars(curDapp.rating_avg)+' ('+curDapp.rating_count+')</span></div>'
+        +'<div class="dp-row"><span class="k">Views / Favs</span><span class="v">'+curDapp.views+' / '+curDapp.fav_count+'</span></div>'
+        +'<div class="dp-row"><span class="k">Created</span><span class="v">'+fmtTs(curDapp.created_at)+'</span></div>';
+      document.getElementById('dComment').value='';
+      document.getElementById('dFavBtn').textContent = tr('dapp.fav');
+      renderStars(Math.max(1, Math.round(curDapp.rating_avg)||0));
+      document.getElementById('mask').classList.add('open');
+      show('dMsg','','');
+    }).catch(function(){ show('dMsg','err',tr('dapp.network')); });
+  }
+
+  function dpRate(){
+    if(!curDapp) return;
+    if(!me){ show('dMsg','err',tr('dapp.connectFirst')); return; }
+    var el=document.querySelector('input[name=drs]:checked');
+    var score=el?parseInt(el.value,10):0;
+    postJSON('/api/dapp/rate',{address:me,dapp_id:curDapp.id,score:score,comment:document.getElementById('dComment').value.trim()})
+      .then(function(d){
+        if(!d||!d.ok){ show('dMsg','err',(d&&d.error)||'failed'); return; }
+        show('dMsg','ok','Rated '+score+'★');
+        if(d.dapp) curDapp=d.dapp;
+      }).catch(function(){ show('dMsg','err',tr('dapp.network')); });
+  }
+  document.getElementById('dStars').addEventListener('change', function(){ if(me) dpRate(); });
+
+  function dpFav(){
+    if(!curDapp) return;
+    if(!me){ show('dMsg','err',tr('dapp.connectFirst')); return; }
+    postJSON('/api/dapp/favorite',{address:me,dapp_id:curDapp.id}).then(function(d){
+      if(!d||!d.ok){ show('dMsg','err',(d&&d.error)||'failed'); return; }
+      if(d.dapp) curDapp=d.dapp;
+      document.getElementById('dFavBtn').textContent = d.favorited ? tr('dapp.unfav') : tr('dapp.fav');
+      show('dMsg','ok', d.favorited?'Favorited':'Removed');
+    }).catch(function(){ show('dMsg','err',tr('dapp.network')); });
+  }
+
+  function dpOpen(){
+    if(!curDapp||!curDapp.url) return;
+    window.open(curDapp.url, '_blank', 'noopener,noreferrer');
+  }
+  function dpClose(){ document.getElementById('mask').classList.remove('open'); dpLoad(); }
+
+  if(me) document.getElementById('topAddr').textContent = shortAddr(me);
+  loadCategories();
+  dpLoad();
+</script>
+{% endblock %}

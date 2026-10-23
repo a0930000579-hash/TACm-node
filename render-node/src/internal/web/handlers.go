@@ -590,9 +590,11 @@ func (s *Server) handleAIMarket(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "ai-market.html", pongo2.Context{})
 }
 
-// handleOrderBook GET /orderbook — 鏈上訂單簿式現貨（公開可驗證 orderbook，對標 Binance）。
+// handleOrderBook GET /orderbook — v163 去重：舊版獨立訂單簿式現貨已併入交易所現貨交易
+// （/exchange/trade 含 K 線、深度、bids/asks 訂單簿、下單/撤單，功能較完整）。
+// 本路由保留為相容舊連結的 301 導向，避免收藏/入口失效；前端不再維護第二套現貨介面。
 func (s *Server) handleOrderBook(w http.ResponseWriter, r *http.Request) {
-	s.render(w, "orderbook.html", pongo2.Context{})
+	http.Redirect(w, r, "/exchange/trade", http.StatusMovedPermanently)
 }
 
 // handleAIVerify GET /ai-verify — 跨鏈 AI 推理驗證網路（驗證者質押／多數決／獎懲）。

@@ -22,9 +22,17 @@ const (
 )
 
 // ChatMessage OpenAI 兼容訊息。
+// v163 擴充：ToolCalls / ToolCallID 為 function-calling 可選欄位（omitempty），
+// 純推理 Chat（llama.go）不設這些欄位，行為不變；Agent Provider 用它們表達工具呼叫往返。
 type ChatMessage struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
+	// ToolCalls assistant 決定的工具呼叫（OpenAI 相容）。
+	ToolCalls []ToolCall `json:"tool_calls,omitempty"`
+	// ToolCallID tool 訊息對應的工具呼叫 id。
+	ToolCallID string `json:"tool_call_id,omitempty"`
+	// Name tool 訊息的工具名稱。
+	Name string `json:"name,omitempty"`
 }
 
 // ChatRequest llama-server 請求體。
