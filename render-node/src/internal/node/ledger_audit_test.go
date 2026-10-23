@@ -22,6 +22,7 @@ func m71Node(t *testing.T, aliceAddr, allocAmt string) *Node {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() { _ = n.Close() })
 	now := time.Now().Unix()
 	genTx := chaindb.Transaction{
 		TxHash: "genalloc", ToAddr: aliceAddr, Amount: allocAmt, Fee: "0", Ts: now,
@@ -135,9 +136,9 @@ func TestLedgerAudit_GoodChain(t *testing.T) {
 	if len(la.Issues) != 0 {
 		t.Fatalf("好鏈不應有 issues: %+v", la.Issues)
 	}
-}
 
-// TestLedgerAudit_BadSignature 偽簽名交易上鏈——簽名層被抓出。
+	// TestLedgerAudit_BadSignature 偽簽名交易上鏈——簽名層被抓出。
+}
 func TestLedgerAudit_BadSignature(t *testing.T) {
 	aliceKP, _ := crypto.GenerateKeyPair()
 	alice := m71Addr(t, aliceKP)
@@ -168,9 +169,9 @@ func TestLedgerAudit_BadSignature(t *testing.T) {
 	if la.OK {
 		t.Fatal("含偽簽名鏈不應 OK")
 	}
-}
 
-// TestLedgerAudit_BadNonce nonce 跳號——nonce 層被抓出。
+	// TestLedgerAudit_BadNonce nonce 跳號——nonce 層被抓出。
+}
 func TestLedgerAudit_BadNonce(t *testing.T) {
 	aliceKP, _ := crypto.GenerateKeyPair()
 	alice := m71Addr(t, aliceKP)
@@ -194,9 +195,9 @@ func TestLedgerAudit_BadNonce(t *testing.T) {
 	if la.OK {
 		t.Fatal("含 nonce 異常鏈不應 OK")
 	}
-}
 
-// TestLedgerAudit_Overdraft 透支交易——餘額層被抓出。
+	// TestLedgerAudit_Overdraft 透支交易——餘額層被抓出。
+}
 func TestLedgerAudit_Overdraft(t *testing.T) {
 	aliceKP, _ := crypto.GenerateKeyPair()
 	alice := m71Addr(t, aliceKP)
@@ -219,9 +220,9 @@ func TestLedgerAudit_Overdraft(t *testing.T) {
 	if la.OK {
 		t.Fatal("含透支鏈不應 OK")
 	}
-}
 
-// TestLedgerAudit_BadContractMemo 非法合約 memo（payload 非 hex）——合約層被抓出。
+	// TestLedgerAudit_BadContractMemo 非法合約 memo（payload 非 hex）——合約層被抓出。
+}
 func TestLedgerAudit_BadContractMemo(t *testing.T) {
 	aliceKP, _ := crypto.GenerateKeyPair()
 	alice := m71Addr(t, aliceKP)
@@ -245,9 +246,9 @@ func TestLedgerAudit_BadContractMemo(t *testing.T) {
 	if la.OK {
 		t.Fatal("含非法合約鏈不應 OK")
 	}
-}
 
-// TestLedgerAudit_EmptyChain 僅創世（空鏈）——通過且守恆。
+	// TestLedgerAudit_EmptyChain 僅創世（空鏈）——通過且守恆。
+}
 func TestLedgerAudit_EmptyChain(t *testing.T) {
 	aliceKP, _ := crypto.GenerateKeyPair()
 	n := m71Node(t, m71Addr(t, aliceKP), "0")
@@ -261,10 +262,10 @@ func TestLedgerAudit_EmptyChain(t *testing.T) {
 	if la.TxChecked != 0 {
 		t.Fatalf("空鏈不應有交易: %+v", la)
 	}
-}
 
-// TestLedgerAudit_SystemGovTxNoSig v55 回歸：治理系統交易（memo=gov:treasury:N）
-// 由出塊引擎依治理決議自動建單、無簽名——語意同 coinbase，不應被標為「簽名驗證失敗」。
+	// TestLedgerAudit_SystemGovTxNoSig v55 回歸：治理系統交易（memo=gov:treasury:N）
+	// 由出塊引擎依治理決議自動建單、無簽名——語意同 coinbase，不應被標為「簽名驗證失敗」。
+}
 func TestLedgerAudit_SystemGovTxNoSig(t *testing.T) {
 	aliceKP, _ := crypto.GenerateKeyPair()
 	alice := m71Addr(t, aliceKP)
@@ -289,11 +290,11 @@ func TestLedgerAudit_SystemGovTxNoSig(t *testing.T) {
 	if la.OK == false {
 		t.Fatalf("含治理系統交易的鏈應通過審計: %+v", la)
 	}
-}
 
-// TestLedgerAudit_LegacyContractNoGas v55 回歸：舊格式合約 memo（vm:deploy:<hex>，
-// 無 gas 段）gas 天然為 0——屬早期合法格式，不應被標為「合約 gas 為 0」。
-// 帶 gas 段的新格式若 gas=0 仍必須抓出（保留原資源治理檢查）。
+	// TestLedgerAudit_LegacyContractNoGas v55 回歸：舊格式合約 memo（vm:deploy:<hex>，
+	// 無 gas 段）gas 天然為 0——屬早期合法格式，不應被標為「合約 gas 為 0」。
+	// 帶 gas 段的新格式若 gas=0 仍必須抓出（保留原資源治理檢查）。
+}
 func TestLedgerAudit_LegacyContractNoGas(t *testing.T) {
 	aliceKP, _ := crypto.GenerateKeyPair()
 	alice := m71Addr(t, aliceKP)
@@ -321,4 +322,5 @@ func TestLedgerAudit_LegacyContractNoGas(t *testing.T) {
 	if la.OK {
 		t.Fatal("含 gas=0 新格式合約的鏈不應 OK")
 	}
+
 }

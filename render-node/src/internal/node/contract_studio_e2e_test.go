@@ -73,17 +73,25 @@ func contractStudioSetup(t *testing.T) (*Node, *httptest.Server, string) {
 	}
 	alice, _ := aliceKP.Address()
 	insertGenesisWithAlloc(t, n, alice)
-	n.Start()
-	srv := httptest.NewServer(NewRPCServer(n).mux)
-	t.Cleanup(func() {
-		srv.Close()
-		_ = n.Close()
-	})
 	// 節點金鑰地址（代簽發行者）。
 	admin, err := n.keypair.Address()
 	if err != nil {
 		t.Fatal(err)
 	}
+	n.Start()
+	// 等待創世分配同步進錢包帳本（代幣發行需 100 TACm），避免 Start() 後立即部署的啟動競態。
+	waitFor(t, func() bool {
+		acc, berr := n.Wallet().Balance(admin)
+		if berr != nil || acc == nil {
+			return false
+		}
+		return acc.TACmBalance.Cmp(big.NewInt(100)) >= 0
+	}, 10*time.Second, "創世分配同步進錢包帳本")
+	srv := httptest.NewServer(NewRPCServer(n).mux)
+	t.Cleanup(func() {
+		srv.Close()
+		_ = n.Close()
+	})
 	return n, srv, admin
 }
 
@@ -92,7 +100,7 @@ func TestContractStudioDeployAndQuery(t *testing.T) {
 
 	// 1. 發行代幣。
 	out := studioPostJSON(t, srv, "/contract/deploy", map[string]any{
-		"name": "MyToken", "symbol": "TAC", "supply": "1000000",
+		"name": "MyToken", "symbol": "TAC", "supply": "1000000", "from": admin,
 	})
 	if out["ok"] != true {
 		t.Fatalf("部署失敗: %v", out)
@@ -159,7 +167,7 @@ func TestContractStudioTransferOnChain(t *testing.T) {
 
 	// 發行 1000000 TAC。
 	out := studioPostJSON(t, srv, "/contract/deploy", map[string]any{
-		"name": "TAC Gold", "symbol": "TG", "supply": "1000000",
+		"name": "TAC Gold", "symbol": "TG", "supply": "1000000", "from": admin,
 	})
 	contractAddr := out["contract_address"].(string)
 	contract0x, _ := tx0To0x(contractAddr)
@@ -226,7 +234,7 @@ func TestContractStudioERC20Convenience(t *testing.T) {
 	n, srv, admin := contractStudioSetup(t)
 
 	out := studioPostJSON(t, srv, "/contract/deploy", map[string]any{
-		"name": "Convenience", "symbol": "CV", "supply": "5000",
+		"name": "Convenience", "symbol": "CV", "supply": "5000", "from": admin,
 	})
 	if out["ok"] != true {
 		t.Fatalf("部署失敗: %v", out)
@@ -271,12 +279,12 @@ func TestContractStudioERC20Convenience(t *testing.T) {
 
 // TestContractStudioGasLimit 驗證 M48 RPC gas_limit：正常值入塊、過小被模擬拒絕。
 func TestContractStudioGasLimit(t *testing.T) {
-	n, srv, _ := contractStudioSetup(t)
+	n, srv, admin := contractStudioSetup(t)
 	defer func() { _ = n.Close() }()
 
 	// 1. gas_limit=5000000 正常部署入塊。
 	out := studioPostJSON(t, srv, "/contract/deploy", map[string]any{
-		"name": "GasCoin", "symbol": "GAS", "supply": "500000",
+		"name": "GasCoin", "symbol": "GAS", "supply": "500000", "from": admin,
 		"gas_limit": 5000000,
 	})
 	if out["ok"] != true {
@@ -453,13 +461,13 @@ func TestGovernanceVoteViaRPC(t *testing.T) {
 	if vd.Power < 99.9 || vd.Power > 100.1 {
 		t.Fatalf("投票權重應為 100，得 %v", vd.Power)
 	}
-}
 
 // M151c-v2 死鎖回歸：param 提案通過→applyFn（內部重入 g.Config/SetConfig）不死鎖。
 // 線上事故：TallyAndExecute 曾於持 g.mu.Lock() 下呼叫 applyGovernanceParam，
 // 其內部再呼叫 g.Config()（RLock）與 g.SetConfig()（Lock）→ 同 goroutine 重入
 // 互鎖 → 出塊引擎卡死、鏈停止出塊、proposals 端點掛起。重構為三階段
 // （持鎖讀取→釋鎖執行→持鎖寫回）後，此測試必須在時限內完成且端點可查。
+}
 func TestGovernanceParamApplyNoDeadlock(t *testing.T) {
 	n, srv, admin := contractStudioSetup(t)
 	// 注資提案人權重（錢包餘額＝投票權重）。

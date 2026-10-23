@@ -2,7 +2,7 @@
 {% block title %}TAC Community · Feed{% endblock %}
 {% block content %}
 <style>
-  /* M31：社群採 Facebook 淺色風（背景去深色） */
+  /* M31：社群採淺色（背景去深色） */
   body { background: #f0f2f5; color: #1c1e21; }
   .container { background: transparent; }
   .footer { background: #fff; border-top-color: #dddfe2; color: #65676b; }
@@ -185,7 +185,7 @@
       <div class="cm-card">
         <h3><svg viewBox="0 0 24 24" style="width:16px;height:16px;vertical-align:-3px;stroke:#1877f2;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;margin-right:6px"><circle cx="12" cy="8" r="4"/><path d="M4 21 C4 16 7.5 13.5 12 13.5 C16.5 13.5 20 16 20 21"/></svg>我的身份</h3>
         <div class="cm-id">
-          <input id="myAddr" placeholder="enter wallet address..." value="">
+          <input id="myAddr" placeholder="enter wallet address..." value="" readonly title="以錢包中心為準">
           <button onclick="setIdentity()">切換</button>
         </div>
         <p style="font-size:12px;color:#65676b;margin:0;line-height:1.6">社群身分＝TAC 錢包地址（tx0 開頭）。發文、按讚、留言、市集與廣告皆以該地址記錄。</p>
@@ -202,7 +202,7 @@
       <div class="cm-card" style="margin-top:12px">
         <h3><svg viewBox="0 0 24 24" style="width:16px;height:16px;vertical-align:-3px;stroke:#f0b90b;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;margin-right:6px"><path d="M12 3 L14.2 8.6 L20 9 L15.6 12.7 L17.2 18.6 L12 15.4 L6.8 18.6 L8.4 12.7 L4 9 L9.8 8.6 Z"/></svg>互動積分與鏈上獎勵</h3>
         <div class="cm-id">
-          <input id="rewardAddr" placeholder="wallet address" value="">
+          <input id="rewardAddr" placeholder="wallet address" value="" readonly title="以錢包中心為準">
           <button onclick="loadRewards()">查詢</button>
         </div>
         <p class="cm-reward-line" id="myPts">—</p>
@@ -329,6 +329,8 @@
   </div>
 </div>
 
+<!-- 社群統一權威地址（比照交易所 v160 錢包中心）：cmResolveAddr / cmBindAddr -->
+<script src="/static/js/community-wallet.js"></script>
 <script>
 // M95：首頁＝全部動態牆；底部導航跳獨立頁（影片/好友/通知/個人）。
 function tabFeed(t){
@@ -358,9 +360,14 @@ function post(p,b){ return fetch(p, {method:'POST', headers:{'Content-Type':'app
 var me = '';
 function shortAddr(a){ if(!a) return '—'; if(a.length<=16) return a; return a.slice(0,10)+'…'+a.slice(-6); }
 function timeAgo(ts){ var d=Date.now()/1000-ts; if(d<60) return '剛剛'; if(d<3600) return Math.floor(d/60)+' 分鐘前'; if(d<86400) return Math.floor(d/3600)+' 小時前'; return Math.floor(d/86400)+' 天前'; }
-function setIdentity(){ me = document.getElementById('myAddr').value.trim(); localStorage.setItem('cm_id', me); refresh(); }
+// 身分＝權威地址（錢包中心為準）；手動輸入框唯讀，「切換」僅重新向權威來源同步。
+function setIdentity(){ cmBindAddr({input:'#myAddr', onResolve:function(a){ me=a; syncRewards(); refresh(); }}); }
 function ensureMe(){
-  refreshAva(); if(!me){ me=(localStorage.getItem('cm_id')||TAC_TE('')); document.getElementById('myAddr').value=me; if(!me){ document.getElementById('postMsg').textContent='請先輸入你的錢包地址（tx0 開頭）'; return false; } } return true; }
+  refreshAva();
+  if(!me){ me = window.cmAddr || ''; document.getElementById('myAddr').value=me; }
+  if(!me){ document.getElementById('postMsg').textContent = TAC_TE('請先於錢包中心選擇錢包地址（tx0 開頭）'); return false; }
+  return true;
+}
 
 function renderFeed(fd){
   var items = (fd.items||[]).filter(function(p){ return p.kind!=='market'; });
@@ -469,10 +476,11 @@ function loadFeed(){
   var q = scope==='following' ? '?scope=following&address='+encodeURIComponent(me||'') : '';
   return get('/api/community/feed'+q);
 }
-// M73-B：我的積分／排行／結算。
+// M73-B：我的積分／排行／結算。地址＝權威地址（me），打賞/收款框同步顯示但不另採。
+function syncRewards(){ var ra=document.getElementById('rewardAddr'); if(ra) ra.value=me||''; }
 function loadRewards(){
-  var addr = document.getElementById('rewardAddr').value.trim() || me || (localStorage.getItem('cm_id')||'');
-  if(!addr){ alert(TAC_TE('請先輸入錢包地址')); return; }
+  var addr = me || '';
+  if(!addr){ return; }
   get('/api/community/rewards?address='+encodeURIComponent(addr)).then(function(d){
     document.getElementById('myPts').textContent = TAC_TE('我的積分：') + d.my_points + ' 分';
     var nb = d.my_points || 0;
@@ -729,11 +737,11 @@ function refresh(){
     }).catch(function(e){ document.getElementById('postMsg').textContent='社群資料載入失敗（'+base+'）：'+e; });
 }
 
-get('/status').then(function(st){
-  if(!localStorage.getItem('cm_id')){ me = st.address||''; document.getElementById('myAddr').value=me; }
-  else { me = localStorage.getItem('cm_id'); document.getElementById('myAddr').value=me; }
-  refresh();
-}).catch(function(){ refresh(); });
+// 進頁解析權威地址（錢包中心優先）；不再以 /status 節點地址自動填入。
+cmBindAddr({
+  input: '#myAddr',
+  onResolve: function(addr){ me = addr; document.getElementById('myAddr').value = addr; syncRewards(); refresh(); }
+});
 
 function editPost(id){
   var txt = prompt(TAC_TE('編輯貼文內容：'), '');

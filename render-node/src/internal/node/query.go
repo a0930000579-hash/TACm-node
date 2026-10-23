@@ -43,7 +43,7 @@ func (n *Node) GetStatus() Status {
 	dist := n.distributed
 	n.mu.Unlock()
 	// M149m-6：共識標識——TACm 為 PoT（時間權證）＋ PoS（質押）永續雙共識
-	// （時間挖礦 30%＋PoS 40%＋在線時長 30%），不具真實 PoW 算力。
+	// （時間挖礦 30%＋PoS 40%＋在線時長 30%），不具真實 PoT 算力。
 	consensus := "tacm_pot_pos"
 	if dist {
 		consensus = "tacm_pot_pos_bft"

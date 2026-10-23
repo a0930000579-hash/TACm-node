@@ -2,7 +2,7 @@
 {% block title %}TAC Community · Friends{% endblock %}
 {% block content %}
 <style>
-  /* M95：好友頁（FB 風：你的朋友／追蹤你的人／建議，全亮色） */
+  /* M95：好友頁（你的朋友／追蹤你的人／建議，全亮色） */
   body{background:#f0f2f5;color:#1c1e21;margin:0}
   .topbar,.footer,.bottom-nav{display:none!important}
   .fr-wrap{max-width:480px;margin:0 auto;padding:0 0 72px}
@@ -45,7 +45,7 @@
   </div>
 
   <div class="fr-id">
-    <input id="myAddr" placeholder="enter wallet address (tx0)…" value="">
+    <input id="myAddr" placeholder="enter wallet address (tx0)…" value="" readonly title="以錢包中心為準">
     <button onclick="setMe()" data-i18n="cm.switch">切換</button>
   </div>
   <div class="fr-online"><i></i><span><b id="onlineN">0</b> <span data-i18n="cm.online">人在線</span></span></div>
@@ -73,13 +73,15 @@
   <a href="/community/profile"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21 C4 16 7.5 13.5 12 13.5 C16.5 13.5 20 16 20 21"/></svg><span data-i18n="cm.me">個人</span></a>
 </nav>
 
+<!-- 社群統一權威地址（比照交易所 v160 錢包中心） -->
+<script src="/static/js/community-wallet.js"></script>
 <script>
 function get(p){ return fetch(p).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); }); }
 function post(p,b){ return fetch(p, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(b||{})}).then(function(r){ if(!r.ok) return r.json().then(function(j){throw new Error(j.error||r.status)}); return r.json(); }); }
-var me = (localStorage.getItem('cm_id')||'');
+var me = '';
 function shortAddr(a){ if(!a) return '—'; if(a.length<=16) return a; return a.slice(0,10)+'…'+a.slice(-6); }
-function setMe(){ me = document.getElementById('myAddr').value.trim(); localStorage.setItem('cm_id', me); load(); }
-document.getElementById('myAddr').value = me;
+// 身分＝權威地址（錢包中心為準）；手動框唯讀，「切換」僅重新向權威來源同步。
+function setMe(){ cmBindAddr({input:'#myAddr', onResolve:function(a){ me=a; load(); }}); }
 
 function card(addr, sub, isFollowing){
   return '<div class="fr-card"><div class="fr-ava">'+(addr||'?').slice(0,1).toUpperCase()+'</div>'+
@@ -113,6 +115,10 @@ function load(){
     elS.innerHTML = sug.length ? sug.map(function(a){ return card(a, TAC_TE('可能認識的朋友'), false); }).join('') : '<div class="fr-empty">'+TAC_TE('暫無建議')+'</div>';
   }).catch(function(e){ alert('載入失敗：'+e); });
 }
-window.addEventListener('DOMContentLoaded', load);
+// 進頁解析權威地址（錢包中心優先），不再以 cm_id 手動框為身分來源。
+cmBindAddr({
+  input: '#myAddr',
+  onResolve: function(addr){ me = addr; load(); }
+});
 </script>
 {% endblock %}

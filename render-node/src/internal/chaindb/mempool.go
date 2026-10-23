@@ -298,21 +298,46 @@ func (c *ChainDB) GetPeers(onlineOnly bool) ([]*Peer, error) {
 
 // GetMempoolPending 返回「可打包佇列」：每個地址從其鏈上 nonce 起連續取
 // （nonce gap 之後的交易跳過，留待前序交易入塊後再打包）；同一 nonce 多筆
-// 只保留 fee 最高者；地址之間按「隊首最高 fee」降序輪流，兼顧收費與公平。
-// 輸出順序即為區塊打包順序（produceBlock 直接使用）。
+// 只保留 fee 最高者；地址之間按「隊首有效小費」降序輪流（預設 PriorityTip）。
+// 輸出順序即為區塊打包順序。
+//
+// 向後相容包裝：以 baseFee=0、預設策略委派至 GetMempoolPendingSorted。
+// legacy 交易（無 max_fee/priority_fee）的有效小費即總 fee，故舊呼叫方
+// （eth_filter pending RPC、既有測試）行為完全不變。
 func (c *ChainDB) GetMempoolPending(limit int) ([]map[string]any, error) {
+	return c.GetMempoolPendingSorted(limit, 0, PackPriorityTip)
+}
+
+// GetMempoolPendingSorted 是可打包佇列的策略化版本（MEV/優先費打包排序）。
+//
+// 與 GetMempoolPending 相同的佇列構造語義（逐字不變）：
+//   - 每地址從鏈上 nonce（GetNonce）起連續取，nonce gap 之後截斷；
+//   - 同一 nonce 多筆只保留「總 fee 最高」者（feeOf 覆蓋）；
+//
+// 唯一差異：地址間「輪流出一筆」的選擇鍵由「隊首總 fee」改為
+// 「隊首交易在給定 baseFee 與 strategy 下的有效小費／策略排序鍵」，
+// 並附確定性 tie-break（鍵相同→received_at 早→tx_hash 字典序），
+// 保證所有節點打包順序一致（共識確定性）。
+//
+// baseFee 為本塊 EIP-1559 基礎價（TACm/gas）；legacy 交易與 baseFee 無關。
+func (c *ChainDB) GetMempoolPendingSorted(limit int, baseFee float64, strategy PackStrategy) ([]map[string]any, error) {
 	rows, err := c.db.Query(
-		"SELECT tx_hash, payload, signature FROM mempool ORDER BY CAST(fee AS REAL) DESC")
+		"SELECT tx_hash, payload, signature, received_at FROM mempool ORDER BY CAST(fee AS REAL) DESC")
 	if err != nil {
 		return nil, fmt.Errorf("chaindb: 讀內存池失敗: %w", err)
 	}
 	defer rows.Close()
 
 	// 按地址 → nonce → 交易（同 nonce 高 fee 覆蓋低 fee）。
-	byAddr := make(map[string]map[int64]map[string]any)
+	type memRow struct {
+		tx   map[string]any
+		recv int64
+	}
+	byAddr := make(map[string]map[int64]memRow)
 	for rows.Next() {
 		var txHash, payload, signature string
-		if err := rows.Scan(&txHash, &payload, &signature); err != nil {
+		var recv int64
+		if err := rows.Scan(&txHash, &payload, &signature, &recv); err != nil {
 			return nil, err
 		}
 		var tx map[string]any
@@ -328,50 +353,49 @@ func (c *ChainDB) GetMempoolPending(limit int) ([]map[string]any, error) {
 		}
 		m, ok := byAddr[from]
 		if !ok {
-			m = make(map[int64]map[string]any)
+			m = make(map[int64]memRow)
 			byAddr[from] = m
 		}
 		cur, ok := m[nonce]
-		if !ok || feeOf(cur) < feeOf(tx) {
-			m[nonce] = tx
+		if !ok || feeOf(cur.tx) < feeOf(tx) {
+			m[nonce] = memRow{tx: tx, recv: recv}
 		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 
 	// 每地址：從鏈上 nonce 起連續構建可執行列表（gap 截斷）。
-	type addrQueue struct {
-		addr  string
-		start int64 // 該地址鏈上 nonce（GetNonce 含 pending 佔用，見 read.go）
-		txs   []map[string]any
-	}
-	var queues []*addrQueue
+	var queues [][]memRow
 	for addr, m := range byAddr {
-		q := &addrQueue{addr: addr, start: c.GetNonce(addr)}
-		n := q.start
-		for {
-			tx, ok := m[n]
+		start := c.GetNonce(addr)
+		var q []memRow
+		for n := start; ; n++ {
+			r, ok := m[n]
 			if !ok {
 				break // nonce gap：其後交易暫不可打包
 			}
-			q.txs = append(q.txs, tx)
-			n++
+			q = append(q, r)
 		}
-		if len(q.txs) > 0 {
+		if len(q) > 0 {
 			queues = append(queues, q)
 		}
 	}
 
-	// 地址輪流：每次取「隊首 fee 最高」的地址出一筆（公平＋高費優先）。
+	// 地址輪流：每次取「隊首排序鍵最佳」的地址出一筆（確定性 tie-break）。
 	out := make([]map[string]any, 0, limit)
 	for len(queues) > 0 && len(out) < limit {
 		best := 0
+		bestKey := sortKeyFor(queues[best][0].tx, queues[best][0].recv, baseFee, strategy)
 		for i := 1; i < len(queues); i++ {
-			if feeOf(queues[i].txs[0]) > feeOf(queues[best].txs[0]) {
-				best = i
+			k := sortKeyFor(queues[i][0].tx, queues[i][0].recv, baseFee, strategy)
+			if k.betterThan(bestKey) {
+				best, bestKey = i, k
 			}
 		}
-		out = append(out, queues[best].txs[0])
-		queues[best].txs = queues[best].txs[1:]
-		if len(queues[best].txs) == 0 {
+		out = append(out, queues[best][0].tx)
+		queues[best] = queues[best][1:]
+		if len(queues[best]) == 0 {
 			queues = append(queues[:best], queues[best+1:]...)
 		}
 	}

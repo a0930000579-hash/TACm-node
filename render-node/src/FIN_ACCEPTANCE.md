@@ -7,9 +7,9 @@
 | # | 區塊鏈要件 | TAC 實作 | 驗證證據 |
 |---|---|---|---|
 | 1 | 密碼學簽章 | secp256k1（btcec/v2）、tx0 地址、WIF、雙 SHA-256 | crypto 包 12 測試；M0 測試向量 |
-| 2 | 共識機制 | PoW（動態難度、降級重試）＋ BFT 最終性（多數認證 view-change） | bft/pos/difficulty 3 包 9 測試；VC 冒煙「3/4 多數認證接管、無分叉」PASS |
+| 2 | 共識機制 | PoT（動態難度、降級重試）＋ BFT 最終性（多數認證 view-change） | bft/pos/difficulty 3 包 9 測試；VC 冒煙「3/4 多數認證接管、無分叉」PASS |
 | 3 | 去中心化 | P2P 多節點（4 節點分布式網）、區塊廣播、交易池 | distributed 網正常啟動；node e2e 全綠 |
-| 4 | 不可篡改 | 區塊 hash 鏈 + Merkle 根、PoW 工作量 | chaindb/crypto 測試；冒煙出塊驗證 |
+| 4 | 不可篡改 | 區塊 hash 鏈 + Merkle 根、PoT 工作量 | chaindb/crypto 測試；冒煙出塊驗證 |
 | 5 | 智能合約 | EVM 相容 VM（部署/調用/儲存） | vm 包 4 測試；/contract/* RPC |
 | 6 | 擴展性 | L2 Rollup（批處理、狀態樹、欺詐證明）＋ L1 提交 | rollup 包 6 測試；/l2/* RPC |
 | 7 | 跨鏈互通 | 跨鏈橋（lock-mint 狀態機、多簽、SPV 輕客戶端） | bridge/spv 2 包 9 測試；/bridge/* RPC |

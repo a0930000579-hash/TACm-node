@@ -25,13 +25,9 @@ func (n *Node) syncChainAccount(tx0addr string) error {
 }
 
 // executeBlockContracts 在區塊插入後執行其中的合約交易（部署/調用）。
+// 實作委派至 executeBlockContractsParallel：連續合格 vm:call 並行、其餘串行。
 func (n *Node) executeBlockContracts(txs []chaindb.Transaction) error {
-	for i := range txs {
-		if err := n.applyContractTx(&txs[i], true); err != nil {
-			return err
-		}
-	}
-	return nil
+	return n.executeBlockContractsParallel(txs)
 }
 
 // splitContractMemo 解析合約 memo：支援 vm:deploy:<gas>:<hex> / vm:call:<gas>:<hex>

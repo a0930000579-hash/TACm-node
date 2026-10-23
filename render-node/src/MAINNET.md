@@ -13,7 +13,7 @@
 | 網路 | `mainnet` |
 | 供應上限 | **52,003,300 TACm**（鏈上強制，coinbase 超過即停） |
 | 穩定幣 | TiUSD（最低流通＝總供應 0.330 倍，按市值增發/銷毀） |
-| 共識 | PoW 出塊（動態難度）＋BFT 最終性＋view change |
+| 共識 | PoT 出塊（動態難度）＋BFT 最終性＋view change |
 | 地址格式 | `tx01...`（secp256k1） |
 | 合約 | VM（`vm:deploy:<gas>:<hex>`，gas 1..10,000,000 治理上限） |
 | 預設端口 | Web/RPC 共用 `8080`、P2P 端點 `http://<IP>:8080/p2p/` |

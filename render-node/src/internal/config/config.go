@@ -29,21 +29,26 @@ type Config struct {
 	EnableBridge bool // 啟用跨鏈橋（Lock & Mint / Burn & Unlock）
 
 	GenesisValidators string // 創世驗證人：nodeID:address:pubkey:power，逗號分隔
+
+	// PackStrategy 區塊打包排序策略：priority_tip（預設，EIP-1559 優先小費降序）、
+	// gas_usage（高 gas 利用率優先）、fifo（先到先服務）。由環境變量 TACM_PACK_STRATEGY 設定。
+	PackStrategy string
 }
 
 // Default 返回帶有安全默認值的配置。
 func Default() *Config {
 	return &Config{
-		ChainID:   "tacm-mainnet-1",
-		Network:   "mainnet",
-		BlockTime: 60,
-		RPCHost:   "0.0.0.0",
-		RPCPort:   8545,
-		P2PPort:   9001,
-		DataDir:   "./data",
-		LogDir:    "./logs",
-		LogLevel:  "info",
-		AddrHRP:   "tx0",
+		ChainID:      "tacm-mainnet-1",
+		Network:      "mainnet",
+		BlockTime:    60,
+		RPCHost:      "0.0.0.0",
+		RPCPort:      8545,
+		P2PPort:      9001,
+		DataDir:      "./data",
+		LogDir:       "./logs",
+		LogLevel:     "info",
+		AddrHRP:      "tx0",
+		PackStrategy: "priority_tip",
 	}
 }
 
@@ -82,6 +87,8 @@ func Load() (*Config, error) {
 	}
 	c.GenesisValidators = envStr("GENESIS_VALIDATORS", c.GenesisValidators)
 
+	c.PackStrategy = strings.ToLower(strings.TrimSpace(envStr("TACM_PACK_STRATEGY", c.PackStrategy)))
+
 	if err := c.Validate(); err != nil {
 		return nil, err
 	}
@@ -109,6 +116,11 @@ func (c *Config) Validate() error {
 	}
 	if c.AddrHRP == "" {
 		return fmt.Errorf("config: 地址前綴不能為空")
+	}
+	switch c.PackStrategy {
+	case "priority_tip", "gas_usage", "fifo":
+	default:
+		return fmt.Errorf("config: 非法 pack_strategy %q（僅允許 priority_tip/gas_usage/fifo）", c.PackStrategy)
 	}
 	return nil
 }

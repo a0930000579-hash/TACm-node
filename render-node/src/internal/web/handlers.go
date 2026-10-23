@@ -453,7 +453,7 @@ func (s *Server) handleExchangePage(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// handleMining GET /mining — 挖礦中心：節點/出塊/PoW/coinbase 分潤/獎勵池/驗證人。
+// handleMining GET /mining — 挖礦中心：節點/出塊/PoT/coinbase 分潤/獎勵池/驗證人。
 // 實時數據由前端直接讀取節點 RPC（與 exchange 頁一致：?rpc= 可覆蓋）。
 func (s *Server) handleMining(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "mining.html", pongo2.Context{})

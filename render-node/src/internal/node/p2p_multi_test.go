@@ -82,7 +82,15 @@ func startFullNodeHbEnc(t *testing.T, id string, bootstrap []string, follower bo
 	} else {
 		n.Start()
 	}
-	return &fullNode{n: n, url: url, srv: srv}
+
+	t.Cleanup(func() {
+		netw.Close()
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		_ = srv.Shutdown(ctx)
+		_ = n.Close()
+	})
+	return &fullNode{n: n, net: netw, url: url, srv: srv}
 }
 
 // startFullNodeHb 同 startFullNode，但可注入礦工心跳間隔（hbInterval>0 時），
@@ -169,9 +177,9 @@ func TestP2PBlockGossip(t *testing.T) {
 	waitHeight(t, A.n, 4, 12*time.Second)
 	waitHeight(t, B.n, 3, 12*time.Second)
 	waitHeight(t, C.n, 3, 12*time.Second)
-}
 
-// 交易 gossip：提交到跟隨節點 B 的交易，轉發到出塊節點 A 打包，全網賬本一致。
+	// 交易 gossip：提交到跟隨節點 B 的交易，轉發到出塊節點 A 打包，全網賬本一致。
+}
 func TestP2PTransactionGossip(t *testing.T) {
 	aliceKP, err := crypto.GenerateKeyPair()
 	if err != nil {
@@ -205,9 +213,9 @@ func TestP2PTransactionGossip(t *testing.T) {
 	waitBalance(t, A.n, bob, 50, 15*time.Second)
 	waitBalance(t, B.n, bob, 50, 15*time.Second)
 	waitBalance(t, C.n, bob, 50, 15*time.Second)
-}
 
-// 晚啟動節點通過主動同步追平網絡。
+	// 晚啟動節點通過主動同步追平網絡。
+}
 func TestP2PLateSync(t *testing.T) {
 	A := startFullNode(t, "nodeA", nil, false, "")
 	waitHeight(t, A.n, 6, 12*time.Second)
@@ -225,11 +233,11 @@ func TestP2PLateSync(t *testing.T) {
 	if ab.Hash != db2.Hash {
 		t.Errorf("同步後高度 6 哈希不一致: %s vs %s", ab.Hash, db2.Hash)
 	}
-}
 
-// TestP2PLedgerConsistency：錨點出塊（coinbase 鏈上瓜分給開機礦工）+ follower 晚同步後，
-// 兩節點的鏈上帳本（區塊、礦工餘額、獎勵池、節點地址、錢包視角、全鏈總產出）必須完全一致。
-// 對應「全網數據必須由鏈上同一份數據決定、任何入口看到都相同」的一致性要求。
+	// TestP2PLedgerConsistency：錨點出塊（coinbase 鏈上瓜分給開機礦工）+ follower 晚同步後，
+	// 兩節點的鏈上帳本（區塊、礦工餘額、獎勵池、節點地址、錢包視角、全鏈總產出）必須完全一致。
+	// 對應「全網數據必須由鏈上同一份數據決定、任何入口看到都相同」的一致性要求。
+}
 func TestP2PLedgerConsistency(t *testing.T) {
 	anchor := startFullNode(t, "anchor", nil, false, "")
 	st := anchor.n.Wallet().Store()
@@ -334,12 +342,12 @@ func TestP2PLedgerConsistency(t *testing.T) {
 	if want := new(big.Int).Mul(perBlock, big.NewInt(syncedF)); fm2.Cmp(want) != 0 {
 		t.Fatalf("follower 總產出≠已同步高度×10: %s vs %d×10", fm2, syncedF)
 	}
-}
 
-// TestFollowerMinerOnChain：M60「開機狀態上鏈」核心場景——在 follower 端註冊並開機的礦工，
-// 透過鏈上 hb:on 交易（follower 代簽廣播）讓錨點出塊時把它算入 coinbase 瓜分；
-// 同步後兩節點的「鏈上在線礦工視角」、礦工餘額完全一致——對應「節點上有 1 個礦工＋
-// 錨點上有 3 個礦工＝全網 4 個礦工、任何入口看到總人數一致」。
+	// TestFollowerMinerOnChain：M60「開機狀態上鏈」核心場景——在 follower 端註冊並開機的礦工，
+	// 透過鏈上 hb:on 交易（follower 代簽廣播）讓錨點出塊時把它算入 coinbase 瓜分；
+	// 同步後兩節點的「鏈上在線礦工視角」、礦工餘額完全一致——對應「節點上有 1 個礦工＋
+	// 錨點上有 3 個礦工＝全網 4 個礦工、任何入口看到總人數一致」。
+}
 func TestFollowerMinerOnChain(t *testing.T) {
 	anchor := startFullNode(t, "anc", nil, false, "")
 	f := startFullNode(t, "fol", []string{anchor.url}, true, "")
@@ -399,12 +407,12 @@ func TestFollowerMinerOnChain(t *testing.T) {
 	if aTotal2 != 0 || fTotal2 != 0 {
 		t.Fatalf("關機後仍顯示在線: anchor=%d follower=%d", aTotal2, fTotal2)
 	}
-}
 
-// TestFollowerMinerAutoRefresh：M61 核心回歸——follower（Render -p2p-follower）模式下，
-// 使用者經 /api/miner/start 開機後「不再做任何操作」，minerHeartbeatLoop 也必須自動週期
-// 續發 hb:on 上鏈。修正前 follower 不跑循環，首筆 hb:on 在 hbWindow 塊窗口後過期、
-// 礦工無聲下線（前端卻仍顯示挖礦中）。
+	// TestFollowerMinerAutoRefresh：M61 核心回歸——follower（Render -p2p-follower）模式下，
+	// 使用者經 /api/miner/start 開機後「不再做任何操作」，minerHeartbeatLoop 也必須自動週期
+	// 續發 hb:on 上鏈。修正前 follower 不跑循環，首筆 hb:on 在 hbWindow 塊窗口後過期、
+	// 礦工無聲下線（前端卻仍顯示挖礦中）。
+}
 func TestFollowerMinerAutoRefresh(t *testing.T) {
 	anchor := startFullNode(t, "anc", nil, false, "")
 	// follower 注入 1.5s 心跳間隔（略慢於 1s 出塊，保持至多約 1 筆未打包，貼近生產的 nonce 時序）。
@@ -464,4 +472,5 @@ func TestFollowerMinerAutoRefresh(t *testing.T) {
 	if bal <= 0 {
 		t.Fatal("礦工未持續收到瓜分")
 	}
+
 }

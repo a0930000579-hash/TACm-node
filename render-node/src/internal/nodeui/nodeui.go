@@ -5,7 +5,9 @@
 package nodeui
 
 import (
+	"crypto/sha256"
 	"embed"
+	"encoding/hex"
 	"encoding/json"
 	"io/fs"
 	"log"
@@ -94,15 +96,20 @@ func New(n *node.Node, mainnetURL, nodeID string) *Server {
 	mux.HandleFunc("GET /api/peers", s.handlePeers)
 	mux.HandleFunc("GET /api/validators", s.handleValidators)
 	mux.HandleFunc("GET /api/blocks", s.handleBlocks)
+	// P0 快速狀態同步（snap/warp）：Render 部署用 nodeweb，種子節點必須提供狀態快照導出，
+	// 新節點經 -snapshot-url 下載後秒級落點，無需自創世逐塊重放。與 tacweb（internal/web）
+	// 的 /api/snapshot 協議一致（含 X-Snapshot-SHA256 校驗頭）。
+	mux.HandleFunc("GET /api/snapshot", s.handleSnapshot)
+	mux.HandleFunc("GET /api/snapshot/info", s.handleSnapshotInfo)
 	// M148：節點架設者面板（綁定收款地址／節點獎勵查詢／提領轉入 tac web3 錢包）。
 	mux.HandleFunc("GET /node-panel", s.handleNodePanel)
 	mux.HandleFunc("GET /api/node/panel", s.handleNodePanelAPI)
 	mux.HandleFunc("POST /api/node/setup", s.handleNodeSetupAPI)
 	mux.HandleFunc("POST /api/node/bind", s.handleNodeBindAPI)
 	mux.HandleFunc("POST /api/node/withdraw", s.handleNodeWithdrawAPI)
-	mux.HandleFunc("POST /api/node/stake", s.handleNodeStakeAPI) // M149m 質押成為驗證人
+	mux.HandleFunc("POST /api/node/stake", s.handleNodeStakeAPI)         // M149m 質押成為驗證人
 	mux.HandleFunc("POST /api/node/bootstrap", s.handleNodeBootstrapAPI) // M149m-2 節點引導獎勵
-	mux.HandleFunc("POST /api/node/register", s.handleNodeRegisterAPI) // M149m-9 PoT 節點註冊
+	mux.HandleFunc("POST /api/node/register", s.handleNodeRegisterAPI)   // M149m-9 PoT 節點註冊
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(mustSub(assets, "static")))))
 	// v71：下載中心——Render/任何節點都可提供 nodeweb/install-node.sh（繞過主鏈外部 502）。
 	// v71：下載中心——Render/任何節點都可提供 nodeweb/install-node.sh（繞過主鏈外部 502）。
@@ -282,5 +289,44 @@ func writeJSON(w http.ResponseWriter, v any) {
 	w.Header().Set("Cache-Control", "no-store")
 	if err := json.NewEncoder(w).Encode(v); err != nil {
 		log.Printf("[nodeui] encode: %v", err)
+	}
+}
+
+// handleSnapshotInfo GET /api/snapshot/info — 快照元資訊（輕量，不帶帳戶資料）。
+// 與 internal/web 的同名端點欄位一致，便於 join 頁/部署腳本在兩種 binary 上通用。
+func (s *Server) handleSnapshotInfo(w http.ResponseWriter, r *http.Request) {
+	sd, err := s.n.ExportSnapshot()
+	if err != nil {
+		writeJSON(w, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	writeJSON(w, map[string]any{
+		"ok":           true,
+		"version":      sd.Version,
+		"height":       sd.Height,
+		"genesis_hash": sd.GenesisHash,
+		"tip_hash":     sd.TipHash,
+	})
+}
+
+// handleSnapshot GET /api/snapshot — 導出狀態快照（供新節點 -snapshot-url 導入）。
+// 回應帶 X-Snapshot-SHA256，導入端下載後重算比對，防傳輸損壞/竄改；與 tacweb 端點協議一致。
+func (s *Server) handleSnapshot(w http.ResponseWriter, r *http.Request) {
+	sd, err := s.n.ExportSnapshot()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	raw, err := json.Marshal(sd)
+	if err != nil {
+		http.Error(w, "snapshot: marshal 失敗", http.StatusInternalServerError)
+		return
+	}
+	sum := sha256.Sum256(raw)
+	w.Header().Set("X-Snapshot-SHA256", hex.EncodeToString(sum[:]))
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	if _, err := w.Write(raw); err != nil {
+		log.Printf("[nodeui] snapshot write: %v", err)
 	}
 }

@@ -99,6 +99,14 @@ type Param struct {
 // ApplyFunc 提案通過後的參數執行回調（由節點註冊，決定如何套用變更）。
 type ApplyFunc func(key, value string) error
 
+// Delegation 治理委託紀錄：delegator 把投票權委託給 delegatee。
+type Delegation struct {
+	Delegator string `json:"delegator"`
+	Delegatee string `json:"delegatee"`
+	Height    int64  `json:"height"`
+	TxHash    string `json:"tx_hash"`
+}
+
 // Governance 治理管理器（Goroutine 安全）。
 type Governance struct {
 	db       *sql.DB
@@ -125,7 +133,7 @@ func New(path string) (*Governance, error) {
 		db: db,
 		paramDef: []Param{
 			{Key: "block_time", Value: "1", Desc: "目標出塊間隔（秒）"},
-			{Key: "difficulty", Value: "1", Desc: "基礎 PoW 難度"},
+			{Key: "difficulty", Value: "1", Desc: "基礎 PoT 難度"},
 			{Key: "tx_fee_bps", Value: "200", Desc: "TACm 交易手續費基準（萬分比，2%=200）"},
 			{Key: "tiusd_floor_bps", Value: "3300", Desc: "TiUSD 流通下限佔 TACM 總供應比例（萬分比）"},
 			// M151a：治理參數可透過鏈上提案修改（0=關閉/既有行為）；現值由 Params() 動態填入。
@@ -170,6 +178,13 @@ func (g *Governance) init() error {
 			height INTEGER NOT NULL,
 			tx_hash TEXT NOT NULL DEFAULT '',
 			UNIQUE(proposal_id, voter)
+		)`,
+		// v129：治理委託投票（delegateVote）——delegator 將投票權委託給 delegatee。
+		`CREATE TABLE IF NOT EXISTS delegations (
+			delegator TEXT PRIMARY KEY,
+			delegatee TEXT NOT NULL,
+			height INTEGER NOT NULL,
+			tx_hash TEXT NOT NULL DEFAULT ''
 		)`,
 		`CREATE TABLE IF NOT EXISTS gov_config (
 			id INTEGER PRIMARY KEY CHECK(id=1),
@@ -766,4 +781,105 @@ func (g *Governance) Votes(proposalID int64) ([]Vote, error) {
 		out = append(out, v)
 	}
 	return out, nil
+}
+
+// Delegate 設定/改寫委託（delegator → delegatee；覆寫式，與主流 DAO 一致）。
+// 委託後 delegator 自身投票權歸 0，改由 delegatee 代理。
+func (g *Governance) Delegate(delegator, delegatee string, height int64, txHash string) error {
+	delegator = strings.TrimSpace(delegator)
+	delegatee = strings.TrimSpace(delegatee)
+	if delegator == "" || delegatee == "" {
+		return errors.New("governance: 委託人與受託人不能為空")
+	}
+	if delegator == delegatee {
+		return errors.New("governance: 不能委託給自己（請使用 undelegate 解除）")
+	}
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	_, err := g.db.Exec(
+		`INSERT INTO delegations (delegator, delegatee, height, tx_hash) VALUES (?,?,?,?)
+		 ON CONFLICT(delegator) DO UPDATE SET delegatee=excluded.delegatee, height=excluded.height, tx_hash=excluded.tx_hash`,
+		delegator, delegatee, height, txHash,
+	)
+	if err != nil {
+		return fmt.Errorf("governance: 設定委託失敗: %w", err)
+	}
+	return nil
+}
+
+// Undelegate 解除委託（delegator 收回投票權）。
+func (g *Governance) Undelegate(delegator string, height int64, txHash string) error {
+	delegator = strings.TrimSpace(delegator)
+	if delegator == "" {
+		return errors.New("governance: 委託人不能為空")
+	}
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	res, err := g.db.Exec(`DELETE FROM delegations WHERE delegator=?`, delegator)
+	if err != nil {
+		return fmt.Errorf("governance: 解除委託失敗: %w", err)
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return errors.New("governance: 該地址目前沒有委託")
+	}
+	return nil
+}
+
+// Delegations 回傳全部委託紀錄（按委託人排序）。
+func (g *Governance) Delegations() ([]Delegation, error) {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	rows, err := g.db.Query(`SELECT delegator, delegatee, height, tx_hash FROM delegations ORDER BY delegator`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := make([]Delegation, 0)
+	for rows.Next() {
+		d := Delegation{}
+		if err := rows.Scan(&d.Delegator, &d.Delegatee, &d.Height, &d.TxHash); err != nil {
+			return nil, err
+		}
+		out = append(out, d)
+	}
+	return out, nil
+}
+
+// DelegateeOf 回傳委託人目前的受託人；無委託回空字串。
+func (g *Governance) DelegateeOf(delegator string) string {
+	delegator = strings.TrimSpace(delegator)
+	if delegator == "" {
+		return ""
+	}
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	var delegatee string
+	if err := g.db.QueryRow(`SELECT delegatee FROM delegations WHERE delegator=?`, delegator).Scan(&delegatee); err != nil {
+		return ""
+	}
+	return delegatee
+}
+
+// DelegatorsOf 回傳委託給指定受託人的全部委託人（RPC 層計算聚合投票權用）。
+func (g *Governance) DelegatorsOf(delegatee string) []string {
+	delegatee = strings.TrimSpace(delegatee)
+	if delegatee == "" {
+		return nil
+	}
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	rows, err := g.db.Query(`SELECT delegator FROM delegations WHERE delegatee=?`, delegatee)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+	out := make([]string, 0)
+	for rows.Next() {
+		var d string
+		if err := rows.Scan(&d); err != nil {
+			return nil
+		}
+		out = append(out, d)
+	}
+	return out
 }

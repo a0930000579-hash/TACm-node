@@ -24,7 +24,7 @@ func (s *RPCServer) handleMetrics(w http.ResponseWriter, r *http.Request) {
 
 	emit("tac_chain_height", "Current chain block height.", strconv.FormatInt(st.BlockHeight, 10))
 	emit("tac_chain_finalized_height", "Finalized block height.", strconv.FormatInt(st.FinalHeight, 10))
-	emit("tac_chain_difficulty", "Effective PoW difficulty.", strconv.Itoa(st.Difficulty))
+	emit("tac_chain_difficulty", "Effective PoT difficulty.", strconv.Itoa(st.Difficulty))
 	emit("tac_chain_mempool_size", "Pending transactions in mempool.", strconv.FormatInt(st.MempoolSize, 10))
 	emit("tac_chain_base_fee", "Current base fee (TACm per gas).", strconv.FormatFloat(st.BaseFee, 'f', 8, 64))
 	emit("tac_chain_gas_price", "Effective gas price (TACm per gas).", strconv.FormatFloat(st.GasPrice, 'f', 8, 64))

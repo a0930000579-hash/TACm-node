@@ -6,7 +6,7 @@ import (
 )
 
 // ConsensusWeights 為 PoT（時間權證）+ PoS（質押）永續雙共識權重。
-// TACm 不具真實算力：挖礦本質是時間權證（與 PoW 僅形式相似）。
+// TACm 不具真實算力：挖礦本質是時間權證（與 PoT 僅形式相似）。
 type ConsensusWeights struct {
 	PowWeight     float64 `json:"pow_weight"`
 	PosWeight     float64 `json:"pos_weight"`

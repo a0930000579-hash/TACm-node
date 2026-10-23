@@ -2,7 +2,7 @@
 {% block title %}TAC Community · Profile{% endblock %}
 {% block content %}
 <style>
-  /* M95：個人主頁（FB 風：封面＋頭像＋鏈上資產＋統計＋我的貼文，全亮色） */
+  /* M95：個人主頁（封面＋頭像＋鏈上資產＋統計＋我的貼文，全亮色） */
   body{background:#f0f2f5;color:#1c1e21;margin:0}
   .topbar,.footer,.bottom-nav{display:none!important}
   .pf-wrap{max-width:480px;margin:0 auto;padding:0 0 72px}
@@ -76,7 +76,7 @@
   </div>
 
   <div class="pf-id">
-    <input id="myAddr" placeholder="enter wallet address (tx0)…" value="">
+    <input id="myAddr" placeholder="enter wallet address (tx0)…" value="" readonly title="以錢包中心為準">
     <button onclick="setMe()" data-i18n="cm.switch">切換</button>
   </div>
 
@@ -132,18 +132,21 @@
   <a href="/community/profile" class="on"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21 C4 16 7.5 13.5 12 13.5 C16.5 13.5 20 16 20 21"/></svg><span data-i18n="cm.me">個人</span></a>
 </nav>
 
+<!-- 社群統一權威地址（比照交易所 v160 錢包中心） -->
+<script src="/static/js/community-wallet.js"></script>
 <script>
 function get(p){ return fetch(p).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); }); }
 function post(p,b){ return fetch(p, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(b||{})}).then(function(r){ if(!r.ok) return r.json().then(function(j){throw new Error(j.error||r.status)}); return r.json(); }); }
-var me = (localStorage.getItem('cm_id')||'');
-if(!me){ try{ me = localStorage.getItem('tac_guest_addr')||''; }catch(e){} }
+var me = ''; // 身分＝權威地址（錢包中心為準），進頁由 cmBindAddr 解析填入。
 function shortAddr(a){ if(!a) return '—'; if(a.length<=16) return a; return a.slice(0,10)+'…'+a.slice(-6); }
 function timeAgo(ts){ var d=Date.now()/1000-ts; if(d<60) return '剛剛'; if(d<3600) return Math.floor(d/60)+' 分鐘前'; if(d<86400) return Math.floor(d/3600)+' 小時前'; return Math.floor(d/86400)+' 天前'; }
 function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
-function setMe(){ me = document.getElementById('myAddr').value.trim(); localStorage.setItem('cm_id', me); load(); }
-document.getElementById('myAddr').value = me;
-window.addEventListener('DOMContentLoaded', function(){
-  if(!me){ get('/status').then(function(st){ me = st.address||''; document.getElementById('myAddr').value = me; load(); }).catch(function(){ load(); }); } else { load(); }
+// 「切換」僅重新向權威來源同步（手動框唯讀，不另採）。
+function setMe(){ cmBindAddr({input:'#myAddr', onResolve:function(a){ me=a; load(); }}); }
+// 進頁解析權威地址（錢包中心優先）；不再以 /status 節點地址或 cm_id 自動填入。
+cmBindAddr({
+  input: '#myAddr',
+  onResolve: function(addr){ me = addr; document.getElementById('myAddr').value = addr; load(); }
 });
 
 function load(){

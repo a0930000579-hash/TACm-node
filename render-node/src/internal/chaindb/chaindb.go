@@ -182,6 +182,13 @@ func Open(dbPath string) (*ChainDB, error) {
 	}
 	// SQLite 單寫多讀，連接數過大反而加劇鎖競爭；保留少量連接。
 	db.SetMaxOpenConns(8)
+	// 明確收斂連線池：WAL 模式下允許並發讀，但突發並發開出的閒置連線若不回收，
+	// 會在長期運行節點永久佔用檔案控制代碼（.db/.db-wal）。設 MaxIdleConns=2 保留
+	// 少量常駐連線避免反覆開關，ConnMaxIdleTime 使空閒連線在 90s 後歸還，
+	// ConnMaxLifetime 週期性回收避免長連線老化，確保控制代碼有界且可回收。
+	db.SetMaxIdleConns(2)
+	db.SetConnMaxIdleTime(90 * time.Second)
+	db.SetConnMaxLifetime(time.Hour)
 
 	pragmas := []string{
 		"PRAGMA journal_mode=WAL",

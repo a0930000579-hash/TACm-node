@@ -58,7 +58,7 @@
     <div class="lv-card">
       <h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M2 12a15 15 0 0 1 20 0"/><path d="M5 15a10 10 0 0 1 14 0"/><circle cx="12" cy="19" r="1.5"/></svg> 我要開播</h2>
       <div class="lv-form">
-        <input id="lvAddr" placeholder="wallet address (tx0…)" value="">
+        <input id="lvAddr" placeholder="wallet address (tx0…)" value="" readonly title="以錢包中心為準">
         <input id="lvTitle" placeholder="直播標題，例如：今晚一起挖礦聊幣市" value="">
         <button class="lv-btn" onclick="startLive()">開播</button>
       </div>
@@ -83,11 +83,12 @@
   </div>
 </div>
 
+<!-- 社群統一權威地址（比照交易所 v160 錢包中心） -->
+<script src="/static/js/community-wallet.js"></script>
 <script>
 // M93：直播 — 列表 / 開播 / 聊天輪詢。
 var curRoom = null, curAfter = 0, lvTimer = null;
-var me = localStorage.getItem('cm_id') || '';
-if(me) document.getElementById('lvAddr').value = me;
+var me = ''; // 身分＝權威地址（錢包中心為準），進頁由 cmBindAddr 解析填入。
 
 function loadRooms(){
   return get('/api/live/list').then(function(d){
@@ -107,12 +108,11 @@ function loadRooms(){
 }
 
 function startLive(){
-  var addr = document.getElementById('lvAddr').value.trim() || me;
+  var addr = me; // 身分＝權威地址（錢包中心為準）；lvAddr 僅顯示，不另採
   var title = document.getElementById('lvTitle').value.trim();
-  if(!addr){ document.getElementById('lvMsg').textContent='請輸入錢包地址'; return; }
+  if(!addr){ document.getElementById('lvMsg').textContent='請先於錢包中心選擇錢包地址'; return; }
   if(!title){ document.getElementById('lvMsg').textContent='請輸入直播標題'; return; }
   post('/api/live/create', {address:addr, title:title}).then(function(d){
-    localStorage.setItem('cm_id', addr);
     document.getElementById('lvMsg').textContent='';
     openRoom(d.room_id, addr);
   }).catch(function(e){ document.getElementById('lvMsg').textContent='開播失敗：'+e; });
@@ -155,7 +155,7 @@ function pollChat(force){
 function sendMsg(){
   var body = document.getElementById('lvSend').value.trim();
   if(!body || !curRoom) return;
-  var addr = document.getElementById('lvAddr').value.trim() || me;
+  var addr = me; // 權威地址
   post('/api/live/'+curRoom+'/message', {address:addr, body:body}).then(function(){
     document.getElementById('lvSend').value='';
     pollChat(true);
@@ -163,7 +163,7 @@ function sendMsg(){
 }
 
 function endLive(){
-  var addr = document.getElementById('lvAddr').value.trim() || me;
+  var addr = me; // 權威地址
   post('/api/live/'+curRoom+'/end', {address:addr}).then(function(){
     leaveRoom();
   }).catch(function(e){ alert('結束失敗：'+e); });
@@ -179,10 +179,15 @@ function leaveRoom(){
 
 // 公用的 get/post/shortAddr/escapeHtml/timeAgo 取自全域（base.html 已提供）。
 // M94：社群影片 tab 帶 ?room= 直接進房（直播不與社群脫鉤）。
-(function(){
-  var q = new URLSearchParams(location.search).get('room');
-  if(q){ var addr = localStorage.getItem('cm_id')||''; loadRooms().then(function(){ openRoom(parseInt(q,10), addr); }); }
-  else { loadRooms(); }
-})();
+// 進頁先解析權威地址（錢包中心為準）；有 ?room= 時解析後再進房。
+cmBindAddr({
+  input: '#lvAddr',
+  onResolve: function(addr){
+    me = addr;
+    var q = new URLSearchParams(location.search).get('room');
+    if(q){ loadRooms().then(function(){ openRoom(parseInt(q,10), addr); }); }
+    else { loadRooms(); }
+  }
+});
 </script>
 {% endblock %}

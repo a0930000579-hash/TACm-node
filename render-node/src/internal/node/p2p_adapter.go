@@ -81,7 +81,7 @@ func (h *p2pHost) OnIncomingBlock(b *chaindb.Block, txs []chaindb.Transaction) e
 		return errors.New("Merkle 根不匹配")
 	}
 
-	// PoW 核對。
+	// PoT 核對。
 	header := map[string]any{
 		"height": b.Height, "prev_hash": prev, "merkle_root": b.MerkleRoot,
 		"proposer": b.Proposer, "ts": b.Ts, "tx_count": len(txs),
@@ -92,7 +92,7 @@ func (h *p2pHost) OnIncomingBlock(b *chaindb.Block, txs []chaindb.Transaction) e
 		return err
 	}
 	if !ok {
-		return errors.New("PoW 驗證失敗")
+		return errors.New("PoT 驗證失敗")
 	}
 
 	b.TxCount = len(txs)

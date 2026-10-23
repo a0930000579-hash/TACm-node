@@ -14,7 +14,7 @@
 | 防重放 | 每帳戶 Nonce 順序校驗，拒絕亂序/重複 | SubmitTransaction（GetNonce 檢查） |
 | 餘額安全 | 交易前餘額校驗；不足即拒絕；SQLite 事務原子寫入 | chaindb / submit.go |
 | 合約安全 | 合約交易入池前只讀模擬（失敗即拒）；位元組碼/地址/金額嚴格校驗 | internal/vm, node 模擬 |
-| 出塊安全 | PoW 前導零驗證；區塊 Hash/Merkle 重算驗證 | consensus/difficulty, chaindb |
+| 出塊安全 | PoT 前導零驗證；區塊 Hash/Merkle 重算驗證 | consensus/difficulty, chaindb |
 | 最終性 | BFT 投票 >2/3 權重門檻；多數認證 View Change；Slashing 5% 罰沒 | consensus/pos, consensus/bft |
 | 治理安全 | 提案參數上下限校驗（如 difficulty 1–100、tiusd_floor 1000–5000） | internal/governance |
 | 跨鏈安全 | SPV Merkle 證明 + 區塊頭鏈驗證；守衛多簽 >2/3 才執行 | internal/spv, internal/bridge |

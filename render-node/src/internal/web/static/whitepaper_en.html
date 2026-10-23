@@ -51,7 +51,7 @@ footer{color:var(--muted);font-size:.85rem;border-top:1px solid var(--line);padd
 
 <div class="abstract">
 <h3>Abstract</h3>
-<p>TACm is a blockchain financial network based on the Time Warrant consensus mechanism, designed to address the fundamental problems of traditional Proof-of-Work (PoW) blockchains, including computing power monopolization, energy waste, and high participation barriers. TACm treats "time" as the fairest consensus asset and achieves efficient, energy-saving, and fair block confirmation through the hybrid Time Warrant consensus (PoT + PoS).</p>
+<p>TACm is a blockchain financial network based on the Time Warrant consensus mechanism, designed to address the fundamental problems of traditional Proof-of-Work (PoT) blockchains, including computing power monopolization, energy waste, and high participation barriers. TACm treats "time" as the fairest consensus asset and achieves efficient, energy-saving, and fair block confirmation through the hybrid Time Warrant consensus (PoT + PoS).</p>
 <p>Above the consensus layer, TACm builds a complete decentralized financial ecosystem, including digital asset trading, perpetual contracts, liquidity mining, lending markets, token issuance platforms, and a stablecoin system, providing users with one-stop blockchain financial services. This document describes TACm's consensus mechanism, network architecture, token economics, governance model, and security design.</p>
 </div>
 
@@ -74,12 +74,12 @@ footer{color:var(--muted);font-size:.85rem;border-top:1px solid var(--line);padd
 </div>
 
 <h2 id="s1">1. Background and Problems</h2>
-<p>Since the emergence of the Proof-of-Work (PoW) consensus mechanism in 2009 has become the most widely adopted consensus algorithm in the blockchain field. However, as network scale expands, the PoW mechanism has exposed a series of fundamental problems:</p>
+<p>Since the emergence of the Proof-of-Work (PoT) consensus mechanism in 2009 has become the most widely adopted consensus algorithm in the blockchain field. However, as network scale expands, the PoT mechanism has exposed a series of fundamental problems:</p>
 <ol>
 <li><b>Computing Power Monopolization</b>: Mining machine manufacturing and mining farm operations show a strong trend of centralization. Small-scale participants struggle to compete fairly, contradicting the original decentralized intention of blockchain.</li>
-<li><b>Energy Waste</b>: Traditional PoW networks consume annual electricity exceeding that of some medium-sized countries. Vast amounts of energy are used for meaningless hash computations, resulting in high social costs.</li>
+<li><b>Energy Waste</b>: Traditional PoT networks consume annual electricity exceeding that of some medium-sized countries. Vast amounts of energy are used for meaningless hash computations, resulting in high social costs.</li>
 <li><b>Participation Barriers</b>: Application-Specific Integrated Circuits (ASICs) are expensive, making it impossible for ordinary users to directly participate in the consensus process. Blockchain has become a game for the few.</li>
-<li><b>Performance Bottlenecks</b>: To ensure security, the PoW mechanism sacrifices transaction processing capacity. legacy PoW chains only process single-digit transactions per second, unable to meet the demands of large-scale commercial applications.</li>
+<li><b>Performance Bottlenecks</b>: To ensure security, the PoT mechanism sacrifices transaction processing capacity. legacy PoT chains only process single-digit transactions per second, unable to meet the demands of large-scale commercial applications.</li>
 </ol>
 <p>Subsequent consensus mechanisms such as Proof-of-Stake (PoS) and Delegated Proof-of-Stake (DPoS) have improved energy efficiency and performance, but introduced new problems such as capital monopolization, token concentration, and governance centralization. How to achieve a balance between decentralization, security, and performance remains the core challenge in the blockchain field.</p>
 <p>TACm proposes a PoT + PoS hybrid consensus mechanism based on Time Warrant, treating "time" — the fairest, non-purchasable resource — as the consensus foundation. Through a decentralized public chain architecture that balances performance and security, TACm provides a new solution for blockchain consensus mechanisms.</p>
@@ -100,13 +100,13 @@ footer{color:var(--muted);font-size:.85rem;border-top:1px solid var(--line);padd
 <p>TACm possesses the following irreplaceable core competitive advantages among existing blockchain projects:</p>
 
 <h4>(1) Original Time Warrant Consensus Mechanism</h4>
-<p>TACm is the first to propose the "Time Warrant" consensus concept, treating time — the fairest, non-purchasable, and non-replicable resource in human society — as the consensus foundation. This mechanism fundamentally differs from the computing power competition of traditional PoW and the capital competition of PoS, creating an entirely new paradigm for consensus mechanisms. The Time Warrant mechanism has theoretically proven its natural defense capability against Sybil Attacks and has achieved a balance between fairness and efficiency in practice.</p>
+<p>TACm is the first to propose the "Time Warrant" consensus concept, treating time — the fairest, non-purchasable, and non-replicable resource in human society — as the consensus foundation. This mechanism fundamentally differs from the computing power competition of traditional PoT and the capital competition of PoS, creating an entirely new paradigm for consensus mechanisms. The Time Warrant mechanism has theoretically proven its natural defense capability against Sybil Attacks and has achieved a balance between fairness and efficiency in practice.</p>
 
 <h4>(2) Genuine Fair Participation</h4>
-<p>In traditional PoW blockchains, computing power determines everything, and ordinary users are excluded from the consensus process. In PoS blockchains, wealth determines voting power, exacerbating the wealth gap. TACm's Time Warrant mechanism ensures that every participant is equal before time, regardless of how much computing power or capital they possess. Nodes that stay online continuously receive reasonable bonuses, but the bonus is capped (+1 weight every 6 online hours, max 10 ≈ 1,000 TACm stake equivalent) to avoid the Matthew Effect. This makes TACm a truly fair blockchain network for the general public.</p>
+<p>In traditional PoT blockchains, computing power determines everything, and ordinary users are excluded from the consensus process. In PoS blockchains, wealth determines voting power, exacerbating the wealth gap. TACm's Time Warrant mechanism ensures that every participant is equal before time, regardless of how much computing power or capital they possess. Nodes that stay online continuously receive reasonable bonuses, but the bonus is capped (+1 weight every 6 online hours, max 10 ≈ 1,000 TACm stake equivalent) to avoid the Matthew Effect. This makes TACm a truly fair blockchain network for the general public.</p>
 
 <h4>(3) Extremely Low Energy Consumption</h4>
-<p>TACm adopts a consortium chain architecture, where the consensus process is completed by preset validator nodes, eliminating the need for all network nodes to perform meaningless hash computations. Compared to traditional PoW blockchains that consume tens of billions of kilowatt-hours annually, TACm's energy consumption is reduced by several orders of magnitude, aligning with sustainable development principles and avoiding regulatory risks and social controversies caused by energy issues.</p>
+<p>TACm adopts a consortium chain architecture, where the consensus process is completed by preset validator nodes, eliminating the need for all network nodes to perform meaningless hash computations. Compared to traditional PoT blockchains that consume tens of billions of kilowatt-hours annually, TACm's energy consumption is reduced by several orders of magnitude, aligning with sustainable development principles and avoiding regulatory risks and social controversies caused by energy issues.</p>
 
 <h4>(4) One-Stop Financial Ecosystem</h4>
 <p>Most blockchain projects focus solely on the underlying protocol, with financial applications relying on external third-party development, resulting in severe ecosystem fragmentation. TACm has holistically planned the underlying consensus and upper-layer financial applications from the very beginning of its design, natively integrating complete financial infrastructure including digital asset trading, derivatives, lending, liquidity mining, token issuance, yield aggregators, and stablecoins. Users can enjoy one-stop blockchain financial services without switching between multiple platforms, with assets achieving full-chain circulation within the ecosystem.</p>
@@ -115,7 +115,7 @@ footer{color:var(--muted);font-size:.85rem;border-top:1px solid var(--line);padd
 <p>TACm natively issues the TiUSD stablecoin within its ecosystem, pegged 1:1 to the US dollar, and employs an over-collateralized minting mechanism to ensure peg stability. To encourage the use of TiUSD, TACm implements a differentiated fee strategy: TiUSD trading pairs charge only 0.5% fees, significantly lower than the 1.25% charged by other stablecoin trading pairs. This mechanism both reduces user transaction costs and promotes the circulation and adoption of stablecoins within the ecosystem, creating a virtuous cycle.</p>
 
 <h4>(6) High Performance and Immediate Finality</h4>
-<p>TACm's consortium chain architecture achieves a transaction processing capacity of approximately 1000 TPS, with a target block time of just 3 seconds. Transactions reach practical finality after 6 block confirmations (approximately 18 seconds). Compared to traditional PoW blockchains that require tens of minutes for confirmation, TACm's high performance and immediate finality enable it to support large-scale commercial applications, including high-frequency trading, payment settlement, and real-time clearing scenarios.</p>
+<p>TACm's consortium chain architecture achieves a transaction processing capacity of approximately 1000 TPS, with a target block time of just 3 seconds. Transactions reach practical finality after 6 block confirmations (approximately 18 seconds). Compared to traditional PoT blockchains that require tens of minutes for confirmation, TACm's high performance and immediate finality enable it to support large-scale commercial applications, including high-frequency trading, payment settlement, and real-time clearing scenarios.</p>
 
 <h4>(7) Comprehensive On-Chain Governance</h4>
 <p>TACm has designed a complete on-chain governance mechanism. Token holders can participate in network decision-making through staking, including consensus parameter adjustment, economic model optimization, protocol upgrades, and ecosystem fund allocation. The governance process is open and transparent, with all proposals and voting records recorded on-chain and verifiable. This mechanism ensures the long-term sustainable development of the network and avoids the centralization risk of a few individuals controlling the protocol's direction.</p>
@@ -150,7 +150,7 @@ W(t) = 1 + ⌊online time ÷ 6h⌋, &nbsp;&nbsp; capped at 10<br>
 <h3>3.4 Consensus Mechanism Comparison</h3>
 <table>
 <tr><th>Consensus Mechanism</th><th>Decentralization</th><th>Throughput</th><th>Energy</th><th>Finality</th><th>Sybil Resistance</th></tr>
-<tr><td>PoW</td><td>High</td><td>~7 TPS</td><td>Extremely High</td><td>Probabilistic</td><td>Medium (computing barrier)</td></tr>
+<tr><td>PoT</td><td>High</td><td>~7 TPS</td><td>Extremely High</td><td>Probabilistic</td><td>Medium (computing barrier)</td></tr>
 <tr><td>PoS</td><td>Medium-High</td><td>~15 TPS</td><td>Low</td><td>Probabilistic</td><td>Low (capital barrier)</td></tr>
 <tr><td>DPoS (EOS)</td><td>Medium</td><td>~4000 TPS</td><td>Low</td><td>Immediate</td><td>Medium (voting barrier)</td></tr>
 <tr><td>PoA (Consortium)</td><td>Low</td><td>High</td><td>Extremely Low</td><td>Immediate</td><td>High (permissioned)</td></tr>
@@ -163,13 +163,13 @@ W(t) = 1 + ⌊online time ÷ 6h⌋, &nbsp;&nbsp; capped at 10<br>
 <h3>3.6 Block-Production Comparison with Mainstream Blockchains (TACm Advantages)</h3>
 <table>
 <tr><th>Mode</th><th>Representative</th><th>Block Producer</th><th>Entry Barrier</th><th>Energy</th><th>TACm Contrast</th></tr>
-<tr><td>PoW</td><td>Bitcoin, Litecoin</td><td>Hashrate race</td><td>Hashrate (ASIC-monopolized)</td><td>Extreme</td><td>TACm replaces hashrate with time: no energy, no mining arms race</td></tr>
+<tr><td>PoT</td><td>Bitcoin, Litecoin</td><td>Hashrate race</td><td>Hashrate (ASIC-monopolized)</td><td>Extreme</td><td>TACm replaces hashrate with time: no energy, no mining arms race</td></tr>
 <tr><td>PoS</td><td>Ethereum, Solana</td><td>Staked validators rotate</td><td>Staked coins (capital)</td><td>Low</td><td>Staking is only one dimension; time nodes need no capital</td></tr>
 <tr><td>DPoS</td><td>EOS, Tron</td><td>Delegated super nodes</td><td>Votes (centralized)</td><td>Low</td><td>No delegation voting; Time Warrant is open directly</td></tr>
 <tr><td>PoA</td><td>BNB legacy</td><td>Permissioned authorities</td><td>Authorization (not decentralized)</td><td>Very low</td><td>TACm is a public chain; any node may join</td></tr>
 <tr><td>PoET</td><td>Sawtooth</td><td>TEE timers</td><td>Requires TEE hardware</td><td>Very low</td><td>TACm Time Warrant is pure software, no hardware dependency</td></tr>
 <tr><td>PoSpace</td><td>Chia</td><td>Disk space</td><td>Space (hoardable)</td><td>Low</td><td>Time cannot be hoarded: TACm resists monopolies better than PoSpace</td></tr>
-<tr><td>PoW+Masternode</td><td>Dash</td><td>Miners + staked masternodes</td><td>Hashrate + 1,000 DASH</td><td>High</td><td>TACm validators = staked service layer, but the base layer uses capital-free time mining</td></tr>
+<tr><td>PoT+Masternode</td><td>Dash</td><td>Miners + staked masternodes</td><td>Hashrate + 1,000 DASH</td><td>High</td><td>TACm validators = staked service layer, but the base layer uses capital-free time mining</td></tr>
 <tr><td><b>TACm PoT+PoS</b></td><td>—</td><td>Time nodes + staked validators</td><td><b>Time alone suffices</b></td><td><b>Very low</b></td><td>Combines PoET's time consensus, PoSpace's fairness and Dash's staking layer, with none of their downsides</td></tr>
 </table>
 <p>Conclusion: TACm absorbs the strengths of mainstream modes — PoET's "time as consensus", PoSpace's "hashrate-free fairness", Dash's "staked service layer" — while avoiding their weaknesses (no TEE dependency, no space hoarding, capital-free base layer), forming the original PoT+PoS Time Warrant hybrid consensus.</p>

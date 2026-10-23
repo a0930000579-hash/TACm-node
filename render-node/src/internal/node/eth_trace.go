@@ -141,6 +141,13 @@ func (s *RPCServer) debugTraceBlock(params []any, byHash bool) ([]map[string]any
 		}
 		if ref == "latest" || ref == "pending" || ref == "" {
 			b = latest
+		} else if isBlockHashRef(ref) {
+			// trace_block 接受區塊哈希（Parity/viem traceBlock 支援 hash 或 height）。
+			bb, berr := s.node.db.GetBlockByHash(strip0x(ref))
+			if berr != nil || bb == nil {
+				return nil, errors.New("debug: 區塊不存在: " + ref)
+			}
+			b = bb
 		} else if h := parseEthBlock(ref, latest.Height); h >= 0 {
 			bb, berr := s.node.db.GetBlock(h)
 			if berr != nil || bb == nil {
@@ -172,6 +179,21 @@ func (s *RPCServer) traceTxSummary(tx *chaindb.Transaction) map[string]any {
 		"returnValue": "0x",
 		"structLogs":  []any{},
 	}
+}
+
+// isBlockHashRef 判斷是否為 0x-prefixed 64-hex 區塊哈希引用。
+func isBlockHashRef(ref string) bool {
+	s := strings.TrimPrefix(ref, "0x")
+	if len(s) != 64 {
+		return false
+	}
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+			return false
+		}
+	}
+	return true
 }
 
 // traceFilter 實作 Parity/OpenEthereum 風格 trace_filter：
@@ -349,7 +371,6 @@ func (s *RPCServer) normSet(addrs []string) map[string]bool {
 	}
 	return set
 }
-
 
 // debugGetRawReceipts 依區塊哈希回區塊內全部交易收據原始 JSON（geth debug 面）。
 func (s *RPCServer) debugGetRawReceipts(params []any) ([]map[string]any, error) {

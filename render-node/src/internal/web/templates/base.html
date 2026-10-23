@@ -26,12 +26,14 @@ input,textarea,[contenteditable]{-webkit-user-select:auto;user-select:auto}
 @media (hover:hover){
   .panel,.gov-card,.bn-panel,.dex-card,.market-card,.stat-cards .card{transition:box-shadow .18s ease,transform .18s ease}
   .panel:hover,.gov-card:hover,.bn-panel:hover,.dex-card:hover,.market-card:hover,.stat-cards .card:hover{box-shadow:0 8px 24px rgba(16,24,40,.10);transform:translateY(-1px)}
-  .net-badge{margin-left:8px;font-size:10px;font-weight:700;letter-spacing:.5px;padding:2px 8px;border-radius:20px;color:#0B0E11;background:linear-gradient(135deg,#F0B90B,#FCD535);vertical-align:middle}
   .btn,.bn-copy,.gov-tab,.search-btn,.pill{transition:transform .14s ease,box-shadow .14s ease}
   .btn:hover,.bn-copy:hover,.gov-tab:hover,.search-btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(16,24,40,.08)}
   .pill:hover{opacity:.9}
 }
 .btn,.bn-copy,.search-btn,.gov-btn{border-radius:10px}
+/* v161：帳號膠囊限寬，避免行動端頂欄超出版面 */
+.member-pill{max-width:112px;padding:6px 10px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;flex-shrink:0}
+.member-pill #member-label{display:inline-block;max-width:78px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
 </style>
 <!-- M84：深色自癒——若被舊 Service Worker 快取餵到舊版深色頁面，自動強制重載＋更新 SW，無需手動清緩存 -->
 <script>
@@ -67,7 +69,6 @@ input,textarea,[contenteditable]{-webkit-user-select:auto;user-select:auto}
 
 <header class="topbar">
   <a class="brand" href="/"><span class="brand-badge" aria-hidden="true"></span>TAC<span>Chain</span></a>
-  <span class="net-badge">{{ network|default:"mainnet" }}</span>
   <nav class="navlinks">
     {% if node_only %}
     <a href="/explorer" data-i18n="nav.home">區塊瀏覽</a>
@@ -93,6 +94,7 @@ input,textarea,[contenteditable]{-webkit-user-select:auto;user-select:auto}
     <a href="/liquid-staking" data-i18n="nav.ls">質押</a>
     <a href="/governance" data-i18n="nav.governance">治理</a>
     <a href="/ai-verify" data-i18n="nav.aiv">AI Verify</a>
+    <a href="/aa" data-i18n="nav.aa">AA</a>
     {% endif %}
   </nav>
   {% if not node_only %}
@@ -128,6 +130,7 @@ input,textarea,[contenteditable]{-webkit-user-select:auto;user-select:auto}
       <a class="pill" href="/sign" rel="noopener" data-i18n="pill.sign">Sign Tool</a>
       <a class="pill" href="/zk" rel="noopener" data-i18n="pill.zk">ZK/VRF</a>
       <a class="pill" href="/contracts" rel="noopener" data-i18n="pill.contracts">Contract Verifier</a>
+      <a class="pill" href="/aa" rel="noopener" data-i18n="pill.aa"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M12 3l8 4v6c0 4.4-3.4 7.4-8 9-4.6-1.6-8-4.6-8-9V7z"/><path d="M9 12l2 2 4-4"/></svg>Account Abstraction</a>
       <button class="pill" id="langToggle" type="button" data-i18n-lang="1" data-i18n="pill.lang">EN</button>
       {% if community.telegram %}<a class="pill" href="{{ community.telegram }}" target="_blank" rel="noopener">Telegram</a>{% endif %}
       {% if community.x %}<a class="pill" href="{{ community.x }}" target="_blank" rel="noopener">X</a>{% endif %}

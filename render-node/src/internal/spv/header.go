@@ -28,7 +28,7 @@ func hdrStr(m map[string]any, key string) string {
 	return ""
 }
 
-// VerifyHeaderPoW 驗證區塊頭工作量證明。
+// VerifyHeaderPoW 驗證區塊頭時間證明（PoT；函式名保留歷史命名）。
 func VerifyHeaderPoW(h map[string]any) bool {
 	diff := int(hdrInt(h, "difficulty"))
 	if diff <= 0 {
@@ -38,7 +38,7 @@ func VerifyHeaderPoW(h map[string]any) bool {
 	return err == nil && ok
 }
 
-// VerifyHeaderChain 驗證一組連續區塊頭：高度連續、prev_hash 鏈接、每塊 PoW 有效。
+// VerifyHeaderChain 驗證一組連續區塊頭：高度連續、prev_hash 鏈接、每塊 PoT 有效。
 func VerifyHeaderChain(headers []map[string]any) (bool, string) {
 	if len(headers) == 0 {
 		return false, "empty header chain"
@@ -55,7 +55,7 @@ func VerifyHeaderChain(headers []map[string]any) (bool, string) {
 				return false, fmt.Sprintf("prev_hash broken @ %d", height)
 			}
 			if !VerifyHeaderPoW(h) {
-				return false, fmt.Sprintf("invalid PoW @ %d", height)
+				return false, fmt.Sprintf("invalid PoT @ %d", height)
 			}
 		}
 		prev = h

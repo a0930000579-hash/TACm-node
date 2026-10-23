@@ -20,15 +20,15 @@
   <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M12 3l8 4v6c0 4.4-3.4 7.4-8 9-4.6-1.6-8-4.6-8-9V7z"/><path d="M9 12l2 2 4-4"/></svg> <span data-i18n="aa.submit">提交 UserOperation</span></h2><span class="muted" id="aaBundler"></span></div>
   <p class="muted" data-i18n="aa.submitHint">填入智能帳戶位址與其簽名（ECDSA，對操作摘要），Bundler 驗證授權後代付 Gas 並執行目標合約呼叫。</p>
   <div class="aa-actions">
-    <input class="search-input aa-field" id="aaSender" data-ph="aa.senderPh" placeholder="Sender（智能帳戶位址）">
-    <input class="search-input aa-field" id="aaPubkey" data-ph="aa.pubkeyPh" placeholder="Pubkey（壓縮公鑰 hex）">
-    <input class="search-input aa-field" id="aaSig" data-ph="aa.sigPh" placeholder="Signature（DER 簽名 hex）">
-    <input class="search-input aa-field" id="aaTarget" data-ph="aa.targetPh" placeholder="Target（目標合約位址）">
-    <input class="search-input aa-field" id="aaCallData" data-ph="aa.callDataPh" placeholder="Call Data（hex，如 00）">
-    <input class="search-input aa-field" id="aaNonce" placeholder="Nonce" value="0" style="max-width:140px;min-width:0">
-    <input class="search-input aa-field" id="aaGasLimit" placeholder="Call Gas Limit" value="100000" style="max-width:150px;min-width:0">
-    <input class="search-input aa-field" id="aaVerifGas" placeholder="Verification Gas" value="21000" style="max-width:150px;min-width:0">
-    <input class="search-input aa-field" id="aaMaxFee" placeholder="Max Fee Per Gas" value="0.000001" style="max-width:150px;min-width:0">
+    <input class="search-input aa-field" id="aaSender" data-i18n-placeholder="aa.senderPh" placeholder="Sender (smart account)">
+    <input class="search-input aa-field" id="aaPubkey" data-i18n-placeholder="aa.pubkeyPh" placeholder="Pubkey (compressed hex)">
+    <input class="search-input aa-field" id="aaSig" data-i18n-placeholder="aa.sigPh" placeholder="Signature (DER hex)">
+    <input class="search-input aa-field" id="aaTarget" data-i18n-placeholder="aa.targetPh" placeholder="Target (contract address)">
+    <input class="search-input aa-field" id="aaCallData" data-i18n-placeholder="aa.callDataPh" placeholder="Call Data (hex, e.g. 00)">
+    <input class="search-input aa-field" id="aaNonce" data-i18n-placeholder="aa.noncePh" placeholder="Nonce" value="0" style="max-width:140px;min-width:0">
+    <input class="search-input aa-field" id="aaGasLimit" data-i18n-placeholder="aa.callGasPh" placeholder="Call Gas Limit" value="100000" style="max-width:150px;min-width:0">
+    <input class="search-input aa-field" id="aaVerifGas" data-i18n-placeholder="aa.verifGasPh" placeholder="Verification Gas" value="21000" style="max-width:150px;min-width:0">
+    <input class="search-input aa-field" id="aaMaxFee" data-i18n-placeholder="aa.maxFeePh" placeholder="Max Fee Per Gas" value="0.000001" style="max-width:150px;min-width:0">
   </div>
   <div class="aa-actions">
     <button class="search-btn" id="aaEstimate" data-i18n="aa.estimateBtn">估算 Gas</button>
@@ -43,7 +43,7 @@
 <section class="panel">
   <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg> <span data-i18n="aa.status">操作狀態</span></h2></div>
   <div class="aa-actions">
-    <input class="search-input" id="aaStatusSender" data-ph="aa.senderPh" placeholder="Sender（智能帳戶位址）" style="max-width:340px;min-width:0">
+    <input class="search-input" id="aaStatusSender" data-i18n-placeholder="aa.senderPh" placeholder="Sender (smart account)" style="max-width:340px;min-width:0">
     <button class="search-btn" id="aaStatusBtn" data-i18n="aa.statusBtn">查詢</button>
   </div>
   <div class="table-wrap"><table class="aa-table" style="min-width:560px">
@@ -61,9 +61,10 @@
   </ol>
 </section>
 <script>
-  // M154：AA 前端（/aa/* 節點 RPC）
+  // M154：AA 前端（/aa/* 節點 RPC）——動態字串一律走 TAC_T 雙語。
   (function () {
     var base = location.protocol + '//' + location.host;
+    function t(key) { return (window.TAC_T ? TAC_T(key) : key); }
     function get(path) { return fetch(base + path, { cache: 'no-store' }).then(function (r) { return r.json(); }); }
     function post(path, body) {
       return fetch(base + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -76,6 +77,21 @@
       el.textContent = msg;
       el.style.color = ok === false ? '#ef4444' : '#22c55e';
     }
+    function setBundler(addr) {
+      var el = document.getElementById('aaBundler');
+      if (el) { el.textContent = addr ? (t('aa.bundlerLabel') + ': ' + addr) : ''; }
+    }
+    // busy 狀態：防止連點重複提交。
+    function setBusy(btn, busy, busyText) {
+      if (!btn) { return; }
+      btn.disabled = busy;
+      if (busy) {
+        btn.dataset.orig = btn.textContent;
+        btn.textContent = busyText || t('aa.submitting');
+      } else if (btn.dataset.orig) {
+        btn.textContent = btn.dataset.orig;
+      }
+    }
     function collectOp() {
       return {
         sender: val('aaSender'), pubkey: val('aaPubkey'), signature: val('aaSig'),
@@ -86,29 +102,48 @@
         max_fee_per_gas: val('aaMaxFee'), max_priority_fee_per_gas: '0'
       };
     }
+    // 用戶端必填驗證（雙語錯誤訊息）。
+    function validateRequired(op) {
+      if (!op.sender || !op.target || !op.call_data || !op.pubkey || !op.signature) {
+        setResult(t('aa.fillRequired'), false);
+        return false;
+      }
+      return true;
+    }
     document.getElementById('aaEstimate').addEventListener('click', function () {
-      post('/aa/estimate', collectOp()).then(function (d) {
+      var op = collectOp();
+      if (!validateRequired(op)) { return; }
+      var btn = this; setBusy(btn, true, t('aa.estimating'));
+      post('/aa/estimate', op).then(function (d) {
         if (d.ok) {
           document.getElementById('aaEstCard').style.display = 'grid';
           document.getElementById('aaGasOut').textContent = d.gas;
           document.getElementById('aaFeeOut').textContent = d.gas_fee;
-          setResult('Estimated', true);
-        } else { setResult(d.error || 'failed', false); }
-      }).catch(function () { setResult('RPC unavailable', false); });
+          setResult(t('aa.estimated'), true);
+        } else { setResult(d.error || t('aa.failed'), false); }
+      }).catch(function () { setResult(t('aa.rpcDown'), false); })
+        .finally(function () { setBusy(btn, false); });
     });
     document.getElementById('aaSubmit').addEventListener('click', function () {
-      setResult('Submitting...', true);
-      post('/aa/submit', collectOp()).then(function (d) {
-        if (d.ok) { setResult('tx: ' + d.tx_hash, true); } else { setResult(d.error || 'failed', false); }
-      }).catch(function () { setResult('RPC unavailable', false); });
+      var op = collectOp();
+      if (!validateRequired(op)) { return; }
+      var btn = this; setBusy(btn, true, t('aa.submitting'));
+      setResult(t('aa.submitting'), true);
+      post('/aa/submit', op).then(function (d) {
+        if (d.ok) {
+          setResult(t('aa.txPrefix') + (d.tx_hash || ''), true);
+          setBundler(d.bundler);
+        } else { setResult(d.error || t('aa.failed'), false); }
+      }).catch(function () { setResult(t('aa.rpcDown'), false); })
+        .finally(function () { setBusy(btn, false); });
     });
     document.getElementById('aaStatusBtn').addEventListener('click', function () {
       var sender = val('aaStatusSender');
-      if (!sender) return;
+      if (!sender) { setResult(t('aa.fillSender'), false); return; }
       get('/aa/status?sender=' + encodeURIComponent(sender)).then(function (d) {
         var body = document.getElementById('aaOpsBody');
         if (!d.ok || !d.operations || !d.operations.length) {
-          body.innerHTML = '<tr><td colspan="5" class="muted">-</td></tr>';
+          body.innerHTML = '<tr><td colspan="5" class="muted">' + esc(t('aa.opsEmpty')) + '</td></tr>';
           return;
         }
         body.innerHTML = d.operations.map(function (o) {
@@ -119,10 +154,8 @@
             '<td>' + esc(o.gas_fee) + '</td>' +
             '<td>' + esc(new Date(o.submitted_at * 1000).toLocaleString()) + '</td></tr>';
         }).join('');
-      }).catch(function () {});
+      }).catch(function () { setResult(t('aa.rpcDown'), false); });
     });
-    // Bundler 位址提示（可選，節點 RPC）。
-    get('/aa/status?sender=probe').then(function () {}).catch(function () {});
   })();
 </script>
 {% endblock %}

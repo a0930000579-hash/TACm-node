@@ -27,9 +27,11 @@ func main() {
 	nodeID := flag.String("node-id", "node1", "節點 ID")
 	dataDir := flag.String("data-dir", "", "數據目錄")
 	blockTime := flag.Int("block-time", 1, "目標出塊間隔（秒）")
-	difficulty := flag.Int("difficulty", 1, "基礎 PoW 難度")
+	difficulty := flag.Int("difficulty", 1, "基礎 PoT 難度")
 	rpcPort := flag.Int("rpc-port", 8332, "節點 RPC 端口")
 	webPort := flag.Int("web-port", 8080, "Web 服務端口")
+	tlsCert := flag.String("tls-cert", "", "HTTPS 憑證路徑（pem；提供則以 HTTPS 啟動，配合 -tls-key）")
+	tlsKey := flag.String("tls-key", "", "HTTPS 私鑰路徑（pem）")
 	serveDApp := flag.Bool("serve-dapp", true, "M103：是否提供整套 DApp 網頁（錢包/交易所/社群等）；false＝純節點模式，僅區塊同步＋RPC＋瀏覽器")
 	enableL2 := flag.Bool("l2", false, "啟用 Layer2 Optimistic Rollup（含後台批量/提交）")
 	enableBridge := flag.Bool("bridge", false, "啟用跨鏈橋（Lock&Mint / Burn&Unlock）")
@@ -67,6 +69,8 @@ func main() {
 	p2pEnabled := flag.Bool("p2p", false, "啟用 P2P 聯網（多節點/主網模式）")
 	p2pURL := flag.String("p2p-url", "", "本節點對外可達 HTTP 基址（即 web/rpc 端口，如 http://1.2.3.4:8080；P2P 端點自動位於 /p2p/ 前綴）")
 	p2pSeed := flag.String("p2p-seed", "", "初始引導節點 HTTP 基址（逗號分隔，如 http://1.2.3.4:8080）")
+	p2pEncrypt := flag.Bool("p2p-encrypt", true, "啟用 P2P 訊息層加密（ECDH+AES-GCM，v65 起預設開啟；對端不支援時自動降級明文）")
+	p2pPlain := flag.Bool("p2p-plain", false, "強制明文 P2P（相容舊版節點；覆蓋 -p2p-encrypt）")
 	p2pFollower := flag.Bool("p2p-follower", false, "以驗證節點模式啟動（不主動出塊，同步並驗證區塊、參與 BFT 投票）")
 	flag.Parse()
 
@@ -192,7 +196,7 @@ func main() {
 	var rpcSrv *http.Server
 
 	// P2P 聯網（可選）：錨點節點提供 seed，其餘節點以 -p2p-seed 連入；
-	// follower 模式不主動 PoW 出塊，經 P2P 同步區塊並參與 BFT 投票。
+	// follower 模式不主動 PoT 出塊，經 P2P 同步區塊並參與 BFT 投票。
 	var p2pNet *p2p.Network
 	if *p2pEnabled {
 		if *p2pURL == "" {
@@ -218,7 +222,8 @@ func main() {
 				seeds = append(seeds, s0)
 			}
 		}
-		netw, err := n.AttachP2P(*p2pURL, seeds)
+		enc := *p2pEncrypt && !*p2pPlain // v65：-p2p-plain 強制明文，覆蓋預設加密
+		netw, err := n.AttachP2P(*p2pURL, seeds, enc)
 		if err != nil {
 			log.Fatalf("掛載 P2P 網絡失敗: %v", err)
 		}
@@ -242,12 +247,16 @@ func main() {
 		p2pNet.Start(context.Background())
 		log.Printf("[p2p] P2P 已啟動：%s（seed=%d）", *p2pURL, len(strings.Split(*p2pSeed, ",")))
 	}
-	if *p2pFollower {
-		if !*p2pEnabled {
-			log.Fatalf("-p2p-follower 需與 -p2p 一起使用（驗證節點依賴 P2P 同步）")
-		}
+	// v56：與 nodeweb 對齊的去中心化分流——鏈上已質押（PoS active）且 P2P 啟用的
+	// 節點以分布式 BFT 啟動（驗證人輪值出塊）：創世節點掛機時其他驗證人仍可出塊，
+	// 鏈不中斷（參照比特幣/主流鏈）；-p2p-follower 且非驗證人維持跟隨模式；
+	// 其餘（無 P2P 或非驗證人）維持單節點出塊。
+	if *p2pFollower && !n.IsValidator() {
 		n.StartAsFollower()
-		log.Printf("[node] 節點 %s 以跟隨模式啟動，地址 %s", *nodeID, n.Address())
+		log.Printf("[node] 節點 %s 以跟隨模式啟動（非驗證人，同步＋投票），地址 %s", *nodeID, n.Address())
+	} else if n.IsValidator() && *p2pEnabled {
+		n.StartDistributed()
+		log.Printf("[node] 節點 %s 以分布式 BFT 模式啟動（驗證人輪值出塊），地址 %s", *nodeID, n.Address())
 	} else {
 		n.Start()
 		log.Printf("[node] 節點 %s 已啟動，地址 %s", *nodeID, n.Address())
@@ -276,10 +285,27 @@ func main() {
 				wmux.ServeHTTP(w, r)
 			})
 		}
-		rpcSrv = &http.Server{Addr: addr(*webPort), Handler: finalHandler}
+		rpcSrv = &http.Server{
+			Addr: addr(*webPort), Handler: finalHandler,
+			// v130：補上伺服器超時——先前全零值（無限等待），慢請求/掛死連線會
+			// 無限堆積 goroutine，最終連線耗盡即「時常伺服器斷線」。
+			ReadHeaderTimeout: 10 * time.Second,
+			ReadTimeout:       30 * time.Second,
+			WriteTimeout:      120 * time.Second, // 流向統計/CSV 匯出等大回應保留餘裕
+			IdleTimeout:       120 * time.Second,
+		}
 		log.Printf("[web+rpc] 同埠合併模式 :%d（RPC /health /status /api/* 已掛載）", *webPort)
 		go func() {
-			if err := rpcSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			var err error
+			if *tlsCert != "" && *tlsKey != "" {
+				// v87：HTTPS 啟動（-tls-cert/-tls-key 提供時）。配合 Cloudflare Tunnel
+				// 或自簽憑證使用，解決手機端對明文 http 的連線限制。
+				log.Printf("[web+rpc] HTTPS 模式啟動（cert=%s）", *tlsCert)
+				err = rpcSrv.ListenAndServeTLS(*tlsCert, *tlsKey)
+			} else {
+				err = rpcSrv.ListenAndServe()
+			}
+			if err != nil && err != http.ErrServerClosed {
 				log.Printf("[web+rpc] 退出: %v", err)
 			}
 		}()
@@ -295,14 +321,26 @@ func main() {
 				baseHandler.ServeHTTP(w, r)
 			})
 		}
-		rpcSrv = &http.Server{Addr: addr(*rpcPort), Handler: rpcHandler}
+		rpcSrv = &http.Server{
+			Addr: addr(*rpcPort), Handler: rpcHandler,
+			ReadHeaderTimeout: 10 * time.Second,
+			ReadTimeout:       30 * time.Second,
+			WriteTimeout:      120 * time.Second,
+			IdleTimeout:       120 * time.Second,
+		}
 		go func() {
 			log.Printf("[rpc] 節點 RPC: http://0.0.0.0:%d", *rpcPort)
 			if err := rpcSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 				log.Printf("[rpc] 退出: %v", err)
 			}
 		}()
-		webSrv = &http.Server{Addr: addr(*webPort), Handler: wserver.Handler()}
+		webSrv = &http.Server{
+			Addr: addr(*webPort), Handler: wserver.Handler(),
+			ReadHeaderTimeout: 10 * time.Second,
+			ReadTimeout:       30 * time.Second,
+			WriteTimeout:      120 * time.Second,
+			IdleTimeout:       120 * time.Second,
+		}
 		go func() {
 			log.Printf("[web] Web 區塊瀏覽: http://0.0.0.0:%d", *webPort)
 			if err := webSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {

@@ -76,8 +76,11 @@ func OpenAuth(dataDir string) (*AuthService, error) {
 	if err != nil {
 		return nil, fmt.Errorf("auth: 開啟資料庫: %w", err)
 	}
-	// 併發連接限制（SQLite 單寫者）。
+	// 併發連接限制（SQLite 單寫者）；連線池閒置回收，避免長期運行佔用控制代碼。
 	db.SetMaxOpenConns(4)
+	db.SetMaxIdleConns(2)
+	db.SetConnMaxIdleTime(90 * time.Second)
+	db.SetConnMaxLifetime(time.Hour)
 	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS users (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		email TEXT NOT NULL UNIQUE,

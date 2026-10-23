@@ -25,7 +25,7 @@ func main() {
 	networkFlag := flag.String("network", "mainnet", "網路段：mainnet | testnet（testnet 自動分離資料目錄與鏈 ID）")
 	dataDir := flag.String("data-dir", "", "數據目錄")
 	blockTime := flag.Int("block-time", 3, "目標出塊間隔（秒）")
-	difficulty := flag.Int("difficulty", 2, "基礎 PoW 難度")
+	difficulty := flag.Int("difficulty", 2, "基礎 PoT 難度")
 	peersFlag := flag.String("peers", "", "引導節點 URL，逗號分隔")
 	follower := flag.Bool("follower", false, "驗證節點模式：不主動出塊，同步並驗證區塊與投票")
 	enableL2 := flag.Bool("l2", false, "啟用 Layer2 Optimistic Rollup（含後台批量/提交）")

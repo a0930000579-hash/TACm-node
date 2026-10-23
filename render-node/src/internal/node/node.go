@@ -769,7 +769,7 @@ func (n *Node) IsValidator() bool {
 	return false
 }
 
-// StartAsFollower 以跟隨/全節點模式啟動：不主動 PoW 出塊，
+// StartAsFollower 以跟隨/全節點模式啟動：不主動 PoT 出塊，
 // 僅參與 BFT 投票，並通過 P2P gossip/同步接收區塊。
 //
 // M61：follower 同樣啟動 minerHeartbeatLoop——Render 等入口以 -p2p-follower 運行，
@@ -791,7 +791,7 @@ func (n *Node) StartAsFollower() {
 }
 
 // StartDistributed 以分佈式 BFT 模式啟動：每個高度僅輪值 proposer
-// PoW 出塊並廣播，其餘驗證人接收區塊並投票；最終性由跨節點聚合
+// PoT 出塊並廣播，其餘驗證人接收區塊並投票；最終性由跨節點聚合
 // >2/3 precommit 達成；提議超時自動 view change（round+1）。
 //
 // M61：錨點同樣啟動 minerHeartbeatLoop（跟進 M60）——錨點本機 active=1 的礦工
@@ -862,49 +862,19 @@ func (n *Node) ResumeConsensus() {
 	n.mu.Unlock()
 }
 
-// Close 停止出塊循環並關閉數據庫。
-func (n *Node) Close() error {
-	// 先停狀態治理排程，避免關庫過程中仍在清理歷史資料。
-	if n.pruner != nil {
-		_ = n.pruner.Close()
-	}
-	n.mu.Lock()
-	if !n.running {
-		n.mu.Unlock()
-		if n.contracts != nil {
-			n.contracts.Close()
-		}
-		if n.dex != nil {
-			_ = n.dex.Close()
-		}
-		if n.l2svc != nil {
-			n.l2svc.Close()
-		}
-		if n.l2 != nil {
-			_ = n.l2.Close()
-		}
-		if n.bridge != nil {
-			_ = n.bridge.Close()
-		}
-		n.stopAllRelays()
-		if n.walletSvc != nil {
-			_ = n.walletSvc.Store().Close()
-		}
-		if n.exchangeSvc != nil {
-			_ = n.exchangeSvc.Store().Close()
-		}
-		return n.db.Close()
-	}
-	n.running = false
-	n.mu.Unlock()
-	close(n.stopCh)
-	n.wg.Wait()
+// closeAllStores 關閉所有由 New()/Start() 開啟的子服務及其底層資料庫（各自 .db/-wal/-shm）。
+// 每個 store 都帶 nil 判斷、忽略 close error（單一 store 已關閉不應中斷其餘關閉），
+// 供 running 與非 running 兩條 Close() 路徑共用，避免漏關任一 store 造成 FD 長期累積
+// （主網長跑 OOM/斷線與單一測試程序檔案描述元耗盡的根因）。
+func (n *Node) closeAllStores() {
+	// 合約層與鏈上 DEX（各自持有獨立 .db）。
 	if n.contracts != nil {
 		n.contracts.Close()
 	}
 	if n.dex != nil {
 		_ = n.dex.Close()
 	}
+	// L2 與跨鏈橋（僅配置時存在）。
 	if n.l2svc != nil {
 		n.l2svc.Close()
 	}
@@ -915,11 +885,22 @@ func (n *Node) Close() error {
 		_ = n.bridge.Close()
 	}
 	n.stopAllRelays()
+	// 錢包／交易所（需 Store() 取得底層 bolt 控制代碼）。
 	if n.walletSvc != nil {
 		_ = n.walletSvc.Store().Close()
 	}
+	if n.exchangeSvc != nil {
+		_ = n.exchangeSvc.Store().Close()
+	}
+	// 其餘 New() 階段即開啟的 bolt/sqlite 子服務。
+	if n.communitySvc != nil {
+		_ = n.communitySvc.Close()
+	}
 	if n.defiSvc != nil {
 		_ = n.defiSvc.Close()
+	}
+	if n.ensSvc != nil {
+		_ = n.ensSvc.Close()
 	}
 	if n.c2cSvc != nil {
 		_ = n.c2cSvc.Close()
@@ -933,11 +914,11 @@ func (n *Node) Close() error {
 	if n.aimSt != nil {
 		_ = n.aimSt.Close()
 	}
-	if n.obSt != nil {
-		_ = n.obSt.Close()
-	}
 	if n.aivSt != nil {
 		_ = n.aivSt.Close()
+	}
+	if n.obSt != nil {
+		_ = n.obSt.Close()
 	}
 	if n.authSvc != nil {
 		_ = n.authSvc.Close()
@@ -948,6 +929,34 @@ func (n *Node) Close() error {
 	if n.ls != nil {
 		_ = n.ls.Close()
 	}
+	if n.ms != nil {
+		_ = n.ms.Close()
+	}
+	if n.auc != nil {
+		_ = n.auc.Close()
+	}
+	if n.posStore != nil {
+		_ = n.posStore.Close()
+	}
+}
+
+// Close 停止出塊循環並關閉所有子服務與底層資料庫。
+func (n *Node) Close() error {
+	// 先停狀態治理排程，避免關庫過程中仍在清理歷史資料。
+	if n.pruner != nil {
+		_ = n.pruner.Close()
+	}
+	n.mu.Lock()
+	running := n.running
+	if running {
+		n.running = false
+	}
+	n.mu.Unlock()
+	if running {
+		close(n.stopCh)
+		n.wg.Wait()
+	}
+	n.closeAllStores()
 	return n.db.Close()
 }
 
@@ -963,7 +972,7 @@ func (n *Node) waitFor(d time.Duration) bool {
 	}
 }
 
-// consensusLoop 是出塊主循環：動態間隔 → 取池 → PoW → 驗證 → 寫塊 → 調難度。
+// consensusLoop 是出塊主循環：動態間隔 → 取池 → PoT → 驗證 → 寫塊 → 調難度。
 func (n *Node) consensusLoop() {
 	defer n.wg.Done()
 	cs := &consensusState{lastRound: -1}
@@ -1323,14 +1332,9 @@ func (n *Node) produceBlock() error {
 		}
 	}
 
-	// M85：以太坊式 pending 佇列——每地址按 nonce 依序、同 nonce 取高 fee、
-	// 地址間按隊首 fee 輪流；nonce gap 之後的交易留待下塊。
-	mempool, err := n.db.GetMempoolPending(maxTxPerBlock)
-	if err != nil {
-		return err
-	}
-
 	// M74-3 EIP-1559：本塊 base fee 由父塊的 base fee 與 gas 使用率調整。
+	// MEV：baseFee 計算提前到 mempool 取件之前——打包排序需用本塊 baseFee
+	// 計算每筆交易的有效優先小費（tipPerGas × gas）。
 	parentBaseFee := chaindb.InitialBaseFee
 	parentGasUsed := int64(0)
 	parentGasLimit := int64(chaindb.BlockGasLimit)
@@ -1345,6 +1349,13 @@ func (n *Node) produceBlock() error {
 		}
 	}
 	baseFee := chaindb.ComputeNextBaseFee(parentBaseFee, parentGasUsed, parentGasLimit)
+
+	// M85/MEV：可打包佇列——每地址按 nonce 依序、同 nonce 取高 fee、nonce gap 截斷；
+	// 地址間按「隊首有效優先小費」降序輪流（策略由節點 config 配置，預設 PriorityTip）。
+	mempool, err := n.db.GetMempoolPendingSorted(maxTxPerBlock, baseFee, chaindb.ParsePackStrategy(n.cfg.PackStrategy))
+	if err != nil {
+		return err
+	}
 
 	ts := time.Now().Unix()
 	txHashes := make([]string, 0, len(mempool)+1)
@@ -1552,7 +1563,7 @@ func (n *Node) produceBlock() error {
 		"tx_count":    len(txs),
 	}
 
-	// PoW：當前有效難度，cap 8；失敗逐級降級重試（最多3次）。
+	// PoT：當前有效難度，cap 8；失敗逐級降級重試（最多3次）。
 	n.mu.Lock()
 	diff := n.adjDiff
 	n.mu.Unlock()
@@ -1583,7 +1594,7 @@ func (n *Node) produceBlock() error {
 		return err
 	}
 	if !ok {
-		return errors.New("PoW 驗證失敗")
+		return errors.New("PoT 驗證失敗")
 	}
 
 	block := &chaindb.Block{

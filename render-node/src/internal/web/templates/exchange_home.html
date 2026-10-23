@@ -9,13 +9,7 @@
           --bn-txt:#14161a; --bn-sub:#5d6778; --bn-yellow:#fcd535; --bn-green:#0ecb81; --bn-red:#f6465d; }
   .ex-wrap { max-width:1080px; margin:0 auto; padding:4px 0 20px; }
   .tabs { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 14px; }
-  /* M127：交易所門戶——生態導航＋功能卡片（幣安式，與子頁一致） */
-  .ec-nav { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
-  .ec-nav a { display:inline-flex; align-items:center; padding:8px 14px; border-radius:999px; background:var(--bn-card); color:var(--bn-sub); font-size:13px; font-weight:600; text-decoration:none; border:1px solid var(--bn-line); transition:all .15s; }
-  .ec-nav a:hover { color:var(--bn-txt); border-color:var(--bn-yellow); transform:translateY(-1px); }
-  .ec-nav a.on { background:var(--bn-yellow); color:#f7f8fb; border-color:var(--bn-yellow); box-shadow:0 3px 10px rgba(252,213,53,.25); }
-  .ec-nav .ic { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; background:rgba(255,255,255,.10); margin-right:7px; flex:0 0 22px; }
-  .ec-nav a.on .ic { background:rgba(255,255,255,.22); }
+  /* M127：交易所門戶——功能卡片（幣安式，與子頁一致） */
   .ec-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(158px,1fr)); gap:10px; margin-bottom:16px; }
   .ec-card { display:flex; align-items:center; gap:11px; padding:13px 14px; border-radius:14px; background:var(--bn-card); color:var(--bn-txt); text-decoration:none; border:1px solid var(--bn-line); font-size:13px; font-weight:600; transition:all .15s; }
   .ec-card:hover { transform:translateY(-2px); border-color:var(--bn-yellow); box-shadow:0 4px 14px rgba(0,0,0,.10); }
@@ -60,14 +54,6 @@
 <div class="ex-wrap">
   <div class="bn-addr">節點 {{ exchange.NodeAddress }}</div>
 
-  <!-- 生態導航（M127：現貨/DEX/DeFi/NFT/代幣 一級入口） -->
-  <div class="ec-nav">
-    <a href="/exchange" class="on"><span class="ic"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 17l5-5 4 3 6-7"/><path d="M14 8h4v4"/></svg></span>現貨交易</a>
-    <a href="/dex"><span class="ic"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 4v13M7 4L3 8M7 4l4 4"/><path d="M17 20V7M17 20l-4-4M17 20l4-4"/></svg></span>DEX 兌換</a>
-    <a href="/defi"><span class="ic"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 9l9-5 9 5"/><path d="M4 10h16v3H4z"/></svg></span>DeFi</a>
-    <a href="/nfts"><span class="ic"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1.6"/><path d="M5 17l5-5 3 3 4-4 2 2"/></svg></span>NFT 市場</a>
-    <a href="/tokens"><span class="ic"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 9.5c0-1.4 1.3-2 3-2s3 .6 3 2-1.2 1.6-3 2c-2 .5-3 1-3 2.5s1.3 2 3 2 3-.6 3-2"/></svg></span>代幣工作室</a>
-  </div>
   <!-- v159 交易所錢包中心：連結礦工錢包或新建 Web3 錢包（選擇於各交易子頁全域生效） -->
   <div id="exWalletCard" style="margin-bottom:16px;padding:13px 14px;border-radius:14px;background:var(--bn-card);border:1px solid var(--bn-line)">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">

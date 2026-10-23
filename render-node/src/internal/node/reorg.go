@@ -3,6 +3,7 @@ package node
 import (
 	"errors"
 	"fmt"
+	"math/big"
 	"strings"
 	"strconv"
 
@@ -25,7 +26,7 @@ func (h *p2pHost) ReorgChain(forkPoint int64, blocks []chaindb.Block, txs [][]ch
 		return errors.New("重組起始高度與分叉點不符")
 	}
 
-	// 逐塊結構驗證（連續性、prev_hash、coinbase、簽名、merkle、PoW）。
+	// 逐塊結構驗證（連續性、prev_hash、coinbase、簽名、merkle、PoT）。
 	var newCD int64
 	for i := range blocks {
 		b := &blocks[i]
@@ -56,7 +57,15 @@ func (h *p2pHost) ReorgChain(forkPoint int64, blocks []chaindb.Block, txs [][]ch
 		if addr, cerr := h.n.CommunityPoolAddress(); cerr == nil {
 			cp = addr
 		}
-		if err := verifyBlockStructure(b, txs[i], int64(h.n.cfg.BlockTime), cp); err != nil {
+		// 硬煞車驗證：取本塊前全鏈已發（walletSvc 同步帳本）傳入 verifyBlockStructure，
+		// 與出塊側同源（ComputeCappedReward），確保 coinbase 總額全網一致。
+		var minedWei *big.Int
+		if h.n.walletSvc != nil {
+			if mw, merr := h.n.walletSvc.ChainMinedTacm(); merr == nil {
+				minedWei = mw
+			}
+		}
+		if err := verifyBlockStructure(b, txs[i], int64(h.n.cfg.BlockTime), cp, minedWei); err != nil {
 			return err
 		}
 		newCD += int64(b.Difficulty)
@@ -97,10 +106,18 @@ func (h *p2pHost) ReorgChain(forkPoint int64, blocks []chaindb.Block, txs [][]ch
 }
 
 // verifyBlockStructure 驗證區塊的結構有效性（不依賴賬戶狀態）：
-// coinbase 總額、普通交易簽名、Merkle 根、PoW。
-func verifyBlockStructure(b *chaindb.Block, txs []chaindb.Transaction, blockTimeSec int64, communityPoolAddr string) error {
+// coinbase 總額、普通交易簽名、Merkle 根、PoT。
+// minedWei 為本塊前全鏈已發總量（wei），用於硬煞車（剩餘可挖截斷）驗證，
+// 與出塊側 node.go 共用 chaindb.ComputeCappedReward，確保全網一致。
+func verifyBlockStructure(b *chaindb.Block, txs []chaindb.Transaction, blockTimeSec int64, communityPoolAddr string, minedWei *big.Int) error {
 	if b.Height == 0 {
 		// 創世為特殊塊（社群基金 + 空 Merkle 根），結構由來源鏈信任承接。
+		return nil
+	}
+	// M150h-硬煞車：預期獎勵 = ComputeCappedReward（模型獎勵 min 剩餘可挖）。
+	// 已達上限（剩餘≤0）→ 本塊零增發，容許無 coinbase（鏈續跑處理交易）。
+	wantReward := chaindb.ComputeCappedReward(b.Height, blockTimeSec, minedWei)
+	if wantReward <= 1e-9 {
 		return nil
 	}
 	if len(txs) == 0 {
@@ -121,18 +138,8 @@ func verifyBlockStructure(b *chaindb.Block, txs []chaindb.Transaction, blockTime
 		cbTotal += got
 		i++
 	}
-	// M149g：coinbase 總額驗證與出塊側一致（node.go 出塊：LoadEmission 看
-	// Model==annual_decay 用 EmissionAmount，否則 BlockReward）。錨點主網
-	// 採 annual_decay（TACM_MAX_SUPPLY=52003300，6 年，年衰減 25%），
-	// h=1 獎勵 = InitialSubsidy = 1.5045；驗證側必須用同一模型精確匹配。
-	wantReward := chaindb.BlockReward(b.Height)
-	model := "halving"
-	if cfg, err := chaindb.LoadEmission(blockTimeSec); err == nil && cfg.Model == "annual_decay" {
-		wantReward = chaindb.EmissionAmount(b.Height, blockTimeSec)
-		model = cfg.Model
-	}
 	if abs(cbTotal-wantReward) > 1e-9 {
-		return fmt.Errorf("coinbase 總額=%g 應為 %g（emission=%s）", cbTotal, wantReward, model)
+		return fmt.Errorf("coinbase 總額=%g 應為 %g（emission=capped）", cbTotal, wantReward)
 	}
 
 	for j := i; j < len(txs); j++ {
@@ -191,7 +198,7 @@ func verifyBlockStructure(b *chaindb.Block, txs []chaindb.Transaction, blockTime
 		return err
 	}
 	if !ok {
-		return errors.New("PoW 驗證失敗")
+		return errors.New("PoT 驗證失敗")
 	}
 	return nil
 }

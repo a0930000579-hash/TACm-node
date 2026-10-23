@@ -1,4 +1,4 @@
-// Package difficulty 實現 TAC Ai 智能鏈的 PoW 難度動態調整（按出塊時間目標，
+// Package difficulty 實現 TAC Ai 智能鏈的 PoT 難度動態調整（按出塊時間目標，
 // 類似比特幣 retarget，適配秒級快速出塊）。本包為純函數：輸入歷史時間戳即可
 // 重放，不依賴外部狀態，可獨立測試，也可從創世重新計算當前難度。
 package difficulty
@@ -9,7 +9,7 @@ const (
 	RetargetInterval   = 10  // 每 10 個區塊調整一次
 	TargetBlockTime    = 1.0 // 目標出塊間隔（秒）
 	MinDifficulty      = 1
-	MaxDifficulty      = 8   // PoW 前導零上限
+	MaxDifficulty      = 8   // PoT 前導零上限
 	MaxAdjustmentRatio = 4.0 // 單次最多 ×4 / ÷4
 )
 

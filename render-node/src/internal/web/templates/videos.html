@@ -79,10 +79,12 @@
   <a href="/community/profile"><svg viewBox="0 0 24 24" style="stroke:#65676b;fill:none;stroke-width:1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21 C4 16 7.5 13.5 12 13.5 C16.5 13.5 20 16 20 21"/></svg><span data-i18n="cm.me">個人</span></a>
 </nav>
 
+<!-- 社群統一權威地址（比照交易所 v160 錢包中心） -->
+<script src="/static/js/community-wallet.js"></script>
 <script>
 function get(p){ return fetch(p).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); }); }
 function post(p,b){ return fetch(p, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(b||{})}).then(function(r){ if(!r.ok) return r.json().then(function(j){throw new Error(j.error||r.status)}); return r.json(); }); }
-var me = (localStorage.getItem('cm_id')||'');
+var me = ''; // 身分＝權威地址（錢包中心為準），進頁由 cmBindAddr 解析填入。
 function shortAddr(a){ if(!a) return '—'; if(a.length<=16) return a; return a.slice(0,10)+'…'+a.slice(-6); }
 function timeAgo(ts){ var d=Date.now()/1000-ts; if(d<60) return '剛剛'; if(d<3600) return Math.floor(d/60)+' 分鐘前'; if(d<86400) return Math.floor(d/3600)+' 小時前'; return Math.floor(d/86400)+' 天前'; }
 function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
@@ -155,9 +157,10 @@ function loadVideos(){
     }
   }).catch(function(e){ el.innerHTML = '<div class="vw-empty">'+TAC_TE('載入失敗')+'：'+e+'</div>'; });
 }
-function trackImpV(id){ try{ post('/api/community/ads/'+id+'/impression', {address:''}); }catch(e){} }
-function adClickV(id, target){ try{ post('/api/community/ads/'+id+'/click', {address:''}); }catch(e){} if(target){ window.open(target,'_blank'); } }
-loadVideos();
+function trackImpV(id){ try{ post('/api/community/ads/'+id+'/impression', {address:me||''}); }catch(e){} }
+function adClickV(id, target){ try{ post('/api/community/ads/'+id+'/click', {address:me||''}); }catch(e){} if(target){ window.open(target,'_blank'); } }
+// 進頁解析權威地址（錢包中心為準）後再載入影片瀑布流。
+cmBindAddr({ onResolve: function(addr){ me = addr; loadVideos(); } });
     var vwIO=null;
     function setupIO(){
       if(vwIO){ vwIO.disconnect(); }

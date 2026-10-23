@@ -57,6 +57,27 @@ func buildCluster(t *testing.T, n int) []*distNode {
 			t.Fatal(err)
 		}
 	}
+	// 無論後續是否 launchCluster（部分測試只建叢集驗證輪值而不啟動），都在測試結束時
+	// 關閉所有節點與監聽器；清理時依 d.launched 判斷關閉路徑（launchCluster 與 v54 接管
+	// 重啟會回寫 d.netw/d.srv/d.l/d.launched，故此處閉到的是最終存活的資源）。
+	for _, d := range dn {
+		d := d
+		t.Cleanup(func() {
+			if d.launched {
+				if d.netw != nil {
+					d.netw.Close()
+				}
+				if d.srv != nil {
+					ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+					_ = d.srv.Shutdown(ctx)
+					cancel()
+				}
+			} else if d.l != nil {
+				_ = d.l.Close()
+			}
+			_ = d.n.Close()
+		})
+	}
 	return dn
 }
 
@@ -90,20 +111,7 @@ func launchCluster(t *testing.T, dn []*distNode, launch []bool) {
 			firstURL = url
 		}
 	}
-	t.Cleanup(func() {
-		for _, d := range dn {
-			if d.launched {
-				d.netw.Close()
-				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-				_ = d.srv.Shutdown(ctx)
-				cancel()
-				_ = d.n.Close()
-			} else {
-				_ = d.l.Close()
-				_ = d.n.Close()
-			}
-		}
-	})
+	// 節點/監聽器的關閉由 buildCluster 註冊的 t.Cleanup 統一處理（依 d.launched 判斷）。
 }
 
 func waitFinalized(t *testing.T, n *Node, h int64, to time.Duration) {
@@ -137,10 +145,10 @@ func TestDistributedBFTQuorum(t *testing.T) {
 			t.Errorf("v%d 高度3 哈希不一致", i)
 		}
 	}
-}
 
-// 容錯 f=1：v3 離線（不投票），其餘 3 人 power3 > quorum(2.67)，
-// 在非 v3 提議的高度（h1=v1、h2=v2）仍可跨節點最終化。
+	// 容錯 f=1：v3 離線（不投票），其餘 3 人 power3 > quorum(2.67)，
+	// 在非 v3 提議的高度（h1=v1、h2=v2）仍可跨節點最終化。
+}
 func TestDistributedBFTQuorumOneOffline(t *testing.T) {
 	dn := buildCluster(t, 4)
 	launchCluster(t, dn, []bool{true, true, true, false})
@@ -148,9 +156,9 @@ func TestDistributedBFTQuorumOneOffline(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		waitFinalized(t, dn[i].n, 2, 90*time.Second)
 	}
-}
 
-// 非驗證人簽名的投票必須被拒絕。
+	// 非驗證人簽名的投票必須被拒絕。
+}
 func TestNonValidatorVoteRejected(t *testing.T) {
 	dn := buildCluster(t, 4)
 	launchCluster(t, dn, []bool{false, false, false, false})
@@ -164,11 +172,11 @@ func TestNonValidatorVoteRejected(t *testing.T) {
 	if err := dn[0].n.handleIncomingVote(vote); err == nil {
 		t.Fatal("非驗證人投票應被拒絕")
 	}
-}
 
-// view change：h3 的 round0 proposer 恰為離線的 v3（3%4=3）；其餘 3 人
-// 在本地超時後進 round1，v0（(3+1)%4=0）接棒出塊，集群跨過離線節點
-// 最終化 h3 且哈希一致；h4（v0 round0）繼續正常推進。
+	// view change：h3 的 round0 proposer 恰為離線的 v3（3%4=3）；其餘 3 人
+	// 在本地超時後進 round1，v0（(3+1)%4=0）接棒出塊，集群跨過離線節點
+	// 最終化 h3 且哈希一致；h4（v0 round0）繼續正常推進。
+}
 func TestDistributedBFTViewChangeOfflineProposer(t *testing.T) {
 	dn := buildCluster(t, 4)
 	launchCluster(t, dn, []bool{true, true, true, false})
@@ -186,4 +194,5 @@ func TestDistributedBFTViewChangeOfflineProposer(t *testing.T) {
 			t.Errorf("v%d 高度3 哈希不一致（view change 後分叉）", i)
 		}
 	}
+
 }

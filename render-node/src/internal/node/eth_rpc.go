@@ -161,7 +161,7 @@ func (s *RPCServer) dispatchEthRPC(req ethRPCRequest) ethRPCResponse {
 	case "eth_hashrate":
 		result = "0x0"
 	case "eth_submitWork":
-		result = false // 不接收外部 PoW work
+		result = false // 不接收外部 PoT work
 	case "eth_submitHashrate":
 		result = false
 	case "eth_blockNumber":

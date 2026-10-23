@@ -4,7 +4,7 @@ import (
 	"strings"
 )
 
-// PowResult 為一次成功 PoW 的結果。
+// PowResult 為一次成功 PoT 挖礦的結果（型別名保留歷史命名）。
 type PowResult struct {
 	Nonce int    `json:"nonce"`
 	Hash  string `json:"hash"`
@@ -29,7 +29,7 @@ func MineBlock(header map[string]any, difficulty, maxNonce int) (*PowResult, err
 	return nil, nil
 }
 
-// VerifyPow 校驗區塊 PoW；內部固定 difficulty 字段，避免調用方遺漏。
+// VerifyPow 校驗區塊 PoT；內部固定 difficulty 字段，避免調用方遺漏（函式名保留歷史命名）。
 func VerifyPow(header map[string]any, difficulty int) (bool, error) {
 	test := cloneHeader(header)
 	test["difficulty"] = difficulty
