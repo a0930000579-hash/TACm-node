@@ -2,6 +2,7 @@ package ai
 
 import (
 	"context"
+	"log"
 	"sync"
 	"time"
 )
@@ -111,10 +112,13 @@ func nowTS() int64 { return time.Now().Unix() }
 
 // FallbackProvider 先嘗試 primary，連續失敗時退回 fallback（llama 不可用→規則式）。
 // primary 回錯時，把該錯誤計數並改走 fallback；primary 成功則重置。免金鑰環境永遠可跑。
+// v167：降級時把 primary 具體錯誤（HTTP 狀態碼/逾時/解碼錯，絕不含 API key）寫進日誌，方便主網診斷。
 type FallbackProvider struct {
 	primary  Provider
 	fallback Provider
 	failures int
+	active   Provider // 最近一次成功 Complete 的那一層（讓 Name() 反映實際服務層）
+	logger   func(format string, args ...any)
 }
 
 // NewFallbackProvider 組裝 primary+fallback。
@@ -122,23 +126,48 @@ func NewFallbackProvider(primary, fallback Provider) *FallbackProvider {
 	return &FallbackProvider{primary: primary, fallback: fallback}
 }
 
-// Name 回傳當前實際使用的提供者名稱。
+// WithLogger 注入自訂日誌（測試可斷言降級原因）；nil 時用標準 log。
+func (f *FallbackProvider) WithLogger(fn func(format string, args ...any)) *FallbackProvider {
+	f.logger = fn
+	return f
+}
+
+func (f *FallbackProvider) logf(format string, args ...any) {
+	if f.logger != nil {
+		f.logger(format, args...)
+		return
+	}
+	log.Printf("[ai] "+format, args...)
+}
+
+// Name 回傳最近一次實際成功服務的提供者名稱（降級後反映真正產生回答的那一層）。
 func (f *FallbackProvider) Name() string {
+	if f.active != nil {
+		return f.active.Name()
+	}
 	if f.primary != nil && f.failures < 2 {
 		return f.primary.Name()
 	}
 	return f.fallback.Name()
 }
 
-// Complete 實作 Provider：primary 失敗逾 2 次後固定走 fallback。
+// Complete 實作 Provider：primary 失敗逾 2 次後固定走 fallback；成功即記錄 active。
 func (f *FallbackProvider) Complete(ctx context.Context, msgs []ChatMessage, tools []*Tool) (Turn, error) {
 	if f.primary != nil && f.failures < 2 {
 		turn, err := f.primary.Complete(ctx, msgs, tools)
 		if err == nil {
 			f.failures = 0
+			f.active = f.primary
 			return turn, nil
 		}
 		f.failures++
+		// v167：明確記錄降級原因（不含 key）。
+		f.logf("primary provider %q failed (#%d/2): %v; falling back to %q",
+			f.primary.Name(), f.failures, err, f.fallback.Name())
 	}
-	return f.fallback.Complete(ctx, msgs, tools)
+	turn, err := f.fallback.Complete(ctx, msgs, tools)
+	if err == nil {
+		f.active = f.fallback
+	}
+	return turn, err
 }

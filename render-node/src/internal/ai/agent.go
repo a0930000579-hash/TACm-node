@@ -52,6 +52,7 @@ type Agent struct {
 	memory   *MemoryStore
 	maxIter  int
 	timeout  time.Duration
+	addr     string // v166：本請求連結的錢包地址（後端 backstop＋system prompt 提示）
 }
 
 // Option 組裝 Agent 的可選參數。
@@ -84,6 +85,22 @@ func WithMemory(m *MemoryStore) Option {
 	}
 }
 
+// WithAddress 注入本請求連結的錢包地址：寫進 system prompt 讓模型知道預設地址，
+// 並與工具層 backstop 搭配（模型未帶 address 時以它補上）。
+func WithAddress(addr string) Option {
+	return func(a *Agent) { a.addr = strings.TrimSpace(addr) }
+}
+
+// addressNote 把連結地址告知模型（zh/en）；未連結時明確要求先引導連結。
+func (a *Agent) addressNote() string {
+	if a.addr == "" {
+		return "WALLET: no wallet is currently linked / 目前未連結錢包。 If the user asks about their own balance, recent transactions or DeFi positions, ask them to link a wallet first (請先引導連結錢包)。"
+	}
+	return "WALLET: the user's linked wallet address is " + a.addr +
+		" / 目前連結錢包：" + a.addr +
+		". Use it as the default when the user asks about their own balance / transactions / DeFi, unless they explicitly give a different address (除非使用者明確指定其他地址)。"
+}
+
 // NewAgent 組裝 Agent。provider 不可為 nil，registry 不可為 nil。
 func NewAgent(provider Provider, registry *Registry, opts ...Option) (*Agent, error) {
 	if provider == nil {
@@ -111,6 +128,11 @@ func NewAgent(provider Provider, registry *Registry, opts ...Option) (*Agent, er
 // 才動用 function-calling 工具。其餘日常／規劃／寫作／解釋／翻譯／學習一律直接自然回答，
 // 不硬套工具。金融相關自帶風險提示、不報明牌、寫操作需確認閘。
 const systemPromptAgent = "You are Titan Ai (泰坦 Ai), a warm, natural and capable AI assistant on the TAC AI Smart Chain.\n" +
+	"BRAND: always introduce yourself as \"Titan Ai (泰坦 Ai)\", the smart assistant of the TAC AI Smart Chain. " +
+	"Do NOT call yourself ChatGPT, OpenAI, GPT, or name any underlying model vendor in normal conversation. " +
+	"If the user directly asks what model you are built on or whether you are GPT, answer honestly that Titan Ai " +
+	"integrates open-source models (e.g. GPT-OSS) tuned and integrated by the TAC team — do not lie, but do not " +
+	"volunteer vendor/model names on your own.\n" +
 	"LANGUAGE: reply in the user's language — use Traditional Chinese for Chinese, otherwise English.\n" +
 	"PERSONA: be conversational, concise and human. When a request is ambiguous, ask one short clarifying " +
 	"question instead of guessing. Summarize the key point when helpful, and close with a gentle follow-up " +
@@ -153,6 +175,7 @@ func (a *Agent) Run(ctx context.Context, userMsg, sessionID string, confirm bool
 	// 組裝對話：system + 歷史記憶 + 本輪 user。
 	history := a.memory.Load(sessionID)
 	msgs := []ChatMessage{{Role: "system", Content: systemPromptAgent}}
+	msgs = append(msgs, ChatMessage{Role: "system", Content: a.addressNote()})
 	msgs = append(msgs, history...)
 	msgs = append(msgs, ChatMessage{Role: "user", Content: userMsg})
 
@@ -180,8 +203,9 @@ func (a *Agent) Run(ctx context.Context, userMsg, sessionID string, confirm bool
 		}
 
 		if !turn.HasToolCalls() {
-			// 最終回答。
+			// 最終回答。res.Model 反映實際產生回答的那一層（FallbackProvider 已記錄 active）。
 			res.Answer = strings.TrimSpace(turn.Answer)
+			res.Model = a.provider.Name()
 			res.Trace = append(res.Trace, Step{Kind: "answer", Result: res.Answer, Ts: nowTS()})
 			a.memory.Append(sessionID,
 				ChatMessage{Role: "user", Content: userMsg},

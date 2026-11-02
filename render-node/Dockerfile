@@ -12,5 +12,7 @@ RUN chmod +x /var/tac/downloads/nodeweb /var/tac/downloads/install-node.sh
 # 供應模型與錨點一致：annual_decay（總上限 52,003,300、6 年、年衰減 25%）
 ENV TACM_MAX_SUPPLY=52003300 TACM_EMISSION_YEARS=6 TACM_ANNUAL_DECAY_PCT=0.25
 EXPOSE 8080
-# 純節點：同步＋驗證＋節點面板；p2p-url 自動依部署位置偵測（Render env）
-CMD ["nodeweb", "-web-port", "8080", "-data-dir", "/var/tac/data", "-network", "mainnet", "-block-time", "3", "-p2p", "-p2p-seed", "http://2.28.201.174:8080", "-p2p-follower"]
+# v167：出塊間隔 12 秒（與主網 anchor 一致）；-p2p-follower=false——Render 節點改為驗證人：
+# 鏈上質押 ≥1,000 TACm 後自動以分布式 BFT 輪值 proposer 出塊（與 anchor 輪流提議）；
+# 尚未質押期間 StartDistributed 自動降為同步＋投票（不亂出塊）。
+CMD ["nodeweb", "-web-port", "8080", "-data-dir", "/var/tac/data", "-network", "mainnet", "-block-time", "12", "-p2p", "-p2p-seed", "http://2.28.201.174:8080", "-p2p-follower=false"]

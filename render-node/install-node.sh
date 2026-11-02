@@ -74,7 +74,9 @@ $SUDO tee /etc/systemd/system/tacnode.service >/dev/null <<SVC
 Description=TACm Node
 After=network.target
 [Service]
-ExecStart=/usr/local/bin/nodeweb -data-dir $DATA_DIR -web-port $WEB_PORT -p2p -p2p-url http://$PUBIP:$WEB_PORT -p2p-seed $SEED -snapshot-url $SEED
+# v167：出塊間隔 12 秒（與主網 anchor 一致）。節點預設跟隨模式，鏈上質押 ≥1,000 TACm 後
+# 由 StartDistributed 自動切換為輪值驗證人（-p2p-follower 不傳＝預 true，已質押仍自動升驗證人）。
+ExecStart=/usr/local/bin/nodeweb -data-dir $DATA_DIR -web-port $WEB_PORT -p2p -p2p-url http://$PUBIP:$WEB_PORT -p2p-seed $SEED -snapshot-url $SEED -block-time 12
 Restart=always
 RestartSec=5
 [Install]

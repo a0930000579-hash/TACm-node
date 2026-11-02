@@ -3,8 +3,10 @@ package node
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"tacm/internal/ai"
@@ -63,18 +65,15 @@ func (s *RPCServer) handleAIAgent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	mem := sharedAgentMemory()
-	reg := s.buildAgentRegistry(func() string { return mem.Summary(req.SessionID) })
+	reg := s.buildAgentRegistry(func() string { return mem.Summary(req.SessionID) }, req.Address)
 
-	// Provider：llama 在線走原生 function calling（best-effort）；失敗自動退回離線規則。
-	base := ai.NewRulesProvider(req.Address)
-	var provider ai.Provider = base
-	if probeLLM() {
-		if lp, err := ai.NewLlamaProvider(llm()); err == nil {
-			provider = ai.NewFallbackProvider(lp, base)
-		}
-	}
+	// Provider 選擇鏈：OpenAI 相容 env（TAC_LLM_*）> 本地 llama(TAC_LLAMA_PORT) > 離線規則。
+	// v167：啟動時明確記錄選擇鏈；OpenAI init 失敗記錄具體原因（不含 key）。
+	provider := s.buildAIProvider(req.Address)
 
-	agent, err := ai.NewAgent(provider, reg, ai.WithMemory(mem), ai.WithMaxIterations(8), ai.WithTimeout(60*time.Second))
+	agent, err := ai.NewAgent(provider, reg,
+		ai.WithMemory(mem), ai.WithMaxIterations(8), ai.WithTimeout(60*time.Second),
+		ai.WithAddress(req.Address))
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "agent_init: "+err.Error())
 		return
@@ -104,4 +103,37 @@ func (s *RPCServer) handleAIAgent(w http.ResponseWriter, r *http.Request) {
 		"queries":   result.Queries,
 		"citations": result.Citations,
 	})
+}
+
+// aiProviderLogOnce 全進程只記一次 provider 選擇鏈（env 固定，避免每請求洗版）。
+var aiProviderLogOnce sync.Once
+
+// buildAIProvider 組裝 provider 鏈：OpenAI 相容 env（TAC_LLM_*）> 本地 llama(TAC_LLAMA_PORT) > 離線規則。
+// v167：明確記錄選擇鏈與 OpenAI init 失敗原因（絕不含 API key）。
+func (s *RPCServer) buildAIProvider(addr string) ai.Provider {
+	base := ai.NewRulesProvider(addr)
+	tail := ai.Provider(base)
+	llamaOn := probeLLM()
+	if llamaOn {
+		if lp, err := ai.NewLlamaProvider(llm()); err == nil {
+			tail = ai.NewFallbackProvider(lp, base)
+		}
+	}
+	provider := tail
+	openaiOn := false
+	openaiErr := ""
+	if op, err := ai.NewOpenAIProviderFromEnv(); err == nil {
+		provider = ai.NewFallbackProvider(op, tail)
+		openaiOn = true
+	} else {
+		openaiErr = err.Error() // 缺哪個 env，不含 key
+	}
+	aiProviderLogOnce.Do(func() {
+		log.Printf("[ai] provider chain: openai_env=%v llama_online=%v fallback=rules; selected=%s",
+			openaiOn, llamaOn, provider.Name())
+		if openaiErr != "" {
+			log.Printf("[ai] openai-compatible provider NOT enabled: %s", openaiErr)
+		}
+	})
+	return provider
 }

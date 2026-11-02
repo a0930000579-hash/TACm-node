@@ -253,9 +253,9 @@ func (p *RulesProvider) generalReply(text, lang string, history []ChatMessage) s
 		}
 	case "who":
 		if zh {
-			body = "我是 Titan Ai，TAC AI 智能鏈上的 AI 助手。我能陪你對話、規劃、寫作，也能在你確認後協助鏈上查詢與 DeFi 操作。"
+			body = "我是 Titan Ai（泰坦 Ai），TAC AI 智能鏈上的 AI 助手。我由 TAC 團隊整合調校開源模型（如 GPT-OSS）而成，不是 ChatGPT／OpenAI 的產物。我能陪你對話、規劃、寫作、寫程式，也能在你確認後協助鏈上查詢與 DeFi 操作。"
 		} else {
-			body = "I'm Titan Ai, the AI assistant on the TAC AI Smart Chain. I can chat, plan and write, and help with on-chain queries and DeFi actions after your confirmation."
+			body = "I'm Titan Ai (泰坦 Ai), the AI assistant on the TAC AI Smart Chain, built by the TAC team on tuned open-source models (e.g. GPT-OSS) — I am not a ChatGPT/OpenAI product. I can chat, plan, write and code, and help with on-chain queries and DeFi actions after your confirmation."
 		}
 	default:
 		if zh {
