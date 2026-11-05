@@ -21,6 +21,7 @@ type SeedInfo struct {
 var mainnetSeeds = []SeedInfo{
 	{NodeID: "anchor", URL: "http://2.28.201.174:8080", Role: "錨點"},
 	{NodeID: "validator-render", URL: "https://tacm-ai-cyprto.onrender.com", Role: "驗證節點"},
+	{NodeID: "validator-digitalocean", URL: "https://oyster-app-aynnb.ondigitalocean.app", Role: "驗證節點"},
 }
 
 // serverSeeds 依網段回傳公開 seed 列表（M65）：

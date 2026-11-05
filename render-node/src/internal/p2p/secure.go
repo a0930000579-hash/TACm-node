@@ -17,6 +17,18 @@ import (
 	"github.com/btcsuite/btcd/btcec/v2"
 )
 
+// ErrPeerAuth 表示對端以 400 拒絕加密握手（金鑰/協議層失效）。
+// 觸發本端清除快取公鑰並重新取得後重試一次。
+var ErrPeerAuth = errors.New("p2p: peer rejected auth (400)")
+
+// invalidatePeerCrypto 清除對端快取的公鑰與通道狀態。對端重啟後其 ECDH
+// 金鑰輪替，舊公鑰快取會讓加密握手永久失敗；清除後下次 sealBody 重新向
+// /p2p/pubkey 取得新公鑰，SharedKey 依新公鑰產生新共享密鑰（舊密鑰條目無害保留）。
+func (n *Network) invalidatePeerCrypto(origin string) {
+	n.peerPubKeys.Delete(origin)
+	n.peerCipher.Delete(origin)
+}
+
 // Secure 提供 P2P 訊息層加密：secp256k1 ECDH 交換共享密鑰，
 // AES-256-GCM 加密每則 JSON body（與主流鏈 devp2p 的加密思想對齊，
 // 但以 HTTP/JSON 協議的最小侵入方式落地）。
@@ -153,20 +165,39 @@ func (n *Network) fetchPeerPubKey(baseURL string) (string, error) {
 	return out.PubKey, nil
 }
 
+// setPeerCipher 記錄與指定 peer 的通道加密狀態（供 Peer.Encrypted 展示）。
+func (n *Network) setPeerCipher(baseURL string, enc bool) { n.peerCipher.Store(baseURL, enc) }
+
+// peerEncrypted 返回與指定 peer 的通道是否加密；未知時預設 true（本端加密開啟）。
+func (n *Network) peerEncrypted(baseURL string) bool {
+	if v, ok := n.peerCipher.Load(baseURL); ok {
+		return v.(bool)
+	}
+	return n.cfg.Encrypt && n.Secure != nil
+}
+
 // sealBody 加密 HTTP body（Encrypt 開啟時）：向對端索取公鑰 → ECDH → AES-GCM。
+// v65：對端不支援加密（舊版節點）或索取失敗時**自動降級明文**並記錄通道狀態，
+// 避免加密節點與舊節點混跑時連線中斷；降級狀態經 Peer.Encrypted 可視化。
 func (n *Network) sealBody(rawURL string, plain []byte) ([]byte, error) {
 	if !n.cfg.Encrypt || n.Secure == nil {
 		return plain, nil
 	}
+	origin := peerOrigin(rawURL)
 	// rawURL 可能是完整端點（.../p2p/hello、.../p2p/gossip），pubkey 握手固定走 origin。
-	peerPub, err := n.fetchPeerPubKey(peerOrigin(rawURL))
+	peerPub, err := n.fetchPeerPubKey(origin)
 	if err != nil {
-		return nil, err
+		// 對端不支援加密（/p2p/pubkey 404/400/空）或暫時不可達：
+		// 降級明文保證網絡不斷裂，並標記通道狀態供 UI 警示。
+		n.setPeerCipher(origin, false)
+		return plain, nil
 	}
 	key, err := n.Secure.SharedKey(peerPub)
 	if err != nil {
-		return nil, err
+		n.setPeerCipher(origin, false)
+		return plain, nil
 	}
+	n.setPeerCipher(origin, true)
 	sealed, err := EncryptPayload(key, plain)
 	if err != nil {
 		return nil, err
@@ -181,6 +212,8 @@ func (n *Network) sealBody(rawURL string, plain []byte) ([]byte, error) {
 }
 
 // openBody 解密 HTTP body（Encrypt 開啟時）；返回原 JSON bytes。
+// v65 相容：對端若為舊版明文節點（body 不是加密 envelope），直接視明文
+// 處理，避免加密端拒絕明文節點的 hello/gossip（全網可混跑）。
 func (n *Network) openBody(r *http.Request) ([]byte, error) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -190,8 +223,9 @@ func (n *Network) openBody(r *http.Request) ([]byte, error) {
 		return body, nil
 	}
 	var env encEnvelope
-	if err := json.Unmarshal(body, &env); err != nil {
-		return nil, fmt.Errorf("p2p: 加密封包解析失敗: %w", err)
+	if err := json.Unmarshal(body, &env); err != nil || env.Pub == "" || env.IV == "" || env.Data == "" {
+		// 非加密 envelope（明文節點發來或格式異常）：按明文相容處理。
+		return body, nil
 	}
 	key, err := n.Secure.SharedKey(env.Pub)
 	if err != nil {

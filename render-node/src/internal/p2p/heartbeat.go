@@ -42,7 +42,7 @@ func (n *Network) heartbeatOnce() {
 		wg.Add(1)
 		go func(p Peer) {
 			defer wg.Done()
-			respBody, err := n.postHello(p.BaseURL+"/p2p/hello", body)
+			respBody, err := n.postHelloWithKeyRefresh(p.BaseURL+"/p2p/hello", body)
 			if err != nil {
 				n.markFailByURL(p.BaseURL)
 				return
@@ -86,7 +86,7 @@ func (n *Network) refreshPeerHeights() {
 		wg.Add(1)
 		go func(p Peer) {
 			defer wg.Done()
-			respBody, err := n.postHello(p.BaseURL+"/p2p/hello", body)
+			respBody, err := n.postHelloWithKeyRefresh(p.BaseURL+"/p2p/hello", body)
 			if err != nil {
 				n.markFailByURL(p.BaseURL)
 				return
@@ -120,10 +120,27 @@ func (n *Network) postHello(url string, body []byte) ([]byte, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusBadRequest {
+		// 400 多半是加密金鑰/協議層被拒（對端重啟後 ECDH 金鑰輪替，本端
+		// 快取的舊公鑰已失效）；回傳哨兵錯誤，由 postHelloWithKeyRefresh
+		// 清除快取並以新公鑰重試，避免節點長期把對端誤判離線。
+		return nil, ErrPeerAuth
+	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("hello status %d", resp.StatusCode)
 	}
 	return io.ReadAll(resp.Body)
+}
+
+// postHelloWithKeyRefresh 發送加密握手；若對端以 400 拒絕（金鑰失效），
+// 清除該對端的公鑰/通道快取並用新公鑰重試一次（自我癒合，僅一次以防重試風暴）。
+func (n *Network) postHelloWithKeyRefresh(endpoint string, body []byte) ([]byte, error) {
+	respBody, err := n.postHello(endpoint, body)
+	if errors.Is(err, ErrPeerAuth) {
+		n.invalidatePeerCrypto(peerOrigin(endpoint))
+		return n.postHello(endpoint, body)
+	}
+	return respBody, err
 }
 
 func (n *Network) markFailByURL(rawURL string) {
