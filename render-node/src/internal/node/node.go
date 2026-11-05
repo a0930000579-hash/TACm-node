@@ -1200,12 +1200,14 @@ func (n *Node) takeOverIfProposerOffline(cs *consensusState) bool {
 	if time.Since(cs.offlineSince) <= n.consensusTimeout(round) {
 		return false
 	}
-	// v54：接管僅在「本節點是唯一在線驗證人」時觸發（主鏈/創世節點掛機、
-	// 無其他驗證人可輪值接棒的少數場景）；有其他在線驗證人時交給 view change
-	// 正常輪值接棒，避免接管與 view-change 同時出塊造成分叉（4 節點 BFT 回歸）。
+	// v168：接管僅在「沒有其他驗證人實際可輪值出塊」時觸發。
+	// v167 事故根因：Render 免費層冷啟動/共識卡死時仍持續送 P2P hello＋心跳交易
+	// （網路在線但共識無法出塊），舊邏輯僅看 p.Online 就 return false，導致在線
+	// 驗證人永遠無法接管、鏈永久停塊。改為：僅當其他在線驗證人「已抵達 target 高度」
+	// （實際可出塊）才交還 view-change；online 但高度停滯＝共識失能，本節點照樣接管。
 	if n.vset != nil && n.p2pNet != nil {
 		for _, p := range n.p2pNet.PeerSnapshot() {
-			if p.Online && n.vset.Get(p.Owner) != nil {
+			if p.Online && n.vset.Get(p.Owner) != nil && p.Height >= target {
 				return false
 			}
 		}

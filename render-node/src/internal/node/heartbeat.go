@@ -16,16 +16,17 @@ package node
 // 同一條鏈，看到的在線礦工、算力與瓜分完全一致 → 錨點/節點不再有入口差異。
 
 import (
-	"log"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"tacm/internal/chaindb"
 	"tacm/internal/crypto"
 )
 
@@ -33,10 +34,13 @@ import (
 const hbMemoPrefix = "hb:"
 
 // hbWindow 鏈上在線窗口（塊）：窗口內最後一筆 hb 為 on 且未 off 視為在線；超出窗口自動下線。
-const hbWindow = int64(60)
+// v112：心跳頻率改 1h/次 → 窗口需覆蓋 1h＋餘量（主網 block-time 1s ≈ 3600 塊/小時；2s ≈ 1800 塊/小時）。
+// 3700 塊：@1s 覆蓋 ~1h＋100 塊餘量；@2s 覆蓋 ~2h。
+const hbWindow = int64(3700)
 
-// hbRefresh 伺服器端心跳續命間隔：每 30s 對已開機礦工續發 hb:on（窗口 60 塊 ≈ 120s，保留 2 倍餘量）。
-const hbRefresh = 30 * time.Second
+// hbRefresh 伺服器端心跳續命間隔：v112 改為每 1 小時續發一次 hb:on（窗口 3700 塊覆蓋 1h＋餘量）。
+// 開機時仍立即上鏈 hb:on（首次即計算），之後每小時續命，大幅降低鏈上心跳交易量（頁面載入更快）。
+const hbRefresh = 1 * time.Hour
 
 // parseHeartbeatMemo 解析 hb:on:<hashrate> / hb:off（hashrate 可省略＝0）。
 // 非 hb 交易回傳 ok=false。
@@ -122,7 +126,31 @@ func (n *Node) StartNodeHeartbeat(interval time.Duration, stop <-chan struct{}) 
 			return true
 		}
 		ensureRegistered()
-		if _, err := n.SubmitHeartbeat(n.nodeAddress, true, 0); err != nil {
+		// v67：節點心跳與礦工心跳共用同一節點金鑰（from=節點），兩路徑同時提交時
+		// nonce 會被礦工心跳先佔用，node-hb 以舊 nonce 提交會被 bad nonce 拒絕，
+		// 導致節點在線心跳長期失敗、45% 節點獎勵領不到。故提交失敗後以最新
+		// nonce（重新 buildHeartbeatTx）重試一次——重試基本必成，剩餘極少數
+		// 衝突留待下一心跳週期。
+		submitHeartbeat := func() error {
+			// v168：mempool 已有本節點待打包 hb:on 時直接跳過——避免 60s ticker／
+			// Render 免費層反覆冷啟動重複提交，堆出連續 nonce 零費交易並刷
+			// replacement transaction underpriced（v167 主網事故伴隨症狀根因）。
+			if n.hasPendingNodeHeartbeat() {
+				return nil
+			}
+			if _, err := n.SubmitHeartbeat(n.nodeAddress, true, 0); err != nil {
+				// v168：underpriced 視為良性（同 nonce 已有同費心跳待打包），不刷錯誤、不重試。
+				if errors.Is(err, chaindb.ErrMempoolUnderpriced) {
+					return nil
+				}
+				// 第一次失敗（多半 bad nonce：miner-hb 先佔）→ 重新算 nonce 重試。
+				if _, err2 := n.SubmitHeartbeat(n.nodeAddress, true, 0); err2 != nil {
+					return err2
+				}
+			}
+			return nil
+		}
+		if err := submitHeartbeat(); err != nil {
 			log.Printf("[node-hb] 初始心跳失敗: %v", err)
 		}
 		for {
@@ -135,7 +163,7 @@ func (n *Node) StartNodeHeartbeat(interval time.Duration, stop <-chan struct{}) 
 					// 且註冊失敗多半伴隨交易通道異常，避免重複卡 nonce。
 					continue
 				}
-				if _, err := n.SubmitHeartbeat(n.nodeAddress, true, 0); err != nil {
+				if err := submitHeartbeat(); err != nil {
 					log.Printf("[node-hb] 心跳失敗: %v", err)
 				}
 			}
@@ -151,6 +179,27 @@ func (n *Node) SubmitHeartbeat(minerAddr string, on bool, hashrate int64) (strin
 		return "", err
 	}
 	return n.SubmitTransaction(tx)
+}
+
+// hasPendingNodeHeartbeat v168：mempool 是否已有本節點送出的待打包 hb:on。
+// 有則跳過新一輪心跳提交，避免重複堆 nonce／刷 underpriced。查詢失敗時回 false
+// （寧可多發一筆也不讓節點被誤判下線）。
+func (n *Node) hasPendingNodeHeartbeat() bool {
+	txs, err := n.db.GetMempool(500)
+	if err != nil {
+		return false
+	}
+	for _, t := range txs {
+		from, _ := t["from"].(string)
+		if from != n.nodeAddress {
+			continue
+		}
+		memo, _ := t["memo"].(string)
+		if on, _, ok := parseHeartbeatMemo(memo); ok && on {
+			return true
+		}
+	}
+	return false
 }
 
 // hbCache* M145：鏈上在線礦工視窗快取（3 秒 TTL）。/api/miners 每次輪詢都全掃
@@ -182,27 +231,31 @@ func (n *Node) onChainOnlineMiners(window int64) (map[string]int64, error) {
 		start = 1
 	}
 	states := map[string]int64{}
-	for h := start; h <= tip; h++ {
-		txs, err := n.db.GetTransactionsByBlock(h)
-		if err != nil {
-			return nil, err
+	// v112：一次 SQL 查窗口內全部 hb 交易（取代逐塊 GetTransactionsByBlock——鏈長時數分鐘級卡頓）。
+	txs, err := n.db.GetHeartbeatTxs(start)
+	if err != nil {
+		return nil, err
+	}
+	for _, tx := range txs {
+		on, hr, ok := parseHeartbeatMemo(tx.Memo)
+		if !ok {
+			continue
 		}
-		for _, tx := range txs {
-			on, hr, ok := parseHeartbeatMemo(tx.Memo)
-			if !ok {
-				continue
-			}
-			if on {
-				states[tx.ToAddr] = hr
-			} else {
-				delete(states, tx.ToAddr)
-			}
+		if on {
+			states[tx.ToAddr] = hr
+		} else {
+			delete(states, tx.ToAddr)
 		}
 	}
 	hbCache = states
 	hbCacheTip = tip
 	hbCacheAt = time.Now()
 	return states, nil
+}
+
+// OnlineMinersView v113：鏈上在線礦工視圖（窗口與心跳 1h 一致），供 web 聚合層（audit/chain-stats）。
+func (n *Node) OnlineMinersView() ([]string, int64, error) {
+	return n.OnChainMiners(hbWindow)
 }
 
 // OnChainMiners 對外暴露鏈上在線礦工視角（供 web 層渲染）：回傳 (地址清單, 總算力)。
