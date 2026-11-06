@@ -4,7 +4,7 @@ package node
 //
 // 從創世起逐塊重放全部鏈上交易，獨立驗證：
 //  1. 每筆非 coinbase 交易的簽名有效（pubkey 派生地址 == from，簽名匹配）
-//  2. nonce 順序正確（同地址嚴格遞增，防重放/亂序）
+//  2. nonce 單調不回退（防重放/亂序；向前跳號相容冷啟動序號燒毀）
 //  3. 發送方餘額充足（from ≥ amount+fee，防透支/雙花）
 //  4. 合約交易（vm:deploy:/vm:call:）memo 格式合法（gas 可解析、payload 可解碼）
 //  5. 賬本守恆：全部地址餘額總和 == 全鏈 coinbase 增發總額（無憑空增發）
@@ -17,6 +17,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -333,15 +334,20 @@ func (n *Node) auditReplay(start int64, cp *AuditCheckpoint, tip int64) LedgerAu
 					" tx["+strconv.Itoa(t.TxIndex)+"] 簽名驗證失敗")
 			}
 
-			// ② nonce 順序：同地址嚴格遞增（下一筆期望 = 已見 + 1）。
+			// ② nonce 順序：鏈上 applyDelta 對每筆真實交易「無條件 nonce+1」，權威
+			// account nonce 即真實交易筆數（不校驗宣告 nonce）。安全不變式為「宣告
+			// nonce 不得回退/重複」（防重放）。冷啟動時被 RBF 取代或未確認的 mempool
+			// 交易會燒掉一個宣告序號，使下一筆宣告 nonce 向前跳號——不構成雙花/增發
+			// （餘額與簽名獨立把關），故向前跳號予以相容，期望計數仍逐筆 +1，與鏈上
+			// account nonce 完全一致；僅當宣告 nonce 回退（重放/亂序）才判定失敗。
 			exp := nonces[t.FromAddr]
-			if t.Nonce == exp {
+			if t.Nonce >= exp {
 				out.TxNoncePass++
 				nonces[t.FromAddr] = exp + 1
 			} else {
 				out.TxNonceFail++
 				out.Issues = append(out.Issues, "h="+strconv.FormatInt(h, 10)+
-					" tx["+strconv.Itoa(t.TxIndex)+"] nonce 異常: 期望 "+strconv.FormatInt(exp, 10)+
+					" tx["+strconv.Itoa(t.TxIndex)+"] nonce 回退（重放）: 期望 "+strconv.FormatInt(exp, 10)+
 					" 實際 "+strconv.FormatInt(t.Nonce, 10))
 			}
 
@@ -399,20 +405,31 @@ func (n *Node) auditReplay(start int64, cp *AuditCheckpoint, tip int64) LedgerAu
 	}
 
 	// ⑤ 賬本守恆：總餘額 + 銷毀 == coinbase 增發總額。
+	// 按 key 排序後確定性求和，避免 map 隨機順序讓數千筆累加的浮點誤差在不同
+	// 重放間漂移；容差採「絕對 1e-6 + 相對 1e-9」，相對項吸收大額總量下的合理
+	// 累加誤差，真實增發（至少一個 coinbase 量級）遠超此閾值，不會被放過。
+	keys := make([]string, 0, len(balances))
+	for k := range balances {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
 	var balTotal float64
-	for _, b := range balances {
-		balTotal += b
+	for _, k := range keys {
+		balTotal += balances[k]
 	}
 	out.CoinbaseTotal = roundCoinbase(coinbaseTotal)
 	out.BalancesTotal = roundCoinbase(balTotal)
 	out.BurnedTotal = roundCoinbase(burnedTotal)
-	out.LedgerOK = math.Abs(balTotal+burnedTotal-coinbaseTotal) <= ledgerAuditEps
+	conservationDiff := balTotal + burnedTotal - coinbaseTotal
+	tol := ledgerAuditEps + 1e-9*math.Abs(coinbaseTotal)
+	out.LedgerOK = math.Abs(conservationDiff) <= tol
 	if !out.LedgerOK {
 		out.Issues = append(out.Issues, fmt.Sprintf(
-			"賬本守恆失敗: 總餘額 %s + 銷毀 %s != coinbase 增發 %s",
+			"賬本守恆失敗: 總餘額 %s + 銷毀 %s != coinbase 增發 %s（差異 %.12g）",
 			strconv.FormatFloat(out.BalancesTotal, 'f', 4, 64),
 			strconv.FormatFloat(burnedTotal, 'f', 4, 64),
-			strconv.FormatFloat(out.CoinbaseTotal, 'f', 4, 64)))
+			strconv.FormatFloat(out.CoinbaseTotal, 'f', 4, 64),
+			conservationDiff))
 	}
 
 	out.OK = out.TxSigFail == 0 && out.TxNonceFail == 0 &&

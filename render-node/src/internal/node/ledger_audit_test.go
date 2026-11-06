@@ -170,7 +170,7 @@ func TestLedgerAudit_BadSignature(t *testing.T) {
 		t.Fatal("含偽簽名鏈不應 OK")
 	}
 
-	// TestLedgerAudit_BadNonce nonce 跳號——nonce 層被抓出。
+	// TestLedgerAudit_BadNonce nonce 回退（重放）——nonce 層被抓出。
 }
 func TestLedgerAudit_BadNonce(t *testing.T) {
 	aliceKP, _ := crypto.GenerateKeyPair()
@@ -180,20 +180,56 @@ func TestLedgerAudit_BadNonce(t *testing.T) {
 	n := m71Node(t, alice, "100")
 
 	m71InsertBlock(t, n, 1, n.Address(), m71CoinbaseTxs(1, alice, n.Address()))
-	// nonce=5（應為 0），但簽名包含 nonce=5 因此簽名本身有效——nonce 檢查必須獨立抓出。
+	// 第一筆 nonce=0 合法（alice 獲 coinbase 後餘額充足）。
 	m71InsertBlock(t, n, 2, n.Address(), []chaindb.Transaction{
-		m71SignedTx(t, aliceKP, bob, "5", "0.1", 5, ""),
+		m71SignedTx(t, aliceKP, bob, "5", "0.1", 0, ""),
+	})
+	// 第二筆再用 nonce=0（期望已為 1，回退/重放）——簽名各自有效，nonce 檢查必須獨立抓出。
+	replay := m71SignedTx(t, aliceKP, bob, "5", "0.1", 0, "")
+	replay.TxHash = "tx-replay-001"
+	m71InsertBlock(t, n, 3, n.Address(), []chaindb.Transaction{
+		replay,
 	})
 
 	la, _ := n.VerifyLedgerOnChain()
 	if la.TxNonceFail != 1 {
-		t.Fatalf("nonce 跳號應被抓出: %+v", la)
+		t.Fatalf("nonce 回退（重放）應被抓出: %+v", la)
 	}
 	if la.TxSigFail != 0 {
 		t.Fatalf("簽名本身有效，不應誤報簽名: %+v", la)
 	}
 	if la.OK {
-		t.Fatal("含 nonce 異常鏈不應 OK")
+		t.Fatal("含 nonce 重放鏈不應 OK")
+	}
+
+	// TestLedgerAudit_NonceForwardJumpTolerated 冷啟動序號燒毀造成的向前跳號——
+	// 鏈上 account nonce 逐筆連續、餘額與簽名正確，向前跳號應相容，鏈仍 OK。
+}
+func TestLedgerAudit_NonceForwardJumpTolerated(t *testing.T) {
+	aliceKP, _ := crypto.GenerateKeyPair()
+	alice := m71Addr(t, aliceKP)
+	bobKP, _ := crypto.GenerateKeyPair()
+	bob := m71Addr(t, bobKP)
+	n := m71Node(t, alice, "100")
+
+	m71InsertBlock(t, n, 1, n.Address(), m71CoinbaseTxs(1, alice, n.Address()))
+	// 第一筆 nonce=0；下一筆直接 nonce=5（向前跳號，模擬序號被未確認交易燒毀）。
+	m71InsertBlock(t, n, 2, n.Address(), []chaindb.Transaction{
+		m71SignedTx(t, aliceKP, bob, "5", "0.1", 0, ""),
+	})
+	m71InsertBlock(t, n, 3, n.Address(), []chaindb.Transaction{
+		m71SignedTx(t, aliceKP, bob, "5", "0.1", 5, ""),
+	})
+
+	la, _ := n.VerifyLedgerOnChain()
+	if la.TxNonceFail != 0 {
+		t.Fatalf("向前跳號不應誤報 nonce: %+v", la)
+	}
+	if la.TxNoncePass != 2 {
+		t.Fatalf("兩筆都應計入 nonce pass: %+v", la)
+	}
+	if !la.OK || !la.LedgerOK {
+		t.Fatalf("含向前跳號的健康鏈應通過: %+v", la)
 	}
 
 	// TestLedgerAudit_Overdraft 透支交易——餘額層被抓出。
