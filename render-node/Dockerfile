@@ -3,6 +3,9 @@
 # 之後只經 P2P 同步、不主動出塊。
 FROM alpine:3.20
 RUN apk add --no-cache ca-certificates tzdata
+# 供應模型必須與 anchor 一致：annual_decay（總上限 52,003,300、6 年、年衰減 25%）。
+# 缺此環境變數會退回 halving 模型、獎勵誤算成 10，與 anchor 實際 6.018 不符而拒塊。
+ENV TACM_MAX_SUPPLY=52003300 TACM_EMISSION_YEARS=6 TACM_ANNUAL_DECAY_PCT=0.25
 WORKDIR /app
 COPY nodeweb /app/nodeweb
 RUN chmod +x /app/nodeweb
