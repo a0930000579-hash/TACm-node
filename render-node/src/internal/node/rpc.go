@@ -43,6 +43,8 @@ type RPCServer struct {
 	// v133：personal_importRawKey 記憶體金鑰快取（不落盤；低 64 hex → priv）。
 	importedKeys map[string][]byte
 	importedMu   sync.Mutex
+	// v183：AI 生成檔案暫存（記憶體、TTL、有上限），供下載端點回讀。
+	fileStore *agentFileStore
 }
 
 type dashCacheItem struct {

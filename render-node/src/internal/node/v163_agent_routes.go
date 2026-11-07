@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"tacm/internal/ai"
+	"tacm/internal/wallet"
 )
 
 // v163 平行支線：AI Agent（Function Calling）端點。
@@ -22,6 +23,7 @@ import (
 
 func (s *RPCServer) registerV163AgentRoutes() {
 	s.addRoute("POST /api/ai/agent", s.handleAIAgent)
+	s.addRoute("GET /api/ai/file/{id}", s.handleAIDownload)
 }
 
 type agentRequest struct {
@@ -88,11 +90,26 @@ func (s *RPCServer) handleAIAgent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	steps := make([]agentStepDTO, 0, len(result.Trace))
+	fileGenerated := false
 	for _, st := range result.Trace {
 		steps = append(steps, agentStepDTO{
 			Kind: st.Kind, Thought: st.Thought, ToolName: st.ToolName, Args: st.Args,
 			Result: st.Result, Err: st.Err, Ts: st.Ts,
 		})
+		if st.Kind == "tool" && st.ToolName == "create_file" && st.Err == "" {
+			fileGenerated = true
+		}
+	}
+
+	// 確認閘未過（needs_confirm）不計費：尚未真正提供服務，避免對未執行動作收費。
+	billing := titanBilling{Asset: string(wallet.AssetTACm), FeeAccount: titanFeeAccount}
+	if !result.NeedsConfirm {
+		b, err := meterAgentTurn(s.node.walletSvc, req.Address, fileGenerated)
+		if err != nil {
+			writeErr(w, http.StatusPaymentRequired, "billing_failed: "+err.Error())
+			return
+		}
+		billing = b
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{
@@ -102,6 +119,7 @@ func (s *RPCServer) handleAIAgent(w http.ResponseWriter, r *http.Request) {
 		"searched":  result.Searched,
 		"queries":   result.Queries,
 		"citations": result.Citations,
+		"billing":   billing,
 	})
 }
 

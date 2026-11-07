@@ -4,11 +4,14 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"strconv"
 	"strings"
 	"sync"
 
 	"tacm/internal/ai"
 	"tacm/internal/chaindb"
+	"tacm/internal/defi"
+	"tacm/internal/wallet"
 )
 
 // agentMemory 跨請求的 Agent 對話記憶（package-level，避免改 RPCServer 結構；mutex 保護）。
@@ -43,6 +46,12 @@ func withLinkedAddr(args map[string]any, linked string) map[string]any {
 		args["address"] = linked
 	}
 	return args
+}
+
+// mustStr 安全取出工具參數中的字串（缺失或型別不符回空字串）。
+func mustStr(v any) string {
+	s, _ := v.(string)
+	return s
 }
 
 // v163：把 TACm 既有服務包成 Agent 工具（ai.Registry）。
@@ -188,7 +197,97 @@ func (s *RPCServer) buildAgentRegistry(memReader func() string, linkedAddr strin
 		},
 	})
 
+	reg.MustRegister(&ai.Tool{
+		Name:        "get_tx",
+		Description: "Get the status/receipt of a transaction by its hash (mempool vs confirmed block).",
+		Parameters: map[string]any{
+			"type":     "object",
+			"required": []any{"tx_hash"},
+			"properties": map[string]any{
+				"tx_hash": map[string]any{"type": "string"},
+			},
+		},
+		Run: func(ctx context.Context, args map[string]any) (ai.ToolResult, error) {
+			hash, _ := args["tx_hash"].(string)
+			hash = strings.TrimSpace(hash)
+			if hash == "" {
+				return ai.ToolResult{}, fmt.Errorf("tx_hash is required")
+			}
+			tx, err := s.node.db.GetTransaction(hash)
+			if err != nil {
+				return ai.ToolResult{}, fmt.Errorf("query tx: %w", err)
+			}
+			if tx == nil {
+				return ai.ToolResult{
+					Summary: fmt.Sprintf("Transaction %s not found yet (still propagating or unknown hash).", hash),
+					Data:    map[string]any{"tx_hash": hash, "found": false},
+				}, nil
+			}
+			return ai.ToolResult{
+				Summary: fmt.Sprintf("Tx %s: status=%s from=%s to=%s amount=%s height=%d",
+					hash, tx.Status, tx.FromAddr, tx.ToAddr, tx.Amount, tx.BlockHeight),
+				Data: map[string]any{
+					"tx_hash": hash, "found": true, "status": tx.Status,
+					"from": tx.FromAddr, "to": tx.ToAddr, "amount": tx.Amount,
+					"height": tx.BlockHeight,
+				},
+			}, nil
+		},
+	})
+
 	// --- 寫操作工具（RequiresConfirm：未 confirm 不執行）---
+	reg.MustRegister(&ai.Tool{
+		Name:            "transfer",
+		Description:     "Execute an on-chain/internal-ledger transfer of TACm, TiUSD or USDT to another address. Requires confirmation.",
+		RequiresConfirm: true,
+		Parameters: map[string]any{
+			"type":     "object",
+			"required": []any{"from", "to", "asset", "amount"},
+			"properties": map[string]any{
+				"from":   map[string]any{"type": "string"},
+				"to":     map[string]any{"type": "string"},
+				"asset":  map[string]any{"type": "string", "description": "TACm | TiUSD | USDT"},
+				"amount": map[string]any{"type": "string", "description": "amount as decimal string"},
+				"memo":   map[string]any{"type": "string"},
+			},
+		},
+		Run: func(ctx context.Context, args map[string]any) (ai.ToolResult, error) {
+			if s.node.walletSvc == nil {
+				return ai.ToolResult{}, fmt.Errorf("wallet service unavailable")
+			}
+			from, _ := args["from"].(string)
+			to, _ := args["to"].(string)
+			assetRaw, _ := args["asset"].(string)
+			asset := normalizeAsset(assetRaw)
+			amountStr, _ := args["amount"].(string)
+			memo, _ := args["memo"].(string)
+			from = strings.TrimSpace(from)
+			to = strings.TrimSpace(to)
+			if from == "" {
+				from = linkedAddr
+			}
+			if from == "" || to == "" {
+				return ai.ToolResult{}, fmt.Errorf("from and to are required")
+			}
+			amt, err := wallet.NewAmount(amountStr, wallet.Asset(asset))
+			if err != nil {
+				return ai.ToolResult{}, fmt.Errorf("invalid amount: %w", err)
+			}
+			fee, err := s.node.walletSvc.Transfer(from, to, wallet.Asset(asset), amt, memo)
+			if err != nil {
+				return ai.ToolResult{}, fmt.Errorf("transfer failed: %w", err)
+			}
+			return ai.ToolResult{
+				Summary: fmt.Sprintf("Transferred %s %s from %s to %s (fee %s %s).",
+					amountStr, asset, from, to, fee.String(wallet.Asset(asset)), asset),
+				Data: map[string]any{
+					"executed": true, "from": from, "to": to, "asset": asset,
+					"amount": amountStr, "fee": fee.String(wallet.Asset(asset)),
+				},
+			}, nil
+		},
+	})
+
 	reg.MustRegister(&ai.Tool{
 		Name:            "dex_swap",
 		Description:     "Prepare a DEX swap (tokenIn -> tokenOut). Requires confirmation before execution.",
@@ -203,25 +302,41 @@ func (s *RPCServer) buildAgentRegistry(memReader func() string, linkedAddr strin
 			},
 		},
 		Run: func(ctx context.Context, args map[string]any) (ai.ToolResult, error) {
-			// confirm=true 才會執行至此。用 Quote 做唯讀估算，回報預估輸出。
+			// confirm=true 才會執行至此：實際呼叫 DEX 引擎完成兌換（與 POST /dex/swap 同一路徑）。
+			if s.node.dex == nil {
+				return ai.ToolResult{}, fmt.Errorf("dex engine unavailable")
+			}
 			args = withLinkedAddr(args, linkedAddr)
 			addr, _ := args["address"].(string)
 			amount, _ := args["amount"].(string)
-			amt, _ := new(big.Int).SetString(strings.TrimPrefix(amount, "0"), 10)
-			if amt == nil {
-				amt = big.NewInt(0)
+			amt, ok := new(big.Int).SetString(strings.TrimSpace(amount), 10)
+			if !ok || amt.Sign() <= 0 {
+				return ai.ToolResult{}, fmt.Errorf("invalid or non-positive amount: %q", amount)
 			}
-			estimate := "execution requires your wallet signature on the DApp; this action is prepared once you confirm."
-			if s.node.dex != nil && amt.Sign() > 0 {
-				if pools, err := s.node.dex.Pools(); err == nil && len(pools) > 0 {
-					if _, out, qerr := s.node.dex.Quote(pools[0].ID, "TAC", amt); qerr == nil {
-						estimate = fmt.Sprintf("Estimated output via pool %s: %s (quote only; final swap executes after wallet signature).", pools[0].ID, out.String())
-					}
+			pools, err := s.node.dex.Pools()
+			if err != nil || len(pools) == 0 {
+				return ai.ToolResult{}, fmt.Errorf("no DEX pool available")
+			}
+			poolID := pools[0].ID
+			tokenIn := "TAC"
+			if p, _ := args["pair"].(string); p != "" {
+				up := strings.ToUpper(p)
+				if strings.HasPrefix(up, "TIUSD") || strings.HasPrefix(up, "USDT") {
+					tokenIn = strings.SplitN(up, "/", 2)[0]
 				}
 			}
+			tokenOut, out, err := s.node.dex.Swap(poolID, s.node.nodeAddress, tokenIn, amt, nil)
+			if err != nil {
+				return ai.ToolResult{}, fmt.Errorf("swap failed: %w", err)
+			}
 			return ai.ToolResult{
-				Summary: fmt.Sprintf("Dex swap prepared for %s pair=%s amount=%s. %s", addr, args["pair"], amount, estimate),
-				Data:    map[string]any{"prepared": true, "address": addr, "pair": args["pair"], "amount": amount},
+				Summary: fmt.Sprintf("Swap executed for %s on pool %s: %s %s -> %s %s.",
+					addr, poolID, amount, tokenIn, out.String(), tokenOut),
+				Data: map[string]any{
+					"executed": true, "address": addr, "pool": poolID,
+					"token_in": tokenIn, "amount_in": amt.String(),
+					"token_out": tokenOut, "amount_out": out.String(),
+				},
 			}, nil
 		},
 	})
@@ -240,36 +355,94 @@ func (s *RPCServer) buildAgentRegistry(memReader func() string, linkedAddr strin
 			},
 		},
 		Run: func(ctx context.Context, args map[string]any) (ai.ToolResult, error) {
+			// confirm=true 才會執行至此：與 POST /api/defi/deposit 同一路徑（轉帳入池＋記錄，失敗退款）。
+			ds, ok := s.defiSvc()
+			if !ok || s.node.walletSvc == nil {
+				return ai.ToolResult{}, fmt.Errorf("defi service unavailable")
+			}
 			args = withLinkedAddr(args, linkedAddr)
 			addr, _ := args["address"].(string)
+			addr = strings.TrimSpace(addr)
+			asset := normalizeAsset(mustStr(args["asset"]))
+			amount, err := strconv.ParseFloat(strings.TrimSpace(mustStr(args["amount"])), 64)
+			if err != nil || amount <= 0 {
+				return ai.ToolResult{}, fmt.Errorf("invalid amount: %v", args["amount"])
+			}
+			if addr == "" {
+				return ai.ToolResult{}, fmt.Errorf("address is required")
+			}
+			if _, err := s.node.walletSvc.Transfer(addr, defi.LendingAccount, wallet.Asset(asset), amountOf(amount, asset), "defi:lending:deposit"); err != nil {
+				return ai.ToolResult{}, fmt.Errorf("deposit transfer failed: %w", err)
+			}
+			if err := ds.DepositLending(addr, asset, amount); err != nil {
+				_ = s.node.walletSvc.InternalTransfer(defi.LendingAccount, addr, wallet.Asset(asset), amountOf(amount, asset), "defi:refund")
+				return ai.ToolResult{}, fmt.Errorf("deposit record failed: %w", err)
+			}
 			return ai.ToolResult{
-				Summary: fmt.Sprintf("DeFi deposit prepared for %s asset=%s amount=%s. Execution requires wallet signature and your confirmation.",
-					addr, args["asset"], args["amount"]),
-				Data: map[string]any{"prepared": true, "address": addr, "asset": args["asset"], "amount": args["amount"]},
+				Summary: fmt.Sprintf("DeFi deposit executed: %s deposited %f %s into the lending market.", addr, amount, asset),
+				Data: map[string]any{
+					"executed": true, "address": addr, "asset": asset, "amount": amount,
+				},
 			}, nil
 		},
 	})
 
 	reg.MustRegister(&ai.Tool{
 		Name:            "defi_borrow",
-		Description:     "Prepare a DeFi borrow (CDP). Requires confirmation before execution.",
+		Description:     "Execute a DeFi borrow: lock collateral and borrow another asset from the lending market. Requires confirmation.",
 		RequiresConfirm: true,
 		Parameters: map[string]any{
 			"type":     "object",
-			"required": []any{"address", "asset", "amount"},
+			"required": []any{"address", "collateral_asset", "collateral_amount", "borrow_asset", "borrow_amount"},
 			"properties": map[string]any{
-				"address": map[string]any{"type": "string"},
-				"asset":   map[string]any{"type": "string"},
-				"amount":  map[string]any{"type": "string"},
+				"address":           map[string]any{"type": "string"},
+				"collateral_asset":  map[string]any{"type": "string"},
+				"collateral_amount": map[string]any{"type": "string"},
+				"borrow_asset":      map[string]any{"type": "string"},
+				"borrow_amount":     map[string]any{"type": "string"},
 			},
 		},
 		Run: func(ctx context.Context, args map[string]any) (ai.ToolResult, error) {
+			// confirm=true 才會執行至此：與 POST /api/defi/borrow 同一路徑（抵押入池＋開倉＋放款，失敗退款）。
+			ds, ok := s.defiSvc()
+			if !ok || s.node.walletSvc == nil {
+				return ai.ToolResult{}, fmt.Errorf("defi service unavailable")
+			}
 			args = withLinkedAddr(args, linkedAddr)
 			addr, _ := args["address"].(string)
+			addr = strings.TrimSpace(addr)
+			collAsset := normalizeAsset(mustStr(args["collateral_asset"]))
+			borrowAsset := normalizeAsset(mustStr(args["borrow_asset"]))
+			collAmount, err := strconv.ParseFloat(strings.TrimSpace(mustStr(args["collateral_amount"])), 64)
+			if err != nil || collAmount <= 0 {
+				return ai.ToolResult{}, fmt.Errorf("invalid collateral_amount: %v", args["collateral_amount"])
+			}
+			borrowAmount, err := strconv.ParseFloat(strings.TrimSpace(mustStr(args["borrow_amount"])), 64)
+			if err != nil || borrowAmount <= 0 {
+				return ai.ToolResult{}, fmt.Errorf("invalid borrow_amount: %v", args["borrow_amount"])
+			}
+			if addr == "" {
+				return ai.ToolResult{}, fmt.Errorf("address is required")
+			}
+			if _, err := s.node.walletSvc.Transfer(addr, defi.LendingAccount, wallet.Asset(collAsset), amountOf(collAmount, collAsset), "defi:borrow:collateral"); err != nil {
+				return ai.ToolResult{}, fmt.Errorf("collateral transfer failed: %w", err)
+			}
+			loanID, err := ds.Borrow(addr, collAsset, collAmount, borrowAsset, borrowAmount)
+			if err != nil {
+				_ = s.node.walletSvc.InternalTransfer(defi.LendingAccount, addr, wallet.Asset(collAsset), amountOf(collAmount, collAsset), "defi:refund")
+				return ai.ToolResult{}, fmt.Errorf("borrow failed: %w", err)
+			}
+			if err := s.node.walletSvc.InternalTransfer(defi.LendingAccount, addr, wallet.Asset(borrowAsset), amountOf(borrowAmount, borrowAsset), fmt.Sprintf("defi:borrow:%d", loanID)); err != nil {
+				return ai.ToolResult{}, fmt.Errorf("loan disbursement failed: %w", err)
+			}
 			return ai.ToolResult{
-				Summary: fmt.Sprintf("DeFi borrow prepared for %s asset=%s amount=%s. CDP liquidation risk applies; execution requires wallet signature.",
-					addr, args["asset"], args["amount"]),
-				Data: map[string]any{"prepared": true, "address": addr, "asset": args["asset"], "amount": args["amount"]},
+				Summary: fmt.Sprintf("Borrow executed (loan #%d): %s locked %f %s collateral and received %f %s.",
+					loanID, addr, collAmount, collAsset, borrowAmount, borrowAsset),
+				Data: map[string]any{
+					"executed": true, "address": addr, "loan_id": loanID,
+					"collateral_asset": collAsset, "collateral_amount": collAmount,
+					"borrow_asset": borrowAsset, "borrow_amount": borrowAmount,
+				},
 			}, nil
 		},
 	})
@@ -347,6 +520,43 @@ func (s *RPCServer) buildAgentRegistry(memReader func() string, linkedAddr strin
 			return ai.ToolResult{
 				Summary: text,
 				Data:    map[string]any{"url": u},
+			}, nil
+		},
+	})
+
+	// create_file：把 AI 生成的內容封裝成可下載檔案（記憶體暫存，附下載 URL）。
+	reg.MustRegister(&ai.Tool{
+		Name:        "create_file",
+		Description: "Create a downloadable file from generated content (code, text, data). Returns a download URL.",
+		Parameters: map[string]any{
+			"type":     "object",
+			"required": []any{"filename", "content"},
+			"properties": map[string]any{
+				"filename":  map[string]any{"type": "string", "description": "Target file name (extension optional)"},
+				"language":  map[string]any{"type": "string", "description": "Language/format hint (go, python, javascript, html, json, markdown, text)"},
+				"content":   map[string]any{"type": "string", "description": "Full file content"},
+			},
+		},
+		Run: func(ctx context.Context, args map[string]any) (ai.ToolResult, error) {
+			filename := sanitizeFilename(strings.TrimSpace(mustStr(args["filename"])))
+			if filename == "" {
+				return ai.ToolResult{}, fmt.Errorf("filename is required")
+			}
+			language := strings.ToLower(strings.TrimSpace(mustStr(args["language"])))
+			filename = ensureExtension(filename, language)
+			mime, language := mimeForFile(filename, language)
+			content := mustStr(args["content"])
+			f, err := s.getFileStore().Put(filename, language, mime, []byte(content))
+			if err != nil {
+				return ai.ToolResult{}, err
+			}
+			downloadURL := "/api/ai/file/" + f.ID
+			return ai.ToolResult{
+				Summary: fmt.Sprintf("File %s ready (%d bytes). Download: %s", f.Filename, len(f.Content), downloadURL),
+				Data: map[string]any{
+					"file_id": f.ID, "filename": f.Filename, "language": f.Language,
+					"mime": f.MIME, "size": len(f.Content), "download_url": downloadURL,
+				},
 			}, nil
 		},
 	})
