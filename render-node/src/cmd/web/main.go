@@ -1,4 +1,4 @@
-// Command web 在單進程內啟動 TAC Ai 智能鏈節點（RPC + 出塊 + BFT）與 Web 區塊瀏覽。
+// Command web 在單進程內啟動 TACm 智能鏈節點（RPC + 出塊 + BFT）與 Web 區塊瀏覽。
 package main
 
 import (

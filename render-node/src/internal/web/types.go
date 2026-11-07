@@ -1,4 +1,4 @@
-// Package web 實現 TAC Ai 智能鏈的 Web 層：服務區塊瀏覽、錢包與質押頁面，
+// Package web 實現 TACm 智能鏈的 Web 層：服務區塊瀏覽、錢包與質押頁面，
 // 以 pongo2 渲染、響應式行動優先佈局，數據來自運行中的鏈節點（非靜態頁）。
 package web
 

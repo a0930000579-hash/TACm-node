@@ -1,4 +1,4 @@
-// Package tacclient 是 TAC Ai 智能鏈的官方開發者 SDK：生成/導入密鑰、
+// Package tacclient 是 TACm 智能鏈的官方開發者 SDK：生成/導入密鑰、
 // 簽署交易、提交與查詢節點 RPC。第三方 dApp 開發者可直接在本 module 內
 // 使用（或連同 internal/crypto 複製到自己的 Go 專案）。
 package tacclient

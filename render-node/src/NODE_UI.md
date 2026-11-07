@@ -1,4 +1,4 @@
-# TAC Ai Smart Chain — Node Console (M86)
+# TACm Chain — Node Console (M86)
 
 節點自 M86 起**獨立成自有品牌**，與主網用戶功能（landing / 錢包 / 交易所 / 挖礦等）完全分離。
 
@@ -63,7 +63,7 @@ curl -s http://2.28.201.174:8080/node
 sudo ./nodeweb -web-port 8081 -p2p-url http://<你的公網IP>:8081 -p2p-seed http://2.28.201.174:8080 -p2p-follower
 ```
 
-開啟 `http://<你的公網IP>:8081` 即見「TAC Ai Smart Chain — Node」品牌儀表板。
+開啟 `http://<你的公網IP>:8081` 即見「TACm Chain — Node」品牌儀表板。
 
 ## M86-B 批量同步（同步 flaky 根治）
 

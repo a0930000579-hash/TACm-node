@@ -5,7 +5,7 @@ import (
 	"unicode"
 )
 
-// v165：Titan Ai 從「鏈上問答」升級為通用、人性化 AI 助手。
+// v165：TACm AI 從「鏈上問答」升級為通用、人性化 AI 助手。
 //
 // 本檔負責三件事（純函式、無狀態、可測試）：
 //   - Intent：把使用者訊息分類為 閒聊(chat) / 查詢(query) / 操作(action)；

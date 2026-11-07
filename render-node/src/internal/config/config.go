@@ -1,4 +1,4 @@
-// Package config 提供 TAC Ai 智能鏈的統一配置（單一來源：環境變量 + 默認值）。
+// Package config 提供 TACm 智能鏈的統一配置（單一來源：環境變量 + 默認值）。
 package config
 
 import (

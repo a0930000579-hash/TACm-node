@@ -1,4 +1,4 @@
-// Package wallet 實現 TAC Ai 智能鏈的託管錢包與資產帳本（M13 業務層第一步）。
+// Package wallet 實現 TACm 智能鏈的託管錢包與資產帳本（M13 業務層第一步）。
 // 多資產（TACm 原生幣、TiUSD 穩定幣、USDT 估值對映）：TACm 使用 big.Int
 // （1e18 wei，避免 coinbase/大額轉帳溢出 int64），TiUSD/USDT 使用 int64
 // micro（1e6）。每筆操作為雙分錄（sum(delta)=0）並寫入審計帳本；

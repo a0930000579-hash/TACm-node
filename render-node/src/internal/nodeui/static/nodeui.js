@@ -1,4 +1,4 @@
-/* TAC Ai Smart Chain — Node Console (M86) */
+/* TACm Chain — Node Console (M86) */
 "use strict";
 (function () {
   var dict = {
@@ -16,7 +16,7 @@
       "n.capDeFi": "DeFi 借貸",
       "n.capAlert": "Webhook 警報",
       "n.capBridge": "橋 Kill-switch",
-      "n.heroEyebrow": "TAC Ai 智能鏈 · 主網",
+      "n.heroEyebrow": "TACm 智能鏈 · 主網",
       "n.heroTitle": "節點<br>控制台",
       "n.heroDesc": "運行 TAC 節點、守護網路、驗證區塊並獲得 45% 節點獎勵（在線均分）——全部在專屬的節點品牌面板完成。",
       "n.cTip": "鏈頂高度",
@@ -58,7 +58,7 @@
       "n.renderTip1": "更新節點不需要 SSH/終端機：把更新檔（nodeweb 等）上傳到 GitHub repo（tacm-node 根目錄）覆蓋舊檔，Render autoDeploy 自動重建部署。",
       "n.renderTip2": "渲染節點（Render）網頁上傳：GitHub → repo 根目錄 → Upload files → 覆蓋後 Commit → Render 自動偵測變更重建。",
       "n.join1": "下載節點套件並在伺服器上解壓。",
-      "n.join2": "使用同一創世節點啟動：",
+      "n.join2": "使用對等種子清單啟動（無單一錨點）：",
       "n.join3": "觀察此面板——節點會自動同步並開始驗證區塊。",
       "n.join4": "每塊由在線節點均分 45% 節點獎勵，可由節點金鑰提取。",
       "n.footLine": "節點控制台",
@@ -80,7 +80,7 @@
       "n.capDeFi": "DeFi Lending",
       "n.capAlert": "Webhook Alerts",
       "n.capBridge": "Bridge Kill-switch",
-      "n.heroEyebrow": "TAC Ai Smart Chain · Mainnet",
+      "n.heroEyebrow": "TACm Chain · Mainnet",
       "n.heroTitle": "Node<br>Console",
       "n.heroDesc": "Run a TAC node, secure the network, validate blocks and split the 45% node reward among online nodes — all from your own branded node dashboard.",
       "n.cTip": "Chain Tip",
@@ -122,7 +122,7 @@
       "n.renderTip1": "No SSH/terminal needed: upload the updated files (nodeweb etc.) to the GitHub repo root (tacm-node), overwriting the old ones; Render autoDeploy rebuilds automatically.",
       "n.renderTip2": "Render web upload: GitHub → repo root → Upload files → overwrite → Commit → Render detects the change and rebuilds.",
       "n.join1": "Download the node package and unpack it on your server.",
-      "n.join2": "Start with the same genesis anchor:",
+      "n.join2": "Start with the peer seed list (no single anchor):",
       "n.join3": "Watch this dashboard — your node will sync automatically and start validating blocks.",
       "n.join4": "Online nodes split the 45% node reward per block, withdrawable by the node key.",
       "n.footLine": "Node Console",

@@ -1,4 +1,4 @@
-/* TAC Ai 智能鏈 Service Worker：核心頁面與靜態資源離線快取。 */
+/* TACm 智能鏈 Service Worker：核心頁面與靜態資源離線快取。 */
 const CACHE = 'tacm-v11';
 const CORE = ['/static/css/style.css', '/static/tacm.svg'];
 self.addEventListener('install', function(e){

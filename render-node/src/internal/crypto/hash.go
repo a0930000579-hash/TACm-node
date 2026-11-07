@@ -1,4 +1,4 @@
-// Package crypto 實現 TAC Ai 智能鏈的密碼學原語：
+// Package crypto 實現 TACm 智能鏈的密碼學原語：
 // secp256k1 密鑰、tx0 Base58Check 地址、雙重 SHA-256、Hash160、Merkle、PoT 與交易簽名。
 //
 // 本包僅使用通用密碼學標準（secp256k1/SHA-256/RIPEMD-160/keccak/Base58），

@@ -1,4 +1,4 @@
-// Package p2p 實現 TAC Ai 智能鏈的多節點網絡層：節點握手與自動發現、
+// Package p2p 實現 TACm 智能鏈的多節點網絡層：節點握手與自動發現、
 // 區塊/交易 gossip 廣播、落後節點主動同步與鏈重組。傳輸採用 HTTP/JSON，
 // 以 goroutine、context 與顯式 error 實現，並發安全。
 package p2p

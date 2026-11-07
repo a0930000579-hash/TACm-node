@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>TAC Ai Smart Chain — Node</title>
-<meta name="description" content="TAC Ai Smart Chain node dashboard — chain status, sync, peers, nodes, blocks and rewards.">
+<title>TACm Chain — Node</title>
+<meta name="description" content="TACm Chain node dashboard — chain status, sync, peers, nodes, blocks and rewards.">
 <meta name="color-scheme" content="light">
 <link rel="icon" href="/static/tacnode.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/static/node.css">
@@ -19,7 +19,7 @@
   <div class="brand">
     <span class="brand-badge">NODE</span>
     <div class="brand-text">
-      <strong>TAC Ai Smart Chain</strong>
+      <strong>TACm Chain</strong>
       <small data-i18n="n.brandSub">Node Console</small>
       <small id="verBadge" style="color:var(--brand);font-weight:600">Build v125</small>
     </div>
@@ -35,7 +35,7 @@
 <header class="hero">
   <div class="hero-inner">
     <div class="hero-copy">
-      <span class="hero-eyebrow" data-i18n="n.heroEyebrow">TAC Ai Smart Chain · Mainnet</span>
+      <span class="hero-eyebrow" data-i18n="n.heroEyebrow">TACm Chain · Mainnet</span>
       <h1 data-i18n="n.heroTitle">Node<br>Console</h1>
       <p data-i18n="n.heroDesc">Run a TAC node, secure the network, validate blocks and split the 45% node reward among online nodes — all from your own branded node dashboard.</p>
       <div class="hero-badges">
@@ -168,7 +168,7 @@
     <div class="panel-head"><h2 data-i18n="n.pJoin">Run Your Own Node</h2></div>
     <ol class="steps">
       <li data-i18n="n.join1">Download the node package and unpack it on your server.</li>
-      <li data-i18n="n.join2">Start with the same genesis anchor: <code>--p2p-seed http://2.28.201.174:8080</code></li>
+      <li data-i18n="n.join2">Start with the peer seed list (no single anchor): <code>--p2p-seed "http://2.28.201.174:8080,https://tacm-ai-cyprto.onrender.com,https://oyster-app-aynnb.ondigitalocean.app"</code></li>
       <li data-i18n="n.join3">Watch this dashboard — your node will sync automatically and start validating blocks.</li>
       <li data-i18n="n.join4">Online nodes split the 45% node reward per block, withdrawable by the node key.</li>
     </ol>
@@ -183,7 +183,7 @@
       <pre class="ocmd">cd tacm-go
 git init -b main
 git add -A
-git commit -m "TAC Ai Smart Chain - v125"
+git commit -m "TACm Chain - v125"
 git remote add origin https://github.com/&lt;your-account&gt;/TACm-Ai_Cyprto.git
 git push -u origin main</pre>
       <p class="muted" data-i18n="n.rawTip">After pushing, the node binary gets a permanent raw link — no more expiring short links:
@@ -194,7 +194,7 @@ git push -u origin main</pre>
 
 <footer class="foot">
   <div>
-    <strong>TAC Ai Smart Chain</strong> · <span data-i18n="n.footLine">Node Console</span>
+    <strong>TACm Chain</strong> · <span data-i18n="n.footLine">Node Console</span>
   </div>
   <a class="btn ghost" style="margin-right:8px" href="/node-panel" data-i18n="n.deployerBtn">Deployer Panel</a>
   <a id="footMainnet" href="#" target="_blank" rel="noopener" data-i18n="n.openMainnet">Open Mainnet</a>

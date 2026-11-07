@@ -1,4 +1,4 @@
-// Package bridge 實現 TAC Ai 智能鏈的跨鏈橋：Lock & Mint / Burn & Unlock，
+// Package bridge 實現 TACm 智能鏈的跨鏈橋：Lock & Mint / Burn & Unlock，
 // 跨鏈消息以真實 ECDSA（secp256k1）多重簽名守衛，支持多條公鏈。
 // 不引入任何外部鏈客戶端；外部鏈對接僅以消息/證明形式由守衛網絡驗證。
 package bridge

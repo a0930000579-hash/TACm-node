@@ -1,4 +1,4 @@
-// Package stateprune 是 TAC Ai 智能鏈的狀態膨脹治理排程器。
+// Package stateprune 是 TACm 智能鏈的狀態膨脹治理排程器。
 //
 // 它以 goroutine + context 週期呼叫 chaindb 的歷史清理 / 歸檔（PruneArchive），
 // 防止主網 chain.db 無限膨脹導致 OOM / 斷線。設計原則：

@@ -1,6 +1,6 @@
 package node
 
-// agent_file_store.go — Titan Ai 生成檔案的暫存與下載支援。
+// agent_file_store.go — TACm AI 生成檔案的暫存與下載支援。
 //
 // 設計：
 //   - 純記憶體、不落地（節點不持久化使用者檔案，重啟即清）。

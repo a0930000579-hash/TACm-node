@@ -1,7 +1,7 @@
 // Package nodeui 提供節點獨立品牌前端（M86）：節點運維者專用儀表板——
 // 鏈狀態 / 同步進度 / P2P peers / 驗證人集 / 出塊記錄 / 節點金鑰與獎勵。
 // 與主網 tacweb（landing/錢包/交易所等用戶功能）完全分離：獨立 binary
-// (cmd/nodeweb)、獨立資料夾 (internal/nodeui)、獨立品牌「TAC Ai Smart Chain — Node」。
+// (cmd/nodeweb)、獨立資料夾 (internal/nodeui)、獨立品牌「TACm Chain — Node」。
 package nodeui
 
 import (
@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"tacm/internal/config"
 	"tacm/internal/node"
 	"tacm/internal/p2p"
 )
@@ -74,7 +75,7 @@ type Server struct {
 // New 建立節點 UI 服務器。mainnetURL 為開放挖礦/主網入口（預設創世節點）。
 func New(n *node.Node, mainnetURL, nodeID string) *Server {
 	if mainnetURL == "" {
-		mainnetURL = "http://2.28.201.174:8080"
+		mainnetURL = config.PrimarySeed()
 	}
 	if nodeID == "" {
 		nodeID = "node"
@@ -141,7 +142,7 @@ func (s *Server) Handler() http.Handler {
 
 // ListenAndServe 在指定 addr 上提供節點 UI。
 func (s *Server) ListenAndServe(addr string) error {
-	log.Printf("[nodeui] TAC Ai Smart Chain — Node UI listening on %s", addr)
+	log.Printf("[nodeui] TACm Chain — Node UI listening on %s", addr)
 	return http.ListenAndServe(addr, s.mux)
 }
 

@@ -1,6 +1,6 @@
 # TAC 開發者指南（Developer Guide）
 
-本文說明如何在 TAC Ai 智能鏈上開發 dApp：使用官方 Go SDK（`tacclient`）
+本文說明如何在 TACm 智能鏈上開發 dApp：使用官方 Go SDK（`tacclient`）
 簽署與提交交易、查詢節點、以及完整的節點 RPC 端點清單。
 
 ---

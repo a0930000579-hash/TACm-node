@@ -1,4 +1,4 @@
-// Package exchange 實現 TAC Ai 智能鏈的交易所核心（M14 業務層第二步）。
+// Package exchange 實現 TACm 智能鏈的交易所核心（M14 業務層第二步）。
 // 對照 Python 源碼 exchange_match.py / exchange_db.py / exchange_finance.py 重寫：
 //   - 價格-時間優先的限價/市價撮合（多交易對：TACM/TIUSD、TACM/USDT、TIUSD/USDT）
 //   - 多資產餘額簿（avail 可用 / locked 鎖定，撮合時先鎖後結算）

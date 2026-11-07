@@ -1,4 +1,4 @@
-// Package spv 實現 TAC Ai 智能鏈的輕客戶端（SPV）：只同步區塊頭，
+// Package spv 實現 TACm 智能鏈的輕客戶端（SPV）：只同步區塊頭，
 // 用 Merkle 包含證明在本地驗證交易，並可結合 BFT 最終性證明防止回滾。
 package spv
 

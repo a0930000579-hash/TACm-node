@@ -1,4 +1,4 @@
-// loadtest 是 TAC Ai 智能鏈的高併發壓測工具（v156 A1）。
+// loadtest 是 TACm 智能鏈的高併發壓測工具（v156 A1）。
 //
 // 不透過 internal/node 套件，改以 HTTP 對真實節點灌量：
 //   - -bin：啟動 tacweb/nodeweb 二進位子進程（臨時 datadir、web-port==rpc-port、關 P2P），

@@ -116,11 +116,11 @@ func TestServerPages(t *testing.T) {
 		wantStatus int
 		contains   string
 	}{
-		{"/", http.StatusOK, "TAC Ai Smart Chain"}, // M80：/ 為品牌門戶
+		{"/", http.StatusOK, "TACm Chain"}, // M80：/ 為品牌門戶
 		{"/app", http.StatusOK, "最新區塊"},            // M80：系統主頁移至 /app
 		{"/explorer", http.StatusOK, "鏈上搜尋"},
 		{"/explorer", http.StatusOK, "最新交易"},
-		{"/join", http.StatusOK, "加入 TAC Ai 智能鏈主網"},
+		{"/join", http.StatusOK, "加入 TACm 智能鏈主網"},
 		{"/join", http.StatusOK, "2.28.201.174:8080"},
 		{"/network", http.StatusOK, "節點監控"},
 		{"/block/5", http.StatusOK, "blockhash5"},

@@ -96,27 +96,27 @@ func TestOpenAI_Upstream404Degrades(t *testing.T) {
 
 // v167-brand：系統提示含品牌身份與「不主動說 ChatGPT/OpenAI」指令。
 func TestSystemPrompt_BrandIdentity(t *testing.T) {
-	for _, want := range []string{"Titan Ai", "BRAND", "ChatGPT", "OpenAI", "GPT-OSS"} {
+	for _, want := range []string{"TACm AI", "BRAND", "ChatGPT", "OpenAI", "GPT-OSS"} {
 		if !strings.Contains(systemPromptAgent, want) {
 			t.Fatalf("system prompt should mention %q", want)
 		}
 	}
 	// llama SystemPrompt 同步。
-	if !strings.Contains(SystemPrompt("zh"), "Titan Ai") ||
-		!strings.Contains(SystemPrompt("en"), "Titan Ai") {
-		t.Fatal("llama SystemPrompt should keep Titan Ai branding")
+	if !strings.Contains(SystemPrompt("zh"), "TACm AI") ||
+		!strings.Contains(SystemPrompt("en"), "TACm AI") {
+		t.Fatal("llama SystemPrompt should keep TACm AI branding")
 	}
 }
 
-// 離線規則「你是誰」回答自稱 Titan Ai、不說自己是 ChatGPT。
+// 離線規則「你是誰」回答自稱 TACm AI、不說自己是 ChatGPT。
 func TestRules_WhoAnswerBrand(t *testing.T) {
 	r := NewRulesProvider("")
 	turn, err := r.Complete(context.Background(), []ChatMessage{{Role: "user", Content: "你是誰"}}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(turn.Answer, "Titan Ai") {
-		t.Fatalf("rules who answer should say Titan Ai, got %q", turn.Answer)
+	if !strings.Contains(turn.Answer, "TACm AI") {
+		t.Fatalf("rules who answer should say TACm AI, got %q", turn.Answer)
 	}
 	if strings.Contains(turn.Answer, "I am ChatGPT") || strings.Contains(turn.Answer, "我是 ChatGPT") {
 		t.Fatalf("rules who answer must NOT claim ChatGPT: %q", turn.Answer)

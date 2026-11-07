@@ -16,13 +16,13 @@
       'ls.how2': '池內資產參與節點委託，委託獎勵每區塊自動注入池中（v75），匯率逐步上升——你的 stTACm 贖回值隨之增長。',
       'ls.how3': '隨時依現行匯率贖回 TACm；stTACm 也可用於其他 DeFi 協議。',
       'wallet.onchain': ' 我的鏈上紀錄', 'nav.exchange': '交易所', 'nav.dash': '儀表板',
-      'nav.mining': '挖礦', 'nav.community': '社群', 'nav.ai': 'Titan Ai', 'nav.tokens': '代幣', 'nav.nfts': 'NFT', 'nav.defi': 'DeFi', 'nav.tiusd': 'TiUSD 監控', 'nav.ls': '質押', 'nav.governance': '治理',
+      'nav.mining': '挖礦', 'nav.community': '社群', 'nav.ai': 'TACm AI', 'nav.tokens': '代幣', 'nav.nfts': 'NFT', 'nav.defi': 'DeFi', 'nav.tiusd': 'TiUSD 監控', 'nav.ls': '質押', 'nav.governance': '治理',
       'nav.dapp': 'DApp 商店', 'nav.agent': 'AI Agent', 'pill.dapp': 'DApp 商店', 'pill.agent': 'AI Agent',
       'nh.title': '網路健康',
       'nh.sub': '全網節點健康儀表 · 在線狀態 / 最後心跳 / 出塊接管',
       'tx.logs': '事件日誌', 'tx.logAddr': '合約地址', 'tx.decodedEvents': '事件解碼（ABI）', 'tx.gasUsed': 'Gas 使用量', 'tx.transfers': '代幣轉移', 'tx.tContract': '合約', 'tx.tValue': '數量 / Token ID', 'tx.tBlock': '區塊', 'tx.hash': '交易哈希', 'addr.transfers': '代幣轉移', 'fc.title': '測試幣水龍頭', 'fc.sub': '開發者生態：為你的地址免費領取測試 TACm', 'fc.claim': '領取測試幣', 'fc.limit': '每地址每日 {{ limit }} TACm', 'fc.disabled': '主網已停用（免費資產不再發放）', 'fc.guide': 'TiUSD / USDT 流通', 'fc.guide1': '① 水龍頭領 TACm → 交易所賣 TACM/TiUSD 買 TiUSD（穩定幣 1:1 錨定 USDT）。', 'fc.guide2': '② DeFi 借貸（CDP）：抵押 TACm 鑄造 TiUSD。', 'fc.guide3': '③ TACm/TiUSD → USDT：交易所 TACM/USDT、TiUSD/USDT 市場（掛單/市價/閃兌）。', 'fc.guide4': '④ 跨鏈：TACM/TiUSD/USDT 皆可經多鏈橋轉移至 BSC/Ethereum 等主流鏈。', 'fc.limitNote': '每地址每日限額', 'fc.addrLabel': '你的 tx0 地址', 'fc.claimBtn': '領取', 'fc.how': '如何使用', 'fc.step1': '填入你的錢包地址後點擊領取', 'fc.step2': '交易由節點金鑰簽發並在數秒內上鏈', 'fc.step3': '到錢包或區塊瀏覽器確認到帳（每日一次）',
-      'pill.ai': 'Titan Ai',
-      'ai_assistant': 'Titan Ai', 'ai_sub': '泰坦 Ai —— 鏈上智能助手，問鏈上數據即時回答',
+      'pill.ai': 'TACm AI',
+      'ai_assistant': 'TACm AI', 'ai_sub': 'TACm AI —— 鏈上智能助手，問鏈上數據即時回答',
       'ai.compliance': '寫操作需你確認才執行 · 節點不代簽 · 投資有風險',
       'ai.modeAssist': '助手', 'ai.modeAgent': 'Agent',
       'ai.marketCard': 'AI 模型市場', 'ai.marketCardSub': '鏈上註冊／訂閱／呼叫模型',
@@ -94,7 +94,7 @@
       'wallet.title': 'TAC 錢包', 'wallet.ledger': '最近帳本流（審計分錄）', 'wallet.transfer': '站內轉帳', 'wallet.confirm': '確認轉帳',
       'dash.title': '儀表板', 'chain.mined': '全鏈總產出 TACm', 'chain.tiusd': 'TiUSD 總流通',
       'chain.pool': '獎勵池', 'chain.earned': '我的累計收益', 'chain.rate': '出塊速率',
-      'index.title': 'TAC Ai 智能鏈', 'index.overview': '全鏈儀表',
+      'index.title': 'TACm 智能鏈', 'index.overview': '全鏈儀表',
       'bn.wallet': 'Web3 錢包', 'bn.walletSub': '鏈上資產與轉帳',
       'bn.mining': '開始挖礦', 'bn.miningSub': '算力與獎勵',
       'bn.exchange': '交易所', 'ss.title': '穩定幣兌換（TiUSD ↔ USDT）', 'ss.sub': '1:1 錨定兌換 · 0.5% 手續費入庫 · 治理可調', 'ss.addr': 'address (tx0...)', 'ss.from': '從', 'ss.to': '到', 'ss.btn': '兌換', 'ss.note': '提示：TiUSD 為 TACm 鏈穩定幣（peg 1 USDT）。USDT 可經多鏈橋入金；TiUSD 可經 DeFi CDP 抵押 TACm 鑄造。', 'ss.req': '請輸入地址與金額', 'ss.ok': '兌換成功', 'bn.exchangeSub': '閃兌與訂單',
@@ -147,11 +147,11 @@
       'br.lockBtn': '鎖定並發送', 'br.history': '跨鏈歷史', 'br.historyHint': '依地址',
       'br.query': '查詢', 'br.historyPh': '輸入地址查看跨鏈交易',
       'bn.nfts': 'NFT 收藏', 'bn.nftsSub': '數位收藏',
-      'bn.ai': 'Titan Ai', 'bn.aiSub': '鏈上智能助手 · 單一 AI 入口',
+      'bn.ai': 'TACm AI', 'bn.aiSub': '鏈上智能助手 · 單一 AI 入口',
       'bn.explorer': '區塊瀏覽', 'bn.explorerSub': '鏈上搜尋',
       'index.heroTag': 'AI 原生區塊鏈 · EVM 相容 · EIP-1559 · L2 Rollup · BSC 跨鏈橋',
       'feat.wallet': '資產與轉帳', 'feat.mining': '算力與獎勵', 'feat.explorer': '鏈上搜尋',
-      'feat.exchange': '交易所', 'feat.community': '社群', 'feat.dex': 'DEX', 'feat.nfts': 'NFT', 'feat.ai': 'Titan Ai',
+      'feat.exchange': '交易所', 'feat.community': '社群', 'feat.dex': 'DEX', 'feat.nfts': 'NFT', 'feat.ai': 'TACm AI',
       'index.v1t': '你的資產屬於你', 'index.v1s': '你的銀行帳戶只是別人資料庫裡的一筆記錄。TAC 是另一個網絡——你直接持有資產，不經第三方。',
       'index.v2t': '隱私至上', 'index.v2s': '沒有與你名字綁定的帳戶、沒有公司監看你的餘額。你的鏈上活動由你掌控。',
       'index.v3t': '永不離線', 'index.v3s': '多節點去中心化網絡，100% 正常運行。沒有單一伺服器可以關閉你的鏈。',
@@ -159,7 +159,7 @@
       'index.ctaWallet': '進入錢包', 'index.ctaMining': '開始挖礦', 'index.ctaJoin': '加入網絡', 'index.ctaExplorer': '區塊瀏覽',
       'index.latestTx': '最新交易',       'ld.tag': '一個為智能時代打造的自治網絡：PoT＋PoS＋BFT 共識、EVM 相容、EIP-1559、L2 Rollup、BSC 跨鏈橋、鏈上 AI——你的資產、你的社群、你的未來，都在鏈上。',
       'ld.enter': '進入系統', 'ld.wallet': '開啟錢包', 'ld.mining': '開始挖礦', 'ld.explorer': '區塊瀏覽',
-      'ld.sec1t': '為什麼選擇 TAC Ai 智能鏈？', 'ld.sec1s': '不是另一個中心化伺服器——是一個真正屬於用戶的網絡。以下是六大優勢。',
+      'ld.sec1t': '為什麼選擇 TACm 智能鏈？', 'ld.sec1s': '不是另一個中心化伺服器——是一個真正屬於用戶的網絡。以下是六大優勢。',
       'ld.d1t': '真正的去中心化', 'ld.d1s': '採用 PoT＋PoS＋BFT 三層共識與時間權證動態難度，任何節點都可加入出塊與驗證。沒有單一公司、沒有單一伺服器可以關閉或竄改這條鏈。',
       'ld.d2t': '密碼學級安全', 'ld.d2s': 'ECDSA 簽名、SHA-256 鏈式哈希、SPV 最終性與 Merkle 驗證層層把關；內建全鏈賬本重放審計，每 100 塊自動核對 coinbase／分潤，不一致即時標記。',
       'ld.d3t': '資產屬於你', 'ld.d3s': '沒有綁定姓名的帳戶。錢包私鑰由你保管，鏈上資產直接由你控制；內建交易所與跨鏈橋讓資產自由閃兌、轉入轉出。',
@@ -246,7 +246,7 @@
       'net.onchainBAD': '發現異常', 'net.onchainBADDesc': '鏈上獎勵不一致，需立即檢查',
       'net.issueList': '異常清單：',
       'node.badge': 'NODE', 'node.title': '節點品牌控制台', 'node.h1': '節點獨立品牌前端',
-      'node.p1': '節點已獨立成自有品牌（TAC Ai Smart Chain — Node），檔案自成一個資料夾（cmd/nodeweb + internal/nodeui），與主網用戶功能完全分離。',
+      'node.p1': '節點已獨立成自有品牌（TACm Chain — Node），檔案自成一個資料夾（cmd/nodeweb + internal/nodeui），與主網用戶功能完全分離。',
       'node.encNote': '🔒 P2P 通訊 v65 起預設加密（ECDH+AES-GCM），對端為舊版節點時自動降級明文；強制明文加 -p2p-plain。節點儀表 Peers 顯示 🔒加密／⚠明文。',
       'node.acc1': '節點儀表', 'node.acc2': '同步狀態', 'node.acc3': 'P2P Peers', 'node.acc4': '節點', 'node.acc5': '出塊記錄',
       'node.cmdTitle': '啟動指令', 'node.cmdHint': '以下指令一次一條，於節點伺服器執行：',
@@ -272,7 +272,7 @@
       'ld2.h2t': '選擇服務', 'ld2.h2s': '挖礦、交易、DeFi、NFT——進入任何一個生態入口。',
       'ld2.h3t': '參與治理', 'ld2.h3s': '發起提案、權重投票、參數自動執行。',
       'ld2.ctaT': '準備好上鏈了嗎？', 'ld2.ctaS': '加入主網——挖礦、交易或部署你的合約。',
-      'ld2.f1': '快速連結', 'ld2.f2': '網絡', 'ld2.cr': '© 2026 TAC Ai 智能鏈。保留所有權利。',
+      'ld2.f1': '快速連結', 'ld2.f2': '網絡', 'ld2.cr': '© 2026 TACm 智能鏈。保留所有權利。',
 
     
       'pill.sign': '簽章工具',
@@ -352,11 +352,11 @@
       'ls.how2': 'Pooled assets are delegated to validators; rewards are auto-injected every block (v75) and the rate rises — your stTACm redeem value grows.',
       'ls.how3': 'Redeem TACm anytime at the current rate; stTACm also works across other DeFi protocols.',
       'wallet.onchain': ' My On-chain History', 'nav.exchange': 'Exchange', 'nav.dash': 'Dashboard',
-      'nav.mining': 'Mining', 'nav.community': 'Community', 'nav.ai': 'Titan Ai', 'nav.tokens': 'Tokens', 'nav.nfts': 'NFT', 'nav.defi': 'DeFi', 'nav.tiusd': 'TiUSD Monitor', 'nav.ls': 'Staking', 'nav.governance': 'Governance',
+      'nav.mining': 'Mining', 'nav.community': 'Community', 'nav.ai': 'TACm AI', 'nav.tokens': 'Tokens', 'nav.nfts': 'NFT', 'nav.defi': 'DeFi', 'nav.tiusd': 'TiUSD Monitor', 'nav.ls': 'Staking', 'nav.governance': 'Governance',
       'nav.dapp': 'DApp Store', 'nav.agent': 'AI Agent', 'pill.dapp': 'DApp Store', 'pill.agent': 'AI Agent',
       'tx.logs': 'Event Logs', 'tx.logAddr': 'Contract Address', 'tx.decodedEvents': 'Decoded Events (ABI)', 'tx.gasUsed': 'Gas Used', 'tx.transfers': 'Token Transfers', 'tx.tContract': 'Contract', 'tx.tValue': 'Amount / Token ID', 'tx.tBlock': 'Block', 'tx.hash': 'Tx Hash', 'addr.transfers': 'Token Transfers', 'fc.title': 'Test Token Faucet', 'fc.sub': 'Developer ecosystem — free test TACm for your address', 'fc.claim': 'Claim Test Tokens', 'fc.limit': 'Daily limit per address', 'fc.addrLabel': 'Your tx0 address', 'fc.claimBtn': 'Claim', 'fc.how': 'How to use', 'fc.step1': 'Enter your wallet address and click claim', 'fc.step2': 'The tx is signed by the node key and lands on-chain in seconds', 'fc.step3': 'Check Wallet or Explorer to confirm (once per address per day)', 'fc.disabled': 'Disabled on mainnet (free assets no longer distributed)', 'fc.guide': 'TiUSD / USDT Circulation', 'fc.guide1': '① Claim TACm from the faucet → buy TiUSD on the exchange (TACM/TiUSD pair; stablecoin pegged 1:1 to USDT).', 'fc.guide2': '② DeFi lending (CDP): collateralize TACm to mint TiUSD.', 'fc.guide3': '③ TACm/TiUSD → USDT: trade on TACM/USDT and TiUSD/USDT markets (limit/market/swap).', 'fc.guide4': '④ Cross-chain: TACM/TiUSD/USDT can be bridged to BSC/Ethereum and other major chains.',
-      'pill.ai': 'Titan Ai',
-      'ai_assistant': 'Titan Ai', 'ai_sub': 'Titan Ai — on-chain assistant, instant answers',
+      'pill.ai': 'TACm AI',
+      'ai_assistant': 'TACm AI', 'ai_sub': 'TACm AI — on-chain assistant, instant answers',
       'ai.compliance': 'Write actions need your confirmation · node never signs for you · investment has risk',
       'ai.modeAssist': 'Assistant', 'ai.modeAgent': 'Agent',
       'ai.marketCard': 'AI Model Market', 'ai.marketCardSub': 'Register / subscribe / call on-chain models',
@@ -428,7 +428,7 @@
       'wallet.title': 'TAC Wallet', 'wallet.ledger': 'Recent Ledger (Audit)', 'wallet.transfer': 'Internal Transfer', 'wallet.confirm': 'Confirm Transfer',
       'dash.title': 'Dashboard', 'chain.mined': 'Total TACm Mined', 'chain.tiusd': 'TiUSD Circulation',
       'chain.pool': 'Reward Pool', 'chain.earned': 'My Earnings', 'chain.rate': 'Block Rate',
-      'index.title': 'TAC Ai Smart Chain', 'index.overview': 'Chain Overview',
+      'index.title': 'TACm Chain', 'index.overview': 'Chain Overview',
       'bn.wallet': 'Web3 Wallet', 'bn.walletSub': 'On-chain Assets & Transfers',
       'bn.mining': 'Mining', 'bn.miningSub': 'Hashrate & Rewards',
       'bn.exchange': 'Exchange', 'bn.exchangeSub': 'Swap & Orders',
@@ -481,11 +481,11 @@
       'br.lockBtn': 'Lock & Send', 'br.history': 'Bridge History', 'br.historyHint': 'by address',
       'br.query': 'Query', 'br.historyPh': 'Enter an address to view bridge transactions',
       'bn.nfts': 'NFT Gallery', 'bn.nftsSub': 'Digital Collectibles',
-      'bn.ai': 'Titan Ai', 'bn.aiSub': 'On-chain assistant · single AI entry',
+      'bn.ai': 'TACm AI', 'bn.aiSub': 'On-chain assistant · single AI entry',
       'bn.explorer': 'Explorer', 'bn.explorerSub': 'On-chain Search',
       'index.heroTag': 'AI-native blockchain · EVM compatible · EIP-1559 · L2 Rollup · BSC Bridge',
       'feat.wallet': 'Assets & Transfer', 'feat.mining': 'Hashrate & Rewards', 'feat.explorer': 'On-chain Search',
-      'feat.exchange': 'Exchange', 'feat.community': 'Community', 'feat.dex': 'DEX', 'feat.nfts': 'NFT', 'feat.ai': 'Titan Ai',
+      'feat.exchange': 'Exchange', 'feat.community': 'Community', 'feat.dex': 'DEX', 'feat.nfts': 'NFT', 'feat.ai': 'TACm AI',
       'index.v1t': 'Your Assets Are Yours', 'index.v1s': 'Your bank account is an entry in someone else\'s database. TAC is an alternative network where you hold your assets directly.',
       'index.v2t': 'Privacy by Default', 'index.v2s': 'No account tied to your name, no company watching your balance. Your on-chain activity is yours.',
       'index.v3t': 'Never Offline', 'index.v3s': 'Multi-node decentralized network with 100% uptime. No single server can take your chain down.',
@@ -493,7 +493,7 @@
       'index.ctaWallet': 'Open Wallet', 'index.ctaMining': 'Start Mining', 'index.ctaJoin': 'Join Network', 'index.ctaExplorer': 'Explorer',
       'index.latestTx': 'Latest Transactions',       'ld.tag': 'An autonomous network built for the intelligent era: PoT + PoS + BFT consensus, EVM compatibility, EIP-1559, L2 Rollup, BSC Bridge, on-chain AI - your assets, your community, your future, all on-chain.',
       'ld.enter': 'Enter System', 'ld.wallet': 'Open Wallet', 'ld.mining': 'Start Mining', 'ld.explorer': 'Block Explorer',
-      'ld.sec1t': 'Why TAC Ai Smart Chain?', 'ld.sec1s': 'Not another centralized server - a network that truly belongs to its users. Here are six key advantages.',
+      'ld.sec1t': 'Why TACm Chain?', 'ld.sec1s': 'Not another centralized server - a network that truly belongs to its users. Here are six key advantages.',
       'ld.d1t': 'Truly Decentralized', 'ld.d1s': 'Three-layer consensus (PoT + PoS + BFT) with dynamic time difficulty; any node can join block production and verification. No single company or server can shut down or tamper with this chain.',
       'ld.d2t': 'Cryptographic Security', 'ld.d2s': 'ECDSA signatures, SHA-256 chained hashes, SPV finality and Merkle verification; built-in full-ledger replay audit verifies coinbase/splits every 100 blocks and flags inconsistencies instantly.',
       'ld.d3t': 'Your Assets Are Yours', 'ld.d3s': 'No name-bound accounts, no company watching your balance. You hold the private keys; built-in exchange and bridge let assets move freely.',
@@ -566,7 +566,7 @@
       'net.onchainBAD': 'Anomaly found', 'net.onchainBADDesc': 'On-chain rewards inconsistent, check immediately',
       'net.issueList': 'Issues: ',
       'node.badge': 'NODE', 'node.title': 'Node Branded Console', 'node.h1': 'Standalone Node Console',
-      'node.p1': 'The node front-end is now an independent brand (TAC Ai Smart Chain — Node), living in its own folder (cmd/nodeweb + internal/nodeui), fully separated from mainnet user features.',
+      'node.p1': 'The node front-end is now an independent brand (TACm Chain — Node), living in its own folder (cmd/nodeweb + internal/nodeui), fully separated from mainnet user features.',
       'node.encNote': '🔒 P2P traffic is encrypted by default since v65 (ECDH+AES-GCM), auto-downgrading to plaintext with legacy peers; add -p2p-plain to force plaintext. The node console Peers table shows 🔒 encrypted / ⚠ plaintext per channel.',
       'node.acc1': 'Node Dashboard', 'node.acc2': 'Sync Status', 'node.acc3': 'P2P Peers', 'node.acc4': 'Nodes', 'node.acc5': 'Latest Blocks',
       'node.cmdTitle': 'Start Command', 'node.cmdHint': 'Run one command at a time on your node server:',
@@ -588,7 +588,7 @@
       'ld2.h2t': 'Pick Your Service', 'ld2.h2s': 'Mine, trade, farm or collect — enter any ecosystem door.',
       'ld2.h3t': 'Shape the Network', 'ld2.h3s': 'Propose, vote and auto-execute on-chain parameters.',
       'ld2.ctaT': 'Ready to Go On-Chain?', 'ld2.ctaS': 'Join the mainnet — mine, trade or deploy your contracts.',
-      'ld2.f1': 'Quick Links', 'ld2.f2': 'Network', 'ld2.cr': '© 2026 TAC Ai Smart Chain. All rights reserved.',
+      'ld2.f1': 'Quick Links', 'ld2.f2': 'Network', 'ld2.cr': '© 2026 TACm Chain. All rights reserved.',
 
     
       'pill.sign': 'Sign Tool',
@@ -909,7 +909,7 @@
     ' 廣告池': ' Ad Pool',
     ' 市集': ' Marketplace',
     ' 購買商品（TACM 鏈上轉帳）': ' Buy Item (TACM on-chain transfer)',
-    'TAC Ai 智能鏈 ·': 'TAC Ai Smart Chain ·',
+    'TACm 智能鏈 ·': 'TACm Chain ·',
     '管理儀表板': 'Management Dashboard',
     '10% 年息、全額還款釋放抵押': '10% APR, full repayment releases collateral',
     'APR 動態': 'APR Dynamic',
@@ -1001,7 +1001,7 @@
     ' 一鍵加入指令': ' One-Click Join Command',
     ' 節點要求': ' Node Requirements',
     ' 公開 Seed 列表': ' Public Seed List',
-    ' 加入 TAC Ai 智能鏈主網': ' Join TAC Ai Smart Chain Mainnet',
+    ' 加入 TACm 智能鏈主網': ' Join TACm Chain Mainnet',
     'CPU 算力': 'CPU Hashrate',
     'GPU 算力': 'GPU Hashrate',
     '——每邀請 1 名會員註冊，': '— Per member registered with your invite,',
@@ -1084,7 +1084,7 @@
     '還款成功': 'Repaid',
     '領取成功': 'Claimed',
     '領取獎勵成功': 'Rewards claimed',
-    ' 加入 TAC Ai 智能鏈主網': ' Join TAC Ai Smart Chain Mainnet',
+    ' 加入 TACm 智能鏈主網': ' Join TACm Chain Mainnet',
     '任何一台伺服器都可成為節點，與創世節點同步同一條鏈、共享全網狀態；內建礦機可額外挖礦瓜分出塊獎勵。節點之間嚴格遵循同一套出塊獎勵規則，任何入口看到的鏈上資料與在線礦工完全一致。': 'Any server can become a node: sync the same chain with the genesis node, share global status; the built-in miner can mine and share block rewards. All nodes follow the same reward rules — every entry shows identical on-chain data and online miners.',
     ' 網絡概況': ' Network Overview',
     '鏈 ID': 'Chain ID',
@@ -1134,7 +1134,7 @@
     '（每 10 秒自動刷新）': ' (auto-refresh every 10s)',
     '台 · 總算力': 'rigs · Total Hashrate',
     '0 個代幣': '0 tokens',
-    'TAC Ai 智能鏈 · ': 'TAC Ai Smart Chain · ',
+    'TACm 智能鏈 · ': 'TACm Chain · ',
     '管理儀表板': 'Admin Dashboard',
     'No 農場': 'No Farms',
     '從': 'From',
@@ -1288,7 +1288,7 @@
     '刪除': 'Delete',
     '刪除失敗': 'Delete failed',
     '創節點引導獎勵（限額 50 名）': 'Genesis bootstrap reward (limit 50)',
-    '加入 TAC Ai 智能鏈主網': 'Join TAC Ai Smart Chain mainnet',
+    '加入 TACm 智能鏈主網': 'Join TACm Chain mainnet',
     '加入網路失敗': 'Join network failed',
     '加成': 'Bonus',
     '加成時權': 'Bonus uptime',
@@ -1815,7 +1815,7 @@ dict.zh['assets.secList'] = '• 簽名工具：訊息 / TypedData 簽名與驗�
   dict.zh['assets.f.ido']='IDO 發行 / 回購';
   dict.zh['assets.f.lp'] = '流動性 (LP)'; dict.zh['assets.f.bridge'] = '跨鏈橋'; dict.zh['assets.f.transfer'] = '一般轉帳'; dict.zh['api.tiusdDesc'] = 'TiUSD 穩定幣總覽：供應、市值上限、下限、利用率、儲備、流向、跨鏈淨額。'; dict.zh['api.histDesc'] = 'TiUSD 累計鑄造歷史＋現值上限。'; dict.zh['api.posDesc'] = '全鏈借款頭寸＋總借款／總抵押。'; dict.zh['api.csvDesc'] = 'TiUSD 全量帳本 CSV 匯出。'; dict.zh['api.tacmDesc'] = 'TACm 總覽：產出、上限、剩餘可挖、流向分類。'; dict.zh['api.alertsDesc'] = '最近 30 天鏈上警報事件。'; dict.zh['api.rpcdocDesc'] = '節點 RPC 全路由清單（自動生成）。'; dict.zh['api.full'] = '節點 RPC 全路由 / Full Route List'; dict.zh['api.fullNote'] = '節點自動註冊的全部 HTTP 路由（含 eth_* JSON-RPC 面）。'; dict.zh['api.fullFail'] = '路由載入失敗';
 dict.zh['sdk.title'] = '開發者 SDK — 主網範例';
-dict.zh['sdk.intro'] = 'TAC Ai 智能鏈官方 JS SDK（tacjs）：連線主網節點、查詢鏈狀態與地址餘額，並以一步轉帳示範簽署與提交。SDK 原始碼位於專案 sdk/tacjs（瀏覽器與 Node 通用）。';
+dict.zh['sdk.intro'] = 'TACm 智能鏈官方 JS SDK（tacjs）：連線主網節點、查詢鏈狀態與地址餘額，並以一步轉帳示範簽署與提交。SDK 原始碼位於專案 sdk/tacjs（瀏覽器與 Node 通用）。';
 dict.zh['sdk.rpcTitle'] = '節點連線測試';
 dict.zh['sdk.rpcDesc'] = '輸入節點 RPC 位址（預設為目前站台），查詢鏈狀態。';
 dict.zh['sdk.rpcBtn'] = '連線測試';
@@ -1945,7 +1945,7 @@ dict.en['assets.secList'] = '• Signing tool: message / TypedData sign & verify
   dict.en['assets.f.ido']='IDO Launch / Repurchase';
   dict.en['assets.f.lp'] = 'Liquidity (LP)'; dict.en['assets.f.bridge'] = 'Cross-chain Bridge'; dict.en['assets.f.transfer'] = 'Transfer'; dict.en['api.tiusdDesc'] = 'TiUSD stablecoin overview: supply, mcap cap, floor, utilization, reserves, flow, bridge net.'; dict.en['api.histDesc'] = 'TiUSD cumulative mint history + current cap.'; dict.en['api.posDesc'] = 'All-chain loan positions + totals.'; dict.en['api.csvDesc'] = 'TiUSD full ledger CSV export.'; dict.en['api.tacmDesc'] = 'TACm overview: mined, cap, remaining, flow categories.'; dict.en['api.alertsDesc'] = 'On-chain alert events (last 30 days).'; dict.en['api.rpcdocDesc'] = 'Full node RPC route list (auto-generated).'; dict.en['api.full'] = 'Node RPC Full Route List'; dict.en['api.fullNote'] = 'All auto-registered HTTP routes (incl. eth_* JSON-RPC).'; dict.en['api.fullFail'] = 'Failed to load routes';
 dict.en['sdk.title'] = 'Developer SDK — Mainnet Examples';
-dict.en['sdk.intro'] = 'Official JS SDK (tacjs) for TAC Ai Smart Chain: connect to a mainnet node, query chain status and address balances, and demo signing & submission with one-step transfers. Source lives in sdk/tacjs (browser + Node).';
+dict.en['sdk.intro'] = 'Official JS SDK (tacjs) for TACm Chain: connect to a mainnet node, query chain status and address balances, and demo signing & submission with one-step transfers. Source lives in sdk/tacjs (browser + Node).';
 dict.en['sdk.rpcTitle'] = 'Node Connection Test';
 dict.en['sdk.rpcDesc'] = 'Enter a node RPC URL (defaults to this site) to query chain status.';
 dict.en['sdk.rpcBtn'] = 'Test';
@@ -1970,7 +1970,7 @@ dict.en['sdk.endpointDesc'] = 'The following endpoints can be called by any JSON
   zh2en['場外交易'] = 'OTC Trading'; zh2en['法幣直接買賣加密貨幣'] = 'Fiat crypto trading';
   zh2en['買幣'] = 'Buy Crypto'; zh2en['賣幣'] = 'Sell Crypto';
   zh2en['智能鏈'] = 'Smart Chain'; zh2en['管理儀表板'] = 'Admin Dashboard';
-  zh2en['加入 TAC Ai 智能鏈主網'] = 'Join TAC Ai Smart Chain Mainnet';
+  zh2en['加入 TACm 智能鏈主網'] = 'Join TACm Chain Mainnet';
   zh2en['借出 TiUSD'] = 'Borrow TiUSD'; zh2en['倉位'] = 'Position'; zh2en['可借上限'] = 'Borrow Limit';
   zh2en['安全審計'] = 'Security Audit';
   zh2en['提領節點獎勵'] = 'Withdraw Node Rewards'; zh2en['提領到綁定錢包'] = 'Withdraw to Bound Wallet';

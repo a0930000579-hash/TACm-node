@@ -1,4 +1,4 @@
-// Package defi 提供 TAC Ai 智能鏈 DeFi 模組（照 Python 原版搬運＋真實資產進出）：
+// Package defi 提供 TACm 智能鏈 DeFi 模組（照 Python 原版搬運＋真實資產進出）：
 //   - 流動性挖礦（pools / add / remove / claim reward，LP=sqrt 公式、APR 每日獎勵）
 //   - 借貸市場（deposit / withdraw / borrow / repay，抵押率與 10% 年息）
 //

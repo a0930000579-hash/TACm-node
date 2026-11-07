@@ -1,6 +1,6 @@
 # TAC ↔ BSC 真實跨鏈橋部署教學（M50）
 
-本文件說明如何把 TAC Ai 智能鏈與 BNB Smart Chain（BSC）對接為**真實跨鏈橋**：
+本文件說明如何把 TACm 智能鏈與 BNB Smart Chain（BSC）對接為**真實跨鏈橋**：
 TAC 側鎖定 TACM → BSC 側由 Relayer 自動 mint 映射代幣；BSC 側用戶在
 LockProxy `deposit` 燒毀映射代幣 → TAC 側自動建立解鎖記錄，由守衛網絡完成鏈上解鎖。
 
@@ -12,7 +12,7 @@ LockProxy `deposit` 燒毀映射代幣 → TAC 側自動建立解鎖記錄，由
 ## 1. 架構總覽
 
 ```
-        TAC Ai 智能鏈（自有鏈，Go）                BNB Smart Chain（BSC）
+        TACm 智能鏈（自有鏈，Go）                BNB Smart Chain（BSC）
  ┌──────────────────────────────┐         ┌────────────────────────────────┐
  │ 節點（-bridge -bsc-relay）    │         │ MintBurn 代幣（TACM 映射）      │
  │  ├ 橋狀態機 pending→locked→   │         │  ├ mint(address,uint256)       │

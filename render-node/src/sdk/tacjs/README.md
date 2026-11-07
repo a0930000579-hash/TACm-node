@@ -1,6 +1,6 @@
 # TAC JS SDK（tacjs）
 
-TAC Ai 智能鏈官方 **JavaScript** SDK——瀏覽器與 Node 通用，與 Go SDK
+TACm 智能鏈官方 **JavaScript** SDK——瀏覽器與 Node 通用，與 Go SDK
 （`sdk/tacclient`）簽章格式互通：**前端用 tacjs 簽署的交易，Go 節點可直接驗證入池**
 （互操作已由 `sdk/tacclient/js_interop_test.go` 固定向量測試證明）。
 

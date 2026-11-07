@@ -1,4 +1,4 @@
-// Package perp — TAC Ai 智能鏈永續合約（Perpetuals）模組，對標 dYdX / GMX。
+// Package perp — TACm 智能鏈永續合約（Perpetuals）模組，對標 dYdX / GMX。
 //
 // 本套件只維護純狀態與數學（對標 internal/ens）：
 //   - 多空開倉 / 平倉 / 加減保證金 / 強平

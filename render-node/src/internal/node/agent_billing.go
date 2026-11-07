@@ -1,6 +1,6 @@
 package node
 
-// agent_billing.go — Titan Ai 用量計費（TACm）。
+// agent_billing.go — TACm AI 用量計費（TACm）。
 //
 // 對齊 aimarket 計費模式：資金實際移轉走 walletSvc.Transfer（帳本授權，無需私鑰），
 // 平台收入入 FeeAccount。本檔只定義費率、收費帳戶與計費函式，不新增業務邏輯。
@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	// titanFeeAccount 泰坦 Ai 計費收入帳戶。
+	// titanFeeAccount TACm AI 計費收入帳戶。
 	titanFeeAccount = "titan_ai_fee"
 
 	// 費率（整幣 TACm，六位小數精度內）。

@@ -4,7 +4,7 @@ import (
 	"net/http"
 )
 
-// v164 子任務 B：AI Agent 已併入 TAC Ai（統一更名為 Titan Ai / 泰坦 Ai）。
+// v164 子任務 B：AI Agent 已併入 TACm（統一更名為 TACm AI / TACm AI）。
 //
 // 去重說明：v163 的獨立 /agent 頁（function calling 聊天）與 /ai 助手頁已合併為
 // 單一入口 GET /ai（ai.html）——同一對話框上方可切換「助手（/api/ai/ask）」與
@@ -14,5 +14,5 @@ import (
 //
 // （本檔由「子代理 B」完整實作，其它支線不得編輯；server.go 的 GET /agent 路由保留指向此處。）
 func (s *Server) handleV163Agent(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "/ai", http.StatusFound) // 302 → 單一 Titan Ai 入口
+	http.Redirect(w, r, "/ai", http.StatusFound) // 302 → 單一 TACm AI 入口
 }

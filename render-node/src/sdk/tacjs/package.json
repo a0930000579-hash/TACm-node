@@ -1,7 +1,7 @@
 {
   "name": "@tacm/tacjs",
   "version": "1.0.0",
-  "description": "TAC Ai 智能鏈官方 JavaScript SDK（瀏覽器/Node 通用）：密鑰、簽章、RPC 客戶端",
+  "description": "TACm 智能鏈官方 JavaScript SDK（瀏覽器/Node 通用）：密鑰、簽章、RPC 客戶端",
   "type": "module",
   "main": "src/tacjs.mjs",
   "exports": {

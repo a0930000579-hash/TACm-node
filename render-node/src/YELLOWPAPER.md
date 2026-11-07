@@ -1,5 +1,5 @@
-# TAC Ai Smart Chain — Technical Yellowpaper
-# TAC Ai 智能鏈 — 技術黃皮書（v1.0 / M40）
+# TACm Chain — Technical Yellowpaper
+# TACm 智能鏈 — 技術黃皮書（v1.0 / M40）
 
 > TAC 是一條自主研發的 Layer-1 區塊鏈（不依附任何外部鏈），整合 PoT 出塊、BFT+PoS 最終性、鏈上治理、智能合約（TAC VM）、Rollup L2、跨鏈橋與去中心化交易所生態。本文為其技術規格總覽，所有數值對應真實實作（Go 語言）。
 

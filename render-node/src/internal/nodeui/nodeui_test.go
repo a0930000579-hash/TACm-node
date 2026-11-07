@@ -74,7 +74,7 @@ func TestNodeUIHome(t *testing.T) {
 		t.Fatal(err)
 	}
 	body := string(bodyBytes)
-	for _, want := range []string{"TAC Ai Smart Chain", "Node", "data-i18n", "nodeui.js"} {
+	for _, want := range []string{"TACm Chain", "Node", "data-i18n", "nodeui.js"} {
 		if !contains(body, want) {
 			t.Fatalf("首頁缺少 %q", want)
 		}

@@ -56,7 +56,7 @@ func TestExplorerRealNode(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("門戶 狀態=%d", resp.StatusCode)
 	}
-	if !strings.Contains(body, "TAC Ai Smart Chain") {
+	if !strings.Contains(body, "TACm Chain") {
 		t.Errorf("門戶缺少品牌標題")
 	}
 	resp.Body.Close()

@@ -395,9 +395,9 @@ func (s *RPCServer) aiTransferAnswer(zh bool) string {
 func (s *RPCServer) aiHelpAnswer(zh bool) string {
 	var b strings.Builder
 	if zh {
-		b.WriteString("我是 Titan Ai（泰坦 Ai）鏈上智能助手，可以回答（中/英）：\n")
+		b.WriteString("我是 TACm AI（TACm AI）鏈上智能助手，可以回答（中/英）：\n")
 	} else {
-		b.WriteString("I'm Titan Ai, the on-chain AI assistant. I can answer (EN/ZH):\n")
+		b.WriteString("I'm TACm AI, the on-chain AI assistant. I can answer (EN/ZH):\n")
 	}
 	for _, it := range aiIntents {
 		if zh {

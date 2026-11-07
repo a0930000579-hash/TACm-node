@@ -1,4 +1,4 @@
-// Package dexv3 實現 TAC Ai 智能鏈的 DEX V3 集中流動性做市（對標 Uniswap V3）。
+// Package dexv3 實現 TACm 智能鏈的 DEX V3 集中流動性做市（對標 Uniswap V3）。
 //
 // 核心模型：
 //   - 每個流動性位置（Position，NFT 化 positionId）只在價格區間 [tickLower, tickUpper]

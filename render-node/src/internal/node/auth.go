@@ -368,7 +368,7 @@ func (a *AuthService) NewWeb3Challenge(address, domain, chainID string) (string,
 	now := time.Now().UTC()
 	exp := now.Add(web3NonceTTL)
 	uri := "http://" + domain
-	const statement = "Sign in to TAC Ai Smart Chain with your wallet. This signature is for login only and costs no gas."
+	const statement = "Sign in to TACm Chain with your wallet. This signature is for login only and costs no gas."
 	message := domain + " wants you to sign in with your Ethereum account:\n" +
 		addr + "\n\n" +
 		statement + "\n\n" +

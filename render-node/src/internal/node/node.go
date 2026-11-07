@@ -1,4 +1,4 @@
-// Package node 實現 TAC Ai 智能鏈的單節點：持續出塊、交易驗證與內存池、
+// Package node 實現 TACm 智能鏈的單節點：持續出塊、交易驗證與內存池、
 // 動態難度，以及輕客戶端所需的查詢能力。M2 為單節點垂直切片，P2P 網絡與
 // BFT 最終性在後續里程碑接入。
 package node
@@ -56,7 +56,7 @@ const (
 // errNotProposer 表示當前高度不由本節點提議（分佈式模式下靜默等待網絡塊）。
 var errNotProposer = errors.New("not my turn to propose")
 
-// Node 為 TAC Ai 智能鏈節點。
+// Node 為 TACm 智能鏈節點。
 type Node struct {
 	cfg    *config.Config
 	db     *chaindb.ChainDB

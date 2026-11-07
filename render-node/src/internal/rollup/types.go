@@ -1,4 +1,4 @@
-// Package rollup 實現 TAC Ai 智能鏈的 Layer2 Optimistic Rollup：
+// Package rollup 實現 TACm 智能鏈的 Layer2 Optimistic Rollup：
 // 交易在 L2 批量執行、狀態根提交到 Layer1、進入挑戰期（默認 7 天），
 // 期間任何人可基於執行前快照真實重放提交欺詐證明；挑戰期過後最終確認。
 // L1↔L2 經鎖定/鑄造方式出入金。L2 交易與 L1 同構（真實 ECDSA secp256k1、tx0 地址）。

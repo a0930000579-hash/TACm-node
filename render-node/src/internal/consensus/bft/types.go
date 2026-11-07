@@ -1,4 +1,4 @@
-// Package bft 實現 TAC Ai 智能鏈的 Tendermint 風格拜占庭容錯狀態機，為鏈提供
+// Package bft 實現 TACm 智能鏈的 Tendermint 風格拜占庭容錯狀態機，為鏈提供
 // 即時最終性：Propose → PreVote(>2/3) → PreCommit(>2/3) → Commit。包含 ECDSA
 // 投票簽名、鎖定、view change、雙重投票證據與罰沒；最終化的塊不可回滾。
 package bft

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================
-# TAC Ai Smart Chain — 一鍵節點安裝器（人人可搭，三平台通用）
+# TACm Chain — 一鍵節點安裝器（人人可搭，三平台通用）
 #
 # 支援三種環境（自動偵測，或手動指定）：
 #   1) Linux 伺服器 / 本機（Ubuntu/Debian）→ systemd 服務，開機自啟
@@ -116,7 +116,7 @@ case "$MODE" in
     say "寫入 systemd 服務 $SERVICE…"
     sudo tee /etc/systemd/system/$SERVICE.service >/dev/null <<EOF
 [Unit]
-Description=TAC Ai Smart Chain - Node UI
+Description=TACm Chain - Node UI
 After=network.target
 
 [Service]

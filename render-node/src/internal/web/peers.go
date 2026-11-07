@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"tacm/internal/config"
 )
 
 // SeedInfo 為一個公開種子節點（M63：節點加入指引）。
@@ -14,14 +16,22 @@ type SeedInfo struct {
 	Role   string `json:"role"` // 錨點 / 驗證節點
 }
 
-// mainnetSeeds 為主網 tacm-mainnet-1 的公開 seed 列表。
-// 任何節點與任何入口（瀏覽器/API）看到的 seed 列表必須一致（用戶鎖定口徑：
-// 「無論在哪裡看到的人數/節點都必須全網一致」）——此處為唯一權威來源，
-// 全部節點共用同一份編譯進去的列表，不會因節點不同而不同。
-var mainnetSeeds = []SeedInfo{
-	{NodeID: "anchor", URL: "http://2.28.201.174:8080", Role: "錨點"},
-	{NodeID: "validator-render", URL: "https://tacm-ai-cyprto.onrender.com", Role: "驗證節點"},
-	{NodeID: "validator-digitalocean", URL: "https://oyster-app-aynnb.ondigitalocean.app", Role: "驗證節點"},
+// mainnetSeeds 為主網 tacm-mainnet-1 的公開 seed 列表，由統一引導清單
+// （config.BootstrapSeeds，可用 TACM_SEEDS 覆蓋）即時建立，所有節點與入口
+// 看到的清單一致，且不再標示任何特殊「錨點」——各節點角色皆為對等驗證節點。
+var mainnetSeeds = buildMainnetSeeds()
+
+func buildMainnetSeeds() []SeedInfo {
+	urls := config.BootstrapSeeds()
+	out := make([]SeedInfo, 0, len(urls))
+	for i, u := range urls {
+		out = append(out, SeedInfo{
+			NodeID: fmt.Sprintf("validator-%d", i+1),
+			URL:    u,
+			Role:   "驗證節點",
+		})
+	}
+	return out
 }
 
 // serverSeeds 依網段回傳公開 seed 列表（M65）：

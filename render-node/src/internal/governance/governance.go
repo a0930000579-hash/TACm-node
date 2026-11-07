@@ -1,4 +1,4 @@
-// Package governance 提供 TAC Ai 智能鏈的鏈上治理能力：
+// Package governance 提供 TACm 智能鏈的鏈上治理能力：
 // 提案（Proposal）、投票（Vote）、到期自動統計與參數執行（TallyAndExecute）。
 // 每個提案/投票動作同時產生一筆鏈上交易（memo 前綴 GOV:）作為不可篡改審計軌跡。
 package governance

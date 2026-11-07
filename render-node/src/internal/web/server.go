@@ -342,7 +342,7 @@ func (s *Server) routes() {
 	// M39：節點健康檢查與運行指標（商業營運/監控告警必備）。
 	s.mux.HandleFunc("GET /api/health", s.handleHealth)
 	s.mux.HandleFunc("GET /api/metrics", s.handleMetrics)
-	// 白皮書（中/英）——直接服務嵌入 static 成品（TAC Ai 智能鏈，無第三方品牌）。
+	// 白皮書（中/英）——直接服務嵌入 static 成品（TACm 智能鏈，無第三方品牌）。
 	s.mux.HandleFunc("GET /whitepaper", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/static/whitepaper_zh.html", http.StatusFound)
 	})

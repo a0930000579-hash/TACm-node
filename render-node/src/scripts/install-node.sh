@@ -1,25 +1,29 @@
 #!/bin/bash
 # ============================================================
-# TACm Node 一鍵安裝/更新腳本（v119）
+# TACm Node 一鍵安裝/更新腳本（去中心化版）
 # 用法（架設者任選其一）：
-#   bash <(curl -fsSL http://<主鏈>/downloads/install-node.sh)            # 一鍵安裝
-#   bash <(curl -fsSL http://<主鏈>/downloads/install-node.sh) update      # 一鍵更新到最新版
-#   參數：$1=update（更新模式）或 下載來源 DL；$2=種子節點；$3=Web 埠；$4=資料目錄
-#   更新模式：自動備份目前 nodeweb → 下載最新（主鏈/Render 多來源）→ 覆蓋 → 重啟 tacnode
+#   bash <(curl -fsSL http://<任一節點>/downloads/install-node.sh)            # 一鍵安裝
+#   bash <(curl -fsSL http://<任一節點>/downloads/install-node.sh) update      # 一鍵更新到最新版
+#   參數：$1=update（更新模式）或 下載來源 DL；$2=種子清單 SEEDS；$3=Web 埠；$4=資料目錄
+#   下載與引導皆為多節點清單，任一來源離線自動輪詢下一個，無單一控制點。
 # ============================================================
 set -euo pipefail
 
-DL="${1:-http://2.28.201.174:8080/downloads,https://tacm-ai-cyprto.onrender.com/downloads}"
-SEED="${2:-http://2.28.201.174:8080}"
+DL="${1:-http://2.28.201.174:8080/downloads,https://tacm-ai-cyprto.onrender.com/downloads,https://oyster-app-aynnb.ondigitalocean.app/downloads}"
+SEEDS="${2:-http://2.28.201.174:8080,https://tacm-ai-cyprto.onrender.com,https://oyster-app-aynnb.ondigitalocean.app}"
 WEB_PORT="${3:-8081}"
 DATA_DIR="${4:-/var/tac/data}"
+
+# 供應模型參數（與主網一致；缺這些會誤退回 halving 導致 coinbase 不符而拒塊）。
+MAX_SUPPLY=52003300
+EMISSION_YEARS=6
+ANNUAL_DECAY_PCT=0.25
 
 # sudo 相容（root 直接跑時無 sudo 也行）
 SUDO=""
 command -v sudo >/dev/null 2>&1 && SUDO="sudo"
 
-# v119：多來源 fallback——DL 可為逗號分隔（主鏈→Render），依序嘗試直到成功，
-# 避免主鏈外部 502 時架設者下載不到。
+# 多來源 fallback——DL 可為逗號分隔，依序嘗試直到成功，任一來源離線自動換下一個。
 fetch() {
   local IFS=','
   for u in $DL; do
@@ -33,11 +37,11 @@ fetch() {
     fi
   done
   echo "✗ 無法從任何來源下載 $1（已嘗試：$DL）。"
-  echo "  請確認網路可達主鏈/Render，或手動下載 nodeweb 後放置到 /usr/local/bin/。"
+  echo "  請確認網路可達任一公開節點，或手動下載 nodeweb 後放置到 /usr/local/bin/。"
   return 1
 }
 
-# v74：一鍵更新模式——備份→下載最新 nodeweb（多來源）→覆蓋→重啟。
+# 一鍵更新模式——備份→下載最新 nodeweb（多來源）→覆蓋→重啟。
 if [ "${1:-}" = "update" ]; then
   echo "→ TACm 節點一鍵更新："
   fetch nodeweb /tmp/tacm-nodeweb.new || exit 1
@@ -52,16 +56,16 @@ if [ "${1:-}" = "update" ]; then
   $SUDO chmod +x "$BIN"
   echo "→ 新版本：$(ls -la "$BIN" | awk '{print $5}') bytes"
   if systemctl list-unit-files 2>/dev/null | grep -q tacnode; then
-    $SUDO systemctl restart tacnode && echo "✅ tacnode 已重啟"
+    $SUDO systemctl restart tacnode && echo "✓ tacnode 已重啟"
   else
     echo "→ 未找到 tacnode.service；請手動重啟你的節點服務。"
   fi
-  echo "✅ 更新完成。檢查：systemctl status tacnode"
+  echo "✓ 更新完成。檢查：systemctl status tacnode"
   exit 0
 fi
 
-echo "→ 從 $DL 下載 nodeweb ..."
-fetch "$DL/nodeweb" /usr/local/bin/nodeweb
+echo "→ 從多來源下載 nodeweb ..."
+fetch nodeweb /usr/local/bin/nodeweb
 $SUDO chmod +x /usr/local/bin/nodeweb
 echo "✓ nodeweb 已安裝（$(stat -c%s /usr/local/bin/nodeweb 2>/dev/null || echo '?') bytes）"
 
@@ -74,7 +78,10 @@ $SUDO tee /etc/systemd/system/tacnode.service >/dev/null <<SVC
 Description=TACm Node
 After=network.target
 [Service]
-ExecStart=/usr/local/bin/nodeweb -data-dir $DATA_DIR -web-port $WEB_PORT -p2p -p2p-url http://$PUBIP:$WEB_PORT -p2p-seed $SEED -snapshot-url $SEED
+Environment=TACM_MAX_SUPPLY=$MAX_SUPPLY
+Environment=TACM_EMISSION_YEARS=$EMISSION_YEARS
+Environment=TACM_ANNUAL_DECAY_PCT=$ANNUAL_DECAY_PCT
+ExecStart=/usr/local/bin/nodeweb -data-dir $DATA_DIR -web-port $WEB_PORT -p2p -p2p-url http://$PUBIP:$WEB_PORT -p2p-seed "$SEEDS" -snapshot-url "$SEEDS"
 Restart=always
 RestartSec=5
 [Install]

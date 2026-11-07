@@ -1,4 +1,4 @@
-// Package chaindb 實現 TAC Ai 智能鏈的節點本地存儲：區塊、交易、賬戶狀態、
+// Package chaindb 實現 TACm 智能鏈的節點本地存儲：區塊、交易、賬戶狀態、
 // 內存池與對等節點表。使用純 Go 的 SQLite 驅動，每個節點持有獨立數據庫。
 package chaindb
 

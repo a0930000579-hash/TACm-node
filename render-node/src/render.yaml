@@ -1,4 +1,4 @@
-# TAC Ai Smart Chain — Node（Render 一鍵部署）
+# TACm Chain — Node（Render 一鍵部署）
 # 用法：GitHub 上傳本倉庫 → Render 新建 Web Service → 選 Go runtime → 連接倉庫。
 # 平台會自動執行 buildCommand，並以 startCommand 前台啟動節點 UI。
 services:

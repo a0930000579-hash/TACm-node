@@ -1,4 +1,4 @@
-// TAC Ai 智能鏈官方 JavaScript SDK（瀏覽器/Node 通用）。
+// TACm 智能鏈官方 JavaScript SDK（瀏覽器/Node 通用）。
 // 與 Go 端（internal/crypto）簽章格式互通：TxSighash 白名單、
 // Canonical 排序 JSON、DoubleSHA256、SHA256 後 RFC6979 ECDSA、DER 簽名。
 import { sign as nobleSign, getPublicKey, utils as secpUtils, etc } from '@noble/secp256k1';

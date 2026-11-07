@@ -1,4 +1,4 @@
-// Package vm 實現 TAC Ai 智能鏈的執行層（TAC VM，EVM 兼容）：
+// Package vm 實現 TACm 智能鏈的執行層（TAC VM，EVM 兼容）：
 // 世界狀態（賬戶模型）、字節碼解釋、gas 計量、合約部署與消息調用。
 package vm
 
