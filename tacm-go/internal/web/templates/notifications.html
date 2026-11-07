@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}TAC Community · Notifications{% endblock %}
+{% block content %}
+<style>
+  /* M95：通知中心（讚/留言/追蹤/積分聚合，簡約圖標，全亮色） */
+  body{background:#f0f2f5;color:#1c1e21;margin:0}
+  .topbar,.footer,.bottom-nav{display:none!important}
+  .nt-wrap{max-width:480px;margin:0 auto;padding:0 0 72px}
+  .nt-top{position:sticky;top:0;z-index:40;background:rgba(255,255,255,.97);border-bottom:1px solid #dddfe2;display:flex;align-items:center;gap:10px;padding:10px 14px}
+  .nt-top button{background:none;border:none;padding:6px;border-radius:50%;cursor:pointer}
+  .nt-top button svg{width:22px;height:22px;stroke:#1c1e21;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .nt-top .t{font-weight:800;font-size:16px}
+  .nt-id{display:flex;gap:8px;margin:12px}
+  .nt-id input{flex:1;border:1px solid #dddfe2;border-radius:999px;padding:10px 14px;font-size:14px;outline:none}
+  .nt-id button{background:#1877f2;color:#fff;border:none;border-radius:999px;padding:10px 16px;font-weight:700;font-size:13px}
+  .nt-list{margin:0 12px}
+  .nt-item{background:#fff;border:1px solid #dddfe2;border-radius:12px;padding:12px;margin-bottom:8px;display:flex;gap:12px;align-items:flex-start;cursor:pointer}
+  .nt-ic{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none}
+  .nt-ic svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .nt-ic.like{background:#e41e3f}.nt-ic.comment{background:#1877f2}.nt-ic.follow{background:#31a24c}.nt-ic.points{background:#f0b90b}
+  .nt-body{flex:1;min-width:0}
+  .nt-body .t{font-size:14px;line-height:1.5}
+  .nt-body .t b{font-weight:700}
+  .nt-body .tm{font-size:12px;color:#65676b;margin-top:3px}
+  .nt-empty{text-align:center;color:#65676b;padding:50px 20px;font-size:14px}
+  .nt-bottom{position:fixed;left:0;right:0;bottom:0;z-index:60;background:rgba(255,255,255,.97);border-top:1px solid #dddfe2;display:flex;justify-content:space-around;padding:6px 2px calc(6px + env(safe-area-inset-bottom))}
+  .nt-bottom a{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;color:#65676b;text-decoration:none}
+  .nt-bottom a svg{width:22px;height:22px;stroke:#65676b;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .nt-bottom a.on{color:#1877f2}
+  .nt-bottom a.on svg{stroke:#1877f2}
+</style>
+
+<div class="nt-wrap">
+  <div class="nt-top">
+    <button onclick="location='/community'"><svg viewBox="0 0 24 24"><path d="M19 12 H6 M11 6 L5 12 L11 18"/></svg></button>
+    <div class="t"><svg viewBox="0 0 28 28" style="width:20px;height:20px;vertical-align:-4px;stroke:#1877f2;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;margin-right:6px"><path d="M14 4 C8 4 5 9 5 14 c0 4 2 7 4 9 v2 h10 v-2 c2-2 4-5 4-9 C23 9 20 4 14 4 Z"/><circle cx="14" cy="13" r="3.4"/><path d="M10.5 21.5 h7"/></svg><span data-i18n="cm.brand">TAC 社群</span></div>
+    <div style="margin-left:auto;display:flex;gap:6px">
+      <button onclick="location='/community/ads'"><svg viewBox="0 0 24 24"><path d="M3 11 V15 H5 L9 19 V7 L5 11 Z"/><path d="M13 8 C15 9.5 15 14.5 13 16"/><path d="M17 5 C20.5 8 20.5 16 17 19"/></svg></button>
+      <button onclick="TAC_I18N.toggle()">EN</button>
+    </div>
+  </div>
+
+  <div class="nt-id">
+    <input id="myAddr" placeholder="enter wallet address (tx0)…" value="">
+    <button onclick="setMe()" data-i18n="cm.switch">切換</button>
+  </div>
+  <div class="nt-list" id="ntList"></div>
+</div>
+
+<nav class="nt-bottom">
+  <a href="/community"><svg viewBox="0 0 24 24"><path d="M3 10 L12 3 L21 10 V21 H15 V14 H9 V21 H3 Z"/></svg><span data-i18n="cm.home">首頁</span></a>
+  <a href="/community/videos"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 11 L21 7.5 V16.5 L16 13"/></svg><span data-i18n="cm.video">影片</span></a>
+  <a href="/community/friends"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20 C2.5 15.5 5 13 9 13 C13 13 15.5 15.5 15.5 20"/><circle cx="17" cy="9" r="2.8"/><path d="M16 13.5 C19 13.5 21.5 15.5 21.5 19"/></svg><span data-i18n="cm.friends">好友</span></a>
+  <a href="/community/market"><svg viewBox="0 0 24 24"><path d="M4 7 H20 L18.5 16 H5.5 Z"/><circle cx="9" cy="20" r="1.6"/><circle cx="15.5" cy="20" r="1.6"/><path d="M7 10 V6 C7 3.8 8.8 2.5 10.5 2.5 C12 2.5 13 3.6 13 5"/></svg><span data-i18n="cm.market">市集</span></a>
+  <a href="/community/notifications" class="on"><svg viewBox="0 0 24 24"><path d="M12 3 C8 3 6 6 6 9.5 V15 L4 17 H20 L18 15 V9.5 C18 6 16 3 12 3 Z"/><path d="M9.5 20 C10 21.5 11 22 12 22 C13 22 14 21.5 14.5 20"/></svg><span data-i18n="cm.notify">通知</span></a>
+  <a href="/community/profile"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21 C4 16 7.5 13.5 12 13.5 C16.5 13.5 20 16 20 21"/></svg><span data-i18n="cm.me">個人</span></a>
+</nav>
+
+<script>
+function get(p){ return fetch(p).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); }); }
+var me = (localStorage.getItem('cm_id')||'');
+function shortAddr(a){ if(!a) return '—'; if(a.length<=16) return a; return a.slice(0,10)+'…'+a.slice(-6); }
+function timeAgo(ts){ var d=Date.now()/1000-ts; if(d<60) return '剛剛'; if(d<3600) return Math.floor(d/60)+' 分鐘前'; if(d<86400) return Math.floor(d/3600)+' 小時前'; return Math.floor(d/86400)+' 天前'; }
+function setMe(){ me = document.getElementById('myAddr').value.trim(); localStorage.setItem('cm_id', me); load(); }
+document.getElementById('myAddr').value = me;
+
+var icons = {
+  like:'<div class="nt-ic like"><svg viewBox="0 0 24 24"><path d="M12 20 C6 15.5 3 11.5 3 8.2 C3 5.6 5 4 7.2 4 C9 4 10.5 5 12 7 C13.5 5 15 4 16.8 4 C19 4 21 5.6 21 8.2 C21 11.5 18 15.5 12 20 Z"/></svg></div>',
+  comment:'<div class="nt-ic comment"><svg viewBox="0 0 24 24"><path d="M21 12 C21 16 17.4 19 12 19 C10.8 19 9.6 18.8 8.5 18.5 L4 21 L5.5 17 C3.8 15.6 3 13.8 3 12 C3 8 6.6 5 12 5 C17.4 5 21 8 21 12 Z"/></svg></div>',
+  follow:'<div class="nt-ic follow"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20 C2.5 15.5 5 13 9 13 C13 13 15.5 15.5 15.5 20"/><path d="M16 6 L20 6 M18 4 V8"/></svg></div>',
+  points:'<div class="nt-ic points"><svg viewBox="0 0 24 24"><path d="M12 3 L14.2 8.6 L20 9 L15.6 12.7 L17.2 18.6 L12 15.4 L6.8 18.6 L8.4 12.7 L4 9 L9.8 8.6 Z"/></svg></div>'
+};
+function load(){
+  var el = document.getElementById('ntList');
+  if(!me){ el.innerHTML='<div class="nt-empty">'+TAC_TE('請先輸入你的錢包地址（tx0 開頭）')+'</div>'; return; }
+  get('/api/community/notifications?address='+encodeURIComponent(me)+'&limit=60').then(function(d){
+    var items = d.items||[];
+    if(!items.length){ el.innerHTML='<div class="nt-empty">'+TAC_TE('尚無通知')+'</div>'; return; }
+    el.innerHTML = items.map(function(n){
+      var txt = '';
+      if(n.type==='like') txt = '<b>'+shortAddr(n.actor)+'</b> '+TAC_TE('按讚了你的貼文')+(n.content?'：「'+n.content.slice(0,40)+'」':'');
+      else if(n.type==='comment') txt = '<b>'+shortAddr(n.actor)+'</b> '+TAC_TE('留言了你的貼文')+'：「'+n.content.slice(0,60)+'」';
+      else if(n.type==='follow') txt = '<b>'+shortAddr(n.actor)+'</b> '+TAC_TE('開始追蹤你');
+      else if(n.type==='points') txt = TAC_TE('獲得鏈上互動積分獎勵');
+      else txt = n.content||'';
+      return '<div class="nt-item" onclick="'+(n.post_id?'location=\'/community?post='+n.post_id+'\'':'')+'">'+
+        (icons[n.type]||icons.points)+
+        '<div class="nt-body"><div class="t">'+txt+'</div><div class="tm">'+timeAgo(n.created_at)+'</div></div></div>';
+    }).join('');
+  }).catch(function(e){ el.innerHTML='<div class="nt-empty">載入失敗：'+e+'</div>'; });
+}
+window.addEventListener('DOMContentLoaded', load);
+</script>
+{% endblock %}

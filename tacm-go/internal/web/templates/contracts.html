@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+{% block title %}Contract Verifier{% endblock %}
+{% block content %}
+<style>
+  .ct-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .ct-grid input,.ct-grid textarea{min-width:0;width:100%;box-sizing:border-box}
+  .ct-flex{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .ct-flex > *{min-width:0}
+  .ct-btn{padding:8px 12px;border-radius:8px;white-space:nowrap;flex:0 0 auto}
+  @media (max-width:640px){
+    .ct-grid{grid-template-columns:1fr}
+    .ct-table th,.ct-table td{padding:6px 8px}
+    .ct-hide-sm{display:none}
+  }
+</style>
+<section class="pg-banner">
+  <div class="pg-txt"><h1 data-i18n="contract.title">Contract Verifier</h1><p data-i18n="contract.sub">Explore deployed contracts and interact with read-only methods via ABI encoding</p></div>
+  <svg viewBox="0 0 40 40" class="pg-art"><rect x="8" y="8" width="24" height="24" rx="4" fill="none" stroke="#68BE8D" stroke-width="3"/><path d="M15 17 H25 M15 22 H22" stroke="#68BE8D" stroke-width="2.6" stroke-linecap="round"/><circle cx="27" cy="27" r="3" fill="#68BE8D"/></svg>
+</section>
+
+<section class="panel" style="max-width:900px;margin:0 auto">
+  <div class="panel-head"><h2 data-i18n="contract.listTitle">Deployed Contracts</h2><span class="tag" id="ctCount">0</span></div>
+  <div class="table-wrap" style="overflow-x:auto">
+    <table class="mono ct-table" style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr style="text-align:left;opacity:.65">
+        <th style="padding:8px 10px" data-i18n="contract.thAddr">Address</th>
+        <th style="padding:8px 10px" data-i18n="contract.thName">Name</th>
+        <th style="padding:8px 10px" data-i18n="contract.thSymbol">Symbol</th>
+        <th style="padding:8px 10px" data-i18n="contract.thSupply">Supply</th>
+      </tr></thead>
+      <tbody id="ctRows"><tr><td colspan="4" style="padding:16px;opacity:.5" data-i18n="contract.loading">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<section class="panel" style="max-width:900px;margin:14px auto 0">
+  <div class="panel-head"><h2 data-i18n="contract.readTitle">Read Contract</h2><span class="tag in" data-i18n="contract.readSub">ABI-encoded eth_call · no state change</span></div>
+  <div class="stack" style="display:grid;gap:10px;padding:6px 0">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <select id="ctSel" class="input" style="flex:1;min-width:260px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--fg);font-size:13px"></select>
+      <button class="btn primary" id="ctReload" style="padding:10px 16px;border-radius:10px" data-i18n="contract.reload">Reload</button>
+    </div>
+    <div class="ct-flex">
+      <button class="btn ct-btn" data-ct-method="totalSupply()" data-ct-in="[]" data-ct-out='["uint256"]'>totalSupply()</button>
+      <button class="btn ct-btn" data-ct-method="name()" data-ct-in="[]" data-ct-out='["string"]'>name()</button>
+      <button class="btn ct-btn" data-ct-method="symbol()" data-ct-in="[]" data-ct-out='["string"]'>symbol()</button>
+      <button class="btn ct-btn" id="ctBalanceBtn" data-ct-method="balanceOf(address)" data-ct-in='["address"]'>balanceOf</button>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <select id="ctMethodSel" class="input" style="flex:1;min-width:220px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--fg);font-size:13px"><option value="">— select method (ABI) —</option></select>
+      <button class="btn" id="ctLoadAbi" style="padding:10px 16px;border-radius:10px" data-i18n="contract.loadAbi">Load ABI</button>
+    </div>
+    <input id="ctMethod" class="input mono" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--fg);font-size:14px" placeholder="method signature — e.g. totalSupply()" />
+    <div class="ct-grid">
+      <input id="ctIn" class="input mono" style="padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--fg);font-size:12px" placeholder='input types — address,uint256' />
+      <input id="ctOut" class="input mono" style="padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--fg);font-size:12px" placeholder='output types — uint256' />
+    </div>
+    <textarea id="ctArgs" class="input mono" spellcheck="false" rows="2" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--fg);font-size:12px;resize:vertical" placeholder='arguments as JSON array — e.g. ["0x…"] or [1000]'></textarea>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="btn primary" id="ctRead" style="padding:10px 22px;border-radius:10px;font-weight:600" data-i18n="contract.read">Read</button>
+      <button class="btn" id="ctCopy" style="padding:10px 16px;border-radius:10px" data-i18n="contract.copy">Copy</button>
+      <code id="ctOutBox" class="mono" style="flex:1;min-width:240px;background:var(--bg);padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:12px;word-break:break-all">—</code>
+    </div>
+  </div>
+</section>
+
+<section class="panel" style="max-width:900px;margin:14px auto 0">
+  <div class="panel-head"><h2 data-i18n="contract.verifyTitle">Verify Contract</h2><span class="tag" data-i18n="contract.verifySub">attach ABI · enables one-click method form</span></div>
+  <div class="stack" style="display:grid;gap:10px;padding:6px 0">
+    <div class="ct-flex">
+      <select id="vtSel" class="input" style="flex:1;min-width:0;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--fg);font-size:13px"></select>
+      <input id="vtName" class="input" style="flex:1;min-width:0;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--fg);font-size:13px" placeholder="contract name" />
+    </div>
+    <textarea id="vtAbi" class="input mono" spellcheck="false" rows="5" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--fg);font-size:12px;resize:vertical" placeholder='ABI JSON array — [{"type":"function","name":"totalSupply","inputs":[],"outputs":[{"type":"uint256"}]}]'></textarea>
+    <textarea id="vtSource" class="input mono" spellcheck="false" rows="3" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--fg);font-size:12px;resize:vertical" placeholder="source code (optional)"></textarea>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="btn primary" id="vtGo" style="padding:10px 22px;border-radius:10px;font-weight:600" data-i18n="contract.verify">Verify</button>
+      <code id="vtOut" class="mono" style="flex:1;min-width:240px;background:var(--bg);padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:12px;word-break:break-all">—</code>
+    </div>
+  </div>
+</section>
+
+<section class="panel" style="max-width:900px;margin:14px auto 0">
+  <div class="panel-head"><h2 data-i18n="contract.infoTitle">Contract Details</h2><span class="tag" data-i18n="contract.infoSub">code · storage · balance</span></div>
+  <div class="stack" style="display:grid;gap:8px;padding:6px 0;font-size:13px">
+    <div id="ctInfo" style="opacity:.75">—</div>
+  </div>
+</section>
+
+<script>
+(function () {
+  var contracts = [];
+  function outBox(text, isErr) {
+    var el = document.getElementById('ctOutBox');
+    el.textContent = text;
+    el.style.borderColor = isErr ? '#e5534b' : 'var(--border)';
+  }
+  function copyText(t) {
+    if (!t || t === '—') { return; }
+    if (navigator.clipboard) { navigator.clipboard.writeText(t); }
+  }
+  function shortAddr(a) {
+    if (!a) { return a; }
+    return a.length > 22 ? a.slice(0, 10) + '…' + a.slice(-6) : a;
+  }
+  function loadList(selAddr) {
+    fetch('/contract/list').then(function (r) { return r.json(); }).then(function (j) {
+      contracts = (j.contracts || []).slice();
+      var sel = document.getElementById('ctSel');
+      sel.innerHTML = '';
+      contracts.forEach(function (c) {
+        var opt = document.createElement('option');
+        opt.value = c.address;
+        opt.textContent = (c.name || 'contract') + ' · ' + c.symbol + ' · ' + shortAddr(c.address);
+        sel.appendChild(opt);
+        if (selAddr && c.address === selAddr) { sel.value = c.address; }
+      });
+      document.getElementById('ctCount').textContent = j.count + ' contracts';
+      var vt = document.getElementById('vtSel');
+      vt.innerHTML = '';
+      contracts.forEach(function (c) {
+        var opt = document.createElement('option');
+        opt.value = c.address;
+        opt.textContent = (c.name || 'contract') + ' · ' + shortAddr(c.address);
+        vt.appendChild(opt);
+      });
+      var tb = document.getElementById('ctRows');
+      tb.innerHTML = '';
+      if (!contracts.length) {
+        tb.innerHTML = '<tr><td colspan="4" style="padding:16px;opacity:.5">—</td></tr>';
+        return;
+      }
+      contracts.forEach(function (c) {
+        var tr = document.createElement('tr');
+        tr.style.borderTop = '1px solid var(--border)';
+        tr.innerHTML =
+          '<td style="padding:8px 10px;word-break:break-all"><a href="/explorer?address=' + c.address + '" style="color:var(--acc)">' + shortAddr(c.address) + '</a></td>' +
+          '<td style="padding:8px 10px">' + (c.name || '—') + '</td>' +
+          '<td style="padding:8px 10px">' + (c.symbol || '—') + '</td>' +
+          '<td style="padding:8px 10px">' + (c.supply || '0') + '</td>';
+        tr.style.cursor = 'pointer';
+        tr.addEventListener('click', function () {
+          sel.value = c.address;
+          showInfo(c.address);
+        });
+        tb.appendChild(tr);
+      });
+    }).catch(function (e) { outBox('list error: ' + (e && e.message || e), true); });
+  }
+  function showInfo(addr) {
+    fetch('/contract/get/' + addr).then(function (r) { return r.json(); }).then(function (j) {
+      var el = document.getElementById('ctInfo');
+      if (j.error) { el.textContent = j.error; return; }
+      el.textContent = 'code_size=' + j.code_size + '  storage=' + j.storage_count + '  balance=' + j.balance;
+    }).catch(function () {});
+  }
+  var abiMethods = [];
+  function loadAbi(addr) {
+    return fetch('/contract/abi/' + addr).then(function (r) { return r.json(); }).then(function (j) {
+      var sel = document.getElementById('ctMethodSel');
+      sel.innerHTML = '<option value="">— select method (ABI) —</option>';
+      abiMethods = [];
+      if (j.error) { return j; }
+      var entries;
+      try { entries = JSON.parse(j.abi); } catch (e) { return j; }
+      if (!Array.isArray(entries)) { return j; }
+      entries.forEach(function (e, idx) {
+        if (e.type !== 'function' && e.type !== '') { return; }
+        var ins = (e.inputs || []).map(function (i) { return i.type; });
+        var outs = (e.outputs || []).map(function (o) { return o.type; });
+        var sig = e.name + '(' + ins.join(',') + ')';
+        abiMethods.push({ sig: sig, ins: ins, outs: outs, stateMutability: e.stateMutability || '' });
+        var opt = document.createElement('option');
+        opt.value = idx;
+        opt.textContent = sig + ' → ' + (outs.join(',') || 'void');
+        sel.appendChild(opt);
+      });
+      document.getElementById('ctMethod').placeholder = 'method signature — e.g. totalSupply()';
+      return j;
+    });
+  }
+  function fillMethod(idx) {
+    var m = abiMethods[idx];
+    if (!m) { return; }
+    document.getElementById('ctMethod').value = m.sig;
+    document.getElementById('ctIn').value = m.ins.join(',');
+    document.getElementById('ctOut').value = m.outs.join(',');
+    document.getElementById('ctArgs').placeholder = m.ins.length
+      ? 'arguments as JSON array — e.g. ' + (m.ins.length === 1 && m.ins[0] === 'address' ? '["0x…"]' : '[' + m.ins.map(function () { return '…'; }).join(',') + ']')
+      : 'arguments as JSON array (none required)';
+  }
+  function readNow() {
+    var sel = document.getElementById('ctSel');
+    var addr = sel.value;
+    if (!addr) { outBox('select a contract first', true); return; }
+    var method = document.getElementById('ctMethod').value.trim();
+    if (!method) { outBox('method signature required', true); return; }
+    var ins = document.getElementById('ctIn').value.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+    var outs = document.getElementById('ctOut').value.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+    var args = [];
+    var rawArgs = document.getElementById('ctArgs').value.trim();
+    if (rawArgs) {
+      try { args = JSON.parse(rawArgs); } catch (e) { outBox('arguments must be valid JSON array', true); return; }
+      if (!Array.isArray(args)) { outBox('arguments must be a JSON array', true); return; }
+    }
+    var body = { address: addr, method_sig: method, inputs: ins, args: args };
+    if (outs.length) { body.outputs = outs; }
+    fetch('/contract/read', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(function (r) { return r.json(); }).then(function (j) {
+      if (j.ok) {
+        var label = (outs.length && j.outputs && j.outputs.length) ? j.outputs.join(', ') : ('0x' + (j.return_data || ''));
+        outBox(label);
+      } else {
+        outBox('reverted: ' + (j.revert_reason || j.error || 'unknown'), true);
+      }
+    }).catch(function (e) { outBox('read error: ' + (e && e.message || e), true); });
+  }
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('[data-ct-method]') : null;
+    if (!b) { return; }
+    var addr = document.getElementById('ctSel').value;
+    if (!addr) { outBox('select a contract first', true); return; }
+    document.getElementById('ctMethod').value = b.getAttribute('data-ct-method');
+    document.getElementById('ctIn').value = (b.getAttribute('data-ct-in') || '').replace(/\[|\]|"/g, '');
+    document.getElementById('ctOut').value = (b.getAttribute('data-ct-out') || '').replace(/\[|\]|"/g, '');
+    var args = '';
+    if (b.id === 'ctBalanceBtn') {
+      var acct = '';
+      fetch('/eth', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_accounts', params: [] }) })
+        .then(function (r) { return r.json(); }).then(function (j) {
+          if (j.result && j.result.length) { acct = j.result[0]; }
+          document.getElementById('ctArgs').value = JSON.stringify([acct || '']);
+          readNow();
+        }).catch(function () { document.getElementById('ctArgs').value = '[""]'; readNow(); });
+      return;
+    }
+    document.getElementById('ctArgs').value = args;
+    readNow();
+  });
+  document.getElementById('ctRead').addEventListener('click', readNow);
+  document.getElementById('ctCopy').addEventListener('click', function () { copyText(document.getElementById('ctOutBox').textContent); });
+  document.getElementById('ctReload').addEventListener('click', function () { loadList(); });
+  document.getElementById('ctSel').addEventListener('change', function () {
+    showInfo(this.value);
+    loadAbi(this.value).then(function () {});
+  });
+  document.getElementById('ctLoadAbi').addEventListener('click', function () {
+    var addr = document.getElementById('ctSel').value;
+    if (!addr) { outBox('select a contract first', true); return; }
+    loadAbi(addr).then(function (j) {
+      if (j && j.error) { outBox('abi: ' + j.error, true); }
+      else { outBox('ABI loaded — ' + abiMethods.length + ' methods', false); }
+    });
+  });
+  document.getElementById('ctMethodSel').addEventListener('change', function () {
+    fillMethod(Number(this.value));
+  });
+  document.getElementById('vtSel').addEventListener('change', function () {
+    var c = contracts.filter(function (x) { return x.address === this.value; }.bind(this))[0];
+    if (c) { document.getElementById('vtName').value = c.name || ''; }
+  });
+  document.getElementById('vtGo').addEventListener('click', function () {
+    var addr = document.getElementById('vtSel').value;
+    if (!addr) { outBox('select a contract first', true); return; }
+    var abiStr = document.getElementById('vtAbi').value.trim();
+    if (!abiStr) { outBox('ABI required — 請先貼上 ABI JSON array（格式見下方提示框）', true); return; }
+    var abiOk = true, abiErr = '';
+    try { var parsed = JSON.parse(abiStr); if (!Array.isArray(parsed)) { abiOk = false; abiErr = 'ABI 需為 JSON 陣列（[...]）'; } }
+    catch (e) { abiOk = false; abiErr = 'ABI 不是合法 JSON：' + (e && e.message || e); }
+    if (!abiOk) { outBox('verify failed: ' + abiErr, true); return; }
+    var body = {
+      address: addr,
+      name: document.getElementById('vtName').value.trim(),
+      abi: abiStr,
+      source: document.getElementById('vtSource').value
+    };
+    var el = document.getElementById('vtOut');
+    fetch('/contract/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(function (r) { return r.json(); }).then(function (j) {
+      if (j.ok) {
+        el.textContent = 'verified ✓ ' + (j.methods || 0) + ' methods';
+        el.style.borderColor = 'var(--border)';
+        loadAbi(addr).then(function () {});
+      } else {
+        el.textContent = 'verify failed: ' + (j.error || 'unknown');
+        el.style.borderColor = '#e5534b';
+      }
+    }).catch(function (e) { el.textContent = 'verify error: ' + (e && e.message || e); el.style.borderColor = '#e5534b'; });
+  });
+  loadList();
+})();
+</script>
+{% endblock %}

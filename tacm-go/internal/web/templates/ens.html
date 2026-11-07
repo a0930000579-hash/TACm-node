@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}TAC ENS{% endblock %}
+{% block content %}
+<section class="pg-banner">
+  <div class="pg-txt"><h1 data-i18n="bn.ens">ENS</h1><p data-i18n="bn.ensSub">鏈上域名 · .tac</p></div>
+  <svg viewBox="0 0 40 40" class="pg-art"><rect x="10" y="14" width="20" height="13" rx="3" fill="none" stroke="#68BE8D" stroke-width="2.2"/><text x="20" y="24.5" text-anchor="middle" font-size="9" fill="#68BE8D" font-weight="800">.tac</text></svg>
+</section>
+<style>
+  .en-wrap{max-width:1100px;margin:0 auto}
+  .en-head{background:linear-gradient(135deg,#f7f8fb,#f2f4f9);border:1px solid #e2e6ee;border-radius:16px;padding:18px 20px;color:#14161a;display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+  .en-head .logo{width:48px;height:48px;border-radius:12px;background:#68BE8D;color:#f7f8fb;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;flex:none}
+  .en-head h2{margin:0;font-size:20px;font-weight:800;color:#68BE8D}
+  .en-head .sub{font-size:12px;opacity:.8;margin-top:2px}
+  .en-stats{display:flex;gap:10px;flex-wrap:wrap;margin-left:auto}
+  .en-stats span{background:rgba(104,190,141,.12);border:1px solid rgba(104,190,141,.35);border-radius:999px;padding:6px 14px;font-size:12px;font-weight:700;color:#68BE8D}
+  .en-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+  @media (max-width:980px){.en-grid{grid-template-columns:1fr}}
+  .en-card{background:#f7f8fb;border:1px solid #e2e6ee;border-radius:14px;padding:16px;margin-bottom:14px}
+  .en-card h3{margin:0 0 12px;font-size:14px;color:#68BE8D;font-weight:800;display:flex;align-items:center;gap:8px}
+  .en-card h3 .hint{font-size:11px;color:#5d6778;font-weight:500;margin-left:auto}
+  .en-field{margin-bottom:10px}
+  .en-field label{display:block;font-size:12px;color:#5d6778;margin-bottom:4px}
+  .en-field input,.en-field select{width:100%;box-sizing:border-box;background:#f2f4f9;border:1px solid #e2e6ee;border-radius:10px;color:#14161a;padding:10px 12px;font-size:13px;font-family:ui-monospace,monospace}
+  .en-btn{width:100%;background:#68BE8D;color:#f7f8fb;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:800;cursor:pointer}
+  .en-btn.ghost{background:transparent;border:1px solid #e2e6ee;color:#14161a;font-weight:700}
+  .en-msg{font-size:12px;margin-top:8px;min-height:16px}
+  .en-msg.ok{color:#68BE8D}.en-msg.err{color:#e06060}
+  .en-row{display:flex;justify-content:space-between;gap:10px;padding:9px 2px;border-bottom:1px dashed #e2e6ee;font-size:12px;align-items:center}
+  .en-row:last-child{border-bottom:none}
+  .en-row .nm{font-weight:700;color:#14161a;font-family:ui-monospace,monospace}
+  .en-row .sub{color:#5d6778;font-size:11px}
+  .en-addrbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+  .en-addrbar input{flex:1;min-width:220px;box-sizing:border-box;background:#f2f4f9;border:1px solid #e2e6ee;border-radius:10px;color:#14161a;padding:10px 12px;font-size:13px;font-family:ui-monospace,monospace}
+  .en-addrbar button{background:#68BE8D;color:#f7f8fb;border:none;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:800;cursor:pointer}
+</style>
+
+<div class="en-wrap">
+  <div class="en-head">
+    <div class="logo">.tac</div>
+    <div><h2>TAC ENS <span style="font-size:12px;font-weight:600;opacity:.7">泰坦鏈域名</span></h2>
+      <div class="sub" id="ensSub">名稱註冊（年費 1 TACm/年）· 解析 · 反向解析 —— 對標 Ethereum ENS</div></div>
+    <div class="en-stats"><span id="ensStat">namehash · keccak</span></div>
+  </div>
+
+  <div class="en-addrbar">
+    <input id="me" placeholder="0x… / tx0…（你的鏈上地址，僅本地儲存）" value="">
+    <button onclick="connect()" data-i18n="en.connect">連接</button>
+    <span id="topAddr" style="font-size:12px;color:#5d6778;font-family:ui-monospace,monospace"></span>
+  </div>
+
+  <div class="en-grid">
+    <div>
+      <div class="en-card">
+        <h3>註冊 / 續期 <span class="hint">年費 1 TACm / 年</span></h3>
+        <div class="en-field"><label>名稱（.tac 尾綴免填，僅 [a-z0-9-] ≤63 字元）</label>
+          <input id="regName" placeholder="alice" style="text-transform:lowercase"></div>
+        <div class="en-field"><label>年數</label><input id="regYears" type="number" min="1" max="100" value="1"></div>
+        <div class="en-field"><label>解析目標地址（選填，留空＝註冊者本人）</label>
+          <input id="regTarget" placeholder="0x…"></div>
+        <button class="en-btn" onclick="doReg()" data-i18n="en.regBtn">註冊域名</button>
+        <div id="regMsg" class="en-msg"></div>
+      </div>
+      <div class="en-card">
+        <h3>我的域名 <span class="hint" data-i18n="en.myHint">未過期</span></h3>
+        <div id="myNames"><div class="en-msg" style="color:#5d6778" data-i18n="en.noMy">尚無域名</div></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="en-card">
+        <h3>名稱 → 地址 <span class="hint">resolve</span></h3>
+        <div class="en-field"><label>名稱</label><input id="rsvName" placeholder="alice.tac" style="text-transform:lowercase"></div>
+        <button class="en-btn ghost" onclick="doResolve()" data-i18n="en.resolve">解析</button>
+        <div id="rsvMsg" class="en-msg"></div>
+      </div>
+      <div class="en-card">
+        <h3>地址 → 名稱 <span class="hint">reverse</span></h3>
+        <div class="en-field"><label>地址</label><input id="revAddr" placeholder="0x…"></div>
+        <button class="en-btn ghost" onclick="doReverse()" data-i18n="en.reverse">反向解析</button>
+        <div id="revMsg" class="en-msg"></div>
+      </div>
+      <div class="en-card">
+        <h3>namehash <span class="hint">ENS 標準</span></h3>
+        <div class="en-field"><label>名稱</label><input id="nhName" placeholder="alice.tac" style="text-transform:lowercase"></div>
+        <button class="en-btn ghost" onclick="doNamehash()" data-i18n="en.nh">計算</button>
+        <div id="nhMsg" class="en-msg"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  var T = function(k, zh, en){ try { if (window.TAC_I18N && TAC_I18N.cur() === 'en') { return en; } } catch (e) {} return zh; };
+  var me = localStorage.getItem('tac_defi_addr') || '';
+  if(me) document.getElementById('me').value = me;
+  function show(el, cls, txt){ var e = document.getElementById(el); if(!e) return; e.className = 'en-msg ' + cls; e.textContent = txt; }
+  function fetchJSON(url, tries){
+    var t = tries || 2;
+    return new Promise(function(res, rej){
+      var done = false;
+      var attempt = function(n){
+        var ctl = new AbortController();
+        var to = setTimeout(function(){ ctl.abort(); }, 6000);
+        fetch(url, {cache:'no-store', signal:ctl.signal}).then(function(r){ return r.json().catch(function(){ return null; }); })
+          .then(function(d){ clearTimeout(to); if(done) return; done = true; res(d); })
+          .catch(function(e){ clearTimeout(to); if(n > 0){ setTimeout(function(){ attempt(n-1); }, 1200); } else { if(done) return; done = true; rej(e); } });
+      };
+      attempt(t-1);
+    });
+  }
+  function postJSON(url, body, tries){
+    var t = tries || 2;
+    return new Promise(function(res, rej){
+      var done = false;
+      var attempt = function(n){
+        var ctl = new AbortController();
+        var to = setTimeout(function(){ ctl.abort(); }, 6000);
+        fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body), signal:ctl.signal})
+          .then(function(r){ return r.json().catch(function(){ return null; }); })
+          .then(function(d){ clearTimeout(to); if(done) return; done = true; res(d); })
+          .catch(function(e){ clearTimeout(to); if(n > 0){ setTimeout(function(){ attempt(n-1); }, 1200); } else { if(done) return; done = true; rej(e); } });
+      };
+      attempt(t-1);
+    });
+  }
+  function connect(){
+    me = document.getElementById('me').value.trim();
+    if(me) localStorage.setItem('tac_defi_addr', me);
+    document.getElementById('topAddr').textContent = me ? me.slice(0,10)+'…'+me.slice(-6) : '';
+    loadMy();
+  }
+  function doReg(){
+    var nm = (document.getElementById('regName').value||'').trim().toLowerCase().replace(/\.tac$/,'');
+    var yrs = parseInt(document.getElementById('regYears').value||'1', 10);
+    if(!me){ show('regMsg','err',T('en.needConn','請先輸入並連接地址','Connect your address first')); return; }
+    if(!nm){ show('regMsg','err',T('en.needName','請輸入名稱','Enter a name')); return; }
+    var body = {name:nm, address:me, years:yrs};
+    var tg = document.getElementById('regTarget').value.trim(); if(tg) body.target = tg;
+    show('regMsg','',T('en.reging','註冊中…','Registering…'));
+    postJSON('/api/ens/register', body).then(function(d){
+      if(!d || !d.ok){ show('regMsg','err',(d&&d.error)||'failed'); return; }
+      show('regMsg','ok', nm+'.tac '+T('en.regOk','註冊成功 · 年費 ',' registered · fee ')+d.fee+' TACm · '+T('en.exp','到期 ','expires ')+fmtTs(d.expires_at));
+      loadMy();
+    }).catch(function(){ show('regMsg','err',T('en.fail','連線失敗，請重試','Connection failed, retry')); });
+  }
+  function doResolve(){
+    var nm = (document.getElementById('rsvName').value||'').trim().toLowerCase().replace(/\.tac$/,'');
+    if(!nm){ show('rsvMsg','err',T('en.needName','請輸入名稱','Enter a name')); return; }
+    fetchJSON('/api/ens/resolve?name='+encodeURIComponent(nm)).then(function(d){
+      if(!d || !d.ok){ show('rsvMsg','err',(d&&d.error)||'failed'); return; }
+      show('rsvMsg','ok', nm+'.tac → '+d.address+' · '+T('en.owner','持有者 ','owner ')+d.owner);
+    }).catch(function(){ show('rsvMsg','err',T('en.fail','連線失敗','Connection failed')); });
+  }
+  function doReverse(){
+    var a = document.getElementById('revAddr').value.trim();
+    if(!a){ show('revMsg','err',T('en.needAddr','請輸入地址','Enter an address')); return; }
+    fetchJSON('/api/ens/reverse?address='+encodeURIComponent(a)).then(function(d){
+      if(!d || !d.ok){ show('revMsg','err',(d&&d.error)||'failed'); return; }
+      show('revMsg', d.name ? 'ok' : 'err', d.name || T('en.noReverse','該地址無域名','No name for this address'));
+    }).catch(function(){ show('revMsg','err',T('en.fail','連線失敗','Connection failed')); });
+  }
+  function doNamehash(){
+    var nm = (document.getElementById('nhName').value||'').trim().toLowerCase();
+    if(!nm){ show('nhMsg','err',T('en.needName','請輸入名稱','Enter a name')); return; }
+    // 客戶端簡化：交 RPC 驗證用（此處僅回名稱格式）。
+    show('nhMsg','ok', nm + ' → ' + T('en.nhHint','服務端 namehash（keccak）· 查詢 /api/ens/resolve 即驗證','server namehash via resolve endpoint'));
+  }
+  function fmtTs(ts){ var d = new Date(ts*1000); var p=function(x){return (x<10?'0':'')+x;}; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+  function loadMy(){
+    if(!me){ document.getElementById('myNames').innerHTML = '<div class="en-msg" style="color:#5d6778">'+T('en.noMy','尚無域名','No names yet')+'</div>'; return; }
+    fetchJSON('/api/ens/my?address='+encodeURIComponent(me)).then(function(d){
+      var box = document.getElementById('myNames');
+      if(!d || !d.ok || !d.names || !d.names.length){ box.innerHTML = '<div class="en-msg" style="color:#5d6778">'+T('en.noMy','尚無域名','No names yet')+'</div>'; return; }
+      box.innerHTML = d.names.map(function(n){
+        return '<div class="en-row"><div><span class="nm">'+n.name+'.tac</span><div class="sub">'+T('en.exp','到期 ','expires ')+fmtTs(n.expires_at)+' · '+T('en.to','解析→ ','→ ')+(n.target||n.owner)+'</div></div></div>';
+      }).join('');
+    }).catch(function(){ document.getElementById('myNames').innerHTML = '<div class="en-msg err">'+T('en.fail','連線失敗','Connection failed')+'</div>'; });
+  }
+  if(me){ document.getElementById('topAddr').textContent = me.slice(0,10)+'…'+me.slice(-6); loadMy(); }
+</script>
+{% endblock %}

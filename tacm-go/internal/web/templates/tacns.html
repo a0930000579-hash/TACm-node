@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}TAC Naming Service · .tac{% endblock %}
+{% block content %}
+<style>
+  .wallet-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:12px 0}
+  .wallet-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}
+</style>
+<section class="pg-banner">
+  <div class="pg-txt"><h1 data-i18n="tacns.title">鏈上命名服務（.tac）</h1><p data-i18n="tacns.intro">註冊 .tac 名稱並綁定地址——名稱↔地址雙向解析。</p></div>
+  <svg viewBox="0 0 40 40" class="pg-art"><circle cx="20" cy="20" r="12" fill="none" stroke="#68BE8D" stroke-width="2.4"/><path d="M20 14v12M14 20h12" stroke="#68BE8D" stroke-width="1.6"/><path d="M20 8v2M20 30v2M8 20h2M30 20h2" stroke="#68BE8D" stroke-width="1.6" stroke-linecap="round"/></svg>
+</section>
+<!-- M151：TAC-ENS 鏈上命名服務（獨立 DApp 頁，自 Explorer 面板遷移） -->
+<section class="panel">
+  <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3.5 12h17M12 3.5c2.5 2.5 2.5 14 0 17M12 3.5c-2.5 2.5-2.5 14 0 17"/></svg> <span data-i18n="tacns.title">鏈上命名服務（.tac）</span></h2></div>
+  <div class="wallet-grid">
+    <div class="wg"><small data-i18n="tacns.status">註冊表狀態</small><b class="mono" id="nsStatus">-</b></div>
+    <div class="wg"><small data-i18n="tacns.contract">合約地址</small><b class="mono" id="nsAddr">-</b></div>
+  </div>
+  <div class="wallet-actions">
+    <button class="search-btn" id="nsDeploy" data-i18n="tacns.deploy">部署註冊表</button>
+    <span class="muted" id="nsDeployResult"></span>
+  </div>
+  <div class="wallet-grid" style="margin-top:14px">
+    <div class="wg">
+      <small data-i18n="tacns.registerTitle">註冊名稱</small>
+      <input class="search-input" id="nsLabel" placeholder="titan" style="margin-bottom:6px;min-width:0">
+      <input class="search-input" id="nsOwner" data-i18n-placeholder="tacns.ownerPh" placeholder="tx0…（owner 地址）" style="margin-bottom:6px;min-width:0">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <small data-i18n="tacns.years" style="color:var(--muted)">年數</small>
+        <input class="search-input" id="nsYears" type="number" value="1" min="1" max="100" style="max-width:90px;min-width:0">
+      </div>
+      <button class="search-btn" id="nsRegister" data-i18n="tacns.register">註冊</button>
+      <span class="muted" id="nsRegResult"></span>
+    </div>
+    <div class="wg">
+      <small data-i18n="tacns.queryTitle">查詢</small>
+      <input class="search-input" id="nsQ" data-i18n-placeholder="tacns.queryPh" placeholder="label（如 titan）或 tx0 地址" style="margin-bottom:6px;min-width:0">
+      <button class="search-btn" id="nsQuery" data-i18n="tacns.query">查詢</button>
+      <span class="muted" id="nsQueryResult"></span>
+    </div>
+  </div>
+</section>
+
+<script>
+  // M161：自動帶入我的錢包——登入會員優先，否則訪客地址（與全站 ensureGuestAddr 同源）。
+  (function () {
+    function afill(ids) {
+      function fill(a) { if (!a) return; ids.forEach(function (id) { var el = document.getElementById(id); if (el && !el.value.trim()) el.value = a; }); }
+      fetch('/api/auth/me', { cache: 'no-store' }).then(function (r) { return r.json().catch(function () { return null; }); }).then(function (j) {
+        if (j && j.ok && j.logged_in && j.user && j.user.wallet_addr) { fill(j.user.wallet_addr); return; }
+        if (window.ensureGuestAddr) { ensureGuestAddr().then(fill).catch(function () {}); }
+      }).catch(function () { if (window.ensureGuestAddr) { ensureGuestAddr().then(fill).catch(function () {}); } });
+    }
+    afill(['nsOwner']);
+  })();
+
+  // M151：TAC-ENS 前端操作（/tacns/*，自 Explorer 遷移）
+  (function () {
+    var base = location.protocol + '//' + location.host;
+    function post(path, body) {
+      return fetch(base + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+        .then(function (r) { return r.json(); });
+    }
+    function get(path) {
+      return fetch(base + path, { cache: 'no-store' }).then(function (r) { return r.json(); });
+    }
+    var statusEl = document.getElementById('nsStatus');
+    var addrEl = document.getElementById('nsAddr');
+    function refreshStatus() {
+      if (!statusEl) return;
+      get('/tacns/status').then(function (d) {
+        if (!d || !d.ok) return;
+        statusEl.textContent = d.deployed ? 'Deployed' : 'Not deployed';
+        addrEl.textContent = d.contract_address || '-';
+      }).catch(function () {});
+    }
+    var depBtn = document.getElementById('nsDeploy');
+    var depRes = document.getElementById('nsDeployResult');
+    if (depBtn) depBtn.addEventListener('click', function () {
+      depRes.textContent = '...';
+      post('/tacns/deploy', {}).then(function (d) {
+        depRes.textContent = d.ok ? 'Registry deployed' : (d.error || 'failed');
+        refreshStatus();
+      }).catch(function () { depRes.textContent = 'failed'; });
+    });
+    var regBtn = document.getElementById('nsRegister');
+    var regRes = document.getElementById('nsRegResult');
+    if (regBtn) regBtn.addEventListener('click', function () {
+      var label = document.getElementById('nsLabel').value.trim().toLowerCase();
+      var owner = document.getElementById('nsOwner').value.trim();
+      var years = document.getElementById('nsYears').value || '1';
+      if (!label || !owner) { regRes.textContent = 'Enter label and owner'; return; }
+      regRes.textContent = '...';
+      post('/tacns/register', { label: label, owner: owner, years: years }).then(function (d) {
+        regRes.textContent = d.ok ? 'Registered (awaiting block)' : (d.error || 'failed');
+      }).catch(function () { regRes.textContent = 'failed'; });
+    });
+    var qBtn = document.getElementById('nsQuery');
+    var qRes = document.getElementById('nsQueryResult');
+    if (qBtn) qBtn.addEventListener('click', function () {
+      var q = document.getElementById('nsQ').value.trim();
+      if (!q) { qRes.textContent = 'Enter label or address'; return; }
+      get('/tacns/query?q=' + encodeURIComponent(q)).then(function (d) {
+        if (!d || !d.ok) { qRes.textContent = (d && d.error) || 'failed'; return; }
+        qRes.textContent = d.label ? (d.label + ' -> ' + (d.owner || '-') + (d.expiry ? ' (exp ' + d.expiry + ')' : '')) : (d.name || '-');
+      }).catch(function () { qRes.textContent = 'failed'; });
+    });
+    refreshStatus();
+  })();
+</script>
+{% endblock %}

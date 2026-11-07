@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{% block title %}Signature Tool{% endblock %}
+{% block content %}
+<section class="pg-banner">
+  <div class="pg-txt"><h1 data-i18n="sign.title">Signature Tool</h1><p data-i18n="sign.sub">Developer signing utilities — EIP-191 personal_sign · EIP-712 typed data · ecRecover</p></div>
+  <svg viewBox="0 0 40 40" class="pg-art"><path d="M6 12 L14 20 L6 28" fill="none" stroke="#68BE8D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 26 H34" stroke="#68BE8D" stroke-width="3" stroke-linecap="round"/></svg>
+</section>
+
+<section class="panel" style="max-width:720px;margin:0 auto">
+  <div class="panel-head">
+    <h2 data-i18n="sign.account">Node Account</h2>
+    <span class="tag in" id="signChain">Chain ID —</span>
+  </div>
+  <div class="stack" style="display:grid;gap:10px;padding:6px 0">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:14px">
+      <span style="opacity:.65" data-i18n="sign.addr">Node address</span>
+      <code id="signAddr" class="mono" style="background:var(--bg);padding:6px 10px;border:1px solid var(--border);border-radius:8px">—</code>
+    </div>
+  </div>
+</section>
+
+<section class="panel" style="max-width:720px;margin:14px auto 0">
+  <div class="panel-head"><h2 data-i18n="sign.ps">Personal Sign (EIP-191)</h2><span class="tag" data-i18n="sign.psSub">node key · 0x65-byte signature</span></div>
+  <div class="stack" style="display:grid;gap:10px;padding:6px 0">
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <label class="seg"><input type="radio" name="psMode" value="utf8" checked><span data-i18n="sign.utf8">UTF-8 text</span></label>
+      <label class="seg"><input type="radio" name="psMode" value="hex"><span data-i18n="sign.hex">Hex (0x…)</span></label>
+    </div>
+    <input id="psMsg" class="input mono" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--fg);font-size:14px" placeholder="Hello, TACm!" />
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="btn primary" id="psSign" style="padding:10px 22px;border-radius:10px;font-weight:600" data-i18n="sign.sign">Sign</button>
+      <button class="btn" id="psCopy" style="padding:10px 16px;border-radius:10px" data-i18n="sign.copy">Copy</button>
+      <code id="psOut" class="mono" style="flex:1;min-width:220px;background:var(--bg);padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:12px;word-break:break-all">—</code>
+    </div>
+  </div>
+</section>
+
+<section class="panel" style="max-width:720px;margin:14px auto 0">
+  <div class="panel-head"><h2 data-i18n="sign.verify">Recover Signer (personal_ecRecover)</h2></div>
+  <div class="stack" style="display:grid;gap:10px;padding:6px 0">
+    <input id="rvMsg" class="input mono" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--fg);font-size:14px" placeholder="same message as signed" />
+    <input id="rvSig" class="input mono" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--fg);font-size:12px;word-break:break-all" placeholder="0x… (65-byte signature)" />
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="btn primary" id="rvGo" style="padding:10px 22px;border-radius:10px;font-weight:600" data-i18n="sign.recover">Recover</button>
+      <code id="rvOut" class="mono" style="flex:1;min-width:220px;background:var(--bg);padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:12px;word-break:break-all">—</code>
+    </div>
+  </div>
+</section>
+
+<section class="panel" style="max-width:720px;margin:14px auto 0">
+  <div class="panel-head"><h2 data-i18n="sign.td">Typed Data v4 (EIP-712)</h2><span class="tag" data-i18n="sign.tdSub">official Mail example pre-filled</span></div>
+  <div class="stack" style="display:grid;gap:10px;padding:6px 0">
+    <textarea id="tdJson" class="input mono" spellcheck="false" rows="10" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--fg);font-size:12px;resize:vertical">{
+  "types": {
+    "EIP712Domain": [
+      {"name": "name", "type": "string"},
+      {"name": "version", "type": "string"},
+      {"name": "chainId", "type": "uint256"},
+      {"name": "verifyingContract", "type": "address"}
+    ],
+    "Person": [
+      {"name": "name", "type": "string"},
+      {"name": "wallet", "type": "address"}
+    ],
+    "Mail": [
+      {"name": "from", "type": "Person"},
+      {"name": "to", "type": "Person"},
+      {"name": "contents", "type": "string"}
+    ]
+  },
+  "primaryType": "Mail",
+  "domain": {
+    "name": "Ether Mail",
+    "version": "1",
+    "chainId": 1,
+    "verifyingContract": "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC"
+  },
+  "message": {
+    "from": {"name": "Cow", "wallet": "0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826"},
+    "to": {"name": "Bob", "wallet": "0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB"},
+    "contents": "Hello, Bob!"
+  }
+}</textarea>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="btn primary" id="tdSign" style="padding:10px 22px;border-radius:10px;font-weight:600" data-i18n="sign.tdSign">Sign typed data</button>
+      <button class="btn" id="tdCopy" style="padding:10px 16px;border-radius:10px" data-i18n="sign.copy">Copy</button>
+      <code id="tdOut" class="mono" style="flex:1;min-width:220px;background:var(--bg);padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:12px;word-break:break-all">—</code>
+    </div>
+  </div>
+</section>
+
+<section class="panel" style="max-width:720px;margin:14px auto 0">
+  <div class="panel-head"><h2 data-i18n="sign.legacy">eth_sign (legacy) + eth_ecRecover</h2><span class="tag" data-i18n="sign.legacySub">keccak256(message) — compatibility only</span></div>
+  <div class="stack" style="display:grid;gap:10px;padding:6px 0">
+    <input id="lgMsg" class="input mono" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--fg);font-size:14px" placeholder="0x… message hex" />
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="btn primary" id="lgSign" style="padding:10px 22px;border-radius:10px;font-weight:600" data-i18n="sign.sign">Sign</button>
+      <code id="lgOut" class="mono" style="flex:1;min-width:220px;background:var(--bg);padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:12px;word-break:break-all">—</code>
+    </div>
+  </div>
+</section>
+
+<script>
+(function () {
+  var nodeAddr = '';
+  function ethRpc(method, params, cb) {
+    fetch('/eth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: method, params: params || [] })
+    }).then(function (r) { return r.json(); }).then(function (j) {
+      if (j.error) { cb(null, j.error.message || 'RPC error'); } else { cb(j.result, null); }
+    }).catch(function (e) { cb(null, String(e && e.message || e)); });
+  }
+  function utf8ToHex(s) {
+    var bytes = new TextEncoder().encode(s);
+    var out = '';
+    for (var i = 0; i < bytes.length; i++) { out += (bytes[i] < 16 ? '0' : '') + bytes[i].toString(16); }
+    return '0x' + out;
+  }
+  function out(el, text, isErr) {
+    el.textContent = text;
+    el.style.borderColor = isErr ? '#e5534b' : 'var(--border)';
+  }
+  function copyText(t) {
+    if (!t || t === '—') { return; }
+    if (navigator.clipboard) { navigator.clipboard.writeText(t); }
+  }
+
+  // Node account + chain id.
+  ethRpc('eth_accounts', [], function (res) {
+    if (res && res.length) {
+      nodeAddr = res[0];
+      var el = document.getElementById('signAddr');
+      if (el) { el.textContent = nodeAddr; }
+    }
+  });
+  ethRpc('eth_chainId', [], function (res) {
+    var el = document.getElementById('signChain');
+    if (el) { el.textContent = 'Chain ID ' + (res || '—'); }
+  });
+
+  var psSign = document.getElementById('psSign');
+  var psOut = document.getElementById('psOut');
+  var psCopy = document.getElementById('psCopy');
+  if (psSign && psOut && nodeAddr === '') { /* address loads async; signing resolves account on server */ }
+
+  function psMessage() {
+    var el = document.getElementById('psMsg');
+    var mode = document.querySelector('input[name="psMode"]:checked');
+    if (!el || !mode) { return ''; }
+    var v = el.value.trim();
+    return mode.value === 'hex' ? (v.indexOf('0x') === 0 ? v : '0x' + v) : utf8ToHex(v);
+  }
+
+  if (psSign && psOut) {
+    psSign.addEventListener('click', function () {
+      var msg = psMessage();
+      if (!msg) { out(psOut, 'Enter a message first', true); return; }
+      out(psOut, 'Working…');
+      ethRpc('personal_sign', [nodeAddr || '0x0000000000000000000000000000000000000000', msg], function (res, err) {
+        if (err) { out(psOut, err, true); } else { out(psOut, res); }
+      });
+    });
+  }
+  if (psCopy) {
+    psCopy.addEventListener('click', function () { copyText(psOut.textContent); });
+  }
+
+  var rvGo = document.getElementById('rvGo');
+  var rvOut = document.getElementById('rvOut');
+  if (rvGo && rvOut) {
+    rvGo.addEventListener('click', function () {
+      var msg = document.getElementById('rvMsg').value.trim();
+      var sig = document.getElementById('rvSig').value.trim();
+      if (!msg || !sig) { out(rvOut, 'Message and signature required', true); return; }
+      var m = msg.indexOf('0x') === 0 ? msg : utf8ToHex(msg);
+      out(rvOut, 'Working…');
+      ethRpc('personal_ecRecover', [m, sig], function (res, err) {
+        if (err) { out(rvOut, err, true); return; }
+        var tag = (nodeAddr && res && res.toLowerCase() === nodeAddr.toLowerCase()) ? ' ✓ matches node' : '';
+        out(rvOut, res + tag);
+      });
+    });
+  }
+
+  var tdSign = document.getElementById('tdSign');
+  var tdOut = document.getElementById('tdOut');
+  var tdCopy = document.getElementById('tdCopy');
+  if (tdSign && tdOut) {
+    tdSign.addEventListener('click', function () {
+      var raw = document.getElementById('tdJson').value.trim();
+      if (!raw) { out(tdOut, 'Typed data JSON required', true); return; }
+      try { JSON.parse(raw); } catch (e) { out(tdOut, 'Invalid JSON: ' + e.message, true); return; }
+      out(tdOut, 'Working…');
+      ethRpc('eth_signTypedData_v4', [nodeAddr || '0x0000000000000000000000000000000000000000', raw], function (res, err) {
+        if (err) { out(tdOut, err, true); } else { out(tdOut, res); }
+      });
+    });
+  }
+  if (tdCopy) {
+    tdCopy.addEventListener('click', function () { copyText(tdOut.textContent); });
+  }
+
+  var lgSign = document.getElementById('lgSign');
+  var lgOut = document.getElementById('lgOut');
+  if (lgSign && lgOut) {
+    lgSign.addEventListener('click', function () {
+      var msg = document.getElementById('lgMsg').value.trim();
+      if (!msg) { out(lgOut, 'Enter message hex', true); return; }
+      var m = msg.indexOf('0x') === 0 ? msg : '0x' + msg;
+      out(lgOut, 'Working…');
+      ethRpc('eth_sign', [nodeAddr || '0x0000000000000000000000000000000000000000', m], function (res, err) {
+        if (err) { out(lgOut, err, true); } else { out(lgOut, res); }
+      });
+    });
+  }
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+{% block title %}TAC OrderBook — On-chain Spot Exchange{% endblock %}
+{% block content %}
+<style>
+  .ob-wrap{max-width:1200px;margin:0 auto;padding:14px 12px 90px}
+  .ob-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 2px 14px;flex-wrap:wrap}
+  .ob-head h1{font-size:20px;font-weight:800;color:#14161a;margin:0}
+  .ob-head .ob-badge{font-size:11px;font-weight:700;color:#f0b90b;background:rgba(240,185,11,.12);padding:4px 10px;border-radius:999px}
+  .ob-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  @media (max-width:900px){.ob-grid{grid-template-columns:1fr}}
+  .ob-card{background:#f7f8fb;border:1px solid #eef0f4;border-radius:16px;padding:16px;box-shadow:0 1px 2px rgba(16,24,40,.05)}
+  .ob-card h2{font-size:14px;font-weight:800;color:#14161a;margin:0 0 12px}
+  .ob-field{margin-bottom:10px}
+  .ob-field label{display:block;font-size:12px;color:#5d6778;margin-bottom:4px}
+  .ob-field input,.ob-field select{width:100%;box-sizing:border-box;border:1px solid #e2e6ee;background:#fff;border-radius:10px;padding:10px 12px;font-size:14px;color:#14161a;outline:none}
+  .ob-field input:focus{border-color:#f0b90b}
+  .ob-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .ob-btn{border:none;border-radius:10px;padding:11px 14px;font-size:14px;font-weight:700;width:100%;cursor:pointer;color:#fff}
+  .ob-btn:active{transform:scale(.99)}
+  .ob-btn.buy{background:#2ebd85}
+  .ob-btn.sell{background:#f6465d}
+  .ob-btn.ghost{background:#fff;color:#14161a;border:1px solid #e2e6ee}
+  .ob-msg{font-size:12px;margin-top:8px;min-height:16px;color:#5d6778}
+  .ob-msg.err{color:#f6465d}.ob-msg.ok{color:#2ebd85}
+  .ob-table{width:100%;border-collapse:collapse;font-size:12px}
+  .ob-table th{color:#8a93a6;text-align:left;font-weight:600;padding:6px 4px;border-bottom:1px solid #eef0f4}
+  .ob-table td{padding:8px 4px;border-bottom:1px solid #f2f4f8;color:#14161a}
+  .ob-table .buy{color:#2ebd85;font-weight:700}
+  .ob-table .sell{color:#f6465d;font-weight:700}
+  .ob-depth{font-size:12px;font-family:monospace}
+  .ob-depth .row{display:flex;justify-content:space-between;padding:3px 6px;border-radius:4px;margin-bottom:1px}
+  .ob-depth .row.bid{background:rgba(46,189,133,.08)}
+  .ob-depth .row.ask{background:rgba(246,70,93,.08)}
+  .ob-depth .price{font-weight:700}
+  .ob-depth .amount{color:#5d6778}
+  .ob-ticker{display:flex;align-items:baseline;gap:12px;margin-bottom:12px}
+  .ob-ticker .pair{font-size:18px;font-weight:800;color:#14161a}
+  .ob-ticker .last{font-size:24px;font-weight:800;color:#2ebd85}
+  .ob-tabs{display:flex;gap:4px;margin-bottom:12px;border-bottom:1px solid #eef0f4}
+  .ob-tab{padding:8px 14px;font-size:13px;font-weight:600;color:#8a93a6;cursor:pointer;border-bottom:2px solid transparent}
+  .ob-tab.active{color:#14161a;border-bottom-color:#f0b90b}
+  .ob-lang{position:fixed;top:12px;right:12px;z-index:100;background:#fff;border:1px solid #e2e6ee;border-radius:999px;padding:6px 12px;font-size:12px;cursor:pointer;box-shadow:0 2px 8px rgba(16,24,40,.08)}
+</style>
+
+<button class="ob-lang" id="langToggle" onclick="toggleLang()">EN / 中</button>
+
+<div class="ob-wrap">
+  <div class="ob-head">
+    <h1 id="hTitle">OrderBook <span class="ob-badge">On-chain Spot Exchange</span></h1>
+  </div>
+
+  <div class="ob-field">
+    <label id="lAddr">Wallet Address</label>
+    <input id="me" placeholder="0x…" />
+  </div>
+
+  <div class="ob-grid">
+    <!-- 深度表 -->
+    <div class="ob-card">
+      <h2 id="hDepth">Order Book Depth</h2>
+      <div class="ob-ticker">
+        <span class="pair" id="tPair">TACm/TiUSD</span>
+        <span class="last" id="tLast">—</span>
+      </div>
+      <div class="ob-depth" id="depthBox">
+        <div class="ob-msg" id="depthMsg">Loading…</div>
+      </div>
+    </div>
+
+    <!-- 下單 -->
+    <div class="ob-card">
+      <h2 id="hPlace">Place Limit Order</h2>
+      <div class="ob-row">
+        <div class="ob-field">
+          <label id="lSide">Side</label>
+          <select id="obSide">
+            <option value="buy" selected>Buy</option>
+            <option value="sell">Sell</option>
+          </select>
+        </div>
+        <div class="ob-field">
+          <label id="lMarket">Market</label>
+          <input id="obMarket" value="TACm/TiUSD" />
+        </div>
+      </div>
+      <div class="ob-field">
+        <label id="lPrice">Price (TiUSD per TACm)</label>
+        <input id="obPrice" value="2.5" step="0.0001" />
+      </div>
+      <div class="ob-field">
+        <label id="lAmount">Amount (TACm)</label>
+        <input id="obAmount" value="1" step="0.001" />
+      </div>
+      <button class="ob-btn buy" id="obBtn" onclick="doPlace()">Buy TACm</button>
+      <div class="ob-msg" id="obMsg"></div>
+    </div>
+
+    <!-- 我的委託 -->
+    <div class="ob-card">
+      <h2 id="hMyOrders">My Orders</h2>
+      <div id="myOrdersBox">
+        <div class="ob-msg" id="myMsg">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 成交流 -->
+  <div class="ob-card" style="margin-top:12px">
+    <h2 id="hTrades">Recent Trades</h2>
+    <div id="tradesBox">
+      <div class="ob-msg" id="tradesMsg">—</div>
+    </div>
+  </div>
+</div>
+
+<script>
+var zh = false;
+function T(en, z) { return zh ? z : en; }
+
+function toggleLang() {
+  zh = !zh;
+  document.getElementById('langToggle').textContent = zh ? '中 / EN' : 'EN / 中';
+  applyLang();
+}
+
+function applyLang() {
+  document.getElementById('hTitle').innerHTML = T('OrderBook <span class="ob-badge">On-chain Spot Exchange</span>', '訂單簿 <span class="ob-badge">鏈上現貨交易</span>');
+  document.getElementById('lAddr').textContent = T('Wallet Address', '錢包地址');
+  document.getElementById('hDepth').textContent = T('Order Book Depth', '訂單簿深度');
+  document.getElementById('hPlace').textContent = T('Place Limit Order', '掛限價單');
+  document.getElementById('lSide').textContent = T('Side', '方向');
+  document.getElementById('lMarket').textContent = T('Market', '交易對');
+  document.getElementById('lPrice').textContent = T('Price (TiUSD per TACm)', '價格 (TiUSD / TACm)');
+  document.getElementById('lAmount').textContent = T('Amount (TACm)', '數量 (TACm)');
+  document.getElementById('hMyOrders').textContent = T('My Orders', '我的委託');
+  document.getElementById('hTrades').textContent = T('Recent Trades', '最近成交');
+}
+
+// 載入地址
+var savedAddr = localStorage.getItem('tac_defi_addr') || '';
+document.getElementById('me').value = savedAddr;
+document.getElementById('me').addEventListener('change', function() {
+  localStorage.setItem('tac_defi_addr', this.value.trim());
+});
+
+// 買賣按鈕切換顏色
+document.getElementById('obSide').addEventListener('change', function() {
+  var btn = document.getElementById('obBtn');
+  if (this.value === 'buy') {
+    btn.className = 'ob-btn buy';
+    btn.textContent = T('Buy TACm', '買入 TACm');
+  } else {
+    btn.className = 'ob-btn sell';
+    btn.textContent = T('Sell TACm', '賣出 TACm');
+  }
+});
+
+function api(path, method, body) {
+  return fetch(path, {
+    method: method || 'GET',
+    headers: { 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined
+  }).then(function(r) { return r.json(); });
+}
+
+function loadDepth() {
+  var market = document.getElementById('obMarket').value.trim() || 'TACm/TiUSD';
+  api('/api/orderbook/depth?market=' + encodeURIComponent(market)).then(function(d) {
+    if (!d.ok) {
+      document.getElementById('depthMsg').textContent = d.error || 'Failed';
+      return;
+    }
+    var dep = d.depth;
+    var html = '';
+    // Asks (sell, low→high, reversed to show highest at top)
+    var asks = (dep.asks || []).slice().reverse();
+    asks.forEach(function(a) {
+      html += '<div class="row ask"><span class="price">' + a.price.toFixed(4) + '</span><span class="amount">' + a.amount.toFixed(4) + '</span></div>';
+    });
+    // Last price from trades
+    html += '<div style="text-align:center;padding:6px 0;color:#8a93a6;font-size:11px">——</div>';
+    // Bids (buy, high→low)
+    (dep.bids || []).forEach(function(b) {
+      html += '<div class="row bid"><span class="price">' + b.price.toFixed(4) + '</span><span class="amount">' + b.amount.toFixed(4) + '</span></div>';
+    });
+    document.getElementById('depthBox').innerHTML = html;
+    loadLastPrice(market);
+  });
+}
+
+function loadLastPrice(market) {
+  api('/api/orderbook/trades?market=' + encodeURIComponent(market)).then(function(d) {
+    if (d.ok && d.trades && d.trades.length > 0) {
+      document.getElementById('tLast').textContent = d.trades[0].price.toFixed(4);
+    }
+  });
+}
+
+function loadMyOrders() {
+  var addr = document.getElementById('me').value.trim();
+  if (!addr) return;
+  api('/api/orderbook/myorders?address=' + encodeURIComponent(addr)).then(function(d) {
+    if (!d.ok) {
+      document.getElementById('myMsg').textContent = d.error || 'Failed';
+      return;
+    }
+    var orders = d.orders || [];
+    if (orders.length === 0) {
+      document.getElementById('myOrdersBox').innerHTML = '<div class="ob-msg">—</div>';
+      return;
+    }
+    var html = '<table class="ob-table"><thead><tr><th>Price</th><th>Amount</th><th>Filled</th><th>Status</th><th></th></tr></thead><tbody>';
+    orders.forEach(function(o) {
+      var cls = o.side === 'buy' ? 'buy' : 'sell';
+      html += '<tr><td class="' + cls + '">' + o.price.toFixed(4) + '</td><td>' + o.amount.toFixed(4) + '</td><td>' + o.filled.toFixed(4) + '</td><td>' + o.status + '</td>';
+      if (o.status === 'open' || o.status === 'partial') {
+        html += '<td><button class="ob-btn ghost" style="padding:4px 8px;font-size:11px" onclick="doCancel(' + o.id + ')">Cancel</button></td>';
+      } else {
+        html += '<td></td>';
+      }
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    document.getElementById('myOrdersBox').innerHTML = html;
+  });
+}
+
+function loadTrades() {
+  var market = document.getElementById('obMarket').value.trim() || 'TACm/TiUSD';
+  api('/api/orderbook/trades?market=' + encodeURIComponent(market)).then(function(d) {
+    if (!d.ok) {
+      document.getElementById('tradesMsg').textContent = d.error || 'Failed';
+      return;
+    }
+    var trades = d.trades || [];
+    if (trades.length === 0) {
+      document.getElementById('tradesBox').innerHTML = '<div class="ob-msg">—</div>';
+      return;
+    }
+    var html = '<table class="ob-table"><thead><tr><th>Price</th><th>Amount</th><th>Side</th><th>Time</th></tr></thead><tbody>';
+    trades.forEach(function(t) {
+      var cls = t.taker_side === 'buy' ? 'buy' : 'sell';
+      html += '<tr><td class="' + cls + '">' + t.price.toFixed(4) + '</td><td>' + t.amount.toFixed(4) + '</td><td>' + t.taker_side + '</td><td>' + new Date(t.time * 1000).toLocaleTimeString() + '</td></tr>';
+    });
+    html += '</tbody></table>';
+    document.getElementById('tradesBox').innerHTML = html;
+  });
+}
+
+function doPlace() {
+  var addr = document.getElementById('me').value.trim();
+  if (!addr) {
+    document.getElementById('obMsg').className = 'ob-msg err';
+    document.getElementById('obMsg').textContent = T('Please enter wallet address', '請輸入錢包地址');
+    return;
+  }
+  var body = {
+    address: addr,
+    market: document.getElementById('obMarket').value.trim(),
+    side: document.getElementById('obSide').value,
+    type: 'limit',
+    price: parseFloat(document.getElementById('obPrice').value),
+    amount: parseFloat(document.getElementById('obAmount').value)
+  };
+  api('/api/orderbook/place', 'POST', body).then(function(d) {
+    if (!d.ok) {
+      document.getElementById('obMsg').className = 'ob-msg err';
+      document.getElementById('obMsg').textContent = d.error || 'Failed';
+      return;
+    }
+    document.getElementById('obMsg').className = 'ob-msg ok';
+    document.getElementById('obMsg').textContent = T('Placed! Order #' + d.order.id, '掛單成功！訂單 #' + d.order.id);
+    loadDepth();
+    loadMyOrders();
+    loadTrades();
+  });
+}
+
+function doCancel(orderId) {
+  var addr = document.getElementById('me').value.trim();
+  api('/api/orderbook/cancel', 'POST', { address: addr, order_id: orderId }).then(function(d) {
+    if (!d.ok) {
+      alert(d.error || 'Cancel failed');
+      return;
+    }
+    loadMyOrders();
+    loadDepth();
+  });
+}
+
+// 初始載入
+loadDepth();
+loadTrades();
+setInterval(loadDepth, 5000);
+setInterval(loadTrades, 5000);
+</script>
+{% endblock %}

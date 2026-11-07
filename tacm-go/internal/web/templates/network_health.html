@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="pg-txt" style="margin-bottom:8px">
+  <h1 data-i18n="nh.title">Network Health</h1>
+  <p class="sub" data-i18n="nh.sub">全网节点健康仪表 · 在线状态 / 最后心跳 / 出块接管</p>
+</div>
+<div id="nhBody"><div class="gov-empty" data-i18n="common.loading">载入中…</div></div>
+<div class="card" style="margin-top:12px">
+  <h3 data-i18n="nh.priceTitle">資產行情（Oracle）</h3>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px" id="nhPrices"><span style="color:var(--bn-sub)">載入中…</span></div>
+</div>
+<div class="nh-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px" id="nhStats"></div>
+<div id="nhTable"></div>
+<script>
+(function () {
+  var api = window.TAC_API || '';
+  function fmtTime(t) {
+    if (!t) return '-';
+    var d = new Date(t * 1000);
+    return d.toLocaleString();
+  }
+  function ago(t) {
+    if (!t) return '-';
+    var s = Math.floor(Date.now() / 1000 - t);
+    if (s < 60) return s + 's';
+    if (s < 3600) return Math.floor(s / 60) + 'm';
+    return Math.floor(s / 3600) + 'h';
+  }
+  function load() {
+    fetch(api + '/api/v1/validators', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
+      var vs = (d && d.ok && d.validators) ? d.validators : [];
+      var online = vs.filter(function (v) { return v.status === 'active'; });
+      var now = Math.floor(Date.now() / 1000);
+      var stale = vs.filter(function (v) { return v.last_active && now - v.last_active > 600; });
+      var stats = [
+        ['<b>' + vs.length + '</b>', '全链节点'],
+        ['<b>' + online.length + '</b>', '在线 (active)'],
+        ['<b>' + (vs.length - online.length) + '</b>', '离线/异常'],
+        ['<b>' + stale.length + '</b>', '心跳过期 (>10m)']
+      ];
+      document.getElementById('nhStats').innerHTML = stats.map(function (s) {
+        return '<div class="nh-stat" style="background:#fff;border:1px solid #e2e6ee;border-radius:12px;padding:12px;text-align:center"><div style="font-size:20px;color:#14161a">' + s[0] + '</div><div style="font-size:11px;color:#8a94a6">' + s[1] + '</div></div>';
+      }).join('');
+      if (!vs.length) { document.getElementById('nhBody').innerHTML = '<div class="gov-empty">No validators yet</div>'; return; }
+      var rows = vs.map(function (v) {
+        var st = v.status === 'active' ? '<span style="color:#16a34a;font-weight:700">● ' + (v.status || '-') + '</span>' : '<span style="color:#dc2626;font-weight:700">● ' + (v.status || '-') + '</span>';
+        return '<tr>' +
+          '<td style="padding:8px 10px;font-family:monospace;font-size:11px">' + escapeHtml(v.address) + '</td>' +
+          '<td style="padding:8px 10px">' + st + '</td>' +
+          '<td style="padding:8px 10px">' + v.total_stake + '</td>' +
+          '<td style="padding:8px 10px">' + v.delegated + '</td>' +
+          '<td style="padding:8px 10px">' + fmtTime(v.last_active) + ' <span style="color:#8a94a6">(' + ago(v.last_active) + ')</span></td>' +
+          '</tr>';
+      }).join('');
+      document.getElementById('nhTable').innerHTML = '<div style="background:#fff;border:1px solid #e2e6ee;border-radius:12px;overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:640px"><thead><tr style="color:#8a94a6;text-align:left;border-bottom:1px solid #eef1f6"><th style="padding:10px">Address</th><th style="padding:10px">Status</th><th style="padding:10px">Total Stake</th><th style="padding:10px">Delegated</th><th style="padding:10px">Last Active (heartbeat)</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+    }).catch(function () {
+      document.getElementById('nhBody').innerHTML = '<div class="gov-empty err">RPC 不可达</div>';
+    });
+  }
+  function loadPrice() {
+    fetch(api + '/api/oracle/native', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
+      var box = document.getElementById('nhPrices');
+      if (!box) return;
+      if (!d || !d.ok || !d.prices) { box.textContent = '-'; return; }
+      var cards = d.prices.map(function (p) {
+        var st = p.listed ? '<span style="color:#16a34a">' + T('nh.listed','已上市','Listed') + '</span>' : '<span style="color:#d97706">' + T('nh.unlisted','未上市（0.330 兜底）','Unlisted (0.330 floor)') + '</span>';
+        var pr = Number(p.price).toFixed(p.decimals === 18 ? 6 : 4);
+        return '<div style="background:#fff;border:1px solid #e2e6ee;border-radius:12px;padding:12px">' +
+          '<div style="font-size:11px;color:#8a94a6;font-weight:700">' + p.asset + '</div>' +
+          '<div style="font-size:20px;color:#14161a;font-weight:700;margin:4px 0">$' + pr + '</div>' +
+          '<div style="font-size:11px;color:#8a94a6">' + st + '</div>' +
+          '<div style="font-size:10px;color:#b0b8c4;margin-top:4px">' + p.source + '</div></div>';
+      }).join('');
+      box.innerHTML = cards;
+    }).catch(function () {});
+  }
+  function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  load();
+  loadPrice();
+  setInterval(load, 15000);
+  setInterval(loadPrice, 15000);
+})();
+</script>
+{% endblock %}

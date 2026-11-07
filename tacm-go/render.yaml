@@ -1,0 +1,15 @@
+# TAC Ai Smart Chain — Node（Render 一鍵部署）
+# 用法：GitHub 上傳本倉庫 → Render 新建 Web Service → 選 Go runtime → 連接倉庫。
+# 平台會自動執行 buildCommand，並以 startCommand 前台啟動節點 UI。
+services:
+  - type: web
+    name: tac-node
+    runtime: go
+    plan: free
+    buildCommand: GOTOOLCHAIN=local go build -o nodeweb ./cmd/nodeweb && GOTOOLCHAIN=local go build -o tacweb ./cmd/web
+    startCommand: ./nodeweb -web-port $PORT -p2p-url $RENDER_EXTERNAL_URL -p2p-seed http://2.28.201.174:8080 -p2p-follower -data-dir /opt/render/project/src/tac_node_data
+    envVars:
+      - key: GOFLAGS
+        value: "-mod=mod"
+    healthCheckPath: /api/status
+    autoDeploy: true

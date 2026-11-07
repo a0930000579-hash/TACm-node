@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+{% block title %}TAC Liquid Staking{% endblock %}
+{% block content %}
+<style>
+  :root { --ls-bg:#0b1020; --ls-card:#141a2e; --ls-card2:#1b2240; --ls-line:#2a3355;
+          --ls-txt:#eaf0ff; --ls-sub:#8f9bc7; --ls-yellow:#fcd535; --ls-green:#0ecb81;
+          --ls-blue:#4d8dff; }
+  * { box-sizing:border-box; }
+  body { background:var(--ls-bg); color:var(--ls-txt); margin:0; font-family:-apple-system,"PingFang TC","Noto Sans TC",sans-serif; }
+  .ls-top { display:flex; align-items:center; gap:12px; padding:14px 16px; border-bottom:1px solid var(--ls-line); position:sticky; top:0; background:var(--ls-bg); z-index:5; flex-wrap:wrap; }
+  .ls-logo { font-weight:800; font-size:20px; letter-spacing:.5px; }
+  .ls-logo b { color:var(--ls-yellow); }
+  .ls-nav { display:flex; gap:8px; flex-wrap:wrap; }
+  .ls-nav a { color:var(--ls-sub); text-decoration:none; font-size:13px; padding:6px 12px; border-radius:8px; }
+  .ls-nav a:hover, .ls-nav a.on { color:var(--ls-txt); background:var(--ls-card); }
+  main { max-width:1080px; margin:0 auto; padding:14px; }
+  .hero { background:linear-gradient(135deg,#16204a,#0b1020); border:1px solid var(--ls-line); border-radius:16px; padding:22px; margin-bottom:14px; }
+  .hero h1 { margin:0 0 6px; font-size:22px; }
+  .hero p { margin:0; color:var(--ls-sub); font-size:13px; }
+  .stats { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:14px; }
+  @media (max-width:900px){ .stats { grid-template-columns:repeat(2,1fr); } }
+  .stat { background:var(--ls-card); border:1px solid var(--ls-line); border-radius:12px; padding:14px; }
+  .stat .k { font-size:12px; color:var(--ls-sub); margin-bottom:6px; }
+  .stat .v { font-size:20px; font-weight:700; }
+  .stat .v small { font-size:12px; color:var(--ls-sub); font-weight:400; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media (max-width:860px){ .grid2 { grid-template-columns:1fr; } }
+  .box { background:var(--ls-card); border:1px solid var(--ls-line); border-radius:12px; padding:16px; }
+  .box h3 { margin:0 0 12px; font-size:14px; font-weight:600; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; }
+  label { display:block; font-size:12px; color:var(--ls-sub); margin:10px 0 6px; }
+  input, select { width:100%; background:var(--ls-card2); color:var(--ls-txt); border:1px solid var(--ls-line); border-radius:8px; padding:10px 12px; font-size:14px; }
+  .btn { display:inline-block; margin-top:12px; background:var(--ls-yellow); color:#0b1020; border:none; border-radius:8px; padding:11px 18px; font-size:14px; font-weight:700; cursor:pointer; }
+  .btn:disabled { opacity:.5; cursor:not-allowed; }
+  .msg { margin-top:10px; font-size:12px; min-height:16px; }
+  .ok { color:var(--ls-green); } .err { color:#f6465d; }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  th, td { text-align:left; padding:9px 10px; border-bottom:1px solid var(--ls-line); }
+  th { color:var(--ls-sub); font-weight:500; }
+  .tag { display:inline-block; padding:2px 8px; border-radius:6px; font-size:11px; background:var(--ls-card2); color:var(--ls-blue); }
+  .rpc-input { width:auto; display:inline-block; padding:8px 10px; font-size:12px; max-width:420px; }
+  @media (max-width:600px){ .rpc-input { width:100%; max-width:none; margin-top:6px; } }
+</style>
+<div class="ls-top">
+  <div class="ls-logo">TAC <b>Stake</b></div>
+  <div class="ls-nav">
+    <a href="/" data-i18n="ls.home">首頁</a>
+    <a href="/exchange/defi" data-i18n="ls.defi">DeFi</a>
+    <a href="/stake" data-i18n="ls.stake">質押</a>
+    <a href="/liquid-staking" class="on" data-i18n="ls.liquid">流動性質押</a>
+    <a href="/governance" data-i18n="ls.gov">治理</a>
+  </div>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+    <input class="rpc-input" id="rpcUrl" placeholder="RPC http://2.28.201.174:8080" value="">
+    <button class="btn" style="margin-top:0;padding:8px 12px;font-size:12px;" onclick="setRPC()" data-i18n="ls.apply">套用</button>
+  </div>
+</div>
+<main>
+  <div class="hero">
+    <h1>💧 <span data-i18n="ls.heroTitle">PoT 流動性質押（Proof-of-Trust Liquid Staking）</span></h1>
+    <p data-i18n="ls.heroDesc">存入 TACm 獲得 <b>stTACm</b> 流動憑證——憑證餘額隨池內委託獎勵依匯率增長，可隨時贖回，也可用於 DeFi。質押即流動，資產不鎖倉。</p>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="k" data-i18n="ls.tvl">池內總質押 (TACm)</div><div class="v" id="stTotal">—</div></div>
+    <div class="stat"><div class="k" data-i18n="ls.stSupply">stTACm 流通量</div><div class="v" id="stSupply">—</div></div>
+    <div class="stat"><div class="k" data-i18n="ls.rate">兌換率</div><div class="v" id="stRate">—</div></div>
+    <div class="stat"><div class="k" data-i18n="ls.apy">預估年化 (APY)</div><div class="v" id="stApy">—</div></div>
+    <div class="stat"><div class="k" data-i18n="ls.depositors">參與帳戶</div><div class="v" id="stDep">—</div></div>
+  </div>
+
+  <div class="grid2">
+    <div class="box" style="background:#eef7ff;border:1px solid #bcd9f5">
+      <h3><span data-i18n="ls.tiusdTitle">TiUSD 取得（穩定幣 1:1 錨定 USDT）</span></h3>
+      <p class="sub" data-i18n="ls.tiusdDesc">TiUSD 非免費水龍頭資產，取得方式：① DeFi 超額抵押 CDP——抵押 TACm 鑄造 TiUSD（1:1 錨定）；② 交易所穩定幣兌換——USDT ↔ TiUSD 即時兌換（0.5% 費）；③ 質押/挖礦收益累積 TACm 後經 CDP 換取。</p>
+      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+        <a class="btn primary" style="padding:8px 14px;border-radius:8px;font-size:13px" href="/exchange/defi" data-i18n="ls.goDefi">前往 DeFi CDP 鑄造</a>
+        <a class="btn" style="padding:8px 14px;border-radius:8px;font-size:13px" href="/exchange/swap" data-i18n="ls.goSwap">前往穩定幣兌換</a>
+      </div>
+    </div>
+    <div class="box">
+      <h3>⬇️ <span data-i18n="ls.stakeTitle">質押 TACm → 得 stTACm</span></h3>
+      <label data-i18n="ls.address">你的地址</label>
+      <input id="dAddr" placeholder="0x…">
+      <label data-i18n="ls.amount">質押數量 (TACm)</label>
+      <input id="dAmt" type="number" placeholder="1000">
+      <div class="msg" id="dMsg"></div>
+      <button class="btn" id="dBtn" onclick="doDeposit()" data-i18n="ls.stakeBtn">質押</button>
+    </div>
+    <div class="box">
+      <h3>⬆️ <span data-i18n="ls.redeemTitle">贖回 stTACm → TACm</span></h3>
+      <label data-i18n="ls.address2">你的地址</label>
+      <input id="rAddr" placeholder="0x…">
+      <label data-i18n="ls.amount2">贖回數量 (stTACm)</label>
+      <input id="rAmt" type="number" placeholder="1000">
+      <div class="msg" id="rMsg"></div>
+      <button class="btn" id="rBtn" onclick="doRedeem()" data-i18n="ls.redeemBtn">贖回</button>
+    </div>
+  </div>
+
+  <div class="box" style="margin-top:12px;">
+    <h3>👤 <span data-i18n="ls.myTitle">我的持倉</span></h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <input id="mAddr" placeholder="0x…" style="flex:1;min-width:220px;">
+      <button class="btn" style="margin-top:0;padding:10px 16px;" onclick="queryBalance()" data-i18n="ls.query">查詢</button>
+    </div>
+    <div id="mBox" style="margin-top:12px;display:none;">
+      <table>
+        <tr><th data-i18n="ls.myStaked">質押本金 (TACm)</th><th data-i18n="ls.mySt">stTACm 餘額</th><th data-i18n="ls.myRedeem">可贖回 (TACm)</th></tr>
+        <tr><td id="mStaked">—</td><td id="mSt">—</td><td id="mRedeem">—</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="box" style="margin-top:12px;">
+    <div class="ls-card">
+      <h3>📈 <span data-i18n="ls.rateChart">匯率實時曲線（stTACm/TACm）</span></h3>
+      <svg id="rateChart" width="100%" height="120" viewBox="0 0 600 120" preserveAspectRatio="none" style="display:block;background:#fafcff;border:1px solid #e2e6ee;border-radius:10px"></svg>
+      <div class="ls-muted" style="margin-top:6px;font-size:11px"><span data-i18n="ls.rateNote">每 10 秒取樣一次（本機歷史），匯率隨池委託獎勵注入上升。</span></div>
+    </div>
+    <h3>ℹ️ <span data-i18n="ls.howTitle">運作方式</span></h3>
+    <table>
+      <tr><th data-i18n="ls.step">步驟</th><th data-i18n="ls.desc">說明</th></tr>
+      <tr><td>1</td><td data-i18n="ls.how1">存入 TACm，系統按現行匯率鑄造 stTACm 流動憑證（初期 1:1）。</td></tr>
+      <tr><td>2</td><td data-i18n="ls.how2">池內資產參與節點委託，委託獎勵每區塊自動注入池中（v75），匯率逐步上升——你的 stTACm 贖回值隨之增長。</td></tr>
+      <tr><td>3</td><td data-i18n="ls.how3">隨時依現行匯率贖回 TACm；stTACm 也可用於其他 DeFi 協議。</td></tr>
+    </table>
+  </div>
+</main>
+<script>
+var RPC = localStorage.getItem('tac_rpc') || (location.protocol==='https:' ? 'https://tacm-ai-cyprto.onrender.com' : 'http://' + location.host);
+document.getElementById('rpcUrl').value = RPC;
+function setRPC(){ RPC = document.getElementById('rpcUrl').value.trim() || RPC; localStorage.setItem('tac_rpc', RPC); loadStats(); }
+async function api(path, body){
+  var opt = { headers:{'Content-Type':'application/json'} };
+  if (body){ opt.method = 'POST'; opt.body = JSON.stringify(body); }
+  var res = await fetch(RPC + path, opt);
+  return await res.json();
+}
+function fmt(n, d){ if (n===null||n===undefined||isNaN(n)) return '—'; d = d||2; return Number(n).toLocaleString('en-US',{maximumFractionDigits:d}); }
+async function loadStats(){
+  try {
+    var s = await api('/api/liquidstake/stats');
+    document.getElementById('stTotal').textContent = fmt(s.total_staked);
+    document.getElementById('stSupply').textContent = fmt(s.total_sttacm);
+    document.getElementById('stRate').textContent = fmt(s.exchange_rate, 4);
+    document.getElementById('stApy').textContent = s.apy>0 ? fmt(s.apy,2)+'%' : '—';
+    document.getElementById('stDep').textContent = fmt(s.depositors, 0);
+  } catch(e){ document.getElementById('stTotal').textContent = 'RPC 不可達'; }
+}
+async function doDeposit(){
+  var addr = document.getElementById('dAddr').value.trim(), amt = parseFloat(document.getElementById('dAmt').value);
+  var m = document.getElementById('dMsg');
+  if (!addr || !amt || amt<=0){ m.className='msg err'; m.textContent = '請輸入地址與數量'; return; }
+  var b = document.getElementById('dBtn'); b.disabled = true;
+  try {
+    var r = await api('/api/liquidstake/deposit', {address:addr, amount:amt});
+    if (r.ok){ m.className='msg ok'; m.textContent = '✅ 獲得 stTACm：' + fmt(r.minted_stTACm); loadStats(); }
+    else { m.className='msg err'; m.textContent = r.error||'失敗'; }
+  } catch(e){ m.className='msg err'; m.textContent = 'RPC 不可達'; }
+  b.disabled = false;
+}
+async function doRedeem(){
+  var addr = document.getElementById('rAddr').value.trim(), amt = parseFloat(document.getElementById('rAmt').value);
+  var m = document.getElementById('rMsg');
+  if (!addr || !amt || amt<=0){ m.className='msg err'; m.textContent = '請輸入地址與數量'; return; }
+  var b = document.getElementById('rBtn'); b.disabled = true;
+  try {
+    var r = await api('/api/liquidstake/redeem', {address:addr, amount:amt});
+    if (r.ok){ m.className='msg ok'; m.textContent = '✅ 贖回 TACm：' + fmt(r.tacm); loadStats(); }
+    else { m.className='msg err'; m.textContent = r.error||'失敗'; }
+  } catch(e){ m.className='msg err'; m.textContent = 'RPC 不可達'; }
+  b.disabled = false;
+}
+async function queryBalance(){
+  var addr = document.getElementById('mAddr').value.trim();
+  var box = document.getElementById('mBox');
+  if (!addr){ return; }
+  try {
+    var r = await api('/api/liquidstake/balance?address=' + encodeURIComponent(addr));
+    if (r.found){
+      box.style.display='block';
+      document.getElementById('mStaked').textContent = fmt(r.staked);
+      document.getElementById('mSt').textContent = fmt(r.stTACm);
+      document.getElementById('mRedeem').textContent = fmt(r.redeemable_tacm);
+    } else { box.style.display='block';
+      document.getElementById('mStaked').textContent='0';
+      document.getElementById('mSt').textContent='0';
+      document.getElementById('mRedeem').textContent='0';
+    }
+  } catch(e){ box.style.display='block'; document.getElementById('mStaked').textContent='RPC 不可達'; }
+}
+loadStats();
+
+// v76：匯率實時曲線——每 10 秒取樣一次存 localStorage（最多 180 點），SVG 折線。
+(function () {
+  var KEY = 'tacm_ls_rate_hist';
+  var hist = [];
+  try { hist = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { hist = []; }
+  if (!Array.isArray(hist)) hist = [];
+  function draw() {
+    var svg = document.getElementById('rateChart');
+    if (!svg) return;
+    var pts = hist.slice(-120);
+    if (pts.length < 2) {
+      svg.innerHTML = '<text x="300" y="60" text-anchor="middle" fill="#8a94a6" font-size="11">' + (window.TAC_LANG === 'zh' ? '等待取樣…' : 'Sampling…') + '</text>';
+      return;
+    }
+    var W = 600, H = 120, pad = 8;
+    var vals = pts.map(function (p) { return p.r; });
+    var min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+    var span = (max - min) || 1;
+    var xs = function (i) { return pad + i * (W - pad * 2) / (pts.length - 1); };
+    var ys = function (v) { return H - pad - (v - min) / span * (H - pad * 2); };
+    var d = pts.map(function (p, i) { return (i ? 'L' : 'M') + xs(i).toFixed(1) + ',' + ys(p.r).toFixed(1); }).join(' ');
+    var area = d + ' L' + (W - pad).toFixed(1) + ',' + (H - pad) + ' L' + pad + ',' + (H - pad) + ' Z';
+    svg.innerHTML =
+      '<defs><linearGradient id="lg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3b82f6" stop-opacity=".25"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/></linearGradient></defs>' +
+      '<path d="' + area + '" fill="url(#lg)"/>' +
+      '<path d="' + d + '" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<text x="' + pad + '" y="' + (ys(vals[vals.length - 1]) - 5) + '" fill="#3b82f6" font-size="11" font-weight="700">' + Number(vals[vals.length - 1]).toFixed(4) + '</text>';
+  }
+  // v76.1：以後端持久化歷史為主（跨用戶共享），localStorage 僅在後端無資料時本機取樣補充。
+  function sample() {
+    fetch(api + '/api/liquidstake/rate-history?limit=180', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d && d.ok && d.points && d.points.length >= 2) {
+        hist = d.points.map(function (p) { return { t: p.ts * 1000, r: p.rate }; });
+        try { localStorage.setItem(KEY, JSON.stringify(hist)); } catch (e) {}
+        draw();
+        return;
+      }
+      fetch(api + '/api/liquidstake/stats', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d2) {
+        if (!d2 || !d2.ok) return;
+        var r = Number(d2.exchange_rate) || 0;
+        if (!r) return;
+        hist.push({ t: Date.now(), r: r });
+        if (hist.length > 180) hist = hist.slice(-180);
+        try { localStorage.setItem(KEY, JSON.stringify(hist)); } catch (e) {}
+        draw();
+      }).catch(function () {});
+    }).catch(function () {});
+  }
+  draw();
+  sample();
+  setInterval(sample, 10000);
+})();
+</script>
+{% endblock %}

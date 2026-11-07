@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% block title %}ZK &amp; VRF{% endblock %}
+{% block content %}
+<section class="pg-banner">
+  <div class="pg-txt"><h1 data-i18n="zk.title">ZK &amp; VRF Toolkit</h1><p data-i18n="zk.sub">Zero-Knowledge primitives — state batch proof · commitment · nullifier · verifiable randomness</p></div>
+  <svg viewBox="0 0 40 40" class="pg-art"><path d="M8 12 L20 6 L32 12 L32 26 L20 34 L8 26 Z" fill="none" stroke="#68BE8D" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 20 L18 24 L26 16" fill="none" stroke="#68BE8D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</section>
+
+<section class="panel" style="max-width:760px;margin:0 auto">
+  <div class="panel-head"><h2 data-i18n="zk.batch">ZK-Rollup Batch Proof</h2><span class="tag in" id="zkStatus">status</span></div>
+  <div class="stack" style="display:grid;gap:10px;padding:6px 0">
+    <div style="display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
+      <input id="zkOldRoot" class="input mono" style="padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--fg);font-size:13px" placeholder="old_root" data-i18n-ph="zk.old" />
+      <input id="zkNewRoot" class="input mono" style="padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--fg);font-size:13px" placeholder="new_root" data-i18n-ph="zk.new" />
+    </div>
+    <textarea id="zkOps" class="input mono" rows="4" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--fg);font-size:12px;resize:vertical" placeholder='[{"type":"transfer","address":"txA","to":"txB","asset":"TACm","delta":"-1000000000000000000"},{"type":"transfer","address":"txB","asset":"TACm","delta":"1000000000000000000"}]'></textarea>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="btn primary" id="zkProve" style="padding:10px 22px;border-radius:10px;font-weight:600" data-i18n="zk.prove">Prove</button>
+      <button class="btn" id="zkVerify" style="padding:10px 16px;border-radius:10px" data-i18n="zk.verify">Verify</button>
+      <code id="zkOut" class="mono" style="flex:1;min-width:220px;background:var(--bg);padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:11px;word-break:break-all;white-space:pre-wrap">—</code>
+    </div>
+  </div>
+</section>
+
+<section class="panel" style="max-width:760px;margin:14px auto 0">
+  <div class="panel-head"><h2 data-i18n="rollup.title">L2 Rollup Validity Proof</h2><span class="tag in" id="ruStateTag">state root</span></div>
+  <div class="stack" style="display:grid;gap:10px;padding:6px 0">
+    <div style="display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));font-size:12px">
+      <div style="background:var(--bg);padding:8px 10px;border:1px solid var(--border);border-radius:10px"><div style="opacity:.6" data-i18n="rollup.height">Height</div><div id="ruHeight" class="mono">—</div></div>
+      <div style="background:var(--bg);padding:8px 10px;border:1px solid var(--border);border-radius:10px"><div style="opacity:.6" data-i18n="rollup.accounts">Accounts</div><div id="ruAccounts" class="mono">—</div></div>
+      <div style="background:var(--bg);padding:8px 10px;border:1px solid var(--border);border-radius:10px"><div style="opacity:.6" data-i18n="rollup.valid">Validity</div><div id="ruValid" class="mono">—</div></div>
+    </div>
+    <code id="ruRoot" class="mono" style="background:var(--bg);padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:11px;word-break:break-all;white-space:pre-wrap">state root —</code>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="btn primary" id="ruSubmit" style="padding:10px 18px;border-radius:10px;font-weight:600" data-i18n="rollup.submit">Submit Batch</button>
+      <button class="btn" id="ruRefresh" style="padding:10px 16px;border-radius:10px" data-i18n="rollup.refresh">Refresh</button>
+      <input id="ruIndex" class="input mono" style="padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--fg);font-size:13px;width:110px" placeholder="idx" />
+      <button class="btn" id="ruVerify" style="padding:10px 16px;border-radius:10px" data-i18n="rollup.verify">Verify Proof</button>
+      <button class="btn" id="ruChallenge" style="padding:10px 16px;border-radius:10px" data-i18n="rollup.challenge">Challenge</button>
+    </div>
+    <code id="ruOut" class="mono" style="background:var(--bg);padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:11px;word-break:break-all;white-space:pre-wrap">—</code>
+    <div id="ruList" style="display:grid;gap:6px;font-size:12px"></div>
+    <p style="opacity:.6;font-size:11px;margin:0" data-i18n="rollup.note">Validium-style simplified validity proof: tx-root Merkle + touched-leaf pre→post replay + constraints (no negative balance, nonce anti-double-spend, supply conservation) + proposer batch signature. Any tampered batch is rejected by the stateless verifier.</p>
+  </div>
+</section>
+
+<section class="panel" style="max-width:760px;margin:14px auto 0">
+  <div class="panel-head"><h2 data-i18n="zk.commitTitle">Privacy Commitment &amp; Nullifier</h2><span class="tag" data-i18n="zk.commitSub">hiding + binding · double-spend guard</span></div>
+  <div class="stack" style="display:grid;gap:10px;padding:6px 0">
+    <div style="display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+      <input id="zkBlind" class="input mono" style="padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--fg);font-size:13px" placeholder="blind_hex" />
+      <input id="zkMsg" class="input mono" style="padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--fg);font-size:13px" placeholder="msg" data-i18n-ph="zk.msg" />
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="btn primary" id="zkCommit" style="padding:10px 22px;border-radius:10px;font-weight:600" data-i18n="zk.commit">Commit</button>
+      <code id="zkCommitOut" class="mono" style="flex:1;min-width:220px;background:var(--bg);padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:11px;word-break:break-all">—</code>
+    </div>
+  </div>
+</section>
+
+<section class="panel" style="max-width:760px;margin:14px auto 0">
+  <div class="panel-head"><h2 data-i18n="vrf.title">Verifiable Random Function (ECVRF)</h2><span class="tag" data-i18n="vrf.sub">fair lottery · node election · whitelist</span></div>
+  <div class="stack" style="display:grid;gap:10px;padding:6px 0">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="btn" id="vrfKeygen" style="padding:10px 18px;border-radius:10px" data-i18n="vrf.keygen">Generate Key</button>
+      <code id="vrfPub" class="mono" style="flex:1;min-width:220px;background:var(--bg);padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:11px;word-break:break-all">—</code>
+    </div>
+    <div style="display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+      <input id="vrfPriv" class="input mono" style="padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--fg);font-size:13px" placeholder="priv_hex (32B)" />
+      <input id="vrfMsg" class="input mono" style="padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--fg);font-size:13px" placeholder="message" data-i18n-ph="vrf.msg" />
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="btn primary" id="vrfProve" style="padding:10px 22px;border-radius:10px;font-weight:600" data-i18n="vrf.prove">Prove</button>
+      <button class="btn" id="vrfVerify" style="padding:10px 16px;border-radius:10px" data-i18n="vrf.verify">Verify</button>
+      <code id="vrfOut" class="mono" style="flex:1;min-width:220px;background:var(--bg);padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:11px;word-break:break-all;white-space:pre-wrap">—</code>
+    </div>
+  </div>
+</section>
+
+<script>
+(function(){
+  "use strict";
+  var api = window.TAC_RPC || "/api";
+  var lastProof = null;
+  function nodeURL(){ return api; }
+  function show(el, txt){ var n = document.getElementById(el); if(n) n.textContent = txt; }
+  function post(path, body, cb){
+    fetch(nodeURL() + path, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)})
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if(d && d.ok === false){ show("zkOut", "ERR: " + (d.error || "unknown")); cb && cb(d, true); }
+        else { cb && cb(d, false); }
+      })
+      .catch(function(e){ show("zkOut", "NET: " + e.message); cb && cb(null, true); });
+  }
+
+  // ZK 批次證明
+  document.getElementById("zkProve").addEventListener("click", function(){
+    var ops = [];
+    try { ops = JSON.parse(document.getElementById("zkOps").value || "[]"); }
+    catch(e){ show("zkOut", "JSON parse error: " + e.message); return; }
+    if(!ops.length){ show("zkOut", "ops 不可為空"); return; }
+    post("/api/zk/prove", {old_root: document.getElementById("zkOldRoot").value || "old", new_root: document.getElementById("zkNewRoot").value || "new", ops: ops}, function(d, err){
+      if(err) return;
+      lastProof = d.proof;
+      show("zkOut", "commitment: " + d.proof.commitment + "\nbatch_hash: " + d.proof.batch_hash + "\nproofs: " + d.proof.proofs.length);
+    });
+  });
+
+  document.getElementById("zkVerify").addEventListener("click", function(){
+    if(!lastProof){ show("zkOut", "請先 Prove 產生證明"); return; }
+    post("/api/zk/verify", {proof: lastProof}, function(d, err){
+      if(err) return;
+      show("zkOut", d.valid ? "VALID ✓ 證明有效（承諾＋包含證明＋淨額全過）" : "INVALID ✗ " + (d.error || ""));
+    });
+  });
+
+  // 隱私承諾
+  document.getElementById("zkCommit").addEventListener("click", function(){
+    var blind = document.getElementById("zkBlind").value.trim() || "a1b2c3d4";
+    var msg = document.getElementById("zkMsg").value || "1000000000000000000";
+    post("/api/zk/commit", {blind_hex: blind, msg: msg}, function(d, err){
+      if(err) return;
+      show("zkCommitOut", "commitment: " + d.commitment + "\nnullifier:  " + d.nullifier);
+    });
+  });
+
+  // VRF
+  document.getElementById("vrfKeygen").addEventListener("click", function(){
+    post("/api/vrf/keygen", {}, function(d, err){
+      if(err) return;
+      document.getElementById("vrfPub").textContent = "pub: " + d.pub;
+    });
+  });
+
+  document.getElementById("vrfProve").addEventListener("click", function(){
+    var priv = document.getElementById("vrfPriv").value.trim();
+    if(!priv){ show("vrfOut", "請先 Keygen 或貼上 priv_hex"); return; }
+    post("/api/vrf/prove", {priv_hex: priv, message: document.getElementById("vrfMsg").value || "lottery-round-1"}, function(d, err){
+      if(err) return;
+      document.getElementById("vrfPub").textContent = "pub: " + d.pub;
+      window._lastVRF = {pub: d.pub, proof: d.proof};
+      show("vrfOut", "pub:    " + d.pub + "\noutput: " + d.proof.output + "\nc:      " + d.proof.c.slice(0,16) + "…\ns:      " + d.proof.s.slice(0,16) + "…");
+    });
+  });
+
+  document.getElementById("vrfVerify").addEventListener("click", function(){
+    var v = window._lastVRF;
+    if(!v){ show("vrfOut", "請先 Prove"); return; }
+    post("/api/vrf/verify", {pub: v.pub, proof: v.proof}, function(d, err){
+      if(err) return;
+      show("vrfOut", d.valid ? "VALID ✓ 隨機數已由該公鑰綁定私鑰可驗證產生" : "INVALID ✗ " + (d.error || ""));
+    });
+  });
+
+  // 載入狀態
+  fetch(nodeURL() + "/api/zk/status").then(function(r){ return r.json(); }).then(function(d){
+    if(d && d.ok) show("zkStatus", "ZK primitives online · " + d.primitives.length);
+  }).catch(function(){ show("zkStatus", "status —"); });
+
+  // ===== L2 Rollup Validity =====
+  function ruShow(txt){ show("ruOut", txt); }
+  function ruLoadState(){
+    fetch(nodeURL() + "/api/rollup/state-root").then(function(r){ return r.json(); }).then(function(d){
+      if(!d || d.ok === false){ ruShow("L2 unavailable: " + (d && d.error || "—")); return; }
+      document.getElementById("ruHeight").textContent = d.block_height;
+      document.getElementById("ruAccounts").textContent = d.account_count;
+      document.getElementById("ruValid").textContent = d.valid ? "VALID ✓" : "INVALID ✗";
+      document.getElementById("ruRoot").textContent = "state_root: " + d.state_root;
+      document.getElementById("ruStateTag").textContent = "height " + d.block_height;
+    }).catch(function(e){ ruShow("NET: " + e.message); });
+  }
+  function ruLoadList(){
+    fetch(nodeURL() + "/api/rollup/batch").then(function(r){ return r.json(); }).then(function(d){
+      var box = document.getElementById("ruList");
+      if(!d || !d.batches || !d.batches.length){ box.innerHTML = '<div style="opacity:.5">no batches yet</div>'; return; }
+      box.innerHTML = d.batches.slice().reverse().map(function(b){
+        var st = b.status;
+        return '<div style="display:flex;justify-content:space-between;gap:8px;background:var(--bg);padding:6px 10px;border:1px solid var(--border);border-radius:8px">'
+          + '<span>#' + b.height + ' <span style="opacity:.6">tx' + b.tx_count + '</span></span>'
+          + '<span class="mono" style="opacity:.8">' + (b.state_root||'').slice(0,18) + '…</span>'
+          + '<span style="color:' + (st==='finalized'?'#68BE8D':st==='challenged'?'#e36':'') + '">' + st + '</span></div>';
+      }).join("");
+    }).catch(function(){});
+  }
+  document.getElementById("ruSubmit").addEventListener("click", function(){
+    post("/api/rollup/batch/submit", {}, function(d, err){
+      if(err) return;
+      var b = d.batch || {};
+      ruShow("batch #" + (b.height) + " · tx " + (b.tx_count)
+        + (d.l1_submitted ? " · L1 " + d.l1_tx_hash : " · L1 not configured")
+        + "\npost_root: " + (b && b.state_root));
+      ruLoadState(); ruLoadList();
+    });
+  });
+  document.getElementById("ruRefresh").addEventListener("click", function(){ ruLoadState(); ruLoadList(); });
+  document.getElementById("ruVerify").addEventListener("click", function(){
+    var idx = document.getElementById("ruIndex").value.trim();
+    if(!idx){ ruShow("enter batch index"); return; }
+    post("/api/rollup/proof/verify", {index: parseInt(idx,10)}, function(d, err){
+      if(err) return;
+      ruShow(d.valid ? "VALID ✓ batch #" + d.height + " 證明有效（tx-root＋觸及葉＋約束＋批簽名全過）"
+                    : "INVALID ✗ " + (d.error || ""));
+    });
+  });
+  document.getElementById("ruChallenge").addEventListener("click", function(){
+    var idx = document.getElementById("ruIndex").value.trim();
+    if(!idx){ ruShow("enter batch index to challenge"); return; }
+    post("/api/rollup/challenge", {height: parseInt(idx,10)}, function(d, err){
+      if(err) return;
+      ruShow("challenge: " + (d.challenge_success ? "FRAUD PROVEN ✗ block reverted" : "honest batch ✓ rejected")
+        + "\n" + (d.message || ""));
+      ruLoadState(); ruLoadList();
+    });
+  });
+  ruLoadState(); ruLoadList();
+})();
+</script>
+{% endblock %}

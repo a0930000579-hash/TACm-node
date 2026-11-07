@@ -1,0 +1,421 @@
+{% comment %}
+ 交易所共用 chrome（v164 子任務 A）：自有頂欄 .ex-topbar（幣安深色）＋固定底欄 .ex-bottom-nav，
+ 比照社群 community.html 模式隱藏全域 .topbar/.footer/.bottom-nav/.navlinks。
+ 於四個交易所頁（exchange_home / exchange / defi / nft）block content 開頭 {% include %}。
+ 權威錢包 key：localStorage tac_ex_wallet（{addr,source,wif?}），同步 tac_guest_addr / tac_defi_addr /
+ tac_guest_wif（與 base.html ensureGuestAddr 同源）。會員膠囊元素 ID 刻意不同於 base.html
+ （ex-member-*），避免與隱藏但仍在 DOM 的全域 #member-* 衝突。
+{% endcomment %}
+<style>
+  /* 隱藏全域欄（交易所自有 chrome，比照 .cm-topbar 模式） */
+  .topbar,.footer,.bottom-nav,.navlinks{display:none!important}
+  .bn-top{display:none!important}
+  :root{--ex-yellow:#fcd535;--ex-green:#0ecb81;--ex-red:#f6465d;--ex-dark:#0b0e11;--ex-line:#e2e6ee;
+        --ex-bg:#ffffff;--ex-bg2:#f2f4f9;--ex-txt:#14161a;--ex-sub:#5d6778}
+  body{padding-bottom:calc(60px + env(safe-area-inset-bottom));overflow-x:hidden}
+  main.container{padding-bottom:calc(60px + env(safe-area-inset-bottom))}
+
+  /* ===== 頂欄（幣安白底，全幅 sticky；v165：由深色改淺色，與全站 base 一致） ===== */
+  .ex-topbar{position:sticky;top:0;z-index:90;width:100vw;margin-left:calc(50% - 50vw);
+    background:var(--ex-bg);color:var(--ex-txt);border-bottom:1px solid var(--ex-line);
+    display:flex;align-items:center;gap:8px;height:52px;padding:0 12px;box-sizing:border-box}
+  .ex-topbar-in{width:100%;max-width:1080px;margin:0 auto;display:flex;align-items:center;gap:8px}
+  /* 返回鏈上（比照 community.html .cm-tb-btn 左箭頭） */
+  .ex-back{display:flex;align-items:center;justify-content:center;width:32px;height:32px;flex:none;
+    border-radius:9px;background:var(--ex-bg2);border:1px solid var(--ex-line);color:var(--ex-txt);
+    text-decoration:none;cursor:pointer}
+  .ex-back svg{width:18px;height:18px;stroke:var(--ex-txt);fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+  .ex-brand{display:flex;align-items:center;gap:7px;font-weight:800;font-size:16px;color:var(--ex-txt);
+    text-decoration:none;flex:none;letter-spacing:.3px}
+  .ex-brand svg{width:22px;height:22px;flex:none}
+  .ex-brand b{color:#c9a200}
+  .ex-net{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ex-sub);flex:none;
+    background:var(--ex-bg2);border:1px solid var(--ex-line);border-radius:999px;padding:4px 10px;font-family:ui-monospace,monospace}
+  .ex-net .dot{width:8px;height:8px;border-radius:50%;background:var(--ex-green);flex:none;
+    animation:expulse 2s infinite}
+  @keyframes expulse{0%{box-shadow:0 0 0 0 rgba(14,203,129,.55)}70%{box-shadow:0 0 0 6px rgba(14,203,129,0)}100%{box-shadow:0 0 0 0 rgba(14,203,129,0)}}
+  .ex-spacer{flex:1;min-width:6px}
+  .ex-wpill{display:flex;align-items:center;gap:6px;flex:none;background:var(--ex-bg2);border:1px solid var(--ex-line);
+    color:var(--ex-txt);border-radius:999px;padding:6px 11px;font-size:12px;font-weight:600;cursor:pointer;
+    max-width:170px;font-family:inherit}
+  .ex-wpill .wa{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:96px;font-family:ui-monospace,monospace}
+  .ex-wpill.unlinked{color:#b8860b;border-color:rgba(201,162,0,.55);background:#fff8e1}
+  .ex-wpill.linked{color:var(--ex-txt)}
+  .ex-wpill svg{width:15px;height:15px;flex:none}
+  .ex-member{position:relative;flex:none}
+  .ex-member-pill{display:flex;align-items:center;gap:6px;background:var(--ex-bg2);border:1px solid var(--ex-line);
+    color:var(--ex-txt);border-radius:999px;padding:6px 11px;font-size:12px;font-weight:600;cursor:pointer;
+    text-decoration:none;max-width:132px;overflow:hidden;white-space:nowrap;font-family:inherit;border-top-width:1px;border-bottom-width:1px;border-left-width:1px;border-right-width:1px}
+  #ex-member-dot{width:8px;height:8px;border-radius:50%;background:#9aa3b2;flex:none}
+  #ex-member-dot.on{background:var(--ex-green)}
+  #ex-member-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:92px;display:inline-block}
+  .ex-menu{position:absolute;right:0;top:calc(100% + 8px);background:#fff;border:1px solid var(--ex-line);
+    border-radius:12px;min-width:210px;display:none;flex-direction:column;overflow:hidden;z-index:100;
+    box-shadow:0 10px 28px rgba(16,24,40,.14);text-align:left}
+  .ex-menu.open{display:flex}
+  .ex-menu .mm-email{padding:11px 13px;font-size:12px;color:var(--ex-sub);border-bottom:1px solid var(--ex-line);
+    word-break:break-all;font-family:ui-monospace,monospace}
+  .ex-menu a,.ex-menu button{display:block;width:100%;box-sizing:border-box;text-align:left;background:none;
+    border:none;color:var(--ex-txt);padding:11px 13px;font-size:13px;text-decoration:none;cursor:pointer;font-family:inherit}
+  .ex-menu a:hover,.ex-menu button:hover{background:var(--ex-bg2);color:var(--ex-dark)}
+  .ex-menu button.danger{color:var(--ex-red)}
+  .ex-lang{flex:none;background:var(--ex-bg2);border:1px solid var(--ex-line);color:var(--ex-txt);border-radius:999px;
+    width:36px;height:30px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+  @media (max-width:560px){
+    .ex-net{padding:4px 8px;font-size:11px}
+    .ex-wpill{max-width:120px;padding:6px 9px}
+    .ex-wpill .wa{max-width:64px}
+    .ex-member-pill{max-width:96px;padding:6px 9px}
+    #ex-member-label{max-width:64px}
+    .ex-brand{font-size:14px}
+  }
+  /* v164-fix：≤430px 極窄屏頂欄收斂（390/360px）。根因：.ex-topbar-in 多為 flex:none 項目，
+     自然寬度加總 > clientWidth 造成 document 向右溢出（scrollWidth=485 vs 390）。
+     此段縮小各項寬度、讓 flex 項目可縮（min-width:0）、文字以 ellipsis 截斷；桌面 >560px 不受影響。 */
+  @media (max-width:430px){
+    .ex-topbar{height:48px;padding:0 10px;gap:6px}
+    .ex-topbar-in{gap:6px;min-width:0}
+    .ex-back{width:28px;height:28px}
+    .ex-brand{gap:5px;font-size:14px;min-width:0}
+    .ex-brand svg{width:20px;height:20px}
+    .ex-brand > span{white-space:nowrap;overflow:hidden}
+    .ex-brand > span > b{display:none}              /* 隱藏「·」分隔號 */
+    .ex-brand > span > span:last-child{display:none} /* 極窄屏只留 logo＋TAC，隱藏在地化「交易所/Exchange」 */
+    .ex-net{gap:4px;padding:3px 7px;font-size:11px;min-width:0}
+    .ex-net .dot{width:7px;height:7px}
+    .ex-spacer{flex:1;min-width:0}
+    .ex-wpill{flex:0 1 auto;min-width:0;max-width:96px;padding:5px 8px;gap:4px}
+    .ex-wpill .wa{max-width:42px}
+    /* v165 修「連結錢包」被截斷為「連結…」：未連結狀態標籤給足寬度（4 個中文字 ≈48px），不做 ellipsis */
+    .ex-wpill.unlinked{max-width:84px}
+    .ex-wpill.unlinked .wa{max-width:64px}
+    .ex-wpill svg{width:14px;height:14px}
+    .ex-member{flex:0 1 auto;min-width:0}
+    .ex-member-pill{max-width:78px;padding:5px 8px;gap:4px;min-width:0}
+    #ex-member-dot{width:7px;height:7px}
+    #ex-member-label{max-width:40px}
+    .ex-lang{width:30px;height:28px;font-size:11px}
+  }
+
+  /* ===== 底部導航（幣安風淺色固定底欄） ===== */
+  .ex-bottom-nav{position:fixed;left:0;right:0;bottom:0;z-index:90;background:#fff;
+    border-top:1px solid var(--ex-line);display:flex;justify-content:space-around;
+    padding:6px 2px calc(6px + env(safe-area-inset-bottom));box-sizing:border-box}
+  .ex-bottom-nav a{display:flex;flex-direction:column;align-items:center;gap:2px;position:relative;
+    font-size:9.5px;color:#5d6778;text-decoration:none;flex:1;max-width:120px;padding-top:2px}
+  .ex-bottom-nav a svg{width:21px;height:21px;stroke:#5d6778;fill:none;stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round}
+  .ex-bottom-nav a.on{color:var(--ex-dark);font-weight:700}
+  .ex-bottom-nav a.on svg{stroke:var(--ex-dark)}
+  .ex-bottom-nav a.on::before{content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);
+    width:28px;height:3px;border-radius:0 0 3px 3px;background:var(--ex-yellow)}
+  @media (max-width:380px){.ex-bottom-nav a{font-size:8.5px}}
+</style>
+
+<nav class="ex-topbar">
+  <div class="ex-topbar-in">
+    <a class="ex-back" href="/" title="返回鏈上主站" aria-label="Back to chain" data-i18n-title="ex.backHomeTitle">
+      <svg viewBox="0 0 24 24"><path d="M19 12 H6 M11 6 L5 12 L11 18"/></svg>
+    </a>
+    <a class="ex-brand" href="/exchange" title="TAC Chain Exchange">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#c9a200" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 4 3 6-7"/><path d="M14 8h4v4"/></svg>
+      <span>TAC<b>·</b><span data-i18n="ex.chrome.exchange">交易所</span></span>
+    </a>
+    <div class="ex-net" title="Network height"><span class="dot"></span><span>#<span id="ex-height">{{ status.Height }}</span></span></div>
+    <div class="ex-spacer"></div>
+
+    <div class="ex-member" id="ex-wallet-wrap">
+      <button type="button" class="ex-wpill unlinked" id="ex-wallet-pill" onclick="ExChrome.toggleWallet(event)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M16 12h2v2h-2z"/><path d="M3 9h18"/></svg>
+        <span class="wa" id="ex-wallet-label">連結錢包</span>
+      </button>
+      <div class="ex-menu" id="ex-wallet-menu">
+        <div class="mm-email" id="ex-wallet-addr" data-i18n="ex.chrome.noWallet">尚未連結錢包</div>
+        <button type="button" id="ex-wallet-miner" onclick="ExChrome.connectMiner(event)" data-i18n="ex.walletMiner">連結礦工錢包</button>
+        <button type="button" id="ex-wallet-new" onclick="ExChrome.createWeb3(event)" data-i18n="ex.walletNew">新建 Web3 錢包</button>
+        <button type="button" class="danger" id="ex-wallet-change" style="display:none" onclick="ExChrome.change(event)" data-i18n="ex.walletChange">更換錢包</button>
+      </div>
+    </div>
+
+    <div class="ex-member" id="ex-member-wrap">
+      <a class="ex-member-pill" id="ex-member-pill" href="/auth/login">
+        <span id="ex-member-dot"></span><span id="ex-member-label" data-i18n="ex.chrome.signin">登入/註冊</span>
+      </a>
+      <div class="ex-menu" id="ex-member-menu">
+        <div class="mm-email" id="ex-member-email">—</div>
+        <a href="/wallet" data-i18n="ex.chrome.myWallet">我的錢包</a>
+        <a href="/exchange/assets" data-i18n="ex.chrome.assets">交易所資產</a>
+        <button type="button" class="danger" id="ex-member-logout" style="display:none" data-i18n="ex.chrome.logout">登出</button>
+      </div>
+    </div>
+
+    <button type="button" class="ex-lang" id="ex-lang-btn" data-i18n-lang="1">EN</button>
+  </div>
+</nav>
+
+<nav class="ex-bottom-nav" id="ex-bottom-nav">
+  <a href="/exchange" data-exnav="home"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/></svg><span data-i18n="ex.nav.home">首頁</span></a>
+  <a href="/exchange/trade" data-exnav="trade"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg><span data-i18n="ex.nav.trade">現貨</span></a>
+  <a href="/exchange/swap" data-exnav="swap"><svg viewBox="0 0 24 24"><path d="M7 7h13M7 7l3-3M7 7l3 3"/><path d="M17 17H4M17 17l-3-3M17 17l-3 3"/></svg><span data-i18n="ex.nav.swap">閃兌</span></a>
+  <a href="/dex" data-exnav="dex"><svg viewBox="0 0 24 24"><circle cx="9" cy="12" r="6"/><circle cx="16" cy="12" r="6"/></svg><span data-i18n="ex.nav.dex">DEX</span></a>
+  <a href="/exchange/defi" data-exnav="defi"><svg viewBox="0 0 24 24"><path d="M12 3c3 5 6 8 6 11a6 6 0 0 1-12 0c0-3 3-6 6-11z"/></svg><span data-i18n="ex.nav.defi">DeFi</span></a>
+  <a href="/exchange/nft" data-exnav="nft"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M3 17l5-5 3 3 4-4 6 6"/></svg><span data-i18n="ex.nav.nft">NFT</span></a>
+  <a href="/exchange/assets" data-exnav="assets"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M16 12h5v2h-5z"/><circle cx="8" cy="12" r="1"/></svg><span data-i18n="ex.nav.assets">資產</span></a>
+</nav>
+
+<script>
+(function(){
+  // 頁面級 i18n 詞條（zh/en 皆給；既有 ex.wallet* 沿用 global dict，不重複）
+  try{
+    window.TAC_LOAD_I18N({
+      zh:{
+        'ex.chrome.exchange':'交易所','ex.chrome.connectWallet':'連結錢包','ex.chrome.noWallet':'尚未連結錢包',
+        'ex.chrome.signin':'登入/註冊','ex.chrome.myWallet':'我的錢包','ex.chrome.assets':'交易所資產',
+        'ex.chrome.logout':'登出','ex.chrome.connected':'已連結','ex.backHomeTitle':'返回鏈上主站',
+        'ex.nav.home':'首頁','ex.nav.trade':'現貨','ex.nav.swap':'閃兌','ex.nav.dex':'DEX',
+        'ex.nav.defi':'DeFi','ex.nav.nft':'NFT','ex.nav.assets':'資產',
+        'ex.verifyFail':'連線失敗，請稍後再試','ex.walletWifWarn':'請妥善保存 WIF，遺失將無法恢復資產。'
+      },
+      en:{
+        'ex.chrome.exchange':'Exchange','ex.chrome.connectWallet':'Connect Wallet','ex.chrome.noWallet':'No wallet connected',
+        'ex.chrome.signin':'Sign In / Up','ex.chrome.myWallet':'My Wallet','ex.chrome.assets':'Exchange Assets',
+        'ex.chrome.logout':'Log out','ex.chrome.connected':'Connected','ex.backHomeTitle':'Back to chain',
+        'ex.nav.home':'Home','ex.nav.trade':'Spot','ex.nav.swap':'Swap','ex.nav.dex':'DEX',
+        'ex.nav.defi':'DeFi','ex.nav.nft':'NFT','ex.nav.assets':'Assets',
+        'ex.verifyFail':'Connection failed, please try again','ex.walletWifWarn':'Backup your WIF; lost WIF means lost funds.'
+      }
+    });
+  }catch(e){}
+
+  var EX_WK='tac_ex_wallet';
+  function $(id){ return document.getElementById(id); }
+  function t18n(k){ try{ return window.TAC_T ? TAC_T(k) : k; }catch(e){ return k; } }
+
+  function wload(){ try{ var s=localStorage.getItem(EX_WK); return s?JSON.parse(s):null; }catch(e){ return null; } }
+  function wsave(o){ try{ localStorage.setItem(EX_WK, JSON.stringify(o)); }catch(e){} }
+  function wclear(){ try{ localStorage.removeItem(EX_WK); }catch(e){} }
+  function wsyncAll(addr, wif){
+    try{
+      localStorage.setItem('tac_guest_addr', addr);
+      localStorage.setItem('tac_defi_addr', addr);
+      if (wif) localStorage.setItem('tac_guest_wif', wif);
+      else localStorage.removeItem('tac_guest_wif');
+    }catch(e){}
+  }
+  function shortAddr(a){ if(!a) return ''; return a.slice(0,8)+'…'+a.slice(-5); }
+
+  // v165：權威錢包解析——tac_ex_wallet 為準；降級時（僅有同步的 guest/defi key）也視為已連結。
+  function resolveWallet(){
+    var w=wload();
+    if (w && w.addr && w.addr.indexOf('tx0')===0){
+      return {addr:w.addr, source:w.source||'web3'};
+    }
+    try{
+      var g = localStorage.getItem('tac_guest_addr') || localStorage.getItem('tac_defi_addr');
+      if (g && g.indexOf('tx0')===0){ return {addr:g, source:''}; }
+    }catch(e){}
+    return null;
+  }
+
+  // 頂欄錢包膠囊渲染
+  function renderWallet(){
+    var pill=$('ex-wallet-pill'), lab=$('ex-wallet-label'), addrEl=$('ex-wallet-addr'),
+        chg=$('ex-wallet-change'), mn=$('ex-wallet-miner'), nw=$('ex-wallet-new');
+    var w=resolveWallet();
+    if (w && w.addr && w.addr.indexOf('tx0')===0){
+      if(pill){ pill.classList.remove('unlinked'); pill.classList.add('linked'); }
+      if(lab){ lab.textContent = shortAddr(w.addr); }
+      if(addrEl){ addrEl.textContent = (w.source==='miner'?t18n('ex.walletMiner'):t18n('ex.walletNew'))+'：'+w.addr; }
+      if(chg){ chg.style.display='block'; }
+      if(mn){ mn.style.display='none'; }
+      if(nw){ nw.style.display='none'; }
+    } else {
+      if(pill){ pill.classList.add('unlinked'); pill.classList.remove('linked'); }
+      if(lab){ lab.textContent = t18n('ex.chrome.connectWallet'); }
+      if(addrEl){ addrEl.textContent = t18n('ex.chrome.noWallet'); }
+      if(chg){ chg.style.display='none'; }
+      if(mn){ mn.style.display='block'; }
+      if(nw){ nw.style.display='block'; }
+    }
+  }
+
+  // 同步頁內既有錢包卡片（exchange.html setExV/fillAll；exchange_home exWRender），並广播事件
+  function refreshPageCards(addr, source){
+    try{
+      if (addr){
+        if (typeof window.fillAll==='function'){ window.fillAll(addr); }
+        if (typeof window.setExV==='function'){ window.setExV(true, addr, source||''); }
+        if (typeof window.exWRender==='function'){ window.exWRender({addr:addr, source:source||''}); }
+        // defi.html 以 #me 輸入＋connect() 為身份
+        var me=$('me');
+        if (me){ me.value=addr; if (typeof window.connect==='function'){ window.connect(); } }
+      } else {
+        if (typeof window.setExV==='function'){ window.setExV(false,''); }
+        if (typeof window.exWRender==='function'){ window.exWRender(null); }
+        var me=$('me');
+        if (me){ me.value=''; }
+      }
+    }catch(e){}
+    try{ window.dispatchEvent(new CustomEvent('tac-ex-wallet-changed',{detail:{addr:addr||'',source:source||''}})); }catch(e){}
+  }
+
+  function closeMenus(){
+    ['ex-wallet-menu','ex-member-menu'].forEach(function(id){ var m=$(id); if(m){ m.classList.remove('open'); } });
+  }
+  document.addEventListener('click', function(e){
+    var w=$('ex-wallet-wrap'), m=$('ex-member-wrap');
+    if (w && !w.contains(e.target)){ var wm=$('ex-wallet-menu'); if(wm) wm.classList.remove('open'); }
+    if (m && !m.contains(e.target)){ var mm=$('ex-member-menu'); if(mm) mm.classList.remove('open'); }
+  });
+
+  function toggleWallet(ev){
+    if(ev){ ev.stopPropagation(); }
+    closeMenus();
+    var m=$('ex-wallet-menu'); if(m){ m.classList.toggle('open'); }
+  }
+
+  function connectMiner(ev){
+    if(ev){ ev.stopPropagation(); }
+    fetch('/api/auth/me',{credentials:'same-origin',cache:'no-store'}).then(function(r){return r.json().catch(function(){return null;});}).then(function(j){
+      if (j && j.ok && j.logged_in && j.user && j.user.wallet_addr){
+        var a=j.user.wallet_addr;
+        wsave({addr:a,source:'miner'}); wsyncAll(a,'');
+        renderWallet(); refreshPageCards(a,'miner');
+      } else {
+        alert(t18n('ex.walletNeedLogin')+' → /auth/login');
+      }
+    }).catch(function(){ alert(t18n('ex.verifyFail')); });
+    closeMenus();
+  }
+  function createWeb3(ev){
+    if(ev){ ev.stopPropagation(); }
+    if (!window.confirm(t18n('ex.walletNewConfirm'))){ closeMenus(); return; }
+    fetch('/api/guest/address',{cache:'no-store'}).then(function(r){return r.json().catch(function(){return null;});}).then(function(j){
+      if (j && j.ok && j.address && j.address.indexOf('tx0')===0){
+        wsave({addr:j.address,source:'web3',wif:j.wif||''}); wsyncAll(j.address, j.wif||'');
+        renderWallet(); refreshPageCards(j.address,'web3');
+        if (j.wif){ alert(t18n('ex.walletNewOK')+'\n'+j.address+'\nWIF: '+j.wif+'\n'+t18n('ex.walletWifWarn')); }
+      } else { alert(t18n('ex.walletNewFail')); }
+    }).catch(function(){ alert(t18n('ex.verifyFail')); });
+    closeMenus();
+  }
+  function change(ev){
+    if(ev){ ev.stopPropagation(); }
+    if (!window.confirm(t18n('ex.walletChangeConfirm'))){ closeMenus(); return; }
+    wclear();
+    try{ localStorage.removeItem('tac_guest_wif'); }catch(e){}
+    wsyncAll('', ''); // 清掉同步地址
+    try{ localStorage.removeItem('tac_guest_addr'); localStorage.removeItem('tac_defi_addr'); }catch(e){}
+    renderWallet(); refreshPageCards('', '');
+    closeMenus();
+  }
+
+  // 會員膠囊（與 base.html 相同縮排規則，獨立 ID）
+  function renderMember(j){
+    var pill=$('ex-member-pill'), lab=$('ex-member-label'), dot=$('ex-member-dot'),
+        em=$('ex-member-email'), lo=$('ex-member-logout'), wrap=$('ex-member-wrap');
+    try{
+      if (j && j.ok && j.logged_in && j.user){
+        var email = j.user.email||'';
+        var shown = (email && email.length>9) ? email.slice(0,9)+'…' : email;
+        if(pill){ pill.href='#'; pill.setAttribute('data-logged','1'); }
+        if(lab){ lab.textContent = ' '+shown; }
+        if(dot){ dot.classList.add('on'); }
+        if(em){ em.textContent = email; }
+        if(lo){ lo.style.display='block'; }
+      } else {
+        if(pill){ pill.href='/auth/login'; pill.setAttribute('data-logged','0'); }
+        if(lab){ lab.textContent = (window.TAC_I18N && TAC_I18N.cur()==='en') ? ' Sign In / Up' : ' 登入/註冊'; }
+        if(dot){ dot.classList.remove('on'); }
+        if(em){ em.textContent = '—'; }
+        if(lo){ lo.style.display='none'; }
+      }
+    }catch(e){}
+  }
+  function syncMember(){
+    fetch('/api/auth/me',{credentials:'same-origin',cache:'no-store'})
+      .then(function(r){return r.json().catch(function(){return null;});})
+      .then(renderMember).catch(function(){ renderMember(null); });
+  }
+  var pill=$('ex-member-pill');
+  if (pill){
+    pill.addEventListener('click', function(e){
+      if (pill.getAttribute('data-logged')==='1'){
+        e.preventDefault(); e.stopPropagation(); closeMenus();
+        var m=$('ex-member-menu'); if(m){ m.classList.toggle('open'); }
+      }
+    });
+  }
+  var lo=$('ex-member-logout');
+  if (lo){
+    lo.addEventListener('click', function(ev){
+      ev.stopPropagation();
+      fetch('/api/auth/logout',{method:'POST',credentials:'same-origin'}).catch(function(){}).then(function(){ location.reload(); });
+    });
+  }
+
+  // 網路高度定時刷新（/status → block_height）
+  function syncHeight(){
+    fetch('/status',{cache:'no-store'}).then(function(r){return r.json().catch(function(){return null;});}).then(function(s){
+      var el=$('ex-height');
+      if (el && s && (s.block_height!=null)){ el.textContent = s.block_height; }
+    }).catch(function(){});
+  }
+
+  // 語言切換
+  var langBtn=$('ex-lang-btn');
+  if (langBtn){
+    function paintLang(){ langBtn.textContent = (window.TAC_I18N && TAC_I18N.cur()==='en') ? '中文' : 'EN'; }
+    paintLang();
+    langBtn.addEventListener('click', function(){ if(window.TAC_I18N){ TAC_I18N.toggle(); paintLang(); } });
+    window.addEventListener('tac-lang-changed', paintLang);
+  }
+
+  // 底欄當前頁高亮
+  (function(){
+    var p=location.pathname;
+    var map=[
+      ['home','/exchange'],['trade','/exchange/trade'],['swap','/exchange/swap'],
+      ['dex','/dex'],['defi','/exchange/defi'],['nft','/exchange/nft'],['assets','/exchange/assets']
+    ];
+    var active='';
+    for (var i=0;i<map.length;i++){
+      if (map[i][1]===p){ active=map[i][0]; break; }
+    }
+    if (!active && p.indexOf('/exchange/')===0){ active='trade'; }
+    var links=document.querySelectorAll('#ex-bottom-nav a');
+    for (var j=0;j<links.length;j++){
+      if (links[j].getAttribute('data-exnav')===active){ links[j].classList.add('on'); }
+    }
+  })();
+
+  // v165 P0：重載後狀態一致性——i18n apply() 於 DOMContentLoaded 會覆寫 [data-i18n] 動態元素，
+  // 導致頁面腳本先前 setExV/exWRender 設的地址被重置回「未連結」。此處在 i18n apply() 之後
+  // （本 script 在 body，i18n.js 在 head 先註冊 listener，故 apply 先跑）依權威 tac_ex_wallet 重繪膠囊＋頁內卡片。
+  function paintAll(){
+    var w=resolveWallet();
+    renderWallet();
+    refreshPageCards(w?w.addr:null, w?w.source:'');
+  }
+
+  // 初始化：錢包權威優先（與 ensureGuestAddr 同源）
+  (function init(){
+    var w=wload();
+    if (w && w.addr && w.addr.indexOf('tx0')===0){ wsyncAll(w.addr, w.wif||''); }
+    else if (window.ensureGuestAddr){
+      try{ window.ensureGuestAddr().catch(function(){}); }catch(e){}
+    }
+    renderWallet(); syncMember(); syncHeight();
+    setInterval(syncMember, 5000); setInterval(syncHeight, 5000);
+    window.addEventListener('tac-lang-changed', function(){ renderWallet(); paintAll(); });
+    // i18n 套用後再重繪一次，確保膠囊與頁內卡片狀態一致（修正重載後被覆寫的問題）
+    if (document.readyState==='loading'){
+      document.addEventListener('DOMContentLoaded', paintAll);
+    } else {
+      paintAll();
+    }
+  })();
+
+  window.ExChrome = { toggleWallet:toggleWallet, connectMiner:connectMiner, createWeb3:createWeb3, change:change };
+})();
+</script>

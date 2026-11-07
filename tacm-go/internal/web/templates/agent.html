@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Titan Ai{% endblock %}
+{% block content %}
+<!--
+  v164：此頁為保留占位。GET /agent 已由 v163_agent_page.go 的 handleV163Agent
+  302 重導向到 /ai（Titan Ai 單一入口：助手 + Agent 模式合一）。
+  此模板不再作為獨立 AI 入口 render；保留僅為 go:embed 編譯不壞。
+-->
+<section class="pg-banner">
+  <div class="pg-txt"><h1>Titan Ai</h1><p>已合併為單一 AI 入口</p></div>
+</section>
+<div style="max-width:680px;margin:24px auto;padding:0 16px">
+  <div style="background:#fff;border:1px solid #e4e6eb;border-radius:14px;padding:28px 22px;text-align:center">
+    <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#1877f2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 12px" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    <p style="font-size:15px;color:#1c1e21;margin:0 0 8px">Titan Ai（泰坦 Ai）已整合為單一 AI 入口。</p>
+    <p style="font-size:13px;color:#6b7280;margin:0 0 18px">助手模式與 Agent 模式（function calling）現在位於同一個對話頁面。</p>
+    <a href="/ai" style="display:inline-block;background:#1877f2;color:#fff;border-radius:10px;padding:10px 24px;font-weight:700;text-decoration:none">前往 Titan Ai</a>
+  </div>
+</div>
+<script>setTimeout(function(){ location.replace('/ai'); }, 1500);</script>
+{% endblock %}

@@ -1,0 +1,17 @@
+# ===== TAC 自主智能鏈 — 自備伺服器/家用機一鍵部署 =====
+# 用法：docker compose up -d --build
+# 網址：http://<伺服器IP>:8080/
+services:
+  tac-chain:
+    build: .
+    container_name: tac-chain
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - DATA_DIR=/data
+      - PORT=8080
+    volumes:
+      - tac-data:/data
+volumes:
+  tac-data:
