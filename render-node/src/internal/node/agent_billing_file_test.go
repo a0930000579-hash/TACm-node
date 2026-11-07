@@ -19,7 +19,7 @@ func TestMeterAgentTurnChargesWhenFunded(t *testing.T) {
 		t.Fatalf("topup: %v", err)
 	}
 	before := mustTACmBalance(t, s, testAlice)
-	b, err := s.node.meterAgentTurn(testAlice, false)
+	b, err := s.node.meterAgentTurn(testAlice, false, "rules")
 	if err != nil {
 		t.Fatalf("meter: %v", err)
 	}
@@ -38,7 +38,7 @@ func TestMeterAgentTurnChargesWhenFunded(t *testing.T) {
 
 func TestMeterAgentTurnInsufficientGraceful(t *testing.T) {
 	s := newAIHost(t)
-	b, err := s.node.meterAgentTurn(testAlice, true)
+	b, err := s.node.meterAgentTurn(testAlice, true, "rules")
 	if err != nil {
 		t.Fatalf("graceful billing must not error: %v", err)
 	}
@@ -49,7 +49,7 @@ func TestMeterAgentTurnInsufficientGraceful(t *testing.T) {
 
 func TestMeterAgentTurnNoAddress(t *testing.T) {
 	s := newAIHost(t)
-	b, err := s.node.meterAgentTurn("", false)
+	b, err := s.node.meterAgentTurn("", false, "rules")
 	if err != nil {
 		t.Fatalf("no-addr billing must not error: %v", err)
 	}
