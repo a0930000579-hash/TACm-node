@@ -184,6 +184,7 @@ func TestL2RollupEndToEnd(t *testing.T) {
 	if v := numField(userAcc2["balance"]); v != 699 {
 		t.Errorf("提款後用戶應699, got %g", v)
 	}
+
 }
 
 const rollupZeroRoot = "0x" +

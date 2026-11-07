@@ -40,9 +40,9 @@ func TestDynamicValidatorsFromPOS(t *testing.T) {
 	if len(lst) != 1 || lst[0].Address != n.nodeAddress {
 		t.Errorf("動態集地址錯誤: %+v", lst)
 	}
-}
 
 // TestSlashingJailsValidator：雙重投票 → jail + 罰沒 → 驗證人集縮減。
+}
 func TestSlashingJailsValidator(t *testing.T) {
 	cfg := testCfg(t)
 	n, err := New(cfg, "slash-node", 3)
@@ -97,4 +97,5 @@ func TestSlashingJailsValidator(t *testing.T) {
 	if err != nil || len(evs) != 1 {
 		t.Errorf("罰沒證據應 1 條: %d, err=%v", len(evs), err)
 	}
+
 }

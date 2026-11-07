@@ -1,10 +1,10 @@
 package p2p
 
 import (
-	"log"
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"runtime"
 	"strconv"
@@ -91,7 +91,7 @@ func (n *Network) bestPeer() (Peer, bool) {
 // bestPeers M122：回傳在線節點按高度降序的前 limit 個（值快照）。
 // 用於多 peer 容錯：最佳 peer 不可達時依序嘗試次佳。
 func (n *Network) bestPeers(limit int) []Peer {
-	ps := n.onlinePeers()
+	ps := filterDialable(n.onlinePeers())
 	if len(ps) == 0 {
 		return nil
 	}
@@ -163,7 +163,7 @@ func (n *Network) syncFrom(p Peer) bool {
 		}
 		// 本機無此高度區塊（空鏈或缺塊）：走重組；doReorg 在無共同祖先時整鏈替換。
 		if lerr != nil || lb == nil {
-			n.doReorg(p, self)
+			n.attemptReorg(p, self)
 			return true
 		}
 		// M149f：創世哈希是難度 0 固定值（000000000000…），哈希相同不代表內容相同；
@@ -171,7 +171,7 @@ func (n *Network) syncFrom(p Peer) bool {
 		genesisDiff := pb.Hash != lb.Hash || (self == 0 && !sameGenesisTx(pbTxs, lbTxs))
 		if genesisDiff {
 			log.Printf("[p2p] 創世不同（哈希/內容）→ 整鏈替換（本機 %s vs 錨點 %s）", lb.Hash[:12], pb.Hash[:12])
-			n.doReorg(p, self)
+			n.attemptReorg(p, self)
 			return true
 		}
 		log.Printf("[p2p] 創世一致 → 線性追 %d..%d", self+1, p.Height)
@@ -240,15 +240,19 @@ func (n *Network) fetchBlocksParallel(p Peer, from, to int64) ([]blockData, bool
 		err    error
 	}
 	results := make(chan segResult, len(segs))
-	sem := make(chan struct{}, workers)
-	for _, sg := range segs {
-		go func(sg seg) {
-			sem <- struct{}{}
-			defer func() { <-sem }()
-			batch, err := n.fetchPeerBlocks(p, sg.from, sg.to)
-			results <- segResult{blocks: batch, err: err}
-		}(sg)
+	segCh := make(chan seg)
+	for w := 0; w < workers; w++ {
+		go func() {
+			for sg := range segCh {
+				batch, err := n.fetchPeerBlocks(p, sg.from, sg.to)
+				results <- segResult{blocks: batch, err: err}
+			}
+		}()
 	}
+	for _, sg := range segs {
+		segCh <- sg
+	}
+	close(segCh)
 
 	all := make(map[int64]blockData, total)
 	for i := range segs {
@@ -301,28 +305,87 @@ func (n *Network) fetchPeerBlocks(p Peer, from, to int64) ([]blockData, error) {
 	return d.Blocks, nil
 }
 
-// doReorg 回退找到共同分叉點，拉取對方分叉後全部區塊並交節點重組。
-func (n *Network) doReorg(best Peer, from int64) {
-	fork := int64(-1)
-	for h := from; h >= 0; h-- {
-		pb, pbTxs, perr := n.fetchPeerBlock(best, h)
-		lb, lbTxs, lerr := n.host.BlockDetail(h)
-		if perr != nil || pb == nil || lerr != nil || lb == nil {
-			continue
+// doReorg 回退找到共同分叉點，拉取對方分叉後全部區塊並交節點重組；回傳錯誤表示重組被拒。
+// hashMatchesAt 比較本機與對端在高度 h 的區塊（創世另比交易內容）。
+// 回傳 ok=false 表示拉取/讀取失敗（呼叫端應重試，不可視為不匹配）。
+func (n *Network) hashMatchesAt(best Peer, h int64) (match bool, ok bool) {
+	pb, pbTxs, perr := n.fetchPeerBlock(best, h)
+	lb, lbTxs, lerr := n.host.BlockDetail(h)
+	if perr != nil || pb == nil || lerr != nil || lb == nil {
+		return false, false
+	}
+	if pb.Hash != lb.Hash {
+		return false, true
+	}
+	if h == 0 {
+		return sameGenesisTx(pbTxs, lbTxs), true
+	}
+	return true, true
+}
+
+// probeMatch 對 hashMatchesAt 做有限重試（網路抖動不誤判），仍失敗回 ok=false。
+func (n *Network) probeMatch(best Peer, h int64) (match bool, ok bool) {
+	for i := 0; i < 3; i++ {
+		m, got := n.hashMatchesAt(best, h)
+		if got {
+			return m, true
 		}
-		if pb.Hash == lb.Hash {
-			// M149h：創世哈希是難度 0 固定值，相同不代表內容相同；內容不同不視為共同祖先。
-			if h == 0 && !sameGenesisTx(pbTxs, lbTxs) {
-				continue
-			}
-			fork = h
-			break
+		select {
+		case <-n.ctx.Done():
+			return false, false
+		case <-time.After(200 * time.Millisecond):
 		}
+	}
+	return false, false
+}
+
+// findForkPoint 以二分搜尋定位最高的共同祖先（O(log n) 次請求，取代從鏈頂逐塊串行下降）。
+// 回傳 fork<0 代表創世不一致（應整鏈替換）。
+func (n *Network) findForkPoint(best Peer, from int64) (int64, error) {
+	if from < 0 {
+		return -1, nil
+	}
+	// 鏈頂若已一致則無需重組。
+	topMatch, ok := n.probeMatch(best, from)
+	if !ok {
+		return -1, fmt.Errorf("重組探測失敗 h=%d", from)
+	}
+	if topMatch {
+		return from, nil
+	}
+	// 創世必須一致（已知共同低邊界）。
+	genMatch, ok := n.probeMatch(best, 0)
+	if !ok {
+		return -1, fmt.Errorf("重組探測創世失敗")
+	}
+	if !genMatch {
+		return -1, nil
+	}
+	// 二分：lo 為已知匹配、hi 為已知不匹配，收斂到最高匹配高度。
+	lo, hi := int64(0), from
+	for lo+1 < hi {
+		mid := lo + (hi-lo)/2
+		m, got := n.probeMatch(best, mid)
+		if !got {
+			return -1, fmt.Errorf("重組探測失敗 h=%d", mid)
+		}
+		if m {
+			lo = mid
+		} else {
+			hi = mid
+		}
+	}
+	return lo, nil
+}
+
+func (n *Network) doReorg(best Peer, from int64) error {
+	fork, err := n.findForkPoint(best, from)
+	if err != nil {
+		return err
 	}
 	if fork < 0 {
 		// 創世都不一致：信任 best peer 的整條鏈，整鏈替換（含創世 #0）。
-		n.reorgFullChain(best)
-		return
+		return n.reorgFullChain(best)
 	}
 
 	// M149h：fork≥0 重組——分批並行拉取 fork+1..best（取代逐塊串行 HTTP 瓶頸），
@@ -330,7 +393,7 @@ func (n *Network) doReorg(best Peer, from int64) {
 	blocks, ok := n.fetchBlocksParallel(best, fork+1, best.Height)
 	if !ok {
 		log.Printf("[p2p] 重組拉取失敗 fork=%d（分批並行，此輪放棄）", fork)
-		return
+		return fmt.Errorf("重組拉取失敗 fork=%d", fork)
 	}
 	all := make([]chaindb.Block, 0, len(blocks))
 	txs := make([][]chaindb.Transaction, 0, len(blocks))
@@ -338,31 +401,22 @@ func (n *Network) doReorg(best Peer, from int64) {
 		all = append(all, *bd.Block)
 		txs = append(txs, bd.Txs)
 	}
-	log.Printf("[p2p] 重組：已拉取 %d 塊，開始分批重放（fork=%d，每段 500 塊）", len(all), fork)
-	const seg = 500
-	for start := fork + 1; start <= best.Height; start += seg {
-		end := start + seg - 1
-		if end > best.Height {
-			end = best.Height
-		}
-		segBlocks := all[start-fork-1 : end-fork]
-		segTxs := txs[start-fork-1 : end-fork]
-		if err := n.host.ReorgChain(start-1, segBlocks, segTxs); err != nil {
-			log.Printf("[p2p] 重組失敗（段 %d..%d，%d 塊）: %v", start, end, len(segBlocks), err)
-			return
-		}
-		log.Printf("[p2p] 重組進度：段 %d..%d 完成（累計 %d 塊）", start, end, end)
+	log.Printf("[p2p] 重組：已拉取 %d 塊，做整鏈總權重決策並重放（fork=%d）", len(all), fork)
+	if err := n.host.ReorgChainFull(fork, all, txs); err != nil {
+		log.Printf("[p2p] 重組失敗（fork=%d，%d 塊）: %v", fork, len(all), err)
+		return err
 	}
 	log.Printf("[p2p] 重組完成：鏈頂 %d", best.Height)
+	return nil
 }
 
 // reorgFullChain 信任 best peer 的創世並整鏈重放（本機自產創世與主網不同源時）。
-func (n *Network) reorgFullChain(best Peer) {
+func (n *Network) reorgFullChain(best Peer) error {
 	log.Printf("[p2p] 整鏈替換開始：拉取 0..%d 全部區塊", best.Height)
 	blocks, ok := n.fetchBlocksParallel(best, 0, best.Height)
 	if !ok {
 		log.Printf("[p2p] 整鏈替換失敗：區塊拉取失敗/缺塊（此輪放棄，等待下一缺口觸發）")
-		return
+		return fmt.Errorf("整鏈替換拉取失敗")
 	}
 	all := make([]chaindb.Block, 0, len(blocks))
 	txs := make([][]chaindb.Transaction, 0, len(blocks))
@@ -370,22 +424,24 @@ func (n *Network) reorgFullChain(best Peer) {
 		all = append(all, *bd.Block)
 		txs = append(txs, bd.Txs)
 	}
-	log.Printf("[p2p] 整鏈替換：已拉取 %d 塊，開始分批重放（每段 500 塊）", len(all))
-	const seg = 500
-	for start := int64(0); start <= best.Height; start += seg {
-		end := start + seg - 1
-		if end > best.Height {
-			end = best.Height
-		}
-		segBlocks := all[start : end+1]
-		segTxs := txs[start : end+1]
-		if err := n.host.ReorgChain(start-1, segBlocks, segTxs); err != nil {
-			log.Printf("[p2p] 整鏈替換失敗（段 %d..%d，%d 塊）: %v", start, end, len(segBlocks), err)
-			return
-		}
-		log.Printf("[p2p] 整鏈替換進度：段 %d..%d 完成（累計 %d 塊）", start, end, end+1)
+	log.Printf("[p2p] 整鏈替換：已拉取 %d 塊，整鏈重放", len(all))
+	if err := n.host.ReorgChainFull(-1, all, txs); err != nil {
+		log.Printf("[p2p] 整鏈替換失敗（%d 塊）: %v", len(all), err)
+		return err
 	}
 	log.Printf("[p2p] 整鏈替換完成：鏈頂 %d", best.Height)
+	return nil
+}
+
+// attemptReorg 在重組抑制檢查後執行重組；被冷卻抑制時直接跳過，失敗則記錄以便退避。
+func (n *Network) attemptReorg(p Peer, self int64) {
+	if n.reorgSuppressed(p, self) {
+		log.Printf("[p2p] 重組抑制：peer=%s 仍在冷卻期（等難度分叉），跳過重拉", p.NodeID)
+		return
+	}
+	if err := n.doReorg(p, self); err != nil {
+		n.noteReorgRejected(p)
+	}
 }
 
 func (n *Network) fetchPeerBlock(p Peer, h int64) (*chaindb.Block, []chaindb.Transaction, error) {

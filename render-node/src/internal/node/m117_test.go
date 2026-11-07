@@ -47,9 +47,9 @@ func TestM117BatchSubmit(t *testing.T) {
 		t.Fatalf("pool 支出異常: before %s after %s", before, after)
 	}
 	t.Logf("M117 批量冒煙通過：%d 筆提交全成功，區塊 %d 筆，支出 %v TACm", len(hashes), blk.TxCount, spent)
-}
 
 // TestM117BatchMixed 批量中含壞簽名：壞筆報錯、其餘正常。
+}
 func TestM117BatchMixed(t *testing.T) {
 	n := benchNodeT(t, 1)
 	txs := signBenchTxs(t, n, 10)
@@ -71,9 +71,9 @@ func TestM117BatchMixed(t *testing.T) {
 			t.Fatalf("第 %d 筆 hash 為空", i)
 		}
 	}
-}
 
 // BenchmarkBatchSubmit 對比：500 筆並行批量 vs 逐筆串行提交。
+}
 func BenchmarkBatchSubmit(b *testing.B) {
 	n := benchNodeB(b, 1)
 	b.ResetTimer()
@@ -131,9 +131,9 @@ func TestM117JSONRPCBatch(t *testing.T) {
 		}
 	}
 	t.Logf("M117 batch RPC 通過：回應 %v", out)
-}
 
 // TestM117JSONRPCBatchSingle 單一請求路徑不受 batch 改造影響。
+}
 func TestM117JSONRPCBatchSingle(t *testing.T) {
 	n := benchNodeT(t, 1)
 	srv := httptest.NewServer(NewRPCServer(n).Handler())
@@ -153,10 +153,10 @@ func TestM117JSONRPCBatchSingle(t *testing.T) {
 		t.Fatalf("單一請求不應錯誤: %v", out)
 	}
 	_ = time.Now()
-}
 
 // TestV57EthBatchSizeLimit v57：JSON-RPC 批處理超過 ethMaxBatch（100）→ 回 -32600
 // 且不進入逐筆分派（防 batch 灌水打掛節點，與主流節點 batch 上限一致）。
+}
 func TestV57EthBatchSizeLimit(t *testing.T) {
 	n := benchNodeT(t, 1)
 	srv := httptest.NewServer(NewRPCServer(n).Handler())
@@ -209,4 +209,5 @@ func TestV57EthBatchSizeLimit(t *testing.T) {
 		t.Fatalf("100 筆 batch 應 100 筆回應，得 %d", len(out2))
 	}
 	t.Log("v57 batch 上限驗證通過：101 筆拒、100 筆正常")
+
 }

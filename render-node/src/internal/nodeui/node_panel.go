@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -106,6 +107,41 @@ func (s *Server) handleNodePanelAPI(w http.ResponseWriter, r *http.Request) {
 	// v54：驗證人/接管狀態——質押節點以分布式 BFT 輪值出塊；proposer 失聯時接管出塊。
 	v["is_validator"] = s.n.IsValidator()
 	v["takeover_active"] = s.n.TakeoverActive()
+	v["takeover_stats"] = s.n.TakeoverStats()
+	// v127：出塊率（近 100 塊本節點出塊比例，on-chain 計算）。
+	if bm, be, br, berr := s.n.BlockProductionRate(100); berr == nil {
+		v["block_mined"] = bm
+		v["block_expected"] = be
+		v["block_rate_pct"] = int(br*100 + 0.5)
+	}
+	// v128：歷史出塊率曲線——近 30 塊、每 5 塊一個窗口，統計本節點 proposer 比例。
+	// 供節點面板繪製走勢（GetBlocks 回傳新→舊，窗口依此切割）。
+	if blks, bherr := s.n.DB().GetBlocks(30, 0); bherr == nil && len(blks) > 0 {
+		hist := []map[string]any{}
+		const histWin = 5
+		for i := 0; i < len(blks); i += histWin {
+			end := i + histWin - 1
+			if end >= len(blks) {
+				end = len(blks) - 1
+			}
+			mined := 0
+			for j := i; j <= end; j++ {
+				if blks[j].ProposerAddress == addr {
+					mined++
+				}
+			}
+			cnt := end - i + 1
+			pct := 0.0
+			if cnt > 0 {
+				pct = float64(mined) / float64(cnt) * 100
+			}
+			hist = append(hist, map[string]any{
+				"label": fmt.Sprintf("#%d-#%d", blks[i].Height, blks[end].Height),
+				"pct":   int(pct + 0.5),
+			})
+		}
+		v["block_rate_history"] = hist
+	}
 	v["consensus_mode"] = "distributed"
 	if !s.n.IsDistributed() {
 		v["consensus_mode"] = "follower"

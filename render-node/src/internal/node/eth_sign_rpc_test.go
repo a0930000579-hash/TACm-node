@@ -103,8 +103,8 @@ func TestSignRPC(t *testing.T) {
 	if out := ethRPC(t, srv, "eth_signTypedData_v4", nodeAddr, "{}"); out["error"] == nil {
 		t.Fatal("壞 typed data 應報錯")
 	}
-}
 
+}
 func TestSignRPCRoundTripEmpty(t *testing.T) {
 	n, srv, _ := contractStudioSetup(t)
 	nodeAddr, _ := n.keypair.EthAddress()
@@ -114,4 +114,5 @@ func TestSignRPCRoundTripEmpty(t *testing.T) {
 	if rec != nodeAddr {
 		t.Fatalf("空訊息恢復不符: %v", rec)
 	}
+
 }

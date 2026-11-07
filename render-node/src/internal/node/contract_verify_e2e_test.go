@@ -17,10 +17,10 @@ import (
 //  6. 錯誤路徑：未部署地址 404 / 非法 ABI 400
 
 func TestContractVerifyFlow(t *testing.T) {
-	n, srv, _ := contractStudioSetup(t)
+	n, srv, admin := contractStudioSetup(t)
 
 	out := studioPostJSON(t, srv, "/contract/deploy", map[string]any{
-		"name": "VerifyToken", "symbol": "VFT", "supply": "5000",
+		"name": "VerifyToken", "symbol": "VFT", "supply": "5000", "from": admin,
 	})
 	if out["ok"] != true {
 		t.Fatalf("部署失敗: %v", out)

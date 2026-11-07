@@ -2,6 +2,7 @@ package node
 
 import (
 	"log"
+	"strings"
 
 	"tacm/internal/chaindb"
 	"tacm/internal/wallet"
@@ -48,4 +49,11 @@ func (n *Node) syncWallet(height int64, txs []chaindb.Transaction) error {
 		return nil
 	}
 	return n.walletSvc.ApplyBlock(height, txs)
+}
+
+// isWalletReorgJump 判斷錢包錯誤是否為重組導致的「同步高度跳號」：錢包是鏈的派生視圖，
+// 重組後其游標暫時落後，屬可背景對齊的非致命狀況（區塊本身已驗證入庫、鏈不受影響）；
+// 其餘錢包錯誤（如餘額不足）代表真實帳本不一致，仍應上報失敗。
+func isWalletReorgJump(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "同步高度跳號")
 }

@@ -40,12 +40,26 @@ func insertGenesis(t *testing.T, n *Node) {
 func insertGenesisWithAlloc(t *testing.T, n *Node, alice string) {
 	t.Helper()
 	now := time.Now().Unix()
+	g := &chaindb.Block{
+		Height: 0, Hash: strings.Repeat("0", 64),
+		Proposer: "genesis", Ts: now, TxCount: 2,
+	}
 	genTx := chaindb.Transaction{
 		TxHash: "genalloc", ToAddr: alice, Amount: "1000", Fee: "0", Ts: now,
 	}
-	g := &chaindb.Block{
-		Height: 0, Hash: strings.Repeat("0", 64),
-		Proposer: "genesis", Ts: now, TxCount: 1,
+	// v108：節點 keypair 地址一併分配（代幣發行費 100 TACm 由發行者支付）。
+	admin := ""
+	if n.keypair != nil {
+		if a, err := n.keypair.Address(); err == nil {
+			admin = a
+			genTx2 := chaindb.Transaction{
+				TxHash: "genalloc-admin", ToAddr: admin, Amount: "1000", Fee: "0", Ts: now,
+			}
+			if err := n.DB().InsertBlock(g, []chaindb.Transaction{genTx, genTx2}); err != nil {
+				t.Fatalf("創世分配失敗: %v", err)
+			}
+			return
+		}
 	}
 	if err := n.DB().InsertBlock(g, []chaindb.Transaction{genTx}); err != nil {
 		t.Fatalf("創世分配失敗: %v", err)
@@ -94,9 +108,9 @@ func TestNodeProducesBlocks(t *testing.T) {
 	if want := float64(height) * 5.5; math.Abs(pool-want) > 1e-6 {
 		t.Errorf("獎勵池=%g want %g (55%%×height=%d)", pool, want, height)
 	}
-}
 
 // signedTx 構造一筆完整簽名交易 map。
+}
 func signedTx(t *testing.T, kp *crypto.KeyPair, to, amount, fee string, nonce int64) map[string]any {
 	t.Helper()
 	tx := map[string]any{
@@ -161,8 +175,8 @@ func TestTransferEndToEnd(t *testing.T) {
 	if _, err := n.SubmitTransaction(old); err == nil {
 		t.Errorf("重放舊 nonce 應被拒")
 	}
-}
 
+}
 func TestNodeBFTFinality(t *testing.T) {
 	n, err := New(testCfg(t), "node1", 1)
 	if err != nil {
@@ -191,8 +205,8 @@ func TestNodeBFTFinality(t *testing.T) {
 	if !proof.Finalized || len(proof.Votes) < 1 || proof.VotePower < 1 {
 		t.Errorf("最終性證明錯誤: %+v", proof)
 	}
-}
 
+}
 func assertNodeBalance(t *testing.T, n *Node, addr string, want float64) {
 	t.Helper()
 	got, err := strconv.ParseFloat(n.DB().GetBalance(addr), 64)
@@ -270,8 +284,8 @@ func TestRPC(t *testing.T) {
 	if result["ok"] != true {
 		t.Errorf("RPC 提交交易失敗: %v", result)
 	}
-}
 
+}
 func getJSON(t *testing.T, url string) map[string]any {
 	t.Helper()
 	resp, err := http.Get(url)

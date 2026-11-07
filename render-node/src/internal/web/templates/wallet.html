@@ -19,7 +19,7 @@
   .bn-copy:hover { background:rgba(104,190,141,.15); }
   main { max-width:900px; margin:0 auto; padding:16px; }
   .bn-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
-  /* M101：MetaMask 風多幣種資產清單 */
+  /* M101：多幣種資產清單 */
   .al-panel { border:1px solid var(--bn-line); border-radius:12px; padding:14px; margin-top:14px; background:var(--bn-card); }
   .al-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:6px; }
   .al-head b { font-size:14px; }
@@ -576,7 +576,7 @@
 // 地址縮短顯示（M101 補上 M93 遺漏的 helper）。
 function shortAddr(a){ if(!a) return '-'; return a.length <= 16 ? a : a.slice(0,8)+'…'+a.slice(-6); }
 
-// ---------- M101：MetaMask 風多幣種資產清單 + gas 估算 ----------
+// ---------- M101：多幣種資產清單 + gas 估算 ----------
 function loadAssetsList(){
   // M104：資產卡已合併，清單卡移除——直接返回避免無效 DOM 操作。
   if (!document.getElementById('alList')) return;
@@ -665,8 +665,107 @@ function loadMeAssets(addr){
 
 </script>
 
-<!-- M151：多簽合約錢包（Safe 風格 N/M＋EIP-1271，原 Explorer 面板遷移） -->
+<!-- v59：金鑰管理（HD）整合進 Web3 錢包——一套錢包系統，HD 為金鑰引擎 -->
+<script>
+var _hdNewAcct = null;
+var _hdDerivedAcct = null;
+// 把 HD 帳戶設定為「目前啟用的 Web3 錢包」（訪客機制同一 localStorage 欄位，純前端、可回滾）。
+function hdSetActive(wif, addr, label){
+  if(!wif || !addr){ alert('no account'); return; }
+  try{
+    localStorage.setItem('tac_guest_wif', wif);
+    localStorage.setItem('tac_guest_addr', addr);
+    localStorage.setItem('tac_guest_type', label || 'hd');
+  }catch(e){}
+  location.reload();
+}
+function hdNew(){
+  var btn = document.getElementById('hdGenBtn'); var old = btn.textContent; btn.disabled = true;
+  fetch('/wallet/hd/new').then(function(r){ return r.json(); }).then(function(j){
+    btn.disabled = false; btn.textContent = old;
+    if(!j.ok){ document.getElementById('hdNewMsg').textContent = 'error: ' + (j.error||''); return; }
+    document.getElementById('hdMnemonic').value = j.mnemonic;
+    document.getElementById('hdPath').textContent = j.path;
+    var a = j.account || {};
+    _hdNewAcct = { wif: a.wif, addr: a.address, path: j.path };
+    document.getElementById('hdAcct').innerHTML = 'address: <b class="mono">' + (a.address||'') + '</b><br>wif: <span class="mono">' + (a.wif||'') + '</span>';
+    document.getElementById('hdSetNew').style.display = '';
+    document.getElementById('hdNewMsg').textContent = 'OK';
+  }).catch(function(e){ btn.disabled = false; btn.textContent = old; document.getElementById('hdNewMsg').textContent = 'error: ' + e; });
+}
+function hdSetNewActive(){
+  if(!_hdNewAcct) return;
+  if(!confirm('設定為我的錢包後，頁面將切換顯示此 HD 帳戶的資產；原訪客地址資產仍在鏈上，可用原 WIF 恢復。')) return;
+  hdSetActive(_hdNewAcct.wif, _hdNewAcct.addr, 'hd');
+}
+function hdDerive(){
+  var m = document.getElementById('hdRestore').value.trim();
+  if(!m){ document.getElementById('hdDerivedMsg').textContent = 'error: mnemonic required'; return; }
+  var acc = document.getElementById('hdAcc').value || '0';
+  var idx = document.getElementById('hdIdx').value || '0';
+  fetch('/wallet/hd/derive', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({mnemonic:m, account:Number(acc), index:Number(idx)})})
+    .then(function(r){ return r.json(); }).then(function(j){
+    if(!j.ok){ document.getElementById('hdDerivedMsg').textContent = 'error: ' + (j.error||''); return; }
+    var a = j.account || {};
+    _hdDerivedAcct = { wif: a.wif, addr: a.address, path: j.path };
+    document.getElementById('hdDerivedMsg').textContent = 'OK';
+    document.getElementById('hdDerived').innerHTML = 'path: <b class="mono">' + (j.path||'') + '</b><br>address: <b class="mono">' + (a.address||'') + '</b><br>wif: <span class="mono">' + (a.wif||'') + '</span>';
+    document.getElementById('hdSetDerived').style.display = '';
+  }).catch(function(e){ document.getElementById('hdDerivedMsg').textContent = 'error: ' + e; });
+}
+function hdSetDerivedActive(){
+  if(!_hdDerivedAcct) return;
+  if(!confirm('設定為我的錢包後，頁面將切換顯示此 HD 帳戶的資產；目前地址資產仍在鏈上，可用原 WIF 恢復。')) return;
+  hdSetActive(_hdDerivedAcct.wif, _hdDerivedAcct.addr, 'hd');
+}
+// 顯示目前錢包類型（訪客 / HD / 未設定）。
+(function(){
+  var t = null, w = null;
+  try{ t = localStorage.getItem('tac_guest_type'); }catch(e){}
+  try{ w = localStorage.getItem('tac_guest_wif'); }catch(e){}
+  var el = document.getElementById('hdActiveLabel');
+  if(el){
+    if(t === 'hd'){ el.textContent = 'HD 帳戶'; }
+    else if(w){ el.textContent = '訪客（WIF）'; }
+    else { el.textContent = '未設定'; }
+  }
+})();
+</script>
+
+<!-- v59：金鑰管理（HD）——Web3 錢包的標準助記詞引擎（BIP-39/32/44 標準助記詞引擎） -->
 <div class="bn-panel" style="margin-top:16px;">
+  <h3 data-i18n="wallet.hdTitle">金鑰管理（HD）</h3>
+  <p style="font-size:12px;color:var(--bn-sub);margin:0 0 10px;" data-i18n="wallet.hdHint">Standard BIP-39/32/44 — one mnemonic manages all accounts, importable into MetaMask etc.</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;color:var(--bn-sub);margin-bottom:10px;">
+    <div><span data-i18n="wallet.hdActive">目前錢包</span><br><b id="hdActiveLabel">-</b></div>
+    <div><span data-i18n="wallet.hdPath">路徑</span><br><b class="mono" id="hdPath">-</b></div>
+  </div>
+  <div class="bn-form">
+    <label data-i18n="wallet.hdNew">建立 HD 錢包（標準助記詞）</label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+      <button type="button" class="bn-copy" id="hdGenBtn" onclick="hdNew()">建立</button>
+      <span class="bn-msg" id="hdNewMsg" style="min-height:16px;"></span>
+    </div>
+    <textarea id="hdMnemonic" rows="3" readonly style="width:100%;box-sizing:border-box;background:var(--bn-card2);color:var(--bn-txt);border:1px solid var(--bn-line);border-radius:8px;padding:8px;font-size:12px;font-family:monospace;"></textarea>
+    <div id="hdAcct" style="font-size:12px;margin-top:6px;word-break:break-all;"></div>
+    <button type="button" class="bn-copy" id="hdSetNew" onclick="hdSetNewActive()" style="display:none;margin-top:8px;" data-i18n="wallet.hdSetActive">設定為我的錢包</button>
+    <hr style="border:none;border-top:1px solid var(--bn-line);margin:12px 0;">
+    <label data-i18n="wallet.hdRestore">匯入 HD 錢包（助記詞）</label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">
+      <input id="hdRestore" data-i18n-placeholder="wallet.hdRestorePh" placeholder="paste 12/15/18/21/24-word mnemonic" style="flex:1;min-width:0;background:var(--bn-card2);color:var(--bn-txt);border:1px solid var(--bn-line);border-radius:8px;padding:8px;font-size:12px;">
+      <input id="hdAcc" type="number" value="0" min="0" style="width:64px;background:var(--bn-card2);color:var(--bn-txt);border:1px solid var(--bn-line);border-radius:8px;padding:8px;font-size:12px;" title="account">
+      <input id="hdIdx" type="number" value="0" min="0" style="width:64px;background:var(--bn-card2);color:var(--bn-txt);border:1px solid var(--bn-line);border-radius:8px;padding:8px;font-size:12px;" title="index">
+      <button type="button" class="bn-copy" onclick="hdDerive()" data-i18n="wallet.hdDerive">派生</button>
+      <span class="bn-msg" id="hdDerivedMsg" style="min-height:16px;"></span>
+    </div>
+    <div id="hdDerived" style="font-size:12px;margin-top:6px;word-break:break-all;"></div>
+    <button type="button" class="bn-copy" id="hdSetDerived" onclick="hdSetDerivedActive()" style="display:none;margin-top:8px;" data-i18n="wallet.hdSetActive">設定為我的錢包</button>
+  </div>
+</div>
+
+<!-- v59：多簽收進「進階功能」摺疊（不再與主錢包並列） -->
+<details class="bn-panel" style="margin-top:16px;">
+  <summary style="cursor:pointer;font-size:14px;font-weight:600;padding:4px 0;" data-i18n="wallet.advanced">進階功能（多簽合約錢包）</summary>
   <h3 data-i18n="wallet.multiTitle">多簽合約錢包</h3>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;color:var(--bn-sub);margin-bottom:10px;">
     <div><span data-i18n="wallet.status">錢包狀態</span><br><b class="mono" id="wlStatus">-</b></div>
@@ -700,10 +799,10 @@ function loadMeAssets(addr){
     </div>
     <span class="bn-msg mono" id="wlQueryResult" style="min-height:16px;"></span>
   </div>
-</div>
+</details>
 
 <script>
-  // M151：MetaMask RPC＋多簽錢包 JS（自 Explorer 遷移，bn 風格）
+  // M151：RPC＋多簽錢包 JS（自 Explorer 遷移）
   (function () {
     function wget(path) {
       return fetch(base + path, { cache: 'no-store' }).then(function (r) { return r.json(); });

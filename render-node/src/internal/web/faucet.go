@@ -58,6 +58,10 @@ func (s *Server) handleFaucetClaimAPI(w http.ResponseWriter, r *http.Request) {
 		writeErrJSON(w, http.StatusBadRequest, "invalid address")
 		return
 	}
+	if s.network == "mainnet" {
+		writeErrJSON(w, http.StatusForbidden, "faucet disabled on mainnet: free assets are no longer distributed")
+		return
+	}
 	if s.faucet.claimedToday(req.Address) {
 		writeErrJSON(w, http.StatusTooManyRequests, "daily limit reached for this address")
 		return

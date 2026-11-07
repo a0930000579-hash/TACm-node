@@ -74,10 +74,11 @@
       <span id="myAddr">載入中…</span>
       <button onclick="copyAddr()">複製</button>
     </div>
+    <div style="color:var(--muted);font-size:11px;margin-top:2px"><span data-i18n="mining.refs">推薦</span> <b id="refN" style="color:var(--text)">0</b> <span data-i18n="mining.refsUnit">人</span></div>
     <div class="mm-hash">
       <div><b id="hrCpu">—</b><small>基礎時權</small></div>
       <div><b id="hrGpu">—</b><small>加成時權</small></div>
-      <div><b id="hrTotal">—</b><small>總時權</small></div>
+      <div><b id="hrTotal">—</b><small>總時權</small><br><small style="color:var(--muted);font-size:10px" id="hrInvite"></small></div>
     </div>
     <div class="mm-eff">
       <div class="ring-wrap">
@@ -151,6 +152,7 @@
 var RPC = (new URLSearchParams(location.search)).get('rpc') || location.port;
 var base = location.protocol + '//' + location.hostname + (RPC ? ':' + RPC : '');
 function get(p){ return fetch(base + p, {cache:'no-store'}).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); }); }
+fetch(base + '/api/gov/invite', {cache:'no-store'}).then(function(r){return r.json();}).then(function(d){ if(d && d.ok) window.__INVITE_GOV = d; }).catch(function(){});
 function post(p,b){ return fetch(base + p, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(b||{})}).then(function(r){ if(!r.ok) return r.json().then(function(j){throw new Error(j.error||r.status)}); return r.json(); }); }
 var myAddr = '';
 var mining = false, tickTimer = null;
@@ -169,10 +171,15 @@ function render(ms, splits, st){
     var on = !!(me && me.active && me.online);
     document.getElementById('stBadge').textContent = on ? (window.TAC_I18N&&TAC_I18N.cur()==='en'?'Mining Online':'在線挖礦中') : (window.TAC_I18N&&TAC_I18N.cur()==='en'?'Offline':'離線');
     document.getElementById('stBadge').className = 'mm-badge' + (on?'':' off');
-    if (me && me.refs) { document.getElementById('refN').textContent = me.refs; }
+    var rn = document.getElementById('refN'); if (rn && me.refs) { rn.textContent = me.refs; } // v113：null 保護（無 refN 元素時不崩）
     document.getElementById('hrCpu').textContent = (me.vcpu||0).toFixed(2);
     document.getElementById('hrGpu').textContent = (me.vgpu||0).toFixed(2);
     document.getElementById('hrTotal').textContent = ((me.vcpu||0)+(me.vgpu||0)).toFixed(2);
+    var iv = document.getElementById('hrInvite');
+    if (iv) {
+      var ip = me.invite_bonus_pct || 0;
+      iv.textContent = ip > 0 ? (ip*100).toFixed(0) + (window.TAC_T ? TAC_T('mining.inviteBonus',' 推薦加成',' referral bonus') : ' 推薦加成') : '';
+    }
     // M35：按鈕以「在線」為準（與徽章同源）——在線＝顯示「停止挖礦」，離線＝「開機挖礦」。
     // 修正訪客/節點礦機 active=false 但 online=true 時「在線挖礦中＋開機挖礦」矛盾顯示。
     var btnS = document.getElementById('btnStart'), btnT = document.getElementById('btnStop');
@@ -210,8 +217,8 @@ function render(ms, splits, st){
     if(ct2) ct2.textContent = '1.00';
     if(gt2) gt2.textContent = '2.00';
   }
-  document.getElementById('height').textContent = st.block_height != null ? '#'+st.block_height : '—';
-  document.getElementById('diff').textContent = st.effective_difficulty != null ? st.effective_difficulty : '—';
+  document.getElementById('height').textContent = (st.height != null ? st.height : st.block_height) != null ? '#'+(st.height != null ? st.height : st.block_height) : '—'; // v113：雙欄位相容（StatusView height / 節點 block_height）
+  var dv = (st.difficulty != null ? st.difficulty : st.effective_difficulty); document.getElementById('diff').textContent = dv != null ? dv : '—'; // v113：雙欄位相容
   var totalHr = 0; (splits||[]).forEach(function(s){ totalHr += parseFloat(s.share||0); });
   document.getElementById('onlineN').textContent = (splits||[]).length;
   document.getElementById('totalHr').textContent = fmtHr(totalHr);
@@ -372,7 +379,7 @@ function bindMiner(){
       refresh();
       // M33：即時刷新——全鏈總產出／TiUSD 流通／獎勵池／我的收益／鏈頂／難度／排行全隨區塊鏈機制滾動。
       // M145：10s→3s 秒級響應（後端 hb 視窗已加快取，不再每次全掃 60 塊）；audit 行獨立 30s。
-      setInterval(refresh, 3000);
+      setInterval(refresh, 10000); // v111：3s→10s（後端已加 5s 快取，不需高頻輪詢）
       freshAuditLine();
       setInterval(freshAuditLine, 30000);
     }

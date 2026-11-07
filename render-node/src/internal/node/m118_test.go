@@ -105,9 +105,9 @@ func TestM118P2PStress(t *testing.T) {
 		}
 	}
 	t.Logf("M118 多節點壓力通過：%d 筆批量全成功，確認延遲 %.2fs（含出塊等待），高度 %d 哈希全網一致", n, latency.Seconds(), minH)
-}
 
 // TestM118P2PBatchRoute /tx/batch 回傳逐筆結果（含壞簽名筆）。
+}
 func TestM118P2PBatchRoute(t *testing.T) {
 	aliceKP, _ := crypto.GenerateKeyPair()
 	alice := mustAddr(t, aliceKP)
@@ -145,9 +145,9 @@ func TestM118P2PBatchRoute(t *testing.T) {
 	if len(out.Results) != 2 {
 		t.Fatalf("results 應 2 筆，得 %d", len(out.Results))
 	}
-}
 
 // TestM118P2PLedgerAudit 壓力後跑鏈上帳本重放審計：全網守恆。
+}
 func TestM118P2PLedgerAudit(t *testing.T) {
 	aliceKP, _ := crypto.GenerateKeyPair()
 	alice := mustAddr(t, aliceKP)
@@ -183,5 +183,6 @@ func TestM118P2PLedgerAudit(t *testing.T) {
 		}
 	}
 	t.Logf("M118 帳本審計通過：A/B 全鏈重放守恆")
-}
 
+
+}

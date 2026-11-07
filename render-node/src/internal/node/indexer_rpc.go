@@ -233,3 +233,22 @@ func (s *RPCServer) handleIndexerValidators(w http.ResponseWriter, r *http.Reque
 		"ok": true, "validators": vs, "total": len(vs),
 	})
 }
+
+// handleIndexerValidatorOne GET /api/v1/validators/{address} — 單一驗證人明細（v126）。
+func (s *RPCServer) handleIndexerValidatorOne(w http.ResponseWriter, r *http.Request) {
+	addr := r.PathValue("address")
+	if addr == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"ok": false, "error": "missing validator address"})
+		return
+	}
+	vs, err := s.node.DB().GetValidatorStat(addr)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	if vs == nil {
+		writeJSON(w, http.StatusNotFound, map[string]any{"ok": false, "error": "validator not found"})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "validator": vs})
+}

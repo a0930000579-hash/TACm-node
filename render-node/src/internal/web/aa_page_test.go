@@ -22,6 +22,7 @@ func (aaPageDS) Status() StatusView {
 }
 func (aaPageDS) Blocks(int) ([]BlockView, error)          { return nil, nil }
 func (aaPageDS) Block(int64) (*BlockView, error)          { return nil, nil }
+func (aaPageDS) BlockHeader(int64) (*BlockView, error)    { return nil, nil }
 func (aaPageDS) Transaction(string) (*TxView, error)      { return nil, nil }
 func (aaPageDS) Address(string) (*AddressView, error)     { return nil, nil }
 func (aaPageDS) Wallet(string) (*WalletView, error)       { return nil, nil }

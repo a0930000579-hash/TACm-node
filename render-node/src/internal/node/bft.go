@@ -138,6 +138,50 @@ func (n *Node) applyFinalityFallback(h int64) {
 	n.finalizedH = cand
 }
 
+// reconcileFinalizedFromTip 以當前鏈頂為準，保守把最終化高度推進到 tip-window+1。
+// 與 applyFinalityFallback 同口徑，但不依賴「新塊事件」——大量 catch-up/重組經
+// ReorgChainFull 直接寫入時 onNewBlock 可能漏接，週期 reconciler 確保最終化必收斂。
+// 只推進最終化指標（顯示/活性），不修改區塊或共識狀態，故不影響鏈安全。
+func (n *Node) reconcileFinalizedFromTip() {
+	if n.db == nil {
+		return
+	}
+	tip := n.db.GetTipHeight()
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	if tip-n.finalizedH < finalityFallbackWindow {
+		return
+	}
+	cand := tip - finalityFallbackWindow + 1
+	if cand > n.finalizedH {
+		n.finalizedH = cand
+	}
+}
+
+// finalityReconcileInterval：最終化週期對齊間隔。
+const finalityReconcileInterval = 30 * time.Second
+
+// StartFinalityReconciler 啟動最終化週期對齊背景循環：每 30 秒依鏈頂檢查並
+// 保守推進最終化高度，重組/批量同步漏接事件時最遲 30 秒自動收斂，不需重啟。
+// 循環隨 stopCh 結束，計入 n.wg。
+func (n *Node) StartFinalityReconciler() {
+	n.wg.Add(1)
+	go func() {
+		defer n.wg.Done()
+		stop := n.stopChannel()
+		t := time.NewTicker(finalityReconcileInterval)
+		defer t.Stop()
+		for {
+			select {
+			case <-stop:
+				return
+			case <-t.C:
+				n.reconcileFinalizedFromTip()
+			}
+		}
+	}()
+}
+
 // handleIncomingViewChange 接收網絡 view-change 票（M12 硬化）：驗證身份與簽名後
 // 記入票集；僅當對某輪次的認證權重 ≥ 2/3 多數（QuorumPower）時才切換輪次，
 // 防止單節點或少數節點隨意篡改輪次。
@@ -264,11 +308,12 @@ func (n *Node) proposeViewChange(height int64) {
 // runBFT 持續推進 BFT：產生投票、檢查最終化。
 func (n *Node) runBFT() {
 	defer n.wg.Done()
+	stop := n.stopChannel()
 	ticker := time.NewTicker(bftTick)
 	defer ticker.Stop()
 	for {
 		select {
-		case <-n.stopCh:
+		case <-stop:
 			return
 		case <-ticker.C:
 			n.bftStep()

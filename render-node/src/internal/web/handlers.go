@@ -440,17 +440,38 @@ func (s *Server) handleExchange(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleExchangePage GET /exchange/{sub} — 獨立功能子頁（trade/assets/swap/bot/orders/pool）。
+// v164：DeFi（/exchange/defi）與 NFT（/exchange/nft）併入交易所 chrome，沿用同一頂/底欄；
+// 其餘子頁維持渲染 exchange.html（單一模板以 {% if page == 'xxx' %} 切換）。
 func (s *Server) handleExchangePage(w http.ResponseWriter, r *http.Request) {
 	sub := r.PathValue("sub")
-	allowed := map[string]bool{"trade": true, "assets": true, "swap": true, "bot": true, "orders": true, "pool": true}
-	if !allowed[sub] {
+	// 渲染到 exchange.html 的子頁（單一切換模板）
+	exchangeSub := map[string]bool{"trade": true, "assets": true, "swap": true, "bot": true, "orders": true, "pool": true}
+	// 併入交易所、但各自獨立模板的子頁（defi/nft）
+	standalone := map[string]bool{"defi": true, "nft": true}
+	if !exchangeSub[sub] && !standalone[sub] {
 		http.NotFound(w, r)
 		return
 	}
-	s.render(w, "exchange.html", pongo2.Context{
-		"exchange": map[string]any{"NodeAddress": s.ds.Status().Address},
-		"page":     sub,
-	})
+	node := s.ds.Status().Address
+	switch sub {
+	case "defi":
+		s.render(w, "defi.html", pongo2.Context{
+			"exchange":   map[string]any{"NodeAddress": node},
+			"page":       "defi",
+			"inExchange": true,
+		})
+	case "nft":
+		s.render(w, "nfts.html", pongo2.Context{
+			"exchange":   map[string]any{"NodeAddress": node},
+			"page":       "nft",
+			"inExchange": true,
+		})
+	default:
+		s.render(w, "exchange.html", pongo2.Context{
+			"exchange": map[string]any{"NodeAddress": node},
+			"page":     sub,
+		})
+	}
 }
 
 // handleMining GET /mining — 挖礦中心：節點/出塊/PoT/coinbase 分潤/獎勵池/驗證人。
@@ -536,10 +557,10 @@ func (s *Server) handleStake(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "stake.html", pongo2.Context{})
 }
 
-// handleDefi GET /defi — DeFi 中心（流動性挖礦＋借貸市場，App 化）。
-// 實時數據由前端直接讀取節點 RPC（?rpc= 可覆蓋）。
+// handleDefi GET /defi — v164 去重：DeFi 中心已併入交易所（/exchange/defi，沿用交易所頂/底欄與
+// 統一錢包）。本路由保留為相容舊連結的 301 導向，避免收藏/入口失效；前端不再維護第二套獨立 chrome。
 func (s *Server) handleDefi(w http.ResponseWriter, r *http.Request) {
-	s.render(w, "defi.html", pongo2.Context{})
+	http.Redirect(w, r, "/exchange/defi", http.StatusMovedPermanently)
 }
 
 // handleTokens GET /tokens — 代幣工作室（Token Studio）：鏈上標準代幣發行
@@ -558,10 +579,10 @@ func (s *Server) handleTokens(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "tokens.html", pongo2.Context{})
 }
 
-// handleNFTs GET /nfts — NFT 工作室（NFT Studio）：鏈上標準 NFT（ERC-721 風格）
-// 發行/mint/查詢/轉移（M74-2）。實時數據由前端讀取 RPC。
+// handleNFTs GET /nfts — v164 去重：NFT 工作室已併入交易所（/exchange/nft，沿用交易所頂/底欄與
+// 統一錢包）。本路由保留為相容舊連結的 301 導向，避免收藏/入口失效。
 func (s *Server) handleNFTs(w http.ResponseWriter, r *http.Request) {
-	s.render(w, "nfts.html", pongo2.Context{})
+	http.Redirect(w, r, "/exchange/nft", http.StatusMovedPermanently)
 }
 
 // handleDex GET /dex — 鏈上 DEX（AMM 恆定乘積）：池列表/建池/流動性/即時兌換，

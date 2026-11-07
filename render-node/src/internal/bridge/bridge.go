@@ -135,6 +135,11 @@ func (b *Bridge) initConfig() error {
 }
 
 // Close 關閉持久層。
+// ListBridgeTxs v100：列出最近跨鏈交易（token 非空則大小寫不敏感篩選；供 TiUSD 監控台）。
+func (b *Bridge) ListBridgeTxs(limit int, token string) ([]BridgeTx, error) {
+	return b.store.ListBridgeTxs(limit, token)
+}
+
 func (b *Bridge) Close() error { return b.store.Close() }
 
 func (b *Bridge) feeRate() (float64, error) {
@@ -441,3 +446,18 @@ func (b *Bridge) ActiveValidators() ([]Validator, error) {
 }
 
 func round8(v float64) float64 { return math.Round(v*1e8) / 1e8 }
+
+// ChainPending v110：各鏈待處理跨鏈筆數（依 source_chain 分組）。
+func (b *Bridge) ChainPending() (map[string]int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	pending, err := b.store.GetPendingBridgeTxs()
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string]int)
+	for _, t := range pending {
+		out[t.SourceChain]++
+	}
+	return out, nil
+}

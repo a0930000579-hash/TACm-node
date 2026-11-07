@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	_ "modernc.org/sqlite"
 )
@@ -144,6 +145,60 @@ func (s *Store) GetBridgeTx(id string) (*BridgeTx, error) {
 		_ = json.Unmarshal([]byte(sigs.String), &tx.Signatures)
 	}
 	return tx, nil
+}
+
+// ListBridgeTxs v100：列出最近跨鏈交易（token 非空則大小寫不敏感篩選；供 TiUSD 監控台跨鏈記錄）。
+func (s *Store) ListBridgeTxs(limit int, token string) ([]BridgeTx, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 50
+	}
+	var (
+		rows *sql.Rows
+		err  error
+	)
+	if token != "" {
+		rows, err = s.db.Query(`SELECT id,bridge_tx_id,source_chain,target_chain,
+			source_address,target_address,amount,fee,received_amount,token,status,
+			source_tx_hash,target_tx_hash,lock_tx_hash,unlock_tx_hash,nonce,
+			created_at,updated_at,confirmed_at,error,signatures
+			FROM bridge_transactions WHERE UPPER(token)=? ORDER BY id DESC LIMIT ?`, strings.ToUpper(token), limit)
+	} else {
+		rows, err = s.db.Query(`SELECT id,bridge_tx_id,source_chain,target_chain,
+			source_address,target_address,amount,fee,received_amount,token,status,
+			source_tx_hash,target_tx_hash,lock_tx_hash,unlock_tx_hash,nonce,
+			created_at,updated_at,confirmed_at,error,signatures
+			FROM bridge_transactions ORDER BY id DESC LIMIT ?`, limit)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("bridge: 列跨鏈交易: %w", err)
+	}
+	defer rows.Close()
+	out := []BridgeTx{}
+	for rows.Next() {
+		tx := BridgeTx{}
+		var (
+			sourceTx, targetTx, lockTx, unlockTx, errStr, sigs sql.NullString
+			confirmed                                          sql.NullInt64
+		)
+		if err := rows.Scan(&tx.ID, &tx.BridgeTxID, &tx.SourceChain, &tx.TargetChain,
+			&tx.SourceAddress, &tx.TargetAddress, &tx.Amount, &tx.Fee,
+			&tx.ReceivedAmount, &tx.Token, &tx.Status,
+			&sourceTx, &targetTx, &lockTx, &unlockTx, &tx.Nonce,
+			&tx.CreatedAt, &tx.UpdatedAt, &confirmed, &errStr, &sigs); err != nil {
+			return nil, fmt.Errorf("bridge: 掃跨鏈交易: %w", err)
+		}
+		tx.SourceTxHash = sourceTx.String
+		tx.TargetTxHash = targetTx.String
+		tx.LockTxHash = lockTx.String
+		tx.UnlockTxHash = unlockTx.String
+		tx.Error = errStr.String
+		tx.ConfirmedAt = confirmed.Int64
+		if sigs.Valid && sigs.String != "" {
+			_ = json.Unmarshal([]byte(sigs.String), &tx.Signatures)
+		}
+		out = append(out, tx)
+	}
+	return out, rows.Err()
 }
 
 // GetBridgeTxsByAddress 查詢與地址相關的跨鏈交易（地址大小寫不敏感，

@@ -78,9 +78,9 @@ func TestDistributedBridgeNetworkedLockMint(t *testing.T) {
 	if len(txA.Signatures) == 0 {
 		t.Fatal("執行記錄應包含守衛簽名")
 	}
-}
 
 // 反向：銷毀-解鎖（B 發起，A 守衛）。
+}
 func TestDistributedBridgeNetworkedBurnUnlock(t *testing.T) {
 	alice, _ := kpForTest(t)
 	fnA := startFullNode(t, "nodeA", nil, false, alice)
@@ -135,9 +135,9 @@ func TestDistributedBridgeNetworkedBurnUnlock(t *testing.T) {
 		t.Fatalf("兩節點 target hash 不一致: A=%q B=%q",
 			txA.TargetTxHash, txB.TargetTxHash)
 	}
-}
 
 // bridgeStatus 經 RPC 查詢跨鏈交易狀態。
+}
 func bridgeStatus(t *testing.T, fn *fullNode, bridgeTxID string) *bridgepkg.BridgeTx {
 	t.Helper()
 	raw, _ := json.Marshal(map[string]string{"bridge_tx_id": bridgeTxID})

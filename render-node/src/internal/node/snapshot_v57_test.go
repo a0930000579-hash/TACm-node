@@ -64,9 +64,9 @@ func TestSnapshotTrust_ImportFreshOk(t *testing.T) {
 	if got := n.db.GetTipHeight(); got != sd.Height+1 {
 		t.Fatalf("續鏈後 tip 應 %d，得 %d", sd.Height+1, got)
 	}
-}
 
 // TestSnapshotTrust_GenesisMismatch 本地已有創世且與快照創世 hash 不符 → 拒絕導入。
+}
 func TestSnapshotTrust_GenesisMismatch(t *testing.T) {
 	_, sd := makeSnapshotSrc(t)
 	// 模擬別鏈快照：篡改創世 hash（本地創世與此必然不同）。
@@ -84,9 +84,9 @@ func TestSnapshotTrust_GenesisMismatch(t *testing.T) {
 	if got := n.db.GetTipHeight(); got != 0 {
 		t.Fatalf("拒絕後本地鏈不應被改寫，tip=%d", got)
 	}
-}
 
 // TestSnapshotTrust_TipHashTamper tip hash 欄位與 tip 區塊 hash 不符 → 拒絕導入。
+}
 func TestSnapshotTrust_TipHashTamper(t *testing.T) {
 	_, sd := makeSnapshotSrc(t)
 	sd.TipHash = strings.Repeat("00", 32)
@@ -103,9 +103,9 @@ func TestSnapshotTrust_TipHashTamper(t *testing.T) {
 	if !strings.Contains(err.Error(), "tip hash") {
 		t.Fatalf("錯誤訊息應指 tip hash 不符，得: %v", err)
 	}
-}
 
 // TestSnapshotTrust_HeightRegression 本地高度高於快照 → 拒絕導入（防覆蓋更新的鏈）。
+}
 func TestSnapshotTrust_HeightRegression(t *testing.T) {
 	_, sd := makeSnapshotSrc(t)
 	n := benchNodeT(t, 1)
@@ -129,4 +129,5 @@ func TestSnapshotTrust_HeightRegression(t *testing.T) {
 		t.Fatalf("拒絕後本地鏈不應被覆蓋，tip=%d", got)
 	}
 	_ = time.Now()
+
 }

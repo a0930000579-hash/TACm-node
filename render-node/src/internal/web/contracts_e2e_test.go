@@ -3,6 +3,7 @@ package web
 import (
 	"bytes"
 	"encoding/json"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"tacm/internal/chaindb"
 	"tacm/internal/config"
 	"tacm/internal/node"
+	"tacm/internal/wallet"
 )
 
 // M139：合約驗證中心頁面與 ABI read 互動端到端驗證。
@@ -36,6 +38,11 @@ func TestContractVerifierPage(t *testing.T) {
 	}
 	if err := n.DB().InsertBlock(genesis, nil); err != nil {
 		t.Fatalf("創世: %v", err)
+	}
+	// v80：發行費 100 TACm 由發行者支付——測試注資發行者帳戶。
+	fund100 := wallet.Amount{Big: new(big.Int).Mul(big.NewInt(100), new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil))}
+	if err := n.Wallet().Deposit("ctrle2e_miner", wallet.AssetTACm, fund100, "test:fund"); err != nil {
+		t.Fatalf("注資: %v", err)
 	}
 	n.Start()
 
@@ -67,7 +74,7 @@ func TestContractVerifierPage(t *testing.T) {
 	}
 
 	// 2. 部署代幣（走 web mux 的 /contract/deploy）。
-	deployBody := map[string]any{"name": "VerifierToken", "symbol": "VRT", "supply": "12345"}
+	deployBody := map[string]any{"name": "VerifierToken", "symbol": "VRT", "supply": "12345", "from": "ctrle2e_miner"}
 	raw, _ := json.Marshal(deployBody)
 	dresp, err := http.Post(ts.URL+"/contract/deploy", "application/json", bytes.NewReader(raw))
 	if err != nil {

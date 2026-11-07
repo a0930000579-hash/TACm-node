@@ -7,6 +7,39 @@ import (
 
 func normURL(u string) string { return strings.TrimRight(strings.TrimSpace(u), "/") }
 
+// filterDialable 過濾出有可達 BaseURL 的節點——外連節點（無自身 URL）無法被
+// 連入，所有主動撥號（心跳/廣播/刷新/拉塊）都應跳過，僅靠其入站請求保持在線。
+func filterDialable(ps []Peer) []Peer {
+	out := make([]Peer, 0, len(ps))
+	for _, p := range ps {
+		if normURL(p.BaseURL) != "" {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+// AddPeerByURL 手動加入 P2P 對等節點（admin_addPeer 用）；自身、重複或已滿返回 false。
+func (n *Network) AddPeerByURL(rawURL string) bool {
+	if n == nil {
+		return false
+	}
+	u := normURL(rawURL)
+	if u == "" {
+		return false
+	}
+	n.mu.Lock()
+	_, exists := n.urlIndex[u]
+	full := len(n.peers) >= n.cfg.MaxPeers
+	self := u == normURL(n.cfg.SelfURL)
+	n.mu.Unlock()
+	if exists || full || self {
+		return false
+	}
+	n.addPeerByURL(rawURL)
+	return true
+}
+
 // addPeerByURL 以臨時 id 加入尚未握手的節點；自身、重複或已滿則忽略。
 func (n *Network) addPeerByURL(rawURL string) {
 	u := normURL(rawURL)
@@ -32,8 +65,11 @@ func (n *Network) registerPeer(nodeID, rawURL, owner string, height, finalized i
 	n.mu.Lock()
 	defer n.mu.Unlock()
 
-	if oldID, ok := n.urlIndex[u]; ok && oldID != nodeID {
-		delete(n.peers, oldID)
+	// 外連節點無可達 URL：僅以 NodeID 索引，不進 urlIndex（避免空字串互相覆蓋）。
+	if u != "" {
+		if oldID, ok := n.urlIndex[u]; ok && oldID != nodeID {
+			delete(n.peers, oldID)
+		}
 	}
 	p, exists := n.peers[nodeID]
 	if !exists {
@@ -49,7 +85,9 @@ func (n *Network) registerPeer(nodeID, rawURL, owner string, height, finalized i
 	p.Online = true
 	p.LastSeen = time.Now()
 	p.failCount = 0
-	n.urlIndex[u] = nodeID
+	if u != "" {
+		n.urlIndex[u] = nodeID
+	}
 	return p
 }
 
@@ -71,7 +109,10 @@ func (n *Network) snapshotPeers() []Peer {
 	defer n.mu.Unlock()
 	out := make([]Peer, 0, len(n.peers))
 	for _, p := range n.peers {
-		out = append(out, *p)
+		cp := *p
+		// v65：補上每個 peer 的通道加密狀態（sealBody 自動降級時為 false）。
+		cp.Encrypted = n.peerEncrypted(p.BaseURL)
+		out = append(out, cp)
 	}
 	return out
 }

@@ -17,10 +17,10 @@ import (
 
 func stakeSetup(t *testing.T) (*httptest.Server, string, string, string, string) {
 	t.Helper()
-	n, ts, _ := contractStudioSetup(t)
+	n, ts, admin := contractStudioSetup(t)
 	// 沿用 dexSetup 的發幣流程（deploy TKA/TKB）。
-	tkA := deployToken(t, ts, "TokenA", "TKA")
-	tkB := deployToken(t, ts, "TokenB", "TKB")
+	tkA := deployToken(t, ts, "TokenA", "TKA", admin)
+	tkB := deployToken(t, ts, "TokenB", "TKB", admin)
 	// 建池＋注入流動性（100000/50000 → LP=70710，admin 持倉）。
 	r := studioPostJSON(t, ts, "/dex/create", map[string]any{
 		"token0": tkA, "token1": tkB,
@@ -54,10 +54,10 @@ func stakeSetup(t *testing.T) (*httptest.Server, string, string, string, string)
 }
 
 // deployToken 部署標準代幣並等待入塊。
-func deployToken(t *testing.T, ts *httptest.Server, name, symbol string) string {
+func deployToken(t *testing.T, ts *httptest.Server, name, symbol, from string) string {
 	t.Helper()
 	r := studioPostJSON(t, ts, "/contract/deploy", map[string]any{
-		"name": name, "symbol": symbol, "supply": "1000000000000",
+		"name": name, "symbol": symbol, "supply": "1000000000000", "from": from,
 	})
 	if r["ok"] != true {
 		t.Fatalf("部署 %s 失敗: %v", symbol, r)
@@ -117,8 +117,8 @@ func TestDEXStakeCreateFundAndPending(t *testing.T) {
 		bi, _ := new(big.Int).SetString(p, 10)
 		return bi != nil && bi.Sign() > 0
 	}, 20*time.Second, "pending 隨區塊累積")
-}
 
+}
 func TestDEXStakeClaimAndLock(t *testing.T) {
 	ts, tkA, _, pid, adminAddr := stakeSetup(t)
 	// admin 質押前餘額。
@@ -168,4 +168,5 @@ func TestDEXStakeClaimAndLock(t *testing.T) {
 	if r4["ok"] != true {
 		t.Fatalf("解除後退出應成功: %v", r4)
 	}
+
 }

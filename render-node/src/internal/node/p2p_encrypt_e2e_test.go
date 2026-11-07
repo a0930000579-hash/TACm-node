@@ -49,4 +49,5 @@ func TestP2PEncryptedGossip(t *testing.T) {
 
 	hA, hB, hC := A.n.DB().GetTipHeight(), B.n.DB().GetTipHeight(), C.n.DB().GetTipHeight()
 	t.Logf("加密 P2P e2e 通過：bob 餘額三節點=50，高度 %d/%d/%d", hA, hB, hC)
+
 }

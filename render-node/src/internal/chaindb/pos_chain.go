@@ -235,6 +235,25 @@ type ValidatorStat struct {
 
 // ListValidatorsWithDelegations 返回全驗證人＋委託聚合（LEFT JOIN delegations，
 // 一次查詢避免 N+1；任何節點同步同鏈結果一致）。
+// GetValidatorStat 單一驗證人統計（含委託總額/人數）——v126 Explorer 單節點明細。
+func (c *ChainDB) GetValidatorStat(address string) (*ValidatorStat, error) {
+	row := c.db.QueryRow(`SELECT v.address, v.total_stake, v.pubkey, v.status, v.first_seen, v.last_active,
+		COALESCE(SUM(CASE WHEN d.amount > 0 THEN d.amount ELSE 0 END), 0),
+		COUNT(CASE WHEN d.amount > 0 THEN d.delegator END)
+		FROM pos_validators v
+		LEFT JOIN delegations d ON d.validator = v.address
+		WHERE v.address=? GROUP BY v.address`, address)
+	var vs ValidatorStat
+	if err := row.Scan(&vs.Validator, &vs.TotalStake, &vs.Pubkey, &vs.Status, &vs.FirstSeen, &vs.LastActive,
+		&vs.DelegTotal, &vs.DelegatorNum); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("chaindb: 驗證人統計查詢失敗: %w", err)
+	}
+	return &vs, nil
+}
+
 func (c *ChainDB) ListValidatorsWithDelegations() ([]ValidatorStat, error) {
 	rows, err := c.db.Query(`SELECT v.address, v.total_stake, v.pubkey, v.status, v.first_seen, v.last_active,
 		COALESCE(SUM(CASE WHEN d.amount > 0 THEN d.amount ELSE 0 END), 0),

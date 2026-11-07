@@ -74,8 +74,8 @@ func TestIndexerStats(t *testing.T) {
 	if out["block_count"].(float64) < 1 || out["tx_count"].(float64) < 1 {
 		t.Fatalf("block/tx count 應 ≥1，got %+v", out)
 	}
-}
 
+}
 func TestIndexerBlocksAndBlock(t *testing.T) {
 	srv, n, _ := newIndexerTestServer(t)
 	out := idxGet(t, srv, "/api/v1/blocks?limit=5")
@@ -109,8 +109,8 @@ func TestIndexerBlocksAndBlock(t *testing.T) {
 		t.Fatalf("不存在區塊應 404，got %d", resp.StatusCode)
 	}
 	_ = n
-}
 
+}
 func TestIndexerTxAndTxs(t *testing.T) {
 	srv, n, aliceKP := newIndexerTestServer(t)
 	alice, _ := aliceKP.Address()
@@ -145,8 +145,8 @@ func TestIndexerTxAndTxs(t *testing.T) {
 		t.Fatalf("非法哈希應 400，got %d", resp.StatusCode)
 	}
 	_ = n
-}
 
+}
 func TestIndexerAddress(t *testing.T) {
 	srv, _, aliceKP := newIndexerTestServer(t)
 	alice, _ := aliceKP.Address()
@@ -171,8 +171,8 @@ func TestIndexerAddress(t *testing.T) {
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("非法地址應 400，got %d", resp.StatusCode)
 	}
-}
 
+}
 func TestIndexerDelegationsE2E(t *testing.T) {
 	srv, n, aliceKP := newIndexerTestServer(t)
 	alice, _ := aliceKP.Address()
@@ -233,9 +233,9 @@ func TestIndexerDelegationsE2E(t *testing.T) {
 	if resp3.StatusCode != http.StatusBadRequest {
 		t.Fatalf("非法委託人應 400，got %d", resp3.StatusCode)
 	}
-}
 
 // M160：驗證人排名——/api/v1/validators 回權重/委託總額/委託人數。
+}
 func TestIndexerValidatorsE2E(t *testing.T) {
 	srv, n, aliceKP := newIndexerTestServer(t)
 	alice, _ := aliceKP.Address()
@@ -280,4 +280,5 @@ func TestIndexerValidatorsE2E(t *testing.T) {
 	if v0.DelegTotal != 100 || v0.DelegatorNum != 1 {
 		t.Fatalf("委託總額應 100／人數應 1，got %v/%v", v0.DelegTotal, v0.DelegatorNum)
 	}
+
 }

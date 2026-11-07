@@ -46,7 +46,11 @@
     <div class="logo"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h5M9.5 14.5h5"/></svg></div>
     <div>
       <h2 data-i18n="tokens.title">代幣工作室</h2>
-      <div class="sub" data-i18n="tokens.sub">鏈上標準代幣（ERC-20 風格）· 節點官方發行 · 即時出塊</div>
+      <div class="sub" data-i18n="tokens.sub">鏈上標準代幣（ERC-20）· 節點官方發行 · 即時出塊</div>
+      <div class="sub" style="margin-top:6px;color:#555" data-i18n="tokens.usage">發行用途：可在 DEX 建立流動性池交易（AMM）、ERC-20 轉帳/授權/跨鏈、IDO 認購、社群市集付款。</div>
+      <div class="tk-fee" style="margin-top:6px;padding:8px 10px;background:#fff7e6;border:1px solid #f5d9a8;border-radius:8px;font-size:12px;color:#8a6d1f">
+        <b data-i18n="tokens.fee">發行費</b>：100 TACm（每次發行由節點代付，防垃圾＋TACm 價值錨點）
+      </div>
     </div>
     <div class="tk-stats">
       <span id="tkCount" data-i18n="tokens.count">0 個代幣</span>
@@ -60,6 +64,7 @@
         <div class="tk-field"><label data-i18n="tokens.name">名稱（≤32 字元）</label><input id="tkName" placeholder="e.g. My Token"></div>
         <div class="tk-field"><label data-i18n="tokens.symbol">代號（≤32 字元）</label><input id="tkSymbol" placeholder="e.g. MTK"></div>
         <div class="tk-field"><label data-i18n="tokens.supply">總供應量</label><input id="tkSupply" placeholder="e.g. 1000000" inputmode="numeric"></div>
+        <div class="tk-field"><label data-i18n="tokens.from">發行者地址（選填；發行費 100 TACm 由此扣，空則節點代付）</label><input id="tkFrom" placeholder="tx0..."></div>
         <button class="tk-btn" onclick="tkDeploy()" data-i18n="tokens.deploy_btn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/></svg> 發行</button>
         <div class="tk-msg" id="tkDMsg"></div>
       </div>
@@ -150,9 +155,11 @@
     var body = {
       name: $('tkName').value.trim(),
       symbol: $('tkSymbol').value.trim(),
-      supply: $('tkSupply').value.trim()
+      supply: $('tkSupply').value.trim(),
+      from: ($('tkFrom') ? $('tkFrom').value.trim() : '')
     };
     if (!body.supply || parseFloat(body.supply) <= 0) { msg.className = 'tk-msg err'; msg.textContent = window.TAC_I18N && TAC_I18N.cur() === 'en' ? 'Supply required' : '請輸入總供應量'; return; }
+    if (!body.from) { msg.className = 'tk-msg err'; msg.textContent = window.TAC_I18N && TAC_I18N.cur() === 'en' ? 'Issuer address required (100 TACm deploy fee is paid by issuer)' : '請填寫發行者地址（發行費 100 TACm 由發行者支付）'; return; }
     fetch(api + '/contract/deploy', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body), cache: 'no-store'

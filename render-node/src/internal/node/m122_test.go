@@ -45,4 +45,5 @@ func TestM122MultiPeerFallback(t *testing.T) {
 	if cb.Hash != bb.Hash {
 		t.Fatalf("fallback 後高度 10 哈希不一致: %s vs %s", cb.Hash, bb.Hash)
 	}
+
 }

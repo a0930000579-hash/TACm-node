@@ -122,17 +122,18 @@ func TestEthBlockTagSafeFinalizedAndFields(t *testing.T) {
 			t.Fatalf("%s 缺 number 欄位", tag)
 		}
 	}
-}
 
 // TestRejectContractSender：EIP-3607——合約地址不得作為交易簽名者；
 // 正常 EOA 地址不受影響（eth 路徑與 SubmitTransactions 共用同一檢查）。
+}
 func TestRejectContractSender(t *testing.T) {
 	n, srv, admin := contractStudioSetup(t)
 
 	// 部署合約（真實上鏈）。
 	out := studioPostJSON(t, srv, "/contract/deploy", map[string]any{
 		"name": "EIP3607", "symbol": "E7", "supply": "1000",
-	})
+		"from": admin,
+		})
 	if out["ok"] != true {
 		t.Fatalf("部署失敗: %v", out)
 	}

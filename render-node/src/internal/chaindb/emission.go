@@ -2,6 +2,7 @@ package chaindb
 
 import (
 	"math"
+	"math/big"
 	"os"
 	"strconv"
 	"sync"
@@ -142,4 +143,42 @@ func EmissionAmount(height int64, blockTimeSec int64) float64 {
 		return cfg.InitialSubsidy * math.Pow(cfg.DecayRatio, float64(yearIdx))
 	}
 	return BlockReward(height)
+}
+
+// capReward 為硬上限煞車的純截斷邏輯（測試友好）：
+// 剩餘可挖＝MaxSupply(wei) − 全鏈已發(wei)；reward＝min(模型獎勵, 剩餘)；剩餘≤0 → 0。
+// maxSupply≤0、minedWei 為 nil 或負值時不截斷（維持模型獎勵）。
+func capReward(reward, maxSupply float64, minedWei *big.Int) float64 {
+	if maxSupply <= 0 || minedWei == nil || minedWei.Sign() < 0 {
+		return reward
+	}
+	maxWei := new(big.Int).Mul(big.NewInt(int64(maxSupply)), big.NewInt(1e18))
+	remaining := new(big.Int).Sub(maxWei, minedWei)
+	if remaining.Sign() <= 0 {
+		return 0.0 // 已達上限：本塊零增發（硬停）
+	}
+	rewardWei := new(big.Int).SetUint64(uint64(math.Round(reward * 1e18)))
+	if rewardWei.Cmp(remaining) > 0 {
+		// 剩餘 < 模型獎勵 → 截斷至剩餘（此情境剩餘 ≤ ~1.5e18 wei，Int64 安全）
+		return float64(remaining.Int64()) / 1e18
+	}
+	return reward
+}
+
+// ComputeCappedReward 依供應模型與全鏈已發總量計算本塊增發獎勵（硬上限煞車）：
+// 模型（annual_decay→EmissionAmount／halving→BlockReward）先取，再以
+// 剩餘可挖＝MaxSupply − 累計已發 截斷；剩餘≤0 → 0。
+// 出塊側與驗證側（reorg.go）必須共用此函式，確保全網帳本一致。
+func ComputeCappedReward(height int64, blockTimeSec int64, minedWei *big.Int) float64 {
+	cfg, err := LoadEmission(blockTimeSec)
+	if err != nil {
+		return 0.0
+	}
+	var reward float64
+	if cfg.Model == "annual_decay" {
+		reward = EmissionAmount(height, blockTimeSec)
+	} else {
+		reward = BlockReward(height)
+	}
+	return capReward(reward, cfg.MaxSupply, minedWei)
 }

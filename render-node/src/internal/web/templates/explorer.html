@@ -234,4 +234,53 @@
     setInterval(refresh, 10000);
   })();
 </script>
+<section class="panel">
+  <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg> <span data-i18n="vld.title">節點排名 / Validator Ranking</span></h2></div>
+  <div style="overflow-x:auto"><table class="tbl" style="width:100%;border-collapse:collapse">
+    <thead><tr><th data-i18n="vld.colNode">節點</th><th data-i18n="vld.colStake">總權重（TACm）</th><th data-i18n="vld.colDeleg">委託總額（TACm）</th><th data-i18n="vld.colNum">委託人數</th><th data-i18n="vld.colStatus">狀態</th></tr></thead>
+    <tbody id="vldBody"><tr><td colspan="5" class="muted center" data-i18n="vld.loading">載入中…</td></tr></tbody>
+  </table></div>
+</section>
+<div id="vldModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99;align-items:center;justify-content:center;padding:16px;" onclick="if(event.target===this)closeVld()">
+  <div style="background:var(--bg,#0f172a);border:1px solid var(--bd,#26344d);border-radius:14px;max-width:520px;width:100%;padding:18px 20px;color:var(--fg,#e2e8f0);box-shadow:0 18px 50px rgba(0,0,0,.45);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><h3 style="margin:0;font-size:15px;" data-i18n="vld.modalTitle">驗證人明細 / Validator Detail</h3><span onclick="closeVld()" style="cursor:pointer;font-size:18px;line-height:1;opacity:.8;">✕</span></div>
+    <div id="vldDetail" style="font-size:13px;line-height:1.9;word-break:break-all;">—</div>
+  </div>
+</div>
+<script>
+  function showVld(a) {
+    var m = document.getElementById('vldModal'), d = document.getElementById('vldDetail');
+    if (!m || !d || !a) return;
+    m.style.display = 'flex';
+    d.textContent = t('vld.loading');
+    fetch('/api/v1/validators/' + encodeURIComponent(a), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
+      if (!j || !j.validator) { d.textContent = '—'; return; }
+      var v = j.validator;
+      var st = v.status || 'active';
+      var lines = [];
+      lines.push('<div><b>' + t('vld.colNode') + ':</b> ' + (v.validator || '—') + '</div>');
+      if (v.pubkey) lines.push('<div><b>' + t('vld.pubkey') + ':</b> <span style="font-size:11px">' + v.pubkey + '</span></div>');
+      lines.push('<div><b>' + t('vld.totalStake') + ':</b> ' + (v.total_stake != null ? Number(v.total_stake).toLocaleString() : '—') + '</div>');
+      lines.push('<div><b>' + t('vld.delegTotal') + ':</b> ' + (v.deleg_total != null ? Number(v.deleg_total).toLocaleString() : '—') + '</div>');
+      lines.push('<div><b>' + t('vld.delegatorNum') + ':</b> ' + (v.delegator_count != null ? v.delegator_count : '—') + '</div>');
+      lines.push('<div><b>' + t('vld.colStatus') + ':</b> ' + st + '</div>');
+      if (v.first_seen != null) lines.push('<div><b>' + t('vld.firstSeen') + ':</b> ' + new Date(v.first_seen * 1000).toLocaleString() + '</div>');
+      if (v.last_active != null) lines.push('<div><b>' + t('vld.lastActive') + ':</b> ' + new Date(v.last_active * 1000).toLocaleString() + '</div>');
+      d.innerHTML = lines.join('');
+    }).catch(function () { d.textContent = '—'; });
+  }
+  function closeVld() { var m = document.getElementById('vldModal'); if (m) m.style.display = 'none'; }
+</script>
+<script>
+    fetch('/api/v1/validators', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
+      var tb = document.getElementById('vldBody');
+      if (!tb || !d || !d.validators || !d.validators.length) { return; }
+      var rows = '';
+      d.validators.forEach(function (v) {
+        var st = v.status || 'active';
+        rows += '<tr style="cursor:pointer" onclick="showVld(' + JSON.stringify(v.validator) + ')"><td style="font-size:12px">' + (v.validator || '—') + '</td><td>' + (v.total_stake != null ? v.total_stake.toLocaleString() : '—') + '</td><td>' + (v.deleg_total != null ? v.deleg_total.toLocaleString() : '—') + '</td><td>' + (v.delegator_count != null ? v.delegator_count : '—') + '</td><td>' + st + '</td></tr>';
+      });
+      tb.innerHTML = rows;
+    }).catch(function(){});
+  </script>
 {% endblock %}

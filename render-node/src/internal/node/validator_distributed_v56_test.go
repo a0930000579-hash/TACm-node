@@ -62,11 +62,11 @@ func TestValidatorDistributed_ChainStakeRoundRobin(t *testing.T) {
 	tipBefore := dn[1].n.DB().GetTipHeight()
 	waitTip(t, dn[1].n, tipBefore+3, 60*time.Second)
 	t.Logf("創世節點掛機後 v1 接管：tip %d → %d", tipBefore, dn[1].n.DB().GetTipHeight())
-}
 
 // TestValidatorDistributed_NewStakeJoinsValidatorSet 新質押驗證人納入輪值：
 // RebuildValidatorSetFromPOS 以鏈上質押取代創世集；輪值 proposer 依高度交替
 // （epoch 式驗證人輪換語義）。
+}
 func TestValidatorDistributed_NewStakeJoinsValidatorSet(t *testing.T) {
 	dn := buildCluster(t, 2)
 	v56StakeAll(t, dn, 2000)
@@ -92,11 +92,11 @@ func TestValidatorDistributed_NewStakeJoinsValidatorSet(t *testing.T) {
 			t.Fatalf("%s 未出現在輪值 proposer 序列", d.id)
 		}
 	}
-}
 
 // TestValidatorDistributed_SingleValidatorStillProduces 單驗證人分布式模式（主鏈
 // 目前僅 1 個質押驗證人的狀態）：vset 僅自己、proposer 恆為本節點，出塊照常推進；
 // view change 由單人認證即切輪——保證 v56 主鏈升級後行為不退化。
+}
 func TestValidatorDistributed_SingleValidatorStillProduces(t *testing.T) {
 	dn := buildCluster(t, 1)
 	v56StakeAll(t, dn, 2000)
@@ -109,4 +109,5 @@ func TestValidatorDistributed_SingleValidatorStillProduces(t *testing.T) {
 	launchCluster(t, dn, []bool{true})
 	waitTip(t, dn[0].n, 3, 60*time.Second)
 	t.Logf("單驗證人分布式出塊正常：tip=%d", dn[0].n.DB().GetTipHeight())
+
 }

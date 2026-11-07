@@ -45,9 +45,9 @@ func TestOnChainCoinbaseAggregate(t *testing.T) {
 	if len(agg.Miners) > 0 {
 		t.Fatalf("無礦工環境下 Miners 應為空，實際=%v", agg.Miners)
 	}
-}
 
 // TestMinerEarnedOnChain 指定地址收益：未挖礦地址鏈上收益為 0（鏈上事實）。
+}
 func TestMinerEarnedOnChain(t *testing.T) {
 	n, _ := startMiningNode(t)
 	waitFor(t, func() bool { return n.DB().GetTipHeight() >= 2 }, 20*time.Second, "等待出塊到 h2")
@@ -58,4 +58,5 @@ func TestMinerEarnedOnChain(t *testing.T) {
 	if v != 0 || count != 0 {
 		t.Fatalf("未挖礦地址收益應為 0/0，實際 %v/%d", v, count)
 	}
+
 }

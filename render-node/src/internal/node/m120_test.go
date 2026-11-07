@@ -62,9 +62,9 @@ func TestM120BatchGossipE2E(t *testing.T) {
 	if blkA.Hash != blkC.Hash {
 		t.Fatalf("tip hash mismatch A=%s C=%s", blkA.Hash, blkC.Hash)
 	}
-}
 
 // balanceOf 讀取帳戶餘額（測試輔助）。
+}
 func balanceOf(t *testing.T, n *Node, addr string) float64 {
 	t.Helper()
 	bal, err := strconv.ParseFloat(n.db.GetBalance(addr), 64)

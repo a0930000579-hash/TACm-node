@@ -57,8 +57,8 @@ func TestDebugTraceBlockByNumber(t *testing.T) {
 	if out2["error"] != nil {
 		t.Fatalf("debug_traceBlockByNumber hex 失敗: %v", out2["error"])
 	}
-}
 
+}
 func TestDebugTraceBlockByHash(t *testing.T) {
 	n, srv := newTestRPCServer(t)
 	waitHeight53(t, n, 2)
@@ -78,8 +78,8 @@ func TestDebugTraceBlockByHash(t *testing.T) {
 	if bad["error"] == nil {
 		t.Fatal("不存在哈希應回 error")
 	}
-}
 
+}
 func TestTxpoolInspect(t *testing.T) {
 	n, srv := newTestRPCServer(t)
 	// 塞一筆 pending 交易（不打包，模擬 mempool 內容）。
@@ -113,8 +113,8 @@ func TestTxpoolInspect(t *testing.T) {
 	if nonceMap["hash"] != "v53pendingtx1" {
 		t.Fatalf("hash 不符: %v", nonceMap["hash"])
 	}
-}
 
+}
 func TestEthGetBlockByNumberTags(t *testing.T) {
 	n, srv := newTestRPCServer(t)
 	waitHeight53(t, n, 2)
@@ -139,9 +139,9 @@ func TestEthGetBlockByNumberTags(t *testing.T) {
 	if fb == nil {
 		t.Fatal("finalized 回 nil")
 	}
-}
 
 // strconv53 高度轉 16 進位字串（避免測試檔額外 import）。
+}
 func strconv53(h int64) string {
 	return new(big.Int).SetInt64(h).Text(16)
 }

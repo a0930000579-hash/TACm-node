@@ -32,9 +32,9 @@ func TestIPLimiterAllow(t *testing.T) {
 	if ok, _ := l.allow("10.0.0.2", false); !ok {
 		t.Fatal("不同 IP 應獨立計數")
 	}
-}
 
 // TestIPLimiterCleanup 驗證過期視窗被清理（map 不無界成長）。
+}
 func TestIPLimiterCleanup(t *testing.T) {
 	l := newIPLimiter(1, 1)
 	l.allow("1.1.1.1", false)
@@ -50,9 +50,9 @@ func TestIPLimiterCleanup(t *testing.T) {
 	if got := len(l.wins); got != 0 {
 		t.Fatalf("清理後應為 0，實際 %d", got)
 	}
-}
 
 // TestLimitWrap429 驗證超額請求收到 429 + Retry-After。
+}
 func TestLimitWrap429(t *testing.T) {
 	s := &RPCServer{limiter: newIPLimiter(1, 1)} // 讀 1 次/分
 	h := s.limitWrap(func(w http.ResponseWriter, r *http.Request) {
@@ -79,9 +79,9 @@ func TestLimitWrap429(t *testing.T) {
 	if !strings.Contains(rec2.Body.String(), "rate limit exceeded") {
 		t.Fatalf("429 body 應含錯誤訊息，實際 %s", rec2.Body.String())
 	}
-}
 
 // TestMaxBodyRejected 驗證超大 body 被拒絕（http.MaxBytesReader 生效）。
+}
 func TestMaxBodyRejected(t *testing.T) {
 	s := &RPCServer{limiter: newIPLimiter(10, 10)}
 	h := s.limitWrap(func(w http.ResponseWriter, r *http.Request) {
@@ -100,4 +100,5 @@ func TestMaxBodyRejected(t *testing.T) {
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("超大 body 應被 MaxBytesReader 拒絕（400），實際 %d", rec.Code)
 	}
+
 }

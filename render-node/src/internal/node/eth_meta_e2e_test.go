@@ -69,9 +69,9 @@ func TestEthMetaMethods(t *testing.T) {
 	if bal := n.DB().GetBalance(cb); bal == "" || bal == "0" {
 		t.Logf("注意：測試節點 coinbase 尚未累積（非斷言）")
 	}
-}
 
-// TestTxpoolAndTrace 驗證 txpool_status/content 與 debug_traceTransaction。
+	// TestTxpoolAndTrace 驗證 txpool_status/content 與 debug_traceTransaction。
+}
 func TestTxpoolAndTrace(t *testing.T) {
 	_, srv, _ := contractStudioSetup(t)
 
@@ -97,15 +97,17 @@ func TestTxpoolAndTrace(t *testing.T) {
 	if v := ethResult(t, srv, "debug_traceTransaction", "0x"+strings.Repeat("00", 32)); v != nil {
 		t.Fatalf("trace 未找到應回 null: %v", v)
 	}
+
 }
 
 // TestEthGetProof 驗證 eth_getProof（EIP-1186）結構與真實值。
 func TestEthGetProof(t *testing.T) {
-	n, srv, _ := contractStudioSetup(t)
+	n, srv, admin := contractStudioSetup(t)
 
 	// 部署 ERC-20（有 code，驗證 codeHash 非空 code hash）。
 	out := studioPostJSON(t, srv, "/contract/deploy", map[string]any{
 		"name": "ProofToken", "symbol": "PRF", "supply": "500000",
+		"from": admin,
 	})
 	if out["ok"] != true {
 		t.Fatalf("部署失敗: %v", out)
@@ -172,14 +174,15 @@ func TestM130BlockAndReceiptFields(t *testing.T) {
 	if bb := ethResult(t, srv, "eth_blobBaseFee").(string); bb != "0x0" {
 		t.Fatalf("eth_blobBaseFee 應為 0x0: %v", bb)
 	}
-}
 
-// TestM131TxType2Fields 驗證交易/收據 type-2（EIP-1559）欄位（ethers v6 解析相容）。
+	// TestM131TxType2Fields 驗證交易/收據 type-2（EIP-1559）欄位（ethers v6 解析相容）。
+}
 func TestM131TxType2Fields(t *testing.T) {
-	n, srv, _ := contractStudioSetup(t)
+	n, srv, admin := contractStudioSetup(t)
 
 	out := studioPostJSON(t, srv, "/contract/deploy", map[string]any{
 		"name": "Type2Token", "symbol": "T2T", "supply": "100000",
+		"from": admin,
 	})
 	if out["ok"] != true {
 		t.Fatalf("部署失敗: %v", out)
@@ -218,11 +221,12 @@ func TestM131TxType2Fields(t *testing.T) {
 
 // TestM132RpcParamCompat 驗證 estimateGas value 參數與 getLogs blockHash 過濾（M132）。
 func TestM132RpcParamCompat(t *testing.T) {
-	n, srv, _ := contractStudioSetup(t)
+	n, srv, admin := contractStudioSetup(t)
 
 	// 部署 ERC-20 產生 logs 與可估算呼叫。
 	out := studioPostJSON(t, srv, "/contract/deploy", map[string]any{
 		"name": "ParamToken", "symbol": "PMT", "supply": "100000",
+		"from": admin,
 	})
 	if out["ok"] != true {
 		t.Fatalf("部署失敗: %v", out)
@@ -319,4 +323,5 @@ func TestM133BlockReceiptsAndNetListening(t *testing.T) {
 	if !listening {
 		t.Fatalf("net_listening 應為 true")
 	}
+
 }

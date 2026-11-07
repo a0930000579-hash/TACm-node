@@ -3,6 +3,8 @@ package node
 import (
 	"errors"
 	"fmt"
+	"log"
+	"math/big"
 	"strconv"
 	"strings"
 
@@ -109,7 +111,13 @@ func (h *p2pHost) OnIncomingBlock(b *chaindb.Block, txs []chaindb.Transaction) e
 	}
 	// 錢包帳本同步（與本地出塊一致）。
 	if err := n.syncWallet(b.Height, txs); err != nil {
-		return fmt.Errorf("錢包同步 h=%d: %w", b.Height, err)
+		// 重組跳號：錢包派生視圖暫時落後，非致命——背景對齊，不阻斷已入庫區塊。
+		if isWalletReorgJump(err) {
+			log.Printf("錢包落後（重組），背景對齊 h=%d: %v", b.Height, err)
+			go n.reconcileWallet()
+		} else {
+			return fmt.Errorf("錢包同步 h=%d: %w", b.Height, err)
+		}
 	}
 	// v54：收到網絡塊（主鏈恢復）→ 結束失聯接管，回到正常輪值。
 	n.takeoverMu.Lock()
@@ -187,13 +195,19 @@ func verifyIncomingTxs(n *Node, b *chaindb.Block, txs []chaindb.Transaction) err
 		cbTotal += v
 		i++
 	}
-	// M149i：與 verifyBlockStructure（reorg.go）及出塊側（node.go）一致的 emission-aware 驗證：
-	// annual_decay 用 EmissionAmount（錨點主網 1.5045/塊），否則 BlockReward（halving）。
-	wantReward := chaindb.BlockReward(b.Height)
-	if cfg, err := chaindb.LoadEmission(int64(n.cfg.BlockTime)); err == nil && cfg.Model == "annual_decay" {
-		wantReward = chaindb.EmissionAmount(b.Height, int64(n.cfg.BlockTime))
+	// M149i/M150h：與 verifyBlockStructure（reorg.go）及出塊側（node.go）完全同源——
+	// 用 ComputeCappedReward（annual_decay 取 EmissionAmount，否則 BlockReward，再按剩餘可挖截斷），
+	// 避免追塊路徑與重組/出塊路徑口徑分歧（快照 follower 曾誤報 6.018 vs 10）。
+	var minedWei *big.Int
+	if n.walletSvc != nil {
+		if mw, merr := n.walletSvc.ChainMinedTacm(); merr == nil {
+			minedWei = mw
+		}
 	}
-	if abs(cbTotal-wantReward) > 1e-9 {
+	wantReward := chaindb.ComputeCappedReward(b.Height, int64(n.cfg.BlockTime), minedWei)
+	if wantReward <= 1e-9 {
+		// 已達上限：本塊零增發，容許無 coinbase（開頭即為普通交易）。
+	} else if abs(cbTotal-wantReward) > 1e-9 {
 		return fmt.Errorf("coinbase 總額=%g 應為 %g", cbTotal, wantReward)
 	}
 

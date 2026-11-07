@@ -16,7 +16,8 @@ func TestEthCallStateOverride(t *testing.T) {
 
 	out := studioPostJSON(t, srv, "/contract/deploy", map[string]any{
 		"name": "OVR", "symbol": "OV", "supply": "1000",
-	})
+		"from": admin,
+		})
 	if out["ok"] != true {
 		t.Fatalf("部署失敗: %v", out)
 	}

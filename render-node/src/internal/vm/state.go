@@ -136,6 +136,13 @@ func (s *WorldState) Transfer(from, to any, value *big.Int) bool {
 }
 
 // Snapshot 深拷貝全部賬戶。
+// DeleteAccount 刪除整個帳號（餘額/代碼/儲存/隨機數全清）。
+// v135：SELFDESTRUCT 語義補全（EIP-6780 主幹）——自毀後帳號從世界狀態移除，可再被建立。
+func (s *WorldState) DeleteAccount(addr any) {
+	a := NormalizeAddress(addr)
+	delete(s.accounts, a)
+}
+
 func (s *WorldState) Snapshot() map[string]*WorldAccount {
 	out := make(map[string]*WorldAccount, len(s.accounts))
 	for a, acc := range s.accounts {

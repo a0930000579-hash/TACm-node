@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -14,7 +15,10 @@ import (
 )
 
 // bscStubE2E 為 e2e 的 BSC JSON-RPC 樁（與 bridge 包測試一致的最小實作）。
+// mu 保護 rawTxs/blockNum/logs：handler 跑在 httptest 的 goroutine，測試本體在另一 goroutine 讀取，
+// 必須加鎖，否則 -race 會偵測到資料競態（v164 修正既有測試競態）。
 type bscStubE2E struct {
+	mu        sync.Mutex
 	t         *testing.T
 	rawTxs    []string
 	blockNum  string
@@ -24,6 +28,8 @@ type bscStubE2E struct {
 }
 
 func (s *bscStubE2E) handler(w http.ResponseWriter, r *http.Request) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	var req struct {
 		Method string `json:"method"`
 		Params []any  `json:"params"`
@@ -105,8 +111,8 @@ func TestBSCRelayStatusEndpoint(t *testing.T) {
 	if sc != 200 || body["enabled"] != false {
 		t.Fatalf("chain=ethereum 未啟用應 disabled: %d %v", sc, body)
 	}
-}
 
+}
 func TestBSCRelayMintEndToEnd(t *testing.T) {
 	n, srv := startBridgeNode(t)
 	defer srv.Close()
@@ -148,10 +154,16 @@ func TestBSCRelayMintEndToEnd(t *testing.T) {
 
 	// 等 relay 自動 mint（mock BSC 收到 raw 且橋狀態推進）。
 	deadline := time.Now().Add(8 * time.Second)
+	var raw0 string
 	for time.Now().Before(deadline) {
+		st.mu.Lock()
 		if len(st.rawTxs) >= 1 {
+			raw0 = st.rawTxs[0]
+		}
+		st.mu.Unlock()
+		if raw0 != "" {
 			// 驗證 calldata 為 withdraw selector（M150b：中繼 mint 走 TACBridge.withdraw）。
-			raw, err := crypto.HexDecode(strings.TrimPrefix(st.rawTxs[0], "0x"))
+			raw, err := crypto.HexDecode(strings.TrimPrefix(raw0, "0x"))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -174,7 +186,7 @@ func TestBSCRelayMintEndToEnd(t *testing.T) {
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	if len(st.rawTxs) == 0 {
+	if raw0 == "" {
 		t.Fatal("relay 未在時限內發送 BSC mint")
 	}
 	// 橋狀態推進（直接查節點橋，避免 GET body 限制）。
@@ -190,4 +202,5 @@ func TestBSCRelayMintEndToEnd(t *testing.T) {
 	if sc != 200 {
 		t.Fatalf("bsc status: %d", sc)
 	}
+
 }

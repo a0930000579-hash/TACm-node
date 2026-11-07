@@ -1,5 +1,28 @@
 {% extends "base.html" %}
-{% block title %}Indexer API Docs{% endblock %}
+{% block title %}Indexer API Docs<script>
+  (function(){
+    fetch('/api/rpc-doc', {cache:'no-store'}).then(function(r){ return r.json().catch(function(){ return null; }); }).then(function(d){
+      var box = document.getElementById('rpcRoutes');
+      if (!box) return;
+      if (!d || !d.ok || !d.routes || !d.routes.length){
+        box.textContent = T('api.fullFail','路由載入失敗','Failed to load routes');
+        return;
+      }
+      var groups = {};
+      (d.routes || []).forEach(function(rt){
+        var m = rt.pattern.split(' ')[0] || 'GET';
+        var p = rt.pattern.split(' ').slice(1).join(' ');
+        groups[p] = groups[p] || [];
+        groups[p].push(m);
+      });
+      var keys = Object.keys(groups).sort();
+      box.innerHTML = keys.map(function(p){
+        return '<div style="margin:6px 0;padding:8px 10px;background:rgba(104,190,141,.06);border:1px solid rgba(104,190,141,.18);border-radius:8px"><code style="color:#16a34a">' + groups[p].join('/') + '</code> <code style="float:right;color:#667085">' + p + '</code></div>';
+      }).join('');
+    });
+  })();
+</script>
+{% endblock %}
 {% block content %}
 <style>
   .api-ep{background:var(--card,#fff);border:1px solid var(--border,#e8ecf1);border-radius:12px;padding:14px 16px;margin:10px 0}
@@ -13,7 +36,7 @@
   .api-note{font-size:13px;color:var(--muted,#667085)}
 </style>
 <section class="pg-banner">
-  <div class="pg-txt"><h1 data-i18n="api.title">Indexer API</h1><p data-i18n="api.intro">公共只讀查詢面（Etherscan 風）——區塊、交易、地址與鏈統計，供開發者與工具整合。全部端點回傳 JSON。</p></div>
+  <div class="pg-txt"><h1 data-i18n="api.title">Indexer API</h1><p data-i18n="api.intro">公共只讀查詢面——區塊、交易、地址與鏈統計，供開發者與工具整合。全部端點回傳 JSON。</p></div>
   <svg viewBox="0 0 40 40" class="pg-art"><path d="M14 10h14v5H14zM10 17h20v5H10zM14 24h14v5H14z" fill="none" stroke="#68BE8D" stroke-width="2"/><circle cx="8" cy="12.5" r="1.6" fill="#68BE8D"/><circle cx="8" cy="19.5" r="1.6" fill="#68BE8D"/><circle cx="8" cy="26.5" r="1.6" fill="#68BE8D"/></svg>
 </section>
 <section class="panel">
@@ -58,7 +81,7 @@
 
   <div class="api-ep">
     <span class="api-method">GET</span><span class="api-path">/api/v1/delegations?limit=&amp;offset=</span>
-    <div class="api-desc" data-i18n="api.delegDesc">質押委託分頁：全鏈委託紀錄（委託額降序，含委託人／驗證人／金額／時間）。</div>
+    <div class="api-desc" data-i18n="api.delegDesc">質押委託分頁：全鏈委託紀錄（委託額降序，含委託人／節點／金額／時間）。</div>
     <code class="api-ex">curl "http://localhost:8080/api/v1/delegations?limit=20"</code>
   </div>
 
@@ -70,9 +93,56 @@
 
   <div class="api-ep">
     <span class="api-method">GET</span><span class="api-path">/api/v1/validators</span>
-    <div class="api-desc" data-i18n="api.validatorsDesc">驗證人排名：權重（自有＋委託）／委託總額／委託人數／狀態，權重降序。</div>
+    <div class="api-desc" data-i18n="api.validatorsDesc">節點排名：權重（自有＋委託）／委託總額／委託人數／狀態，權重降序。</div>
     <code class="api-ex">curl http://localhost:8080/api/v1/validators</code>
   </div>
+
+  <div class="api-ep">
+    <span class="api-method">GET</span><span class="api-path">/api/tiusd/dashboard</span>
+    <div class="api-desc" data-i18n="api.tiusdDesc">TiUSD 穩定幣總覽：供應、市值上限（1:1 TACm 市值）、下限、利用率、真實儲備、流向、跨鏈明細＋淨額。</div>
+    <code class="api-ex">curl http://localhost:8080/api/tiusd/dashboard</code>
+  </div>
+
+  <div class="api-ep">
+    <span class="api-method">GET</span><span class="api-path">/api/tiusd/history</span>
+    <div class="api-desc" data-i18n="api.histDesc">TiUSD 累計鑄造歷史（ledger mint 採樣）＋現值上限，供供應趨勢圖。</div>
+    <code class="api-ex">curl "http://localhost:8080/api/tiusd/history?points=48"</code>
+  </div>
+
+  <div class="api-ep">
+    <span class="api-method">GET</span><span class="api-path">/api/tiusd/positions</span>
+    <div class="api-desc" data-i18n="api.posDesc">全鏈借款頭寸（CDP）＋總借款／總抵押匯總。</div>
+    <code class="api-ex">curl http://localhost:8080/api/tiusd/positions</code>
+  </div>
+
+  <div class="api-ep">
+    <span class="api-method">GET</span><span class="api-path">/api/tiusd/export.csv</span>
+    <div class="api-desc" data-i18n="api.csvDesc">TiUSD 全量帳本 CSV 匯出（審計用）。</div>
+    <code class="api-ex">curl http://localhost:8080/api/tiusd/export.csv -o tiusd-ledger.csv</code>
+  </div>
+
+  <div class="api-ep">
+    <span class="api-method">GET</span><span class="api-path">/api/tacm/dashboard</span>
+    <div class="api-desc" data-i18n="api.tacmDesc">TACm 原生幣總覽：已出塊產出、供應上限、剩餘可挖、流向（含借款／質押／LP 分類）。</div>
+    <code class="api-ex">curl http://localhost:8080/api/tacm/dashboard</code>
+  </div>
+
+  <div class="api-ep">
+    <span class="api-method">GET</span><span class="api-path">/api/alerts</span>
+    <div class="api-desc" data-i18n="api.alertsDesc">最近 30 天鏈上警報事件：市值縮水銷毀、供給層補鑄、跨鏈異常、利用率突破。</div>
+    <code class="api-ex">curl http://localhost:8080/api/alerts</code>
+  </div>
+
+  <div class="api-ep">
+    <span class="api-method">GET</span><span class="api-path">/api/rpc-doc</span>
+    <div class="api-desc" data-i18n="api.rpcdocDesc">節點 RPC 全路由清單（自動生成，含 eth_* JSON-RPC 面）。</div>
+    <code class="api-ex">curl http://localhost:8080/api/rpc-doc</code>
+  </div>
+</section>
+<section class="panel">
+  <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> <span data-i18n="api.full">節點 RPC 全路由 / Full Route List</span></h2></div>
+  <div class="api-note" data-i18n="api.fullNote">以下為節點自動註冊的全部 HTTP 路由（含 eth_* JSON-RPC 相容面，POST /eth）。</div>
+  <div id="rpcRoutes" style="margin-top:8px;font-size:12px;color:var(--muted,#667085)">載入中…</div>
 </section>
 <section class="panel">
   <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M12 3l8 4v6c0 4.4-3.4 7.4-8 9-4.6-1.6-8-4.6-8-9V7z"/></svg> <span data-i18n="api.usage">使用規範 / Usage</span></h2></div>

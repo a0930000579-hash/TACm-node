@@ -19,7 +19,7 @@ func TestContractReadInteractive(t *testing.T) {
 	n, srv, admin := contractStudioSetup(t)
 
 	out := studioPostJSON(t, srv, "/contract/deploy", map[string]any{
-		"name": "ReadToken", "symbol": "RDT", "supply": "250000",
+		"name": "ReadToken", "symbol": "RDT", "supply": "250000", "from": admin,
 	})
 	if out["ok"] != true {
 		t.Fatalf("部署失敗: %v", out)

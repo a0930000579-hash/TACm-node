@@ -2,6 +2,7 @@ package node
 
 import (
 	"encoding/json"
+	"sort"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -43,8 +44,38 @@ func (s *RPCServer) requireBridge(w http.ResponseWriter) *bridgepkg.Bridge {
 }
 
 func (s *RPCServer) handleBridgeChains(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK,
-		map[string]any{"chains": bridgepkg.SupportedChains()})
+	b := s.requireBridge(w)
+	if b == nil {
+		return
+	}
+	cp := map[string]int{}
+	if b != nil {
+		if p, err := b.ChainPending(); err == nil {
+			cp = p
+		}
+	}
+	info := bridgepkg.SupportedChains()
+	keys := make([]string, 0, len(info))
+	for k := range info {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	chains := make([]map[string]any, 0, len(keys))
+	for _, k := range keys {
+		ci := info[k]
+		chains = append(chains, map[string]any{
+			"key":      ci.Key,
+			"chain":    k,
+			"name":     ci.Name,
+			"coin":     ci.Coin,
+			"chain_id": ci.ChainID,
+			"pending":  cp[k],
+		})
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"ok":     true,
+		"chains": chains,
+	})
 }
 
 // startNetworkedTransfer 走守衛網絡：建本地記錄 → 廣播提案 → 本節點即時簽名。
@@ -259,6 +290,10 @@ func (s *RPCServer) requireBridgeAdmin(w http.ResponseWriter, r *http.Request) b
 	u, err := auth.CurrentUser(r)
 	if err != nil || u == nil {
 		writeErr(w, http.StatusUnauthorized, "login required: bridge kill-switch is admin-only")
+		return false
+	}
+	if !u.IsAdmin {
+		writeErr(w, http.StatusForbidden, "admin role required: bridge kill-switch is admin-only (contact the deployer to elevate your account)")
 		return false
 	}
 	return true

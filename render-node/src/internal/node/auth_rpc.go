@@ -81,3 +81,34 @@ func decodeJSON(r *http.Request, v any) error {
 	}
 	return json.Unmarshal(body, v)
 }
+
+// handleAdminSetAdmin POST /api/admin/set-admin — 管理員角色設定（僅 admin，v127）。
+func (s *RPCServer) handleAdminSetAdmin(w http.ResponseWriter, r *http.Request) {
+	auth := s.node.Auth()
+	if auth == nil {
+		writeErr(w, http.StatusServiceUnavailable, "auth service not enabled")
+		return
+	}
+	u, err := auth.CurrentUser(r)
+	if err != nil || u == nil {
+		writeErr(w, http.StatusUnauthorized, "login required")
+		return
+	}
+	if !u.IsAdmin {
+		writeErr(w, http.StatusForbidden, "admin role required")
+		return
+	}
+	var body struct {
+		Email   string `json:"email"`
+		IsAdmin bool   `json:"is_admin"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid_json")
+		return
+	}
+	if err := auth.SetAdmin(body.Email, body.IsAdmin); err != nil {
+		writeErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, 200, map[string]any{"ok": true, "email": body.Email, "is_admin": body.IsAdmin})
+}

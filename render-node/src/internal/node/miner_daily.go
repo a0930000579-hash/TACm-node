@@ -27,14 +27,15 @@ func (n *Node) MinerEarningsDaily(addr string, days int) ([]DailyEarning, error)
 		days = 7
 	}
 	agg := map[string]*DailyEarning{}
-	txs, err := n.db.GetCoinbaseTransactions()
+	now := time.Now().In(time.FixedZone("CST", 8*3600))
+	cutoff := now.AddDate(0, 0, -(days - 1))
+	// v112：一次 SQL 只取該地址近 N 天 coinbase:miner（取代 GetCoinbaseTransactions 全量掃）。
+	txs, err := n.db.GetMinerCoinbaseTxsByAddr(addr, cutoff.Unix())
 	if err != nil {
 		return nil, fmt.Errorf("node: 讀取 coinbase 交易失敗: %w", err)
 	}
-	now := time.Now().In(time.FixedZone("CST", 8*3600))
-	cutoff := now.AddDate(0, 0, -(days - 1))
 	for _, tx := range txs {
-		if tx == nil || tx.ToAddr != addr || tx.Memo != "coinbase:miner" {
+		if tx == nil {
 			continue
 		}
 		amt, err := strconv.ParseFloat(tx.Amount, 64)
@@ -80,34 +81,32 @@ func (n *Node) MinerHashrateDaily(addr string, days int) ([]DailyEarning, error)
 	agg := map[string]*dayAgg{}
 	now := time.Now().In(time.FixedZone("CST", 8*3600))
 	cutoff := now.AddDate(0, 0, -(days - 1))
-	tip := n.db.GetTipHeight()
-	for h := int64(1); h <= tip; h++ {
-		txs, err := n.db.GetTransactionsByBlock(h)
-		if err != nil {
-			return nil, fmt.Errorf("node: 掃區塊 %d 失敗: %w", h, err)
+	// v112：一次 SQL 只取該地址近 N 天 hb 交易（取代「塊 1→tip 逐塊掃描」——鏈長時數分鐘級卡頓主因）。
+	txs, err := n.db.GetHeartbeatTxsByAddr(addr, cutoff.Unix())
+	if err != nil {
+		return nil, fmt.Errorf("node: 讀取心跳交易失敗: %w", err)
+	}
+	for _, tx := range txs {
+		if tx == nil {
+			continue
 		}
-		for _, tx := range txs {
-			if tx == nil || tx.ToAddr != addr {
-				continue
-			}
-			on, hr, ok := parseHeartbeatMemo(tx.Memo)
-			if !ok {
-				continue
-			}
-			d := dayKey(tx.Ts)
-			if d < cutoff.Format("2006-01-02") {
-				continue
-			}
-			a, ok2 := agg[d]
-			if !ok2 {
-				a = &dayAgg{}
-				agg[d] = a
-			}
-			a.n++
-			if on {
-				a.sum += hr
-				a.onCnt++
-			}
+		on, hr, ok := parseHeartbeatMemo(tx.Memo)
+		if !ok {
+			continue
+		}
+		d := dayKey(tx.Ts)
+		if d < cutoff.Format("2006-01-02") {
+			continue
+		}
+		a, ok2 := agg[d]
+		if !ok2 {
+			a = &dayAgg{}
+			agg[d] = a
+		}
+		a.n++
+		if on {
+			a.sum += hr
+			a.onCnt++
 		}
 	}
 	out := make([]DailyEarning, 0, days)

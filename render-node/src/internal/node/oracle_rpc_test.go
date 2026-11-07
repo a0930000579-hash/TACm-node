@@ -61,8 +61,8 @@ func TestOracleRPCPrices(t *testing.T) {
 	if !found {
 		t.Fatal("快照應含 BTC/USDT 且價格 > 0")
 	}
-}
 
+}
 func TestOracleRPCFeedGetHistory(t *testing.T) {
 	srv := newOracleTestServer(t)
 	defer srv.Close()
@@ -129,4 +129,5 @@ func TestOracleRPCFeedGetHistory(t *testing.T) {
 	if br.StatusCode != http.StatusBadRequest {
 		t.Fatalf("非法喂價應 400，got %d", br.StatusCode)
 	}
+
 }

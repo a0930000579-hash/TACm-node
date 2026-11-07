@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"tacm/internal/chaindb"
+	"tacm/internal/node"
 )
 
 // auditEps 浮點容差（與 cmd/tacctl 一致）。
@@ -68,6 +69,9 @@ type AuditView struct {
 	CoinbaseTotal string   `json:"coinbase_total_tacm"` // 全鏈 coinbase 增發總額
 	BalancesTotal string   `json:"balances_total_tacm"` // 重放後全部地址餘額總和
 	Issues        []string `json:"issues"`
+	// v60：審計模式標記（增量重放 vs 全量）。
+	Incremental bool  `json:"incremental"`
+	FromHeight  int64 `json:"from_height"` // 增量時為基線高度；全量時為 0
 }
 
 // expectedCoinbaseReward 預期出塊獎勵：與出塊同源——annual_decay 時依 EmissionAmount，
@@ -80,7 +84,10 @@ func expectedCoinbaseReward(height, blockTimeSec int64) float64 {
 }
 
 // auditRecentBlocks 自鏈頂往下驗證最近 n 塊（含創世則跳過 coinbase 驗證）。
-func auditRecentBlocks(ds DataSource, n int, blockTimeSec int64) AuditView {
+func auditRecentBlocks(ds DataSource, n int, blockTimeSec int64, cache *auditBlockCache) AuditView {
+	if cache == nil {
+		cache = newAuditBlockCache()
+	}
 	st := ds.Status()
 	out := AuditView{
 		Network: "mainnet",
@@ -114,87 +121,54 @@ func auditRecentBlocks(ds DataSource, n int, blockTimeSec int64) AuditView {
 	first := true
 	var minted float64
 	for h := start; h <= tip; h++ {
-		bd, err := ds.BlockDetail(h)
-		if err != nil {
+		// 結構檢查只讀輕量表頭（不載入交易），避免每 tick 重拉 100 塊的完整交易。
+		bv, berr := ds.BlockHeader(h)
+		if berr != nil || bv == nil {
 			out.StructureOK = false
-			out.Issues = append(out.Issues, "h="+strconv.FormatInt(h, 10)+" 讀取失敗: "+err.Error())
-			continue
-		}
-		if bd == nil || bd.Block == nil {
-			out.StructureOK = false
-			out.Issues = append(out.Issues, "h="+strconv.FormatInt(h, 10)+" 區塊缺失（鏈不連續）")
+			out.Issues = append(out.Issues, "h="+strconv.FormatInt(h, 10)+" 讀取失敗（區塊缺失，鏈不連續）")
 			continue
 		}
 		out.CheckedBlocks++
 		// 結構：高度連續由迴圈保證；時間戳不倒退；難度合法（創世豁免）。
 		if first {
-			prevTs = bd.Block.Ts
+			prevTs = bv.Ts
 			first = false
-		} else if bd.Block.Ts < prevTs {
+		} else if bv.Ts < prevTs {
 			out.StructureOK = false
 			out.Issues = append(out.Issues, "h="+strconv.FormatInt(h, 10)+" 時間戳倒退")
 		} else {
-			prevTs = bd.Block.Ts
+			prevTs = bv.Ts
 		}
-		if bd.Block.Height > 0 && bd.Block.Difficulty < 1 {
+		if bv.Height > 0 && bv.Difficulty < 1 {
 			out.StructureOK = false
 			out.Issues = append(out.Issues, "h="+strconv.FormatInt(h, 10)+" 難度非法")
 		}
 		// coinbase 不變式（創世塊 h<=0 無增發，跳過）。
-		if bd.Block.Height <= 0 {
+		if bv.Height <= 0 {
 			continue
 		}
-		reward := expectedCoinbaseReward(bd.Block.Height, blockTimeSec)
-		var coinbaseSum, poolAmt, nodeAmt, minerSum float64
-		for _, tx := range bd.Transactions {
-			if tx == nil || !isCoinbaseMemo(tx.Memo) {
+		// 按哈希快取 coinbase 審計：不可變塊重複 tick 直接重用；重組改哈希 → miss 重算。
+		ca, hit := cache.get(bv.Hash)
+		if !hit {
+			bd, err := ds.BlockDetail(h)
+			if err != nil || bd == nil || bd.Block == nil {
+				out.StructureOK = false
+				out.Issues = append(out.Issues, "h="+strconv.FormatInt(h, 10)+" 區塊交易讀取失敗（鏈不連續）")
 				continue
 			}
-			amt, err := strconv.ParseFloat(tx.Amount, 64)
-			if err != nil {
-				continue
-			}
-			coinbaseSum += amt
-			switch {
-			case strings.HasPrefix(tx.Memo, "coinbase:pool"):
-				poolAmt += amt
-			case strings.HasPrefix(tx.Memo, "coinbase:node"):
-				nodeAmt += amt
-			default:
-				minerSum += amt
-			}
+			ca = auditBlockCoinbase(bd, blockTimeSec)
+			cache.put(bv.Hash, ca)
 		}
-		minted += coinbaseSum
-		expPool := reward * float64(chaindb.PoolShareBps) / 10000
-		expNode := reward * float64(chaindb.NodeShareBps) / 10000
-		expRest := reward - expPool - expNode
-		if math.Abs(coinbaseSum-reward) <= auditEps {
-			out.CoinbasePass++
-		} else {
-			out.CoinbaseFail++
-			out.Issues = append(out.Issues, "h="+strconv.FormatInt(h, 10)+" coinbase 總額 "+strconv.FormatFloat(coinbaseSum, 'f', 8, 64)+" != 出塊獎勵 "+strconv.FormatFloat(reward, 'f', 8, 64))
-		}
-		if math.Abs(poolAmt-expPool) <= auditEps {
-			out.PoolPass++
-		} else {
-			out.PoolFail++
-			out.Issues = append(out.Issues, "h="+strconv.FormatInt(h, 10)+" pool 份額異常")
-		}
-		// M149q：節點 45% 依鏈上在線節點狀態可分發（coinbase:node 均分）或回退
-		// （無節點時 coinbase:reserve 併池）——node 檢查容許「0（併池）」或「45%（有節點）」；
-		// split 僅強制 node+miner==85% 恆等式（45%+40%），避免併池被誤報份額異常。
-		if math.Abs(nodeAmt-expNode) <= auditEps || nodeAmt <= auditEps {
-			out.NodePass++
-		} else {
-			out.NodeFail++
-			out.Issues = append(out.Issues, "h="+strconv.FormatInt(h, 10)+" 節點獎勵份額異常")
-		}
-		if math.Abs(minerSum-expRest) <= auditEps || math.Abs(nodeAmt+minerSum-expRest) <= auditEps {
-			out.SplitPass++
-		} else {
-			out.SplitFail++
-			out.Issues = append(out.Issues, "h="+strconv.FormatInt(h, 10)+" miner/reserve 份額異常")
-		}
+		out.CoinbasePass += ca.coinbasePass
+		out.CoinbaseFail += ca.coinbaseFail
+		out.PoolPass += ca.poolPass
+		out.PoolFail += ca.poolFail
+		out.NodePass += ca.nodePass
+		out.NodeFail += ca.nodeFail
+		out.SplitPass += ca.splitPass
+		out.SplitFail += ca.splitFail
+		minted += ca.minted
+		out.Issues = append(out.Issues, ca.issues...)
 	}
 	out.AuditedMint = chaindb.FormatFloat(minted)
 	out.StructureOK = out.StructureOK && out.CheckedBlocks == int(tip-start+1)
@@ -223,6 +197,8 @@ func auditRecentBlocks(ds DataSource, n int, blockTimeSec int64) AuditView {
 		out.LedgerOK = la.LedgerOK
 		out.CoinbaseTotal = chaindb.FormatFloat(la.CoinbaseTotal)
 		out.BalancesTotal = chaindb.FormatFloat(la.BalancesTotal)
+		out.Incremental = la.Incremental
+		out.FromHeight = la.FromHeight
 		for _, iss := range la.Issues {
 			out.Issues = append(out.Issues, iss)
 		}
@@ -237,6 +213,62 @@ func auditRecentBlocks(ds DataSource, n int, blockTimeSec int64) AuditView {
 	return out
 }
 
+// auditBlockCoinbase 對單一塊（含完整交易）計算 coinbase/份額審計結果，供按哈希快取。
+func auditBlockCoinbase(bd *node.BlockDetail, blockTimeSec int64) blockCoinbaseAudit {
+	b := bd.Block
+	r := blockCoinbaseAudit{height: b.Height}
+	reward := expectedCoinbaseReward(b.Height, blockTimeSec)
+	var coinbaseSum, poolAmt, nodeAmt, minerSum float64
+	for _, tx := range bd.Transactions {
+		if tx == nil || !isCoinbaseMemo(tx.Memo) {
+			continue
+		}
+		amt, err := strconv.ParseFloat(tx.Amount, 64)
+		if err != nil {
+			continue
+		}
+		coinbaseSum += amt
+		switch {
+		case strings.HasPrefix(tx.Memo, "coinbase:pool"):
+			poolAmt += amt
+		case strings.HasPrefix(tx.Memo, "coinbase:node"):
+			nodeAmt += amt
+		default:
+			minerSum += amt
+		}
+	}
+	r.minted = coinbaseSum
+	expPool := reward * float64(chaindb.PoolShareBps) / 10000
+	expNode := reward * float64(chaindb.NodeShareBps) / 10000
+	expRest := reward - expPool - expNode
+	if math.Abs(coinbaseSum-reward) <= auditEps {
+		r.coinbasePass = 1
+	} else {
+		r.coinbaseFail = 1
+		r.issues = append(r.issues, "h="+strconv.FormatInt(b.Height, 10)+" coinbase 總額 "+strconv.FormatFloat(coinbaseSum, 'f', 8, 64)+" != 出塊獎勵 "+strconv.FormatFloat(reward, 'f', 8, 64))
+	}
+	if math.Abs(poolAmt-expPool) <= auditEps {
+		r.poolPass = 1
+	} else {
+		r.poolFail = 1
+		r.issues = append(r.issues, "h="+strconv.FormatInt(b.Height, 10)+" pool 份額異常")
+	}
+	// M149q：node 檢查容許「0（併池）」或「45%（有節點）」；split 強制 node+miner==85%。
+	if math.Abs(nodeAmt-expNode) <= auditEps || nodeAmt <= auditEps {
+		r.nodePass = 1
+	} else {
+		r.nodeFail = 1
+		r.issues = append(r.issues, "h="+strconv.FormatInt(b.Height, 10)+" 節點獎勵份額異常")
+	}
+	if math.Abs(minerSum-expRest) <= auditEps || math.Abs(nodeAmt+minerSum-expRest) <= auditEps {
+		r.splitPass = 1
+	} else {
+		r.splitFail = 1
+		r.issues = append(r.issues, "h="+strconv.FormatInt(b.Height, 10)+" miner/reserve 份額異常")
+	}
+	return r
+}
+
 // handleAuditAPI GET /api/audit?blocks=N — 公開鏈上審計（M67）：
 // 驗證最近 N 塊（預設 100，上限 500）coinbase 不變式＋回傳全鏈真實供應/獎勵池。
 // M149q：優先回後台 auditLoop 快取（20 秒一次全鏈重放），請求不再反覆觸發 O(鏈長) 掃描。
@@ -246,7 +278,7 @@ func (s *Server) handleAuditAPI(w http.ResponseWriter, r *http.Request) {
 	started := s.auditStarted
 	s.auditMu.Unlock()
 	if !started {
-		av = auditRecentBlocks(s.ds, 100, s.blockTimeSec)
+		av = auditRecentBlocks(s.ds, 100, s.blockTimeSec, s.auditBlockCache)
 	}
 	av.Network = s.network
 	if s.network == "testnet" {
@@ -260,7 +292,7 @@ func (s *Server) handleAuditAPI(w http.ResponseWriter, r *http.Request) {
 // 反覆的全鏈賬本重放飽和，出塊間隔與礦機載入因此恢復正常。
 func (s *Server) auditLoop() {
 	run := func() {
-		av := auditRecentBlocks(s.ds, 100, s.blockTimeSec)
+		av := auditRecentBlocks(s.ds, 100, s.blockTimeSec, s.auditBlockCache)
 		s.auditMu.Lock()
 		s.auditView = av
 		s.auditStarted = true

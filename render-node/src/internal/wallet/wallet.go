@@ -12,6 +12,7 @@ type Service struct {
 	st             *Store
 	mu             sync.Mutex
 	tacmMaxSupply  float64 // M35：TACm 總供應上限（TiUSD 錨定基準）
+	tacmPrice      float64 // v102：TACm 市價（USDT/TACm，最後成交價；0＝未上市）
 	treasuryFeeBps int     // M151c-v2：手續費入治理金庫比例（萬分比；0=關閉）
 }
 
@@ -138,14 +139,17 @@ func (s *Service) MintTiUSD(address string, amount int64, note string) (int64, e
 	if amount <= 0 {
 		return 0, fmt.Errorf("wallet: TiUSD 發行量必須大於 0")
 	}
-	_, capAmt, enabled := s.tiUSDSupplies()
+	_, capAmt, enabled, err := s.tiUSDSupplies()
+	if err != nil {
+		return 0, err
+	}
 	if enabled {
 		sup0, err0 := s.st.TiUSDSummary()
 		if err0 != nil {
 			return 0, fmt.Errorf("wallet: 讀取 TiUSD 供給: %w", err0)
 		}
 		if sup0.Supply+amount > capAmt {
-			return 0, fmt.Errorf("wallet: TiUSD 發行超上限（總供應 1:1 錨定，當前 %d 最小單位）", capAmt)
+			return 0, fmt.Errorf("wallet: TiUSD 發行超上限（TACm 市值錨定＝%d 最小單位，當前 %d）", capAmt, sup0.Supply)
 		}
 	}
 	if err := s.st.adjustTiUSD(amount, amount, 0); err != nil {
@@ -169,14 +173,17 @@ func (s *Service) BurnTiUSD(amount int64, note string) (int64, error) {
 	if amount <= 0 {
 		return 0, fmt.Errorf("wallet: TiUSD 銷毀量必須大於 0")
 	}
-	floorAmt, _, enabled := s.tiUSDSupplies()
+	floorAmt, _, enabled, err := s.tiUSDSupplies()
+	if err != nil {
+		return 0, err
+	}
 	if enabled {
 		sup0, err0 := s.st.TiUSDSummary()
 		if err0 != nil {
 			return 0, fmt.Errorf("wallet: 讀取 TiUSD 供給: %w", err0)
 		}
 		if sup0.Supply-amount < floorAmt {
-			return 0, fmt.Errorf("wallet: TiUSD 銷毀將低於最小流通量（總供應 0.330 倍＝%d 最小單位）", floorAmt)
+			return 0, fmt.Errorf("wallet: TiUSD 銷毀將低於最小流通量（0.330 倍＝%d 最小單位）", floorAmt)
 		}
 	}
 	if err := s.st.adjustTiUSD(-amount, 0, amount); err != nil {
@@ -199,7 +206,32 @@ func (s *Service) Ledger(limit int) ([]LedgerEntry, error) {
 	return s.st.Ledger(limit)
 }
 
+// LedgerByKindAsset 透出指定資產指定 kind 的全量帳本（歷史採樣）。
+func (s *Service) LedgerByKindAsset(kind, asset string) ([]LedgerEntry, error) {
+	return s.st.LedgerByKindAsset(kind, asset)
+}
+
+// ExportLedgerCSV 透出指定資產全量帳本 CSV。
+func (s *Service) ExportLedgerCSV(asset string) (string, error) {
+	return s.st.ExportLedgerCSV(asset)
+}
+
 // TiUSDSummary 返回穩定幣供給摘要。
+// ChainMinedTacm v101：全鏈累計出塊產出（TACm 監控台用）。
+func (s *Service) ChainMinedTacm() (*big.Int, error) {
+	return s.st.ChainMinedTacm()
+}
+
 func (s *Service) TiUSDSummary() (*TiUSDSupply, error) {
 	return s.st.TiUSDSummary()
+}
+
+// GetSetting v108：KV 設定讀取（透出 store）。
+func (s *Service) GetSetting(key string) (string, error) {
+	return s.st.GetSetting(key)
+}
+
+// SetSetting v108：KV 設定寫入（透出 store）。
+func (s *Service) SetSetting(key, value string) error {
+	return s.st.SetSetting(key, value)
 }

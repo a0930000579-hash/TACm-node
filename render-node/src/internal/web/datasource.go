@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"tacm/internal/chaindb"
-	"tacm/internal/node"
 	"tacm/internal/exchange"
+	"tacm/internal/node"
 	"tacm/internal/wallet"
 )
 
@@ -18,6 +18,8 @@ type DataSource interface {
 	Status() StatusView
 	Blocks(limit int) ([]BlockView, error)
 	Block(height int64) (*BlockView, error)
+	// BlockHeader 僅讀表頭（不載入交易），審計結構檢查高頻路徑用。
+	BlockHeader(height int64) (*BlockView, error)
 	Transaction(hash string) (*TxView, error)
 	Address(addr string) (*AddressView, error)
 	Wallet(addr string) (*WalletView, error)
@@ -53,9 +55,13 @@ type DataSource interface {
 	NodeRewardStats() chaindb.NodeRewardStats
 	NodeDataDir() string
 	NodeSendFromNode(to, amount string) (string, string, error)
+	// M149m-9：鏈上 PoT 節點註冊（node:reg）——面板顯示節點資格狀態。
+	NodeRegistry() ([]chaindb.NodeRegistry, error)
 	// M115：訂單簿與最新成交（WebSocket depth/trades 推送數據源）。
 	ExchangeOrderBook(market string, depth int) (bids, asks []exchange.PriceLevel, err error)
 	ExchangeRecentTrades(market string, limit int) ([]exchange.Trade, error)
+	// v104：鏈頂高度（dashboard_update 推送偵測新區塊）。
+	TipHeight() int64
 }
 
 type nodeDS struct{ n *node.Node }
@@ -64,7 +70,6 @@ type nodeDS struct{ n *node.Node }
 func (d *nodeDS) Snapshot() (*node.SnapshotData, error) {
 	return d.n.ExportSnapshot()
 }
-
 
 // CurrentUser 讀取登入會員（session cookie）。
 func (d *nodeDS) CurrentUser(r *http.Request) (*node.AuthUser, error) {
@@ -94,6 +99,11 @@ func (d *nodeDS) ExchangeRecentTrades(market string, limit int) ([]exchange.Trad
 	return d.n.ExchangeRecentTrades(market, limit)
 }
 
+// TipHeight 回傳鏈頂高度（dashboard_update 推送用）。
+func (d *nodeDS) TipHeight() int64 {
+	return d.n.DB().GetTipHeight()
+}
+
 func (d *nodeDS) PendingTxHashes(limit int) ([]string, error) {
 	pool, err := d.n.DB().GetMempool(limit)
 	if err != nil {
@@ -115,7 +125,12 @@ func (d *nodeDS) NodeAddress() string { return d.n.Address() }
 func (d *nodeDS) NodeBalance() string { return d.n.DB().GetBalance(d.n.Address()) }
 
 // NodeRewardStats 回傳節點獎勵驗證資料（掃最近 200 塊 coinbase:node 入帳與心跳）。
-func (d *nodeDS) NodeRewardStats() chaindb.NodeRewardStats { return d.n.DB().NodeRewardStats(d.n.Address(), 200) }
+func (d *nodeDS) NodeRewardStats() chaindb.NodeRewardStats {
+	return d.n.DB().NodeRewardStats(d.n.Address(), 200)
+}
+
+// NodeRegistry 回傳鏈上 PoT 節點註冊清單（任何節點同步同鏈即一致）。
+func (d *nodeDS) NodeRegistry() ([]chaindb.NodeRegistry, error) { return d.n.DB().GetNodeRegistry() }
 
 // NodeDataDir 回傳節點資料目錄（存放 node_config.json）。
 func (d *nodeDS) NodeDataDir() string { return d.n.DataDir() }
@@ -292,7 +307,7 @@ func (d *nodeDS) ChainStats() ChainStatsView {
 	// 全網在線礦工＝鏈上視角（最近 60 塊內收到 coinbase 瓜分的礦工）：任何節點只要同步了
 	// 同一條鏈，看到的總人數與總算力就完全一致（鏈上事實），不再用各節點本地 SQL
 	// （本地 SQL 會造成「錨點 3 台、follower 1 台」的入口不一致）。
-	addrs, nominalHr := d.OnChainMiners(60)
+	addrs, nominalHr := d.OnMinersView() // v113：窗口與心跳 1h 一致（60 塊視角在 1h 心跳下必為 0）
 	out.OnlineMiners = len(addrs)
 	if len(addrs) > 0 {
 		// 總算力＝鏈上瓜分礦工的等效算力（每台標稱 5M：1vCPU×1M + 2vGPU×2M）。
@@ -301,6 +316,15 @@ func (d *nodeDS) ChainStats() ChainStatsView {
 		out.TotalHashrate = "0.00M"
 	}
 	return out
+}
+
+// OnMinersView v113：鏈上在線礦工視圖（窗口與心跳 1h 一致——3700 塊）。
+func (d *nodeDS) OnMinersView() ([]string, float64) {
+	addrs, total, err := d.n.OnlineMinersView()
+	if err != nil {
+		return nil, 0
+	}
+	return addrs, float64(total)
 }
 
 // OnChainMiners 從鏈上反推「全網在線礦工」：掃鏈頂回溯 window 塊的 hb（心跳）交易
@@ -338,6 +362,18 @@ func (d *nodeDS) Blocks(limit int) ([]BlockView, error) {
 		out = append(out, blockView(b))
 	}
 	return out, nil
+}
+
+func (d *nodeDS) BlockHeader(height int64) (*BlockView, error) {
+	b, err := d.n.GetBlockHeader(height)
+	if err != nil {
+		return nil, err
+	}
+	if b == nil {
+		return nil, nil
+	}
+	bv := blockView(b)
+	return &bv, nil
 }
 
 func (d *nodeDS) Block(height int64) (*BlockView, error) {

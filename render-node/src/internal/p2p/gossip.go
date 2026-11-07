@@ -118,7 +118,7 @@ func (n *Network) flood(req gossipReq) {
 	if err != nil {
 		return
 	}
-	for _, p := range n.onlinePeers() {
+	for _, p := range filterDialable(n.onlinePeers()) {
 		if p.NodeID == req.From {
 			continue
 		}
@@ -133,7 +133,7 @@ func (n *Network) floodAll(req gossipReq) {
 	if err != nil {
 		return
 	}
-	for _, p := range n.snapshotPeers() {
+	for _, p := range filterDialable(n.snapshotPeers()) {
 		if p.NodeID == req.From {
 			continue
 		}

@@ -130,4 +130,5 @@ func TestContractDeployAndCallEndToEnd(t *testing.T) {
 	if got := n.contracts.StorageAt(contract0x, big.NewInt(0)); got.Cmp(big.NewInt(2)) != 0 {
 		t.Errorf("第二次調用後 slot0 應2, got=%s", got)
 	}
+
 }

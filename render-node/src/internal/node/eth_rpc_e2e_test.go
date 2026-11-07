@@ -262,7 +262,8 @@ func TestEthSendRawTransactionAndCall(t *testing.T) {
 	// 5. eth_call：部署代幣後查詢 totalSupply。
 	dep := studioPostJSON(t, srv, "/contract/deploy", map[string]any{
 		"name": "EthToken", "symbol": "ETK", "supply": "777000",
-	})
+		"from": admin,
+		})
 	if dep["ok"] != true {
 		t.Fatalf("部署失敗: %v", dep)
 	}
@@ -302,9 +303,9 @@ func TestEthGetBlockByNumber(t *testing.T) {
 	if blk["number"] == nil {
 		t.Fatal("block 無 number")
 	}
-}
 
 // mustBytes20 把 0x hex（40 字元）轉 20 bytes。
+}
 func mustBytes20(t *testing.T, s string) []byte {
 	t.Helper()
 	s = strings.TrimPrefix(s, "0x")
@@ -329,12 +330,13 @@ func mustBytes20(t *testing.T, s string) []byte {
 //  5. eth_getStorageAt（ERC-20 balance slot）
 //  6. eth_gasPrice（真實 base fee 建議價）
 func TestEthLogsAndReceipt(t *testing.T) {
-	n, srv, _ := contractStudioSetup(t)
+	n, srv, admin := contractStudioSetup(t)
 
 	// 1. 部署 ERC-20。
 	out := studioPostJSON(t, srv, "/contract/deploy", map[string]any{
 		"name": "LogsToken", "symbol": "LGT", "supply": "1000000",
-	})
+		"from": admin,
+		})
 	if out["ok"] != true {
 		t.Fatalf("部署失敗: %v", out)
 	}
@@ -560,9 +562,9 @@ func TestEthType2SendRawTransactionAndFullBlock(t *testing.T) {
 	} else {
 		t.Logf("錯誤 chainId 被拒（符合預期）: %v", e)
 	}
-}
 
 // ethKeyFrom 產生測試私鑰與地址。
+}
 func ethKeyFrom(t *testing.T) (*btcec.PrivateKey, string) {
 	t.Helper()
 	key, err := btcec.NewPrivateKey()
@@ -612,9 +614,9 @@ func TestEthRPCStandardGap(t *testing.T) {
 	if ethResult(t, srv, "eth_submitHashrate", "0x0", "0x0") != false {
 		t.Fatal("eth_submitHashrate 應 false")
 	}
-}
 
 // M151e：debug_traceCall——模擬呼叫追蹤（主流調試工具必備）。
+}
 func TestEthDebugTraceCall(t *testing.T) {
 	_, srv, _ := contractStudioSetup(t)
 	tr, ok := ethResult(t, srv, "debug_traceCall", map[string]any{
@@ -636,4 +638,5 @@ func TestEthDebugTraceCall(t *testing.T) {
 	if _, hasLogs := tr["structLogs"]; !hasLogs {
 		t.Fatal("trace 應含 structLogs")
 	}
+
 }

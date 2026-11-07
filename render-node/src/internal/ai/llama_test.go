@@ -66,7 +66,7 @@ func TestLLMClientUnavailable(t *testing.T) {
 func TestSystemPrompt(t *testing.T) {
 	zh := SystemPrompt("zh")
 	en := SystemPrompt("en")
-	if !strings.Contains(zh, "FlipOn") || !strings.Contains(zh, "繁體中文") {
+	if !strings.Contains(zh, "Titan Ai") || !strings.Contains(zh, "繁體中文") {
 		t.Fatalf("中文提示詞異常: %q", zh)
 	}
 	if !strings.Contains(en, "English") {

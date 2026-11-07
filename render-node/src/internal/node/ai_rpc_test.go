@@ -49,8 +49,8 @@ func TestAIIntentMatch(t *testing.T) {
 			t.Errorf("matchAIIntent(%q) = %q, want %q", c.q, got, c.want)
 		}
 	}
-}
 
+}
 func aiAsk(t *testing.T, s *RPCServer, q, lang string) map[string]any {
 	t.Helper()
 	url := "/api/ai/ask?q=" + url.QueryEscape(q)
@@ -104,8 +104,8 @@ func TestAIAssistantAnswers(t *testing.T) {
 			t.Errorf("ask(%q) lang = %v, want %s", c.q, out["lang"], c.lang)
 		}
 	}
-}
 
+}
 func TestAIAssistantMissingQ(t *testing.T) {
 	s := newAIHost(t)
 	req := httptest.NewRequest(http.MethodGet, "/api/ai/ask", nil)
@@ -114,8 +114,8 @@ func TestAIAssistantMissingQ(t *testing.T) {
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("缺 q 應 400，實際 %d", rec.Code)
 	}
-}
 
+}
 func TestAIAssistantBlockHeightParsing(t *testing.T) {
 	// 創世後出一塊（高度 1），驗證「最新區塊」回 tip。
 	n, err := New(testCfg(t), "ai2", 1)
@@ -134,4 +134,5 @@ func TestAIAssistantBlockHeightParsing(t *testing.T) {
 	if !strings.Contains(ans, "Block #1") {
 		t.Errorf("最新區塊回答異常：%s", ans)
 	}
+
 }

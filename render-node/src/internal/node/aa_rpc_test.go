@@ -129,8 +129,8 @@ func TestAASubmitAndExecute(t *testing.T) {
 	if first["status"] != "submitted" || first["tx_hash"] != txHash {
 		t.Fatalf("最新紀錄應為 submitted txHash，got %+v", first)
 	}
-}
 
+}
 func TestAASubmitRejectsBadSig(t *testing.T) {
 	srv, _, aliceKP, contractTx0 := newAATestServer(t)
 
@@ -151,8 +151,8 @@ func TestAASubmitRejectsBadSig(t *testing.T) {
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("偽造簽名應 400，got %d", resp.StatusCode)
 	}
-}
 
+}
 func TestAAEstimateRPC(t *testing.T) {
 	srv, _, aliceKP, contractTx0 := newAATestServer(t)
 	alice, _ := aliceKP.Address()
@@ -181,9 +181,9 @@ func TestAAEstimateRPC(t *testing.T) {
 	if fee, _ := out["gas_fee"].(string); fee == "" {
 		t.Fatalf("gas_fee 應為非空，got %+v", out)
 	}
-}
 
 // aaGetStatus 查詢 sender 的 AA 操作紀錄。
+}
 func aaGetStatus(t *testing.T, srv *httptest.Server, sender string) map[string]any {
 	t.Helper()
 	resp, err := srv.Client().Get(srv.URL + "/aa/status?sender=" + sender)

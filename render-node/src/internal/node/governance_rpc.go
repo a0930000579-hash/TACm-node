@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"math/big"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"tacm/internal/wallet"
@@ -67,6 +68,27 @@ func (s *RPCServer) handleGovernanceParams(w http.ResponseWriter, r *http.Reques
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "params": gov.Params()})
 }
 
+// handleGovernanceVotes GET /api/governance/votes?proposal_id=N
+// 回傳指定提案的投票明細（投票人/權重/選擇/區塊）。
+func (s *RPCServer) handleGovernanceVotes(w http.ResponseWriter, r *http.Request) {
+	gov := s.node.Governance()
+	if gov == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"ok": false, "error": "governance_disabled"})
+		return
+	}
+	pid, err := strconv.ParseInt(r.URL.Query().Get("proposal_id"), 10, 64)
+	if err != nil || pid <= 0 {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"ok": false, "error": "invalid proposal_id"})
+		return
+	}
+	list, err := gov.Votes(pid)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "proposal_id": pid, "votes": list})
+}
+
 // handleGovernancePropose POST /api/governance/propose
 // 發起提案：校驗地址與參數後寫入治理庫（投票窗口=20 區塊）。
 func (s *RPCServer) handleGovernancePropose(w http.ResponseWriter, r *http.Request) {
@@ -118,7 +140,15 @@ func (s *RPCServer) handleGovernanceVote(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	// 投票權重（M151）：鏈上 TACm 餘額直接加權（1 TACM = 1 票，與主流 DAO 一致）。
+	// v129 委託投票：已委託者無權自投（權力歸受託人）；受託人權力＝自己餘額＋全部委託者餘額。
+	if de := gov.DelegateeOf(req.Address); de != "" {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"ok": false, "error": "already_delegated_vote_via_delegatee"})
+		return
+	}
 	power := walletBalanceOf(s.node.walletSvc, req.Address)
+	for _, delegator := range gov.DelegatorsOf(req.Address) {
+		power += walletBalanceOf(s.node.walletSvc, delegator)
+	}
 	if power <= 0 {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"ok": false, "error": "zero_balance_no_voting_power"})
 		return
@@ -148,4 +178,84 @@ func validTACAddress(addr string) bool {
 		return false
 	}
 	return strings.HasPrefix(addr, "tx0") || strings.HasPrefix(addr, "reward_pool")
+}
+
+// governanceDelegateReq POST /api/governance/delegate {address, delegatee}
+type governanceDelegateReq struct {
+	Address   string `json:"address"`
+	Delegatee string `json:"delegatee"`
+}
+
+// handleGovernanceDelegate POST /api/governance/delegate
+// 委託投票（v129）：address 把自己的投票權委託給 delegatee（覆寫式，與主流 DAO 一致）。
+func (s *RPCServer) handleGovernanceDelegate(w http.ResponseWriter, r *http.Request) {
+	gov := s.node.Governance()
+	if gov == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"ok": false, "error": "governance_disabled"})
+		return
+	}
+	var req governanceDelegateReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"ok": false, "error": "bad_json"})
+		return
+	}
+	req.Address = strings.TrimSpace(req.Address)
+	req.Delegatee = strings.TrimSpace(req.Delegatee)
+	if !validTACAddress(req.Address) || !validTACAddress(req.Delegatee) {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"ok": false, "error": "invalid_address"})
+		return
+	}
+	tip := s.node.DB().GetTipHeight()
+	if err := gov.Delegate(req.Address, req.Delegatee, tip, ""); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "delegator": req.Address, "delegatee": req.Delegatee})
+}
+
+// governanceUndelegateReq POST /api/governance/undelegate {address}
+type governanceUndelegateReq struct {
+	Address string `json:"address"`
+}
+
+// handleGovernanceUndelegate POST /api/governance/undelegate
+// 解除委託（v129）：address 收回自己的投票權。
+func (s *RPCServer) handleGovernanceUndelegate(w http.ResponseWriter, r *http.Request) {
+	gov := s.node.Governance()
+	if gov == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"ok": false, "error": "governance_disabled"})
+		return
+	}
+	var req governanceUndelegateReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"ok": false, "error": "bad_json"})
+		return
+	}
+	req.Address = strings.TrimSpace(req.Address)
+	if !validTACAddress(req.Address) {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"ok": false, "error": "invalid_address"})
+		return
+	}
+	tip := s.node.DB().GetTipHeight()
+	if err := gov.Undelegate(req.Address, tip, ""); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "delegator": req.Address})
+}
+
+// handleGovernanceDelegations GET /api/governance/delegations
+// 回傳全部委託紀錄（v129）。
+func (s *RPCServer) handleGovernanceDelegations(w http.ResponseWriter, r *http.Request) {
+	gov := s.node.Governance()
+	if gov == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"ok": false, "error": "governance_disabled"})
+		return
+	}
+	list, err := gov.Delegations()
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "delegations": list})
 }

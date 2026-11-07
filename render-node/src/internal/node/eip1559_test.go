@@ -103,9 +103,9 @@ func TestEIP1559DynamicFee(t *testing.T) {
 		t.Fatalf("守恆不平衡: balances %g + burned %g != coinbase %g",
 			audit.BalancesTotal, audit.BurnedTotal, audit.CoinbaseTotal)
 	}
-}
 
 // TestEIP1559BaseFeeAdjust 驗證 base fee 動態調整：滿塊升、空塊降、有下限。
+}
 func TestEIP1559BaseFeeAdjust(t *testing.T) {
 	// 滿塊（gasUsed=gasLimit）→ 上升。
 	up := chaindb.ComputeNextBaseFee(0.000001, chaindb.BlockGasLimit, chaindb.BlockGasLimit)
@@ -128,9 +128,9 @@ func TestEIP1559BaseFeeAdjust(t *testing.T) {
 	if math.Abs(mid-0.000001) > 1e-12 {
 		t.Fatalf("50%% 使用率應不變，得到 %g", mid)
 	}
-}
 
 // TestEIP1559FeeSplit 驗證費用拆分：burn=base×gas、tip=剩餘。
+}
 func TestEIP1559FeeSplit(t *testing.T) {
 	burn, tip := chaindb.SplitFee(0.05, 0.000001, 21000)
 	if math.Abs(burn-0.021) > 1e-9 {
@@ -144,9 +144,9 @@ func TestEIP1559FeeSplit(t *testing.T) {
 	if b2 != 0.01 || t2 != 0 {
 		t.Fatalf("burn 截斷異常: %g %g", b2, t2)
 	}
-}
 
 // TestEIP1559FeeTooLow 驗證：fee 低於 base×gas 被拒絕。
+}
 func TestEIP1559FeeTooLow(t *testing.T) {
 	n, err := New(testCfg(t), "node1", 1)
 	if err != nil {
@@ -173,4 +173,5 @@ func TestEIP1559FeeTooLow(t *testing.T) {
 	if _, err := n.SubmitTransaction(tx); err == nil {
 		t.Fatal("fee 過低應被拒絕")
 	}
+
 }

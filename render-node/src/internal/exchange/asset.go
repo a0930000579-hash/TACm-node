@@ -51,6 +51,9 @@ type Market struct {
 	Quote Asset
 }
 
+// NormAssetStr 公開正規化資產名（供 RPC 層使用）：接受 TACM/tacm/TiUSD/TIUSD/USDT 等變體。
+func NormAssetStr(v string) (Asset, bool) { return normAsset(v) }
+
 // normAsset 正規化資產名（接受 TACM/tacm/TiUSD/TIUSD/USDT 等大小寫變體）。
 func normAsset(s string) (Asset, bool) {
 	switch strings.ToUpper(strings.TrimSpace(s)) {

@@ -86,9 +86,9 @@ func TestP2PReorgHeavier(t *testing.T) {
 	if bal != 24.5 {
 		t.Errorf("重組後節點餘額=%g 應為 24.5", bal)
 	}
-}
 
 // 累積難度不更重的競爭鏈必須被拒絕，本地鏈保持不變。
+}
 func TestP2PReorgRejectLight(t *testing.T) {
 	n, err := New(testCfg(t), "node1", 1)
 	if err != nil {
@@ -120,8 +120,8 @@ func TestP2PReorgRejectLight(t *testing.T) {
 	if tip.Hash != keepTip.Hash {
 		t.Error("拒絕重組後本地鏈頂被改變")
 	}
-}
 
+}
 func parseBal(s string) (float64, error) {
 	f, err := strconv.ParseFloat(s, 64)
 	return f, err

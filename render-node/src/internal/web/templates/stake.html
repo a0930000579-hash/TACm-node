@@ -15,16 +15,16 @@
   code.st-mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;word-break:break-all}
 </style>
 <section class="pg-banner">
-  <div class="pg-txt"><h1 data-i18n="st.title">質押委託（Staking Delegation）</h1><p data-i18n="st.intro">將 TACm 委託給驗證人——委託增加驗證人出塊權重（total_stake），紀錄隨區塊上鏈、全網一致。委託後資產鎖倉，撤銷即返還。</p></div>
+  <div class="pg-txt"><h1 data-i18n="st.title">PoT 質押委託（Proof-of-Trust Staking）</h1><p data-i18n="st.intro">將 TACm 委託給節點——委託增加節點出塊權重（total_stake），紀錄隨區塊上鏈、全網一致。委託後資產鎖倉，撤銷即返還。</p></div>
   <svg viewBox="0 0 40 40" class="pg-art"><circle cx="20" cy="20" r="13" fill="none" stroke="#68BE8D" stroke-width="2.2"/><path d="M20 9v6M20 25v6M9 20h6M25 20h6" stroke="#68BE8D" stroke-width="1.6" stroke-linecap="round"/><circle cx="20" cy="20" r="3.2" fill="#68BE8D"/></svg>
 </section>
 <!-- M156：委託操作 -->
 <section class="panel">
   <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M12 3l8 4v6c0 4.4-3.4 7.4-8 9-4.6-1.6-8-4.6-8-9V7z"/><path d="M9 12l2 2 4-4"/></svg> <span data-i18n="st.delegateTitle">委託 / 撤銷</span></h2></div>
-  <p class="st-note" data-i18n="st.delegateHint">填入你的錢包地址、目標驗證人（節點）地址與金額。委託後站內帳本鎖倉並上鏈紀錄；撤銷上鏈後返還。</p>
+  <p class="st-note" data-i18n="st.delegateHint">填入你的錢包地址、目標節點地址與金額。委託後站內帳本鎖倉並上鏈紀錄；撤銷上鏈後返還。</p>
   <div class="st-actions">
     <input class="search-input st-field" id="stFrom" data-ph="st.fromPh" placeholder="From（你的 tx0 地址）">
-    <input class="search-input st-field" id="stValidator" data-ph="st.validatorPh" placeholder="Validator（驗證人節點地址）">
+    <input class="search-input st-field" id="stValidator" data-ph="st.validatorPh" placeholder="Node（節點地址）">
     <input class="search-input st-field" id="stAmount" data-ph="st.amountPh" placeholder="Amount（TACm）" style="max-width:220px">
     <button class="st-btn" id="stDelegateBtn" data-i18n="st.delegateBtn">委託 Delegate</button>
     <button class="st-btn ghost" id="stUndelegateBtn" data-i18n="st.undelegateBtn">撤銷 Undelegate</button>
@@ -39,22 +39,22 @@
     <button class="st-btn" id="stQueryBtn" data-i18n="st.queryBtn">查詢</button>
   </div>
   <div class="st-tblwrap"><table class="st-table" style="min-width:480px">
-    <thead><tr><th data-i18n="st.colValidator">驗證人</th><th data-i18n="st.colAmount">委託額（TACm）</th><th data-i18n="st.colTime">時間</th></tr></thead>
+    <thead><tr><th data-i18n="st.colValidator">節點</th><th data-i18n="st.colAmount">委託額（TACm）</th><th data-i18n="st.colTime">時間</th></tr></thead>
     <tbody id="stMyBody"></tbody>
   </table></div>
   <p class="st-note" style="margin-top:10px"><span data-i18n="st.rewardsTitle">累計委託獎勵（鏈上 coinbase:deleg）</span>： <code class="st-mono" id="stRewards">0</code> TACm（<code class="st-mono" id="stRewardTxs">0</code> 筆）</p>
 
   <h3 class="st-sub" style="margin-top:16px"><span data-i18n="st.unbondTitle">解綁中（Unbonding）</span></h3>
   <div class="st-tblwrap"><table class="st-table" style="min-width:480px">
-    <thead><tr><th data-i18n="st.colValidator">驗證人</th><th data-i18n="st.colAmount">金額（TACm）</th><th data-i18n="st.colComplete">完成高度</th><th data-i18n="st.colStatus">狀態</th></tr></thead>
+    <thead><tr><th data-i18n="st.colValidator">節點</th><th data-i18n="st.colAmount">金額（TACm）</th><th data-i18n="st.colComplete">完成高度</th><th data-i18n="st.colStatus">狀態</th></tr></thead>
     <tbody id="stUnbondBody"></tbody>
   </table></div>
 </section>
-<!-- 驗證人委託總額 -->
+<!-- 節點委託總額 -->
 <section class="panel">
-  <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg> <span data-i18n="st.validatorsTitle">驗證人委託總額</span></h2></div>
+  <div class="panel-head"><h2><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg> <span data-i18n="st.validatorsTitle">節點委託總額</span></h2></div>
   <div class="st-tblwrap"><table class="st-table" style="min-width:560px">
-    <thead><tr><th data-i18n="st.colValidator">驗證人</th><th data-i18n="st.colTotal">委託總額（TACm）</th><th data-i18n="st.colCount">委託人數</th><th data-i18n="st.colVStatus">狀態</th></tr></thead>
+    <thead><tr><th data-i18n="st.colValidator">節點</th><th data-i18n="st.colTotal">委託總額（TACm）</th><th data-i18n="st.colCount">委託人數</th><th data-i18n="st.colVStatus">狀態</th></tr></thead>
     <tbody id="stValBody"></tbody>
   </table></div>
 </section>
@@ -87,7 +87,7 @@
       var from = (document.getElementById('stFrom') || {}).value || '';
       var val = (document.getElementById('stValidator') || {}).value || '';
       var amt = (document.getElementById('stAmount') || {}).value || '';
-      if (!from || !val || !amt) { tip('From / Validator / Amount required'); return; }
+      if (!from || !val || !amt) { tip('From / Node / Amount required'); return; }
       post(undelegate ? '/stake/undelegate' : '/stake/delegate', { from: from, validator: val, amount: amt }).then(function (o) {
         tip((o && o.ok) ? ('OK · tx ' + (o.tx_hash || '')) : ((o && o.error) || 'failed'));
         if (o && o.ok) loadStatus();
@@ -119,19 +119,19 @@
         }).join('') || '<tr><td colspan="4" class="muted">No unbonding</td></tr>';
         if (vb) vb.innerHTML = (o.validator_delegations || []).map(function (v) {
           return '<tr><td class="mono">' + esc(v.validator) + '</td><td>' + esc(v.total) + '</td><td>' + esc(v.count) + '</td><td>' + esc(v.status || 'active') + '</td></tr>';
-        }).join('') || '<tr><td colspan="4" class="muted">No validator delegations</td></tr>';
+        }).join('') || '<tr><td colspan="4" class="muted">No node delegations</td></tr>';
         tip('');
       }).catch(function () { tip('RPC unavailable'); });
     }
     var qb = document.getElementById('stQueryBtn');
     if (qb) qb.onclick = loadStatus;
-    // 初始載入全驗證人委託（空地址也可）。
+    // 初始載入全節點委託（空地址也可）。
     get('/stake/status').then(function (o) {
       if (!o || !o.ok) return;
       var vb = document.getElementById('stValBody');
       if (vb) vb.innerHTML = (o.validator_delegations || []).map(function (v) {
         return '<tr><td class="mono">' + esc(v.validator) + '</td><td>' + esc(v.total) + '</td><td>' + esc(v.count) + '</td><td>' + esc(v.status || 'active') + '</td></tr>';
-      }).join('') || '<tr><td colspan="4" class="muted">No validator delegations</td></tr>';
+      }).join('') || '<tr><td colspan="4" class="muted">No node delegations</td></tr>';
     }).catch(function () {});
   })();
 </script>

@@ -46,4 +46,5 @@ func TestM121LateSyncWithTxs(t *testing.T) {
 	if ab.Hash != db2.Hash {
 		t.Fatalf("高度 8 哈希不一致: %s vs %s", ab.Hash, db2.Hash)
 	}
+
 }

@@ -49,6 +49,8 @@ type Server struct {
 	auditView    AuditView
 	auditStarted bool
 	auditStop    chan struct{}
+	// auditBlockCache：按哈希快取每塊 coinbase 審計，穩態下每 tick 只重查新增塊。
+	auditBlockCache *auditBlockCache
 }
 
 // downloadsDirPath M144：官方下載中心目錄。預設 /var/tac/downloads；
@@ -124,6 +126,7 @@ func NewWithNetworkMode(ds DataSource, network string, serveDApp bool, blockTime
 	}
 	s.routes()
 	s.auditStop = make(chan struct{})
+	s.auditBlockCache = newAuditBlockCache()
 	go s.auditLoop()
 	return s, nil
 }

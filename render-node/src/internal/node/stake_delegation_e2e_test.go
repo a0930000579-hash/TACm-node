@@ -153,8 +153,8 @@ func TestStakeDelegationE2E(t *testing.T) {
 		t.Fatal("負金額委託應被拒")
 	}
 	_ = http.StatusBadRequest
-}
 
+}
 func TestStakeDelegationRewardQueryE2E(t *testing.T) {
 	srv, n, aliceKP := newStakeTestServer(t)
 	alice, _ := aliceKP.Address()
@@ -175,10 +175,10 @@ func TestStakeDelegationRewardQueryE2E(t *testing.T) {
 	if rw, ok := st["deleg_rewards"].(float64); !ok || rw <= 0 {
 		t.Fatalf("deleg_rewards 應 >0，got %v (%T)", st["deleg_rewards"], st["deleg_rewards"])
 	}
-}
 
 // M159：委託解綁定時限——撤銷後資產鎖倉（unbondings pending）、錢包不即時返還；
 // 期滿由出塊節點自動返還（pos:unbond_pay）。
+}
 func TestStakeUnbondingE2E(t *testing.T) {
 	srv, n, aliceKP := newStakeTestServer(t)
 	alice, _ := aliceKP.Address()
@@ -222,4 +222,5 @@ func TestStakeUnbondingE2E(t *testing.T) {
 	if err != nil || len(dl) != 0 || dl != nil && len(dl) > 0 && dl[0].Amount != 0 {
 		t.Fatalf("撤銷後 active 委託應為空，got %+v err %v", dl, err)
 	}
+
 }

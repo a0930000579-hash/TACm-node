@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -147,6 +148,11 @@ type Node struct {
 
 	// P2P 網絡（可選；nil 時本節點不廣播，作為孤立節點運行）
 	p2pNet *p2p.Network
+
+	// 錢包重組對齊：reconcileWallet 單一飛行防護，避免重組風暴時多個對齊並發
+	// （singleflight）；只保證同時僅一個 backfill 在跑，觸發方不阻塞。
+	walletReconcileMu sync.Mutex
+	walletReconciling bool
 
 	// 智能合約執行層（TAC VM）
 	contracts *vm.ContractManager
@@ -731,8 +737,11 @@ func (n *Node) Start() {
 	go n.consensusLoop()
 	go n.runBFT()
 	go n.minerHeartbeatLoop()
-	n.StartDynamicValidators() // M87：動態驗證人集週期重建（內部自行 wg.Add(1)）
-	go n.healWalletSync()      // M103：錢包帳本/chain_stats 自癒（落後補同步＋產出計數修正）
+	n.StartDynamicValidators()  // M87：動態驗證人集週期重建（內部自行 wg.Add(1)）
+	go n.healWalletSync()       // M103：錢包帳本/chain_stats 自癒（落後補同步＋產出計數修正）
+	n.StartWalletReconciler()   // 重組後錢包週期對齊安全網（30s）
+	n.StartFinalityReconciler() // 最終化週期對齊安全網（30s）
+	n.StartProfiler()           // 僅在 TACM_PPROF_PORT 設定時啟用本機 pprof
 	// M152：鏈上預言機——背景 goroutine 每 60s 刷新喂價快照。
 	n.oracleSvc = oracle.New()
 	n.oracleSvc.Start(context.Background(), 60*time.Second)
@@ -798,6 +807,9 @@ func (n *Node) StartAsFollower() {
 	go n.runBFT()
 	go n.minerHeartbeatLoop()
 	go n.healWalletSync()
+	n.StartWalletReconciler()
+	n.StartFinalityReconciler()
+	n.StartProfiler()
 	n.StartDynamicValidators() // M87：follower 同樣週期重建動態驗證人集
 }
 
@@ -827,6 +839,9 @@ func (n *Node) StartDistributed() {
 	// 帳本自癒、鏈上預言機、帳戶抽象 Bundler。
 	n.StartDynamicValidators() // 內部自行 wg.Add(1)
 	go n.healWalletSync()      // 帳本/chain_stats 自癒（落後補同步＋產出計數修正）
+	n.StartWalletReconciler()  // 重組後錢包週期對齊安全網（30s）
+	n.StartFinalityReconciler() // 最終化週期對齊安全網（30s）
+	n.StartProfiler()
 	n.oracleSvc = oracle.New()
 	n.oracleSvc.Start(context.Background(), 60*time.Second)
 	if addr, aerr := n.keypair.Address(); aerr == nil {
@@ -1669,7 +1684,13 @@ func (n *Node) produceBlock() error {
 
 	// 錢包帳本同步（coinbase 獎勵入帳 + 交易轉帳 + 手續費）。
 	if err := n.syncWallet(height, txs); err != nil {
-		return fmt.Errorf("錢包同步 h=%d: %w", height, err)
+		// 重組跳號：錢包派生視圖暫時落後，非致命——背景對齊，不阻斷出塊。
+		if isWalletReorgJump(err) {
+			log.Printf("錢包落後（重組），背景對齊 h=%d: %v", height, err)
+			go n.reconcileWallet()
+		} else {
+			return fmt.Errorf("錢包同步 h=%d: %w", height, err)
+		}
 	}
 	// 本節點接受新塊，啟動/推進 BFT 最終性投票。
 	n.onNewBlock(height, block.Hash)

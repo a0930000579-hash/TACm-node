@@ -89,9 +89,9 @@ func TestAuditIncrementalMatchesFull(t *testing.T) {
 	if inc.OK != full2.OK || inc.LedgerOK != full2.LedgerOK {
 		t.Fatalf("增量與全量 OK 判定不符:\ninc=%+v\nfull=%+v", inc, full2)
 	}
-}
 
 // TestAuditCheckpointPersisted 審計成功後基線檔落地且高度正確。
+}
 func TestAuditCheckpointPersisted(t *testing.T) {
 	n, _, _ := v60GoodChain(t)
 	if _, err := n.VerifyLedgerOnChain(); err != nil {
@@ -111,9 +111,9 @@ func TestAuditCheckpointPersisted(t *testing.T) {
 	if cp.TxChecked != 2 || cp.ContractPass != 1 {
 		t.Fatalf("基線計數不符: %+v", cp)
 	}
-}
 
 // TestAuditIncrementalDetectsIssue 基線後的非法交易必須被增量重放抓出，且基線不推進。
+}
 func TestAuditIncrementalDetectsIssue(t *testing.T) {
 	n, aliceKP, bob := v60GoodChain(t)
 	if _, err := n.VerifyLedgerOnChain(); err != nil {
@@ -143,9 +143,9 @@ func TestAuditIncrementalDetectsIssue(t *testing.T) {
 	if cp == nil || cp.Height != 3 {
 		t.Fatalf("基線不應推進: %+v", cp)
 	}
-}
 
 // TestAuditCheckpointCorruptFallsBackToFull 基線損壞時自動退回全量重放。
+}
 func TestAuditCheckpointCorruptFallsBackToFull(t *testing.T) {
 	n, _, _ := v60GoodChain(t)
 	if _, err := n.VerifyLedgerOnChain(); err != nil {
@@ -165,12 +165,12 @@ func TestAuditCheckpointCorruptFallsBackToFull(t *testing.T) {
 	if !res.OK {
 		t.Fatalf("好鏈應全過: %+v", res)
 	}
-}
 
 // TestAuditCheckpointStoresRawPrecision v60.1 回歸：基線必須存原始（未 round）精度。
 // 舊版存 roundCoinbase（1e-4）值，增量/直取路徑守恆檢查混入 round 誤差（主鏈
 // 7.5 萬塊實測 ledger_ok=false 誤報）；本測試確保 checkpointFromResult 存原始值、
 // 直取路徑守恆用原始值仍過。
+}
 func TestAuditCheckpointStoresRawPrecision(t *testing.T) {
 	raw := 213580.38150001 // 原始累加值（round 後顯示 213580.3815，兩者差 1e-8 > 0）
 	res := LedgerAuditResult{
@@ -217,4 +217,5 @@ func TestAuditCheckpointStoresRawPrecision(t *testing.T) {
 	if cp2 := loadAuditCheckpoint(p); cp2 != nil {
 		t.Fatal("無版本欄位的舊基線應被視為無效（強制全量重建）")
 	}
+
 }

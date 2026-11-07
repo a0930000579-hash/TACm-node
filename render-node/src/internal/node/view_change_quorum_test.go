@@ -39,9 +39,9 @@ func TestViewChangeAuthSignVerify(t *testing.T) {
 	if err := n0.verifyViewChange(9, 1, n0.nodeAddress, "zz"); err == nil {
 		t.Fatal("壞 hex 簽名應被拒")
 	}
-}
 
 // 單票（少數）不切換；達 2/3 多數才切；更高輪次票覆蓋舊票。
+}
 func TestViewChangeQuorumAggregation(t *testing.T) {
 	dn := buildCluster(t, 4)
 	ns := []*Node{dn[0].n, dn[1].n, dn[2].n, dn[3].n}
@@ -105,9 +105,9 @@ func TestViewChangeQuorumAggregation(t *testing.T) {
 	if sw, _ = ns[0].recordViewChangeTicket(11, 2, ns[1].nodeAddress, sig1); sw {
 		t.Fatal("已切換高度不應再次切換")
 	}
-}
 
 // 已切換後更高輪次票：需重新多數（新 round 認證），避免單節點連續推高。
+}
 func TestViewChangeNoEscalationWithoutQuorum(t *testing.T) {
 	dn := buildCluster(t, 3)
 	n0, n1, n2 := dn[0].n, dn[1].n, dn[2].n
@@ -130,9 +130,9 @@ func TestViewChangeNoEscalationWithoutQuorum(t *testing.T) {
 	if _, r, _ := n0.bftNode.RoundInfo(); r != 1 {
 		t.Fatalf("round 應保持 1, got %d", r)
 	}
-}
 
 // 網絡入口：非驗證人/壞簽名票在 handleIncomingViewChange 即被拒。
+}
 func TestViewChangeIncomingRejectsBad(t *testing.T) {
 	dn := buildCluster(t, 3)
 	launchCluster(t, dn, []bool{true, true, false})
@@ -144,9 +144,9 @@ func TestViewChangeIncomingRejectsBad(t *testing.T) {
 	if err := n0.handleIncomingViewChange(30, 1, addr, hex.EncodeToString(sig)); err == nil {
 		t.Fatal("非驗證人票應被拒")
 	}
-}
 
 // BFT 驗證人輪值公式與 view-change 一致性（供冒煙腳本驗證用）。
+}
 func TestValidatorProposerRotation(t *testing.T) {
 	dn := buildCluster(t, 4)
 	if len(dn) != 4 {
@@ -157,9 +157,9 @@ func TestValidatorProposerRotation(t *testing.T) {
 	if got == "" {
 		t.Fatal("輪值 proposer 不應為空")
 	}
-}
 
 // proposerForHeight 依節點共享驗證人集返回某高度的輪值 proposer 地址。
+}
 func proposerForHeight(dn []*distNode, height int64) string {
 	vs := dn[0].n.ValidatorSet()
 	idx := int(height) % vs.Len()
@@ -202,10 +202,10 @@ func TestDistributedViewChangeMaliciousHighRound(t *testing.T) {
 			t.Fatalf("v%d 高度5 哈希不一致", i)
 		}
 	}
-}
 
 // 少數在線（2/4 < quorum）且 proposer 離線：view change 不達標，輪次保持，
 // 鏈不會被少數節點強行推進（正確行為）。
+}
 func TestDistributedViewChangeMinorityCannotSwitch(t *testing.T) {
 	dn := buildCluster(t, 4)
 	launchCluster(t, dn, []bool{true, true, false, false})
@@ -223,4 +223,5 @@ func TestDistributedViewChangeMinorityCannotSwitch(t *testing.T) {
 	}
 	_ = bft.Precommit // 引用包避免未用
 	_ = strings.Repeat
+
 }

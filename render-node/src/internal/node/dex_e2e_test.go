@@ -19,16 +19,16 @@ import (
 
 func dexSetup(t *testing.T) (*httptest.Server, string, string) {
 	t.Helper()
-	_, ts, _ := contractStudioSetup(t)
+	_, ts, admin := contractStudioSetup(t)
 	// 部署兩個代幣。
 	r0 := studioPostJSON(t, ts, "/contract/deploy", map[string]any{
-		"name": "TokenA", "symbol": "TKA", "supply": "1000000000000",
+		"name": "TokenA", "symbol": "TKA", "supply": "1000000000000", "from": admin,
 	})
 	if r0["ok"] != true {
 		t.Fatalf("部署 TKA 失敗: %v", r0)
 	}
 	r1 := studioPostJSON(t, ts, "/contract/deploy", map[string]any{
-		"name": "TokenB", "symbol": "TKB", "supply": "1000000000000",
+		"name": "TokenB", "symbol": "TKB", "supply": "1000000000000", "from": admin,
 	})
 	if r1["ok"] != true {
 		t.Fatalf("部署 TKB 失敗: %v", r1)
@@ -71,8 +71,8 @@ func TestDEXCreateAndPools(t *testing.T) {
 	if l["ok"] != true {
 		t.Fatalf("池列表失敗: %v", l)
 	}
-}
 
+}
 func TestDEXLiquidityAndSwapE2E(t *testing.T) {
 	ts, tkA, tkB := dexSetup(t)
 	// 建池。
@@ -154,8 +154,8 @@ func TestDEXLiquidityAndSwapE2E(t *testing.T) {
 	if pos2["shares"] != "0" {
 		t.Fatalf("退出後份額應為 0，得到 %v", pos2["shares"])
 	}
-}
 
+}
 func TestDEXSwapRejectsUnknown(t *testing.T) {
 	ts, tkA, tkB := dexSetup(t)
 	if r := studioPostJSON(t, ts, "/dex/create", map[string]any{
@@ -189,4 +189,5 @@ func TestDEXSwapRejectsUnknown(t *testing.T) {
 	var _ = json.Marshal
 	var _ = big.NewInt
 	var _ = strings.TrimSpace
+
 }

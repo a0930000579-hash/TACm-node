@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"strings"
 	"strconv"
+	"strings"
 
 	"tacm/internal/chaindb"
 	"tacm/internal/crypto"
@@ -99,6 +99,97 @@ func (h *p2pHost) ReorgChain(forkPoint int64, blocks []chaindb.Block, txs [][]ch
 		return err
 	}
 	// 重組後合約集合可能不同，整體重建合約 code/storage。
+	if err := n.RebuildContracts(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// ReorgChainFull 以「整條新鏈」做一次性的總權重決策後切換：驗證全部區塊、計算新鏈總
+// 累積難度，與舊鏈 forkPoint 之後的總累積難度比較（更重才切換），再截斷一次並逐塊重放。
+// 解決分段 ReorgChain 只拿單段 CD 對舊鏈全 CD 比較、長鏈領先時首段永遠被拒的問題。
+// forkPoint<0 為整鏈替換（信任來源鏈創世），不做舊 CD 比較。
+func (h *p2pHost) ReorgChainFull(forkPoint int64, blocks []chaindb.Block, txs [][]chaindb.Transaction) error {
+	n := h.n
+	if len(blocks) == 0 || len(blocks) != len(txs) {
+		return errors.New("重組區塊/交易為空或數量不符")
+	}
+	if forkPoint >= 0 && blocks[0].Height != forkPoint+1 {
+		return errors.New("重組起始高度與分叉點不符")
+	}
+
+	// 全鏈驗證與總累積難度。
+	var newCD int64
+	for i := range blocks {
+		b := &blocks[i]
+		if forkPoint >= 0 && b.Height != forkPoint+int64(i)+1 {
+			return errors.New("重組塊高度不連續")
+		}
+		wantPrev := ""
+		if i == 0 && forkPoint >= 0 {
+			fb, err := n.db.GetBlock(forkPoint)
+			if err != nil {
+				return err
+			}
+			if fb != nil {
+				wantPrev = fb.Hash
+			}
+		} else if i > 0 {
+			wantPrev = blocks[i-1].Hash
+		}
+		prev := ""
+		if b.PrevHash != nil {
+			prev = *b.PrevHash
+		}
+		if forkPoint >= 0 && prev != wantPrev {
+			return fmt.Errorf("重組塊 %d prev_hash 不匹配", b.Height)
+		}
+		cp := ""
+		if addr, cerr := n.CommunityPoolAddress(); cerr == nil {
+			cp = addr
+		}
+		var minedWei *big.Int
+		if n.walletSvc != nil {
+			if mw, merr := n.walletSvc.ChainMinedTacm(); merr == nil {
+				minedWei = mw
+			}
+		}
+		if err := verifyBlockStructure(b, txs[i], int64(n.cfg.BlockTime), cp, minedWei); err != nil {
+			return err
+		}
+		newCD += int64(b.Difficulty)
+	}
+
+	if forkPoint >= 0 {
+		oldCD, err := n.db.CumulativeDifficulty(forkPoint, n.db.GetTipHeight())
+		if err != nil {
+			return err
+		}
+		if newCD <= oldCD {
+			return errors.New("重組鏈累積難度不更重，拒絕切換")
+		}
+	}
+
+	// 截斷舊鏈一次（整鏈替換時從創世之後清）。
+	trunc := forkPoint + 1
+	if forkPoint < 0 {
+		trunc = 0
+	}
+	if err := n.db.TruncateFromHeight(trunc); err != nil {
+		return err
+	}
+	for i := range blocks {
+		b := blocks[i]
+		b.TxCount = len(txs[i])
+		if err := n.db.InsertBlock(&b, txs[i]); err != nil {
+			_, _ = n.db.RebuildAccounts()
+			return err
+		}
+		n.onNewBlock(b.Height, b.Hash)
+	}
+	if _, err := n.db.RebuildAccounts(); err != nil {
+		return err
+	}
 	if err := n.RebuildContracts(); err != nil {
 		return err
 	}

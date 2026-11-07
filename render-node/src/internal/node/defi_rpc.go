@@ -38,6 +38,38 @@ func defiAddr(r *http.Request) (string, error) {
 	return addr, nil
 }
 
+// handleDefiConfig GET/PUT /api/defi/config — DeFi 參數化治理（v118）。
+// GET：回傳借貸年利率（defi.borrow_rate）；PUT：JSON body 覆寫（僅接受已知 key、範圍檢查）。
+func (s *RPCServer) handleDefiConfig(w http.ResponseWriter, r *http.Request) {
+	st, ok := s.defiSvc()
+	if !ok {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"ok": false, "error": "defi_disabled"})
+		return
+	}
+	if r.Method == http.MethodPut {
+		var body struct {
+			BorrowRate *float64 `json:"borrow_rate"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"ok": false, "error": "invalid_json"})
+			return
+		}
+		if body.BorrowRate != nil {
+			if *body.BorrowRate < 0 || *body.BorrowRate > 1 {
+				writeJSON(w, http.StatusBadRequest, map[string]any{"ok": false, "error": "borrow_rate 須在 [0,1]"})
+				return
+			}
+			if err := st.SetSetting("defi.borrow_rate", strconv.FormatFloat(*body.BorrowRate, 'f', 4, 64)); err != nil {
+				writeJSON(w, http.StatusInternalServerError, map[string]any{"ok": false, "error": err.Error()})
+				return
+			}
+		}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"ok": true, "borrow_rate": st.BorrowRate(), "note": "借貸年利率；settings key defi.borrow_rate",
+	})
+}
+
 // defiSvc 存取器。
 func (s *RPCServer) defiSvc() (*defi.Store, bool) {
 	if s.node == nil || s.node.defiSvc == nil {
@@ -601,6 +633,46 @@ func (s *RPCServer) handleDefiIDOClaim(w http.ResponseWriter, r *http.Request) {
 }
 
 // ==================== 收益聚合器（Vault） ====================
+
+// handleDefiVaultConfig GET/PUT /api/defi/vault/{id} — 金庫治理參數（v125）。
+func (s *RPCServer) handleDefiVaultConfig(w http.ResponseWriter, r *http.Request) {
+	ds, ok := s.defiSvc()
+	if !ok {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"ok": false, "error": "defi_disabled"})
+		return
+	}
+	idStr := r.PathValue("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"ok": false, "error": "invalid vault id"})
+		return
+	}
+	if r.Method == http.MethodPut {
+		var body struct {
+			PerformanceFee *float64 `json:"performance_fee"`
+			MinDeposit     *float64 `json:"min_deposit"`
+			Status         *string  `json:"status"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"ok": false, "error": "invalid_json"})
+			return
+		}
+		if err := ds.SetVaultParams(id, body.PerformanceFee, body.MinDeposit, body.Status); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"ok": false, "error": err.Error()})
+			return
+		}
+	}
+	v, err := ds.GetVault(id)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"ok": false, "error": err.Error()})
+		return
+	}
+	if v == nil {
+		writeJSON(w, http.StatusNotFound, map[string]any{"ok": false, "error": "vault not found"})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "vault": v})
+}
 
 // handleDefiVaults GET /api/defi/vaults
 func (s *RPCServer) handleDefiVaults(w http.ResponseWriter, r *http.Request) {

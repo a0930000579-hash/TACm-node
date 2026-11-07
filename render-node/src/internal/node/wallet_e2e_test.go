@@ -57,9 +57,9 @@ func TestWalletSyncCoinbase(t *testing.T) {
 	if pool.TACmBalance.Cmp(wantPool) != 0 {
 		t.Fatalf("獎勵池挹注=%s want 1.82e19 (91pct coinbase×2塊)", pool.TACmBalance)
 	}
-}
 
 // 站內 TiUSD 轉帳（0.5% 手續費）+ RPC 端點。
+}
 func TestWalletTransferRPC(t *testing.T) {
 	n, _ := startMiningNode(t)
 	rpc := NewRPCServer(n)
@@ -109,9 +109,9 @@ func TestWalletTransferRPC(t *testing.T) {
 	if len(items) < 6 {
 		t.Fatalf("審計分錄太少: %d", len(items))
 	}
-}
 
 // TiUSD 發行/銷毀 RPC + 供給摘要。
+}
 func TestTiUSDRPC(t *testing.T) {
 	n, _ := startMiningNode(t)
 	rpc := NewRPCServer(n)
@@ -141,9 +141,9 @@ func TestTiUSDRPC(t *testing.T) {
 	if v.TiUSDRaw != 50_000_000 {
 		t.Fatalf("Vault 入帳=%d want 50 TiUSD", v.TiUSDRaw)
 	}
-}
 
 // 鏈上交易（mempool 簽名轉帳 → 打包）隨區塊同步進錢包。
+}
 func TestWalletSyncChainTx(t *testing.T) {
 	n, _ := startMiningNode(t)
 	bobKP, err := crypto.GenerateKeyPair()
@@ -187,10 +187,10 @@ func TestWalletSyncChainTx(t *testing.T) {
 	if proposer.TACmBalance.Sign() <= 0 {
 		t.Fatal("proposer 餘額異常")
 	}
-}
 
 // 測試輔助。
 
+}
 func postJSON(t *testing.T, url string, body any) map[string]any {
 	t.Helper()
 	b, _ := json.Marshal(body)

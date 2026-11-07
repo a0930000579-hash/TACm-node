@@ -139,9 +139,9 @@ func TestCommunityFollowRPC(t *testing.T) {
 	if len(fw2["items"].([]any)) != 0 {
 		t.Fatalf("取消追蹤後應為空")
 	}
-}
 
 // TestCommunityRewardsRPC 互動積分＋rewards 查詢。
+}
 func TestCommunityRewardsRPC(t *testing.T) {
 	n, ts := newCommunityHost(t, 0)
 	alice := testAddr(t)
@@ -166,9 +166,9 @@ func TestCommunityRewardsRPC(t *testing.T) {
 	if pts != 9 {
 		t.Fatalf("Store 積分應 9，得 %d", pts)
 	}
-}
 
 // TestSettleCommunityRewards 結算上鏈：達週期後 mempool 出現帶簽名獎勵交易。
+}
 func TestSettleCommunityRewards(t *testing.T) {
 	n, ts := newCommunityHost(t, 0)
 	alice := testAddr(t)
@@ -231,9 +231,9 @@ func TestSettleCommunityRewards(t *testing.T) {
 	if r["ok"] != true || r["settled"].(float64) != 0 {
 		t.Fatalf("settle API 應 ok/0: %v", r)
 	}
-}
 
 // TestCommunityRewardOnChain 結算交易出塊上鏈：獲獎者鏈上餘額增加。
+}
 func TestCommunityRewardOnChain(t *testing.T) {
 	n, _ := newCommunityHost(t, 1)
 	alice := testAddr(t)
@@ -266,4 +266,5 @@ func TestCommunityRewardOnChain(t *testing.T) {
 	if !la.LedgerOK {
 		t.Fatalf("ledger 守恆被破壞: %+v", la)
 	}
+
 }

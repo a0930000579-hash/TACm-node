@@ -241,7 +241,7 @@ func (s *Server) handleWSMessage(c *wsConn, payload []byte) {
 		}
 		typ, _ := req.Params[0].(string)
 		switch typ {
-		case "newHeads", "newPendingTransactions":
+		case "newHeads", "newPendingTransactions", "dashboard":
 			subID := fmt.Sprintf("0x%x", time.Now().UnixNano())
 			c.mu.Lock()
 			c.subs[subID] = typ
@@ -393,6 +393,29 @@ func (s *Server) wsPump(stop <-chan struct{}) {
 }
 
 // marketPump 交易所行情推送：每 500ms 對訂閱市場推一次 ticker（價格/24h 即時）。
+// dashboardPump 每 2 秒偵測鏈頂高度變化，有出塊即推 dashboard_update（資產中心即時刷新）。
+func (s *Server) dashboardPump(stop <-chan struct{}) {
+	tick := time.NewTicker(2 * time.Second)
+	defer tick.Stop()
+	last := int64(0)
+	for {
+		select {
+		case <-stop:
+			return
+		case <-tick.C:
+			h := s.ds.TipHeight()
+			if h <= 0 || h == last {
+				continue
+			}
+			last = h
+			s.hub.broadcast("dashboard", map[string]any{
+				"subscription": "",
+				"result":       map[string]any{"type": "dashboard_update", "height": h, "ts": time.Now().Unix()},
+			})
+		}
+	}
+}
+
 func (s *Server) marketPump(stop <-chan struct{}) {
 	tick := time.NewTicker(500 * time.Millisecond)
 	defer tick.Stop()

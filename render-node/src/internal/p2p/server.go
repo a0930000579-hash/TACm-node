@@ -48,14 +48,14 @@ func (n *Network) handleHello(w http.ResponseWriter, r *http.Request) {
 		writeP2PErr(w, http.StatusBadRequest, "protocol version mismatch")
 		return
 	}
-	url := req.BaseURL
+	url := normURL(req.BaseURL)
 	if url == "" {
-		url = req.RPCURL
+		url = normURL(req.RPCURL)
 	}
-	url = normURL(url)
-	// M149c：判斷「自己」只認 BaseURL——nodeID 只是顯示名，
-	// 不同節點可能同名（如預設 node1/tac-node），若以 NodeID 過濾會誤拒正常節點握手。
-	if url == "" || url == normURL(n.cfg.SelfURL) {
+	// M149c：有對外位址時以 BaseURL 判自身（nodeID 僅顯示名，可能撞名）。
+	// 外連節點（NAT/平台未提供自身 URL，url 為空）改以 NodeID 判自身：
+	// 這類節點無法被連入，但可主動外連、同步與投票，握手不應拒絕。
+	if (url != "" && url == normURL(n.cfg.SelfURL)) || (url == "" && req.NodeID == n.cfg.SelfID) {
 		writeP2PErr(w, http.StatusBadRequest, "cannot peer with self")
 		return
 	}

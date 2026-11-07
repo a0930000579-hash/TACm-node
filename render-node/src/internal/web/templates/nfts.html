@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}TAC NFT Studio{% endblock %}
 {% block content %}
+{% include "exchange_chrome.html" %}
 <section class="pg-banner">
   <div class="pg-txt"><h1 data-i18n="bn.nfts">NFT 收藏</h1><p data-i18n="bn.nftsSub">數位收藏</p></div>
   <svg viewBox="0 0 40 40" class="pg-art"><rect x="6" y="8" width="28" height="24" rx="4" fill="none" stroke="#68BE8D" stroke-width="2.2"/><circle cx="14" cy="16" r="3.5" fill="rgba(104,190,141,.45)"/><path d="M8 30 L20 18 L32 30" fill="none" stroke="#68BE8D" stroke-width="2.2" stroke-linejoin="round"/></svg>
@@ -51,7 +52,7 @@
     <div class="logo"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M3 17l5-5 3 3 4-4 6 6"/></svg></div>
     <div>
       <h2 data-i18n="nfts.title">NFT 工作室</h2>
-      <div class="sub" data-i18n="nfts.sub">鏈上標準 NFT（ERC-721 風格）· 節點官方發行 · 即時出塊</div>
+      <div class="sub" data-i18n="nfts.sub">鏈上標準 NFT（ERC-721）· 節點官方發行 · 即時出塊</div>
     </div>
     <div class="tk-stats">
       <span id="tkCount" data-i18n="nfts.count">0 個 NFT 集合</span>

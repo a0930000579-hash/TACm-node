@@ -111,4 +111,5 @@ func TestNodeRewardWithdrawEndToEnd(t *testing.T) {
 	if rec2.Code != http.StatusBadRequest {
 		t.Fatalf("壞 to 應 400，got %d", rec2.Code)
 	}
+
 }

@@ -148,8 +148,8 @@ func TestTACWalletE2E(t *testing.T) {
 		t.Fatalf("isApproved(alice) 應為 true: %v", ia)
 	}
 	_ = carol
-}
 
+}
 func toBig(s string) *big.Int {
 	n, _ := new(big.Int).SetString(strings.TrimPrefix(s, "0x"), 16)
 	return n

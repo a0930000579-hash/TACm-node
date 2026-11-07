@@ -54,7 +54,35 @@ const (
 	BaseGPU = 2.0
 	RefCPU  = 0.01
 	RefGPU  = 0.02
+	// v112/v113：被邀請人註冊加成（v113 調降：0.5→0.05、1.0→0.1，+50%→+5%，避免過高）。
+	InvitedCPU = 0.05
+	InvitedGPU = 0.1
 )
+
+// v116：邀請加成參數化治理——所有邀請算力參數可由鏈上治理設定（settings）覆寫，
+// 未設定時用上方常量預設值。key：invite.ref_cpu / invite.ref_gpu / invite.inv_cpu /
+// invite.inv_gpu / invite.bonus_pct（每推薦加成%，預設 5）／ invite.bonus_cap（加成上限%，預設 50）。
+func (s *Store) InviteParams() (refCPU, refGPU, invCPU, invGPU, bonusPct, capPct float64) {
+	refCPU, refGPU, invCPU, invGPU, bonusPct, capPct = RefCPU, RefGPU, InvitedCPU, InvitedGPU, 5.0, 50.0
+	getF := func(key string, def float64) float64 {
+		v, err := s.GetSetting(key)
+		if err != nil || v == "" {
+			return def
+		}
+		f, err := strconv.ParseFloat(v, 64)
+		if err != nil || f < 0 {
+			return def
+		}
+		return f
+	}
+	refCPU = getF("invite.ref_cpu", refCPU)
+	refGPU = getF("invite.ref_gpu", refGPU)
+	invCPU = getF("invite.inv_cpu", invCPU)
+	invGPU = getF("invite.inv_gpu", invGPU)
+	bonusPct = getF("invite.bonus_pct", bonusPct)
+	capPct = getF("invite.bonus_cap", capPct)
+	return
+}
 
 // MinerHashrate 回傳指定地址已註冊礦機的算力（hashrate 欄位；未註冊回 0）。
 // M60：鏈上 hb 交易需要攜帶礦機算力（開機/續心跳），算力由本節點已註冊礦機表提供。
@@ -84,8 +112,17 @@ func (s *Store) RegisterMiner(address string, _vcpu, _vgpu int) error {
 	if err != nil {
 		return err
 	}
-	vcpu := BaseCPU + float64(n)*RefCPU
-	vgpu := BaseGPU + float64(n)*RefGPU
+	referred, err := s.IsReferred(address)
+	if err != nil {
+		return err
+	}
+	refCPU, refGPU, invCPU, invGPU, _, _ := s.InviteParams()
+	vcpu := BaseCPU + float64(n)*refCPU
+	vgpu := BaseGPU + float64(n)*refGPU
+	if referred { // v112：被邀請人註冊即獲得算力加成（實質增加）
+		vcpu += invCPU
+		vgpu += invGPU
+	}
 	hr := int64(vcpu*1_000_000 + vgpu*2_000_000)
 	now := time.Now().Unix()
 	_, err = s.db.Exec(`
@@ -101,15 +138,67 @@ ON CONFLICT(address) DO UPDATE SET
 	return nil
 }
 
+// IsReferred v112：回傳地址是否為某人的被邀請人（referrals.referral 命中）。
+func (s *Store) IsReferred(address string) (bool, error) {
+	var n int
+	if err := s.db.QueryRow(`SELECT COUNT(*) FROM referrals WHERE referral=?`, address).Scan(&n); err != nil {
+		return false, fmt.Errorf("wallet: 查詢被邀請狀態: %w", err)
+	}
+	return n > 0, nil
+}
+
+// RecalcMinerHashrate v111：邀請關係新增後即時重算邀請人礦機算力（已註冊才更新）。
+// 原本加成只在「開機重新註冊」時生效 → 邀請人挖礦中邀請新用戶算力不變。
+func (s *Store) RecalcMinerHashrate(address string) error {
+	if address == "" {
+		return nil
+	}
+	var exists int
+	if err := s.db.QueryRow(`SELECT COUNT(*) FROM miners WHERE address=?`, address).Scan(&exists); err != nil {
+		return fmt.Errorf("wallet: 檢查礦機: %w", err)
+	}
+	if exists == 0 {
+		return nil
+	}
+	n, err := s.ReferralCount(address)
+	if err != nil {
+		return err
+	}
+	referred, err := s.IsReferred(address)
+	if err != nil {
+		return err
+	}
+	refCPU, refGPU, invCPU, invGPU, _, _ := s.InviteParams()
+	vcpu := BaseCPU + float64(n)*refCPU
+	vgpu := BaseGPU + float64(n)*refGPU
+	if referred { // v112：被邀請人也適用被邀請加成
+		vcpu += invCPU
+		vgpu += invGPU
+	}
+	hr := int64(vcpu*1_000_000 + vgpu*2_000_000)
+	_, err = s.db.Exec(`UPDATE miners SET vcpu=?, vgpu=?, hashrate=? WHERE address=?`,
+		vcpu, vgpu, fmt.Sprintf("%d", hr), address)
+	if err != nil {
+		return fmt.Errorf("wallet: 重算礦機算力: %w", err)
+	}
+	return nil
+}
+
 // AddReferral 記錄一次推薦註冊（referrer 為邀請人地址，referral 為新註冊地址）。
 func (s *Store) AddReferral(referrer, referral string) error {
 	if referrer == "" || referral == "" || referrer == referral {
 		return fmt.Errorf("wallet: 推薦關係非法")
 	}
-	_, err := s.db.Exec(`INSERT OR IGNORE INTO referrals (referrer, referral, ts) VALUES (?, ?, ?)`,
+	res, err := s.db.Exec(`INSERT OR IGNORE INTO referrals (referrer, referral, ts) VALUES (?, ?, ?)`,
 		referrer, referral, time.Now().Unix())
 	if err != nil {
 		return fmt.Errorf("wallet: 記錄推薦: %w", err)
+	}
+	if n, _ := res.RowsAffected(); n > 0 {
+		// v111：新增推薦關係後，邀請人礦機算力即時重算（挖礦中不需重開機）。
+		_ = s.RecalcMinerHashrate(referrer)
+		// v112：被邀請人若已註冊礦機，其算力也即時重算（含被邀請加成）。
+		_ = s.RecalcMinerHashrate(referral)
 	}
 	return nil
 }
@@ -121,6 +210,25 @@ func (s *Store) ReferralCount(referrer string) (int, error) {
 		return 0, fmt.Errorf("wallet: 查詢推薦數: %w", err)
 	}
 	return n, nil
+}
+
+// ReferralCounts v111：一次回傳全部邀請人數（GROUP BY，消除 N+1）。
+func (s *Store) ReferralCounts() (map[string]int, error) {
+	rows, err := s.db.Query(`SELECT referrer, COUNT(*) FROM referrals GROUP BY referrer`)
+	if err != nil {
+		return nil, fmt.Errorf("wallet: 查詢全部推薦數: %w", err)
+	}
+	defer rows.Close()
+	out := make(map[string]int)
+	for rows.Next() {
+		var r string
+		var n int
+		if err := rows.Scan(&r, &n); err != nil {
+			return nil, err
+		}
+		out[r] = n
+	}
+	return out, rows.Err()
 }
 
 // MinerSplit 一個礦工的瓜分份額（Share 為分子，分母為全體算力和）。

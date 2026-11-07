@@ -3,6 +3,7 @@ package node
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 )
 
 // ---------- M152 鏈上預言機 RPC ----------
@@ -139,4 +140,30 @@ func (s *RPCServer) handleOracleAggregate(w http.ResponseWriter, r *http.Request
 		})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "prices": out})
+}
+
+// handleOracleNativePrices GET /api/oracle/native — 原生資產喂價（v110）。
+// TACm＝交易所最後成交價（未上市 0）；TiUSD 錨定 1 USDT；USDT 基準 1.0。
+func (s *RPCServer) handleOracleNativePrices(w http.ResponseWriter, r *http.Request) {
+	if s.node.walletSvc == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"ok": false, "error": "wallet_disabled"})
+		return
+	}
+	tacm := s.node.walletSvc.TACMPrice()
+	listed := tacm > 0
+	now := time.Now().Unix()
+	writeJSON(w, http.StatusOK, map[string]any{
+		"ok":      true,
+		"base":    "USDT",
+		"updated": now,
+		"prices": []map[string]any{
+			{"asset": "TACm", "price": tacm, "decimals": 18, "listed": listed,
+				"source": "exchange_last_trade", "note": "交易所最後成交價；未上市按 1:0.330 兜底估算"},
+			{"asset": "TiUSD", "price": 1.0, "decimals": 6, "listed": true,
+				"source": "peg_1:1_usdt", "note": "穩定幣 1:1 錨定 USDT"},
+			{"asset": "USDT", "price": 1.0, "decimals": 6, "listed": true,
+				"source": "base_asset", "note": "基準資產"},
+		},
+		"peg_note": "TiUSD 錨定 1 USDT；TACm 市價來自交易所最後成交（未上市按 0.330 兜底估算）",
+	})
 }

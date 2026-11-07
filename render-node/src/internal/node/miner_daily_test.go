@@ -85,4 +85,5 @@ func TestMinerEarningsDaily(t *testing.T) {
 	if hd[idx[yesterday]].Hash != 20 {
 		t.Errorf("昨天算力應 20，got %v", hd[idx[yesterday]].Hash)
 	}
+
 }

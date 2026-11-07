@@ -7,6 +7,7 @@ package web
 //  4. 提領：節點私鑰簽名把節點獎勵轉入綁定錢包（上鏈、可審計）
 
 import (
+	"fmt"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -82,11 +83,23 @@ type nodePanelView struct {
 	LastRewardBlock int64  `json:"last_reward_block"`
 	HeartbeatCount  int64  `json:"heartbeat_count"`
 	LastHeartbeat   int64  `json:"last_heartbeat"`
+	// PoT 節點資格（M149m-9）：鏈上 node:reg 是否已註冊本節點公鑰。
+	PotRegistered bool `json:"pot_registered"`
+	// v127/v128：出塊率（近 100 塊本節點 proposer 比例）＋歷史出塊率曲線（近 30 塊、每 5 塊窗口）。
+	BlockMined        int64            `json:"block_mined,omitempty"`
+	BlockExpected     int64            `json:"block_expected,omitempty"`
+	BlockRatePct      *int             `json:"block_rate_pct,omitempty"`
+	BlockRateHistory  []map[string]any `json:"block_rate_history,omitempty"`
 }
 
 // handleNodePanel GET /node-panel — 節點架設者面板頁面。
 func (s *Server) handleNodePanel(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "node_panel.html", pongo2.Context{})
+}
+
+// handleNetworkHealth GET /network-health — 全网节点健康仪表。
+func (s *Server) handleNetworkHealth(w http.ResponseWriter, r *http.Request) {
+	s.render(w, "network_health.html", pongo2.Context{})
 }
 
 // handleNodePanelAPI GET /api/node/panel — 節點架設者面板狀態。
@@ -107,8 +120,53 @@ func (s *Server) handleNodePanelAPI(w http.ResponseWriter, r *http.Request) {
 	v.LastRewardBlock = rs.LastRewardBlock
 	v.HeartbeatCount = rs.HeartbeatCount
 	v.LastHeartbeat = rs.LastHeartbeat
+	// PoT 註冊狀態：查鏈上 node:reg 是否含本節點地址（任何節點同步同鏈即一致）。
+	if regs, err := s.ds.NodeRegistry(); err == nil {
+		for i := range regs {
+			if regs[i].Address == v.NodeAddress {
+				v.PotRegistered = true
+				break
+			}
+		}
+	}
 	if v.NodeID == "" {
 		v.NodeID = "anchor"
+	}
+	// v127/v128：出塊率＋歷史曲線——僅完整節點資料源（tacweb）可用；只讀資料源自動略過。
+	nd, ok := s.ds.(*nodeDS)
+	if ok {
+		if bm, be, br, berr := nd.n.BlockProductionRate(100); berr == nil {
+			v.BlockMined = bm
+			v.BlockExpected = be
+			pct := int(br*100 + 0.5)
+			v.BlockRatePct = &pct
+		}
+		if blks, bherr := nd.n.DB().GetBlocks(30, 0); bherr == nil && len(blks) > 0 {
+			hist := []map[string]any{}
+			const histWin = 5
+			for i := 0; i < len(blks); i += histWin {
+				end := i + histWin - 1
+				if end >= len(blks) {
+					end = len(blks) - 1
+				}
+				mined := 0
+				for j := i; j <= end; j++ {
+					if blks[j].ProposerAddress != "" && blks[j].ProposerAddress == v.NodeAddress {
+						mined++
+					}
+				}
+				cnt := end - i + 1
+				pct := 0.0
+				if cnt > 0 {
+					pct = float64(mined) / float64(cnt) * 100
+				}
+				hist = append(hist, map[string]any{
+					"label": fmt.Sprintf("#%d-#%d", blks[i].Height, blks[end].Height),
+					"pct":   int(pct + 0.5),
+				})
+			}
+			v.BlockRateHistory = hist
+		}
 	}
 	writeJSON(w, v)
 }

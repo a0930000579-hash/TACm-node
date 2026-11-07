@@ -59,9 +59,9 @@ func TestHDWalletNewRPC(t *testing.T) {
 	if out.Account.Address == "" || out.Account.WIF == "" {
 		t.Fatalf("帳戶不完整")
 	}
-}
 
 // TestHDWalletDeriveRPC POST /wallet/hd/derive：確定性＋參數錯誤。
+}
 func TestHDWalletDeriveRPC(t *testing.T) {
 	ts := hdTestServer(t)
 	defer ts.Close()
@@ -128,4 +128,5 @@ func TestHDWalletDeriveRPC(t *testing.T) {
 	if c != http.StatusBadRequest {
 		t.Fatalf("負 index HTTP %d, want 400", c)
 	}
+
 }

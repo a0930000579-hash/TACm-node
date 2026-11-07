@@ -1,6 +1,7 @@
 package node
 
 import (
+	"log"
 	"net"
 	"net/http"
 	"strconv"
@@ -115,6 +116,13 @@ func (s *RPCServer) limitWrap(h http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 		r.Body = http.MaxBytesReader(w, r.Body, maxRPCPayloadBytes)
+		// v86：操作請求（寫入）與慢讀（>1s）記入日誌——手機端「Load failed」診斷：
+		// 主鏈日誌出現本行＝請求已到達並處理完成（前端/顯示層問題）；
+		// 操作後日誌無本行＝手機網路未連到主鏈（ISP/路由問題）。
+		start := time.Now()
 		h(w, r)
+		if write || time.Since(start) > time.Second {
+			log.Printf("[api] %s %s 耗時%v ip=%s", r.Method, r.URL.Path, time.Since(start), clientIP(r))
+		}
 	}
 }

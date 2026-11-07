@@ -40,6 +40,7 @@
   <div class="br-card">
     <h3 data-i18n="br.status">Relay Status <span class="hint" id="statusHint"></span><select id="chainSel" style="margin-left:auto;width:auto;font-size:11px;padding:3px 8px;background:#f2f4f9;border:1px solid #e2e6ee;border-radius:8px;color:#14161a;font-weight:700"></select></h3>
     <div id="statusBody"><div class="br-empty">Loading…</div></div>
+    <div style="margin-top:8px;font-size:11px;color:#5d6778;line-height:1.5">多鏈橋（v76）：主鏈以 <code>-eth-relay</code>/<code>-polygon-relay</code> 啟動即自動啟用 Ethereum/Polygon 中繼，本頁鏈選擇器隨之出現對應鏈（BSC/Ethereum/Polygon/Arbitrum/Optimism）。 <span class="en">Multi-chain bridge (v76): start the anchor with <code>-eth-relay</code>/<code>-polygon-relay</code> to enable Ethereum/Polygon relays; the chain selector below reflects active chains.</span></div>
   </div>
   <div class="br-grid">
     <div class="br-card">
@@ -47,6 +48,17 @@
       <div id="assetsBody"><div class="br-empty">Loading…</div></div>
     </div>
     <div class="br-card">
+      <details style="margin:6px 0 10px;background:#f6f8fc;border:1px solid #e2e6ee;border-radius:10px;padding:8px 12px;font-size:12px;color:#2c3340">
+        <summary style="cursor:pointer;font-weight:700;color:#0f6fde">💡 跨鏈入金流程（USDT → TACm）· <span class="en">Deposit guide (USDT → TACm)</span></summary>
+        <div style="margin-top:6px;line-height:1.7">
+          <div>1️⃣ 取得測試資產：<code>https://www.bnbchain.org/en/testnet-faucet</code> 領 BNB，<code>https://faucet.bnbchain.org</code> 領 tUSDT（BSC Testnet）。<span class="en">Get test assets from BNB Faucet (BNB) and BNB Chain Faucet (tUSDT).</span></div>
+          <div>2️⃣ 在下方填「目標地址」＝你的 <code>0x…</code> 收款地址（錢包頁複製），選擇 USDT，輸入金額，點「Lock to BSC」。</div>
+          <div>3️⃣ 中繼自動監聽 BSC Deposit 事件 → TAC 鏈等值 mint（約 30–90 秒，主鏈日誌見 <code>[bsc-relay]</code>）。</div>
+          <div>4️⃣ 回「錢包」頁應見 USDT/TiUSD 到帳。反向提現：填 TAC 地址與金額，點「Unlock from BSC」。</div>
+          <div class="en">1. Claim BNB &amp; tUSDT from BSC testnet faucets. 2. Enter your 0x address as target, pick USDT, enter amount, click "Lock to BSC". 3. Relay mints on TAC within 30-90s. 4. Check Wallet; to exit, enter TAC address and click "Unlock from BSC".</div>
+        </div>
+      </details>
+
       <h3 id="lockTitle" data-i18n="br.lock">Lock to BSC</h3>
       <div class="br-field">
         <label for="lkAsset" data-i18n="br.asset">Asset</label>

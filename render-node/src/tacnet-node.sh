@@ -11,14 +11,14 @@
 #   bash tacnet-node.sh [--port 8081] [--seed http://2.28.201.174:8080] [--mode auto|systemd|nohup|render]
 #   --p2p-url 省略時自動偵測本機公網 IP（偵測失敗才需手動指定）
 #
-# 一行安裝：
-#   curl -L -o /tmp/tacnet-node.sh '<INSTALLER_AKA>' && bash /tmp/tacnet-node.sh
+# 一行安裝（主網節點伺服器 downloads 提供本腳本）：
+#   curl -L -o /tmp/tacnet-node.sh http://2.28.201.174:8080/downloads/tacnet-node.sh && bash /tmp/tacnet-node.sh
 # ============================================================
 set -euo pipefail
 cd "$(dirname "$0")"
 
 # ---- 可調參數 ----
-ZIP_URL='https://aka.doubaocdn.com/s/WLUKjNHxdu'      # M101 壓縮檔（錢包多幣種＋交易所 K 線/深度圖/個人成交）
+ZIP_URL='http://2.28.201.174:8080/downloads/tacm-go-src.zip'  # v62：原始碼改由主網節點伺服器 downloads 提供
 SEED='http://2.28.201.174:8080'                        # 主網錨點（種子）
 PORT="${1:-8081}"
 MODE="${MODE:-auto}"

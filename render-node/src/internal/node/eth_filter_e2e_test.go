@@ -16,12 +16,13 @@ import (
 )
 
 func TestEthFilterAPI(t *testing.T) {
-	n, srv, _ := contractStudioSetup(t)
+	n, srv, admin := contractStudioSetup(t)
 
 	// 部署 ERC-20 並產生 Transfer 事件。
 	out := studioPostJSON(t, srv, "/contract/deploy", map[string]any{
 		"name": "FilterToken", "symbol": "FTK", "supply": "1000000",
-	})
+		"from": admin,
+		})
 	if out["ok"] != true {
 		t.Fatalf("部署失敗: %v", out)
 	}
@@ -158,9 +159,9 @@ func TestEthFeeHistoryAndIndexMethods(t *testing.T) {
 	if uc != "0x0" {
 		t.Fatalf("uncle count 應為 0x0，得到 %v", uc)
 	}
-}
 
 // latestHeight 讀鏈頂高度（測試輔助）。
+}
 func latestHeight(t *testing.T, n *Node) int64 {
 	t.Helper()
 	b, err := n.DB().GetLatestBlock()

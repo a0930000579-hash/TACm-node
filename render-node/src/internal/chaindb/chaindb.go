@@ -140,6 +140,7 @@ CREATE TABLE IF NOT EXISTS peers (
 CREATE INDEX IF NOT EXISTS idx_tx_from ON transactions(from_addr);
 CREATE INDEX IF NOT EXISTS idx_tx_to ON transactions(to_addr);
 CREATE INDEX IF NOT EXISTS idx_tx_block ON transactions(block_height);
+CREATE INDEX IF NOT EXISTS idx_tx_memo ON transactions(memo);
 CREATE INDEX IF NOT EXISTS idx_blocks_hash ON blocks(hash);
 CREATE TABLE IF NOT EXISTS logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

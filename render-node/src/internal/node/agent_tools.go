@@ -33,12 +33,26 @@ func sharedSearchProvider() ai.SearchProvider {
 	return searchProvider
 }
 
+// withLinkedAddr 工具層 backstop：模型 tool_call 未帶 address 時，以本請求連結地址補上。
+// 優先序：模型明確給的 address > 連結地址。僅補預設值，不影響寫操作 needs_confirm 閘與簽名。
+func withLinkedAddr(args map[string]any, linked string) map[string]any {
+	if args == nil {
+		args = map[string]any{}
+	}
+	if a, _ := args["address"].(string); strings.TrimSpace(a) == "" && linked != "" {
+		args["address"] = linked
+	}
+	return args
+}
+
 // v163：把 TACm 既有服務包成 Agent 工具（ai.Registry）。
 // 嚴禁重寫業務邏輯——唯讀工具直接呼叫 s.node.db / oracle / dex / defi 既有查詢；
 // 寫操作工具標 RequiresConfirm，由 Agent 層把關（未 confirm 不執行 Run，亦即不簽/不廣播任何交易）。
 
 // buildAgentRegistry 組裝本節點的 Agent 工具表。memReader 提供 read_memory 工具所需對話記憶。
-func (s *RPCServer) buildAgentRegistry(memReader func() string) *ai.Registry {
+// linkedAddr 為本請求連結的錢包地址，做為工具層 backstop。
+func (s *RPCServer) buildAgentRegistry(memReader func() string, linkedAddr string) *ai.Registry {
+	linkedAddr = strings.TrimSpace(linkedAddr)
 	reg := ai.NewRegistry()
 
 	// --- 唯讀工具 ---
@@ -53,6 +67,7 @@ func (s *RPCServer) buildAgentRegistry(memReader func() string) *ai.Registry {
 			},
 		},
 		Run: func(ctx context.Context, args map[string]any) (ai.ToolResult, error) {
+			args = withLinkedAddr(args, linkedAddr)
 			addr, _ := args["address"].(string)
 			addr = strings.TrimSpace(addr)
 			if addr == "" {
@@ -114,6 +129,7 @@ func (s *RPCServer) buildAgentRegistry(memReader func() string) *ai.Registry {
 			},
 		},
 		Run: func(ctx context.Context, args map[string]any) (ai.ToolResult, error) {
+			args = withLinkedAddr(args, linkedAddr)
 			addr, _ := args["address"].(string)
 			addr = strings.TrimSpace(addr)
 			if addr == "" {
@@ -188,6 +204,7 @@ func (s *RPCServer) buildAgentRegistry(memReader func() string) *ai.Registry {
 		},
 		Run: func(ctx context.Context, args map[string]any) (ai.ToolResult, error) {
 			// confirm=true 才會執行至此。用 Quote 做唯讀估算，回報預估輸出。
+			args = withLinkedAddr(args, linkedAddr)
 			addr, _ := args["address"].(string)
 			amount, _ := args["amount"].(string)
 			amt, _ := new(big.Int).SetString(strings.TrimPrefix(amount, "0"), 10)
@@ -223,6 +240,7 @@ func (s *RPCServer) buildAgentRegistry(memReader func() string) *ai.Registry {
 			},
 		},
 		Run: func(ctx context.Context, args map[string]any) (ai.ToolResult, error) {
+			args = withLinkedAddr(args, linkedAddr)
 			addr, _ := args["address"].(string)
 			return ai.ToolResult{
 				Summary: fmt.Sprintf("DeFi deposit prepared for %s asset=%s amount=%s. Execution requires wallet signature and your confirmation.",
@@ -246,6 +264,7 @@ func (s *RPCServer) buildAgentRegistry(memReader func() string) *ai.Registry {
 			},
 		},
 		Run: func(ctx context.Context, args map[string]any) (ai.ToolResult, error) {
+			args = withLinkedAddr(args, linkedAddr)
 			addr, _ := args["address"].(string)
 			return ai.ToolResult{
 				Summary: fmt.Sprintf("DeFi borrow prepared for %s asset=%s amount=%s. CDP liquidation risk applies; execution requires wallet signature.",

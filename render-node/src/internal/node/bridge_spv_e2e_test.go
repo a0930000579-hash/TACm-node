@@ -43,7 +43,10 @@ func TestBridgeHTTPEndToEnd(t *testing.T) {
 	defer n.Close()
 
 	sc, chains := httpJSON(t, "GET", srv.URL+"/bridge/chains", nil)
-	if sc != 200 || len(chains["chains"].(map[string]any)) != 6 {
+	if sc != 200 {
+		t.Fatalf("鏈列表錯誤: %d %v", sc, chains)
+	}
+	if cl, ok := chains["chains"].([]any); !ok || len(cl) != 6 {
 		t.Fatalf("鏈列表錯誤: %d %v", sc, chains)
 	}
 
@@ -101,8 +104,8 @@ func TestBridgeHTTPEndToEnd(t *testing.T) {
 	if sc != 400 {
 		t.Fatalf("不支持鏈應 400, got %d", sc)
 	}
-}
 
+}
 func TestLightClientEndToEnd(t *testing.T) {
 	n, srv := startBridgeNode(t)
 	defer srv.Close()
@@ -150,4 +153,5 @@ func TestLightClientEndToEnd(t *testing.T) {
 	if missing.Included {
 		t.Fatal("不存在交易不應 included")
 	}
+
 }

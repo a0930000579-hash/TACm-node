@@ -58,4 +58,5 @@ func TestAuthLifecycle(t *testing.T) {
 		t.Fatalf("偽造 token 應拒")
 	}
 	_ = uid2
+
 }

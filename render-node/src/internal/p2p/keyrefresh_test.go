@@ -14,11 +14,11 @@ import (
 
 type mockHost struct{ h int64 }
 
-func (m *mockHost) Height() int64                                          { return m.h }
-func (m *mockHost) FinalizedHeight() int64                                 { return 0 }
+func (m *mockHost) Height() int64                                               { return m.h }
+func (m *mockHost) FinalizedHeight() int64                                      { return 0 }
 func (m *mockHost) OnIncomingBlock(*chaindb.Block, []chaindb.Transaction) error { return nil }
-func (m *mockHost) OnIncomingTx(map[string]any) error                      { return nil }
-func (m *mockHost) OnIncomingVote(*bft.Vote) error                         { return nil }
+func (m *mockHost) OnIncomingTx(map[string]any) error                           { return nil }
+func (m *mockHost) OnIncomingVote(*bft.Vote) error                              { return nil }
 func (m *mockHost) OnIncomingViewChange(int64, int32, string, string) error {
 	return nil
 }
@@ -27,6 +27,9 @@ func (m *mockHost) BlockDetail(int64) (*chaindb.Block, []chaindb.Transaction, er
 	return nil, nil, nil
 }
 func (m *mockHost) ReorgChain(int64, []chaindb.Block, [][]chaindb.Transaction) error {
+	return nil
+}
+func (m *mockHost) ReorgChainFull(int64, []chaindb.Block, [][]chaindb.Transaction) error {
 	return nil
 }
 

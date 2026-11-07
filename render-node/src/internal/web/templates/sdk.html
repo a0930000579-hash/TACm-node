@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Developer SDK<script>
+  (function () {
+    var DEFAULT_RPC = location.origin;
+    function $(id){ return document.getElementById(id); }
+    window.sdkTest = function () {
+      var url = ($('rpcUrl').value || DEFAULT_RPC).replace(/\/$/, '');
+      var out = $('rpcOut');
+      out.textContent = '…';
+      fetch(url + '/api/status', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
+        if (!d || !d.ok) { out.textContent = T('sdk.rpcFail', '連線失敗', 'Connection failed'); return; }
+        out.textContent = JSON.stringify({ node_id: d.node_id, height: d.height, version: d.version, peers: d.peers }, null, 2);
+      }).catch(function () { out.textContent = T('sdk.rpcFail', '連線失敗', 'Connection failed'); });
+    };
+    window.sdkBal = function () {
+      var addr = ($('balAddr').value || '').trim();
+      var out = $('balOut');
+      if (!addr) { out.textContent = T('sdk.balNeedAddr', '請輸入地址', 'Enter an address'); return; }
+      out.textContent = '…';
+      fetch('/api/v1/address/' + encodeURIComponent(addr), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
+        if (!d || !d.ok) { out.textContent = T('sdk.balFail', '查詢失敗（主網需啟用 Indexer）', 'Query failed (mainnet needs Indexer enabled)'); return; }
+        out.textContent = JSON.stringify({ balance: d.balance, tx_count: d.tx_count }, null, 2);
+      }).catch(function () { out.textContent = T('sdk.balFail', '查詢失敗（主網需啟用 Indexer）', 'Query failed (mainnet needs Indexer enabled)'); });
+    };
+  })();
+</script>
+{% endblock %}
+{% block content %}
+<style>
+  .api-ep{background:var(--card,#fff);border:1px solid var(--border,#e8ecf1);border-radius:12px;padding:14px 16px;margin:10px 0}
+  .api-method{display:inline-block;background:#68BE8D;color:#f7f8fb;font-weight:700;font-size:12px;border-radius:6px;padding:3px 8px;margin-right:8px;font-family:ui-monospace,Menlo,Consolas,monospace}
+  .api-path{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:14px;font-weight:600;word-break:break-all}
+  .api-desc{font-size:13px;color:var(--muted,#667085);margin-top:4px}
+  .api-ex{display:block;margin-top:8px;padding:10px 12px;background:rgba(104,190,141,.08);border:1px solid rgba(104,190,141,.2);border-radius:8px;color:#16a34a;white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;word-break:break-all}
+  .sdk-inp{width:100%;max-width:420px;padding:9px 11px;border:1px solid var(--border,#e8ecf1);border-radius:8px;background:var(--bg,#f7f8fb);color:var(--text,#1d2939);font-size:13px}
+  .sdk-btn{background:#68BE8D;color:#f7f8fb;border:0;border-radius:8px;padding:9px 16px;font-weight:600;cursor:pointer;margin-left:8px}
+  .sdk-out{margin-top:8px;background:rgba(104,190,141,.06);border:1px dashed rgba(104,190,141,.3);border-radius:8px;padding:10px 12px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;white-space:pre-wrap;word-break:break-all;min-height:22px}
+</style>
+<section class="pg-banner">
+  <div class="pg-txt"><h1 data-i18n="sdk.title">Developer SDK — Mainnet Examples</h1><p data-i18n="sdk.intro">TAC Ai 智能鏈官方 JS SDK（tacjs）：連線主網節點、查詢鏈狀態與地址餘額，並以一步轉帳示範簽署與提交。SDK 原始碼位於專案 sdk/tacjs（瀏覽器與 Node 通用）。</p></div>
+  <svg viewBox="0 0 40 40" class="pg-art"><path d="M10 8h20v6H10zM10 17h20v6H10zM10 26h20v6H10z" fill="none" stroke="#68BE8D" stroke-width="2"/><circle cx="7" cy="11" r="1.6" fill="#68BE8D"/><circle cx="7" cy="20" r="1.6" fill="#68BE8D"/><circle cx="7" cy="29" r="1.6" fill="#68BE8D"/></svg>
+</section>
+
+<div class="api-ep">
+  <span class="api-method">TEST</span><span class="api-path" data-i18n="sdk.rpcTitle">節點連線測試 / Node Connection Test</span>
+  <div class="api-desc" data-i18n="sdk.rpcDesc">輸入節點 RPC 位址（預設為目前站台），查詢鏈狀態。</div>
+  <div style="margin-top:10px"><input id="rpcUrl" class="sdk-inp" placeholder="https://tacm-ai-cyprto.onrender.com" /><button class="sdk-btn" onclick="sdkTest()" data-i18n="sdk.rpcBtn">連線測試</button></div>
+  <div class="sdk-out" id="rpcOut">—</div>
+</div>
+
+<div class="api-ep">
+  <span class="api-method">BAL</span><span class="api-path" data-i18n="sdk.balTitle">地址餘額查詢 / Address Balance</span>
+  <div class="api-desc" data-i18n="sdk.balDesc">透過 Indexer 端點 GET /api/v1/address/{address} 查詢 TACm 餘額與交易筆數。</div>
+  <div style="margin-top:10px"><input id="balAddr" class="sdk-inp" placeholder="tx0..." /><button class="sdk-btn" onclick="sdkBal()" data-i18n="sdk.balBtn">查餘額</button></div>
+  <div class="sdk-out" id="balOut">—</div>
+</div>
+
+<div class="api-ep">
+  <span class="api-method">CODE</span><span class="api-path" data-i18n="sdk.codeTitle">JS SDK 範例 / tacjs Usage</span>
+  <div class="api-desc" data-i18n="sdk.codeDesc">與 Go SDK（tacclient）簽章格式互通——前端用 tacjs 簽署的交易，Go 節點可直接驗證入池。</div>
+<code class="api-ex"># 安裝
+npm install            # 依賴 @noble/secp256k1 + @noble/hashes
+
+# 主網範例（Node / 瀏覽器）
+import { generateKey, signTransaction, Client } from './tacjs.mjs';
+
+const key = generateKey();                 // tx0... 地址
+const c = new Client('https://tacm-ai-cyprto.onrender.com');
+const st = await c.status();               // 節點狀態
+const bal = await c.balance(key.address);  // 地址餘額
+
+// 一步轉帳（查 nonce → 簽署 → 提交）
+const hash = await c.transfer(key, 'tx0收款地址', '10', '0.1', 'memo');</code>
+</div>
+
+<div class="api-ep">
+  <span class="api-method">API</span><span class="api-path" data-i18n="sdk.endpointTitle">常用端點 / Common Endpoints</span>
+  <div class="api-desc" data-i18n="sdk.endpointDesc">下列端點可由任何 JSON 客戶端直接呼叫。</div>
+  <div class="api-desc" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.9">
+    GET /api/status — 鏈狀態（高度／節點／版本）<br>
+    GET /api/v1/address/{address} — 地址餘額與交易<br>
+    GET /api/v1/validators — 驗證人／委託排名<br>
+    GET /api/block/{height} — 區塊內容<br>
+    POST /rpc — JSON-RPC（eth_* / tac_* 兼容層）<br>
+    WS /ws — 即時訂閱（區塊／交易／事件）
+  </div>
+</div>
+{% endblock %}

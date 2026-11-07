@@ -21,6 +21,15 @@ import (
 
 // signerForAccount 驗證 address 對應節點金鑰，回私鑰與節點 eth 地址。
 func (s *RPCServer) signerForAccount(addrParam string) ([]byte, string, error) {
+	got := strings.ToLower(strip0x(addrParam))
+	if len(s.importedKeys) > 0 {
+		s.importedMu.Lock()
+		priv, ok := s.importedKeys[got]
+		s.importedMu.Unlock()
+		if ok {
+			return priv, got, nil
+		}
+	}
 	kp := s.node.keypair
 	if kp == nil {
 		return nil, "", errors.New("node key unavailable")
@@ -30,11 +39,44 @@ func (s *RPCServer) signerForAccount(addrParam string) ([]byte, string, error) {
 		return nil, "", err
 	}
 	want := strings.ToLower(strip0x(nodeAddr))
-	got := strings.ToLower(strip0x(addrParam))
 	if want != got {
 		return nil, "", fmt.Errorf("account not found or locked: %s", addrParam)
 	}
 	return kp.PrivateKey(), nodeAddr, nil
+}
+
+// personalImportRawKey [hexKey] → 匯入私鑰（僅記憶體快取，不落盤）並回傳 eth 地址。
+// 與 geth personal_importRawKey 相容：64 hex（可帶 0x），passphrase 忽略。
+func (s *RPCServer) personalImportRawKey(params []any) (string, error) {
+	if len(params) < 1 {
+		return "", errors.New("personal_importRawKey 需要 [hexKey]")
+	}
+	hexKey := strip0x(paramString(params, 0))
+	raw, err := hex.DecodeString(hexKey)
+	if err != nil || len(raw) != 32 {
+		return "", errors.New("invalid private key hex (expect 64 hex chars)")
+	}
+	kp, err := crypto.KeyPairFromPrivateKey(raw)
+	if err != nil {
+		return "", errors.New("invalid private key")
+	}
+	addr, err := kp.EthAddress()
+	if err != nil {
+		return "", err
+	}
+	key := strings.ToLower(strip0x(addr))
+	s.importedMu.Lock()
+	if s.importedKeys == nil {
+		s.importedKeys = make(map[string][]byte)
+	}
+	s.importedKeys[key] = append([]byte(nil), raw...)
+	s.importedMu.Unlock()
+	return addr, nil
+}
+
+// debugGetBadBlocks [] → 本鏈無 bad-block 追蹤（finality 拒絕壞塊），回空陣列。
+func (s *RPCServer) debugGetBadBlocks(params []any) (any, error) {
+	return []any{}, nil
 }
 
 // ethPersonalSign [address, message]。

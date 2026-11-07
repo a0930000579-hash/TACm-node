@@ -109,6 +109,40 @@ func (c *ChainDB) GetTransactionsByBlock(height int64) ([]*Transaction, error) {
 	return collectTransactions(rows)
 }
 
+// GetHeartbeatTxs v112：一次查自 sinceHeight 起的全部 hb 心跳交易（memo LIKE 'hb:%'）。
+// 取代 onChainOnlineMiners 逐塊 GetTransactionsByBlock（鏈長時數分鐘級卡頓）。
+func (c *ChainDB) GetHeartbeatTxs(sinceHeight int64) ([]*Transaction, error) {
+	rows, err := c.db.Query("SELECT "+txCols+
+		" FROM transactions WHERE memo LIKE 'hb:%' AND block_height >= ? ORDER BY block_height, tx_index", sinceHeight)
+	if err != nil {
+		return nil, fmt.Errorf("chaindb: 查心跳交易失敗: %w", err)
+	}
+	defer rows.Close()
+	return collectTransactions(rows)
+}
+
+// GetHeartbeatTxsByAddr v112：一次查指定地址自 sinceTs 起的 hb 交易（供每日算力重放）。
+func (c *ChainDB) GetHeartbeatTxsByAddr(addr string, sinceTs int64) ([]*Transaction, error) {
+	rows, err := c.db.Query("SELECT "+txCols+
+		" FROM transactions WHERE to_addr = ? AND memo LIKE 'hb:%' AND ts >= ? ORDER BY ts", addr, sinceTs)
+	if err != nil {
+		return nil, fmt.Errorf("chaindb: 查地址心跳交易失敗: %w", err)
+	}
+	defer rows.Close()
+	return collectTransactions(rows)
+}
+
+// GetMinerCoinbaseTxsByAddr v112：一次查指定地址自 sinceTs 起的 coinbase:miner（供每日收益重放）。
+func (c *ChainDB) GetMinerCoinbaseTxsByAddr(addr string, sinceTs int64) ([]*Transaction, error) {
+	rows, err := c.db.Query("SELECT "+txCols+
+		" FROM transactions WHERE to_addr = ? AND memo = 'coinbase:miner' AND ts >= ? ORDER BY ts", addr, sinceTs)
+	if err != nil {
+		return nil, fmt.Errorf("chaindb: 查地址礦工收益交易失敗: %w", err)
+	}
+	defer rows.Close()
+	return collectTransactions(rows)
+}
+
 // GetCoinbaseTransactions 返回鏈上全部 coinbase 交易（memo 恰為 "coinbase" 或前綴 "coinbase:"），
 // 供鏈上真實聚合（總產出／礦工收益）——任何節點同步同一條鏈結果一致，
 // 不依賴本地 chain_stats/Ledger 快照（M68）。
@@ -120,6 +154,28 @@ func (c *ChainDB) GetCoinbaseTransactions() ([]*Transaction, error) {
 	}
 	defer rows.Close()
 	return collectTransactions(rows)
+}
+
+// ForEachCoinbaseAmount 以單條查詢串流所有 coinbase 交易的原始 amount 字串（走 idx_tx_memo），
+// 逐筆回調，不把整個結果集載入記憶體。保留原始金額字串，呼叫方可走 big.Int 精確口徑
+// （NewAmount），避免浮點聚合損精度，同時取代逐塊 GetBlockDetail 的 N+1 重掃。
+func (c *ChainDB) ForEachCoinbaseAmount(fn func(amount string) error) error {
+	rows, err := c.db.Query("SELECT amount FROM transactions " +
+		"WHERE memo = 'coinbase' OR memo LIKE 'coinbase:%'")
+	if err != nil {
+		return fmt.Errorf("chaindb: 查 coinbase 金額失敗: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var amount string
+		if err := rows.Scan(&amount); err != nil {
+			return fmt.Errorf("chaindb: 讀 coinbase 金額失敗: %w", err)
+		}
+		if err := fn(amount); err != nil {
+			return err
+		}
+	}
+	return rows.Err()
 }
 
 func collectTransactions(rows *sql.Rows) ([]*Transaction, error) {

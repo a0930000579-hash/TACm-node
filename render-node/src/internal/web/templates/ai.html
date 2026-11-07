@@ -15,12 +15,6 @@
   .ai-head .ai-sub{font-size:12px;opacity:.9;margin-top:3px}
   .ai-badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;border:1px solid rgba(255,255,255,.4);border-radius:999px;padding:3px 10px;margin-top:7px}
 
-  /* 模式切換（助手 / Agent）——行動優先 segmented control */
-  .ai-mode{display:flex;background:#eef2f8;border-radius:12px;padding:4px;gap:4px;margin:0 0 12px}
-  .ai-mode button{flex:1;border:none;background:transparent;border-radius:9px;padding:9px 8px;font-size:13px;font-weight:700;color:#5d6778;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s}
-  .ai-mode button.on{background:#fff;color:#1877f2;box-shadow:0 1px 4px rgba(0,0,0,.1)}
-  .ai-mode button svg{flex:none}
-
   /* Titan Ai 生態分頁入口卡片（ai-market / ai-verify） */
   .ai-ecosys{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 12px}
   .ai-ecosys a{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:11px 13px;text-decoration:none;color:#1c1e21}
@@ -102,7 +96,6 @@
     .ai-logo{width:42px;height:42px}
     .ai-head h2{font-size:16px}
     .ai-head .ai-sub{font-size:11px}
-    .ai-mode button{font-size:12px;padding:8px 4px;gap:4px}
     .ai-msg{font-size:13px;padding:9px 11px;line-height:1.6}
     .ai-card{border-radius:12px}
     .ai-chat{padding:12px;max-height:60vh}
@@ -126,17 +119,7 @@
     </div>
   </div>
 
-  <!-- 模式切換：助手（/api/ai/ask）/ Agent（/api/ai/agent，function calling） -->
-  <div class="ai-mode" role="tablist">
-    <button id="modeAssist" class="on" type="button" role="tab" aria-selected="true">
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-      <span data-i18n="ai.modeAssist">助手</span>
-    </button>
-    <button id="modeAgent" type="button" role="tab" aria-selected="false">
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>
-      <span data-i18n="ai.modeAgent">Agent</span>
-    </button>
-  </div>
+  <!-- v166：單一對話介面——前端一律 POST /api/ai/agent，後端用意圖分類自動決定純對話或呼叫鏈上工具。 -->
 
   <!-- Titan Ai 生態分頁入口：鏈上模型市場 / 跨鏈 AI 驗證（仍各自獨立路由） -->
   <div class="ai-ecosys">
@@ -150,10 +133,11 @@
     </a>
   </div>
 
-  <!-- Agent 模式才顯示：目前作用錢包（function calling 用） -->
-  <div class="ai-addrin" id="aiAddrRow" style="display:none">
+  <!-- v166：目前作用錢包（單一對話；查餘額/交易時帶入）。解析順序同全站：tac_ex_wallet > tac_defi_addr > tac_guest_addr > ensureGuestAddr。 -->
+  <div class="ai-addrin" id="aiAddrRow">
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#1877f2" stroke-width="1.8" aria-hidden="true"><path d="M4 6h16v12H4z"/><path d="M4 10h16"/></svg>
     <span data-i18n="ai.wallet">錢包：</span> <b id="aiAddrVal">—</b>
+    <a id="aiLinkWallet" href="/exchange" target="_blank" rel="noopener" style="display:none;margin-left:auto;background:#1877f2;color:#fff;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:700;text-decoration:none" data-i18n="ai.linkWallet">連結錢包</a>
   </div>
 
   <div class="ai-model" id="aiModel">
@@ -200,36 +184,57 @@
   var chat=document.getElementById('aiChat');
   var q=document.getElementById('aiQ');
   var send=document.getElementById('aiSend');
-  var modeAssist=document.getElementById('modeAssist');
-  var modeAgent=document.getElementById('modeAgent');
-  var addrRow=document.getElementById('aiAddrRow');
 
-  var mode='ask';           // 'ask' | 'agent'
   var walletAddr='';
   var SESSION='web-'+Date.now();
 
-  // ---- 模式建議 chips ----
-  var ASSIST_CHIPS=[
-    {zh:'節點狀態',en:'Node status'},
-    {zh:'最新區塊',en:'Latest block'},
-    {zh:'鏈上審計',en:'On-chain audit'},
-    {zh:'獎勵分潤',en:'Rewards'},
-    {zh:'總供應',en:'Supply'},
-    {zh:'加入節點',en:'Join network'}
-  ];
-  var AGENT_CHIPS=[
+  // ---- v166：錢包權威解析（自包含，順序同全站，不動 base.html） ----
+  function isTx0(a){ return typeof a==='string' && a.indexOf('tx0')===0; }
+  function readWalletNow(){
+    // ① 交易所錢包中心明確選擇的地址（tac_ex_wallet.addr）
+    try { var raw=localStorage.getItem('tac_ex_wallet');
+      if (raw){ var ex=JSON.parse(raw); if (ex && isTx0(ex.addr)) return ex.addr; }
+    } catch(e){}
+    // ② 既存鏈上 / 訪客地址
+    try { var d=localStorage.getItem('tac_defi_addr'); if (isTx0(d)) return d; } catch(e){}
+    try { var g=localStorage.getItem('tac_guest_addr'); if (isTx0(g)) return g; } catch(e){}
+    return '';
+  }
+  function renderWallet(addr){
+    walletAddr = addr||'';
+    var el=document.getElementById('aiAddrVal');
+    if (el) el.textContent = walletAddr || t('尚未連結','not linked');
+    var btn=document.getElementById('aiLinkWallet');
+    if (btn) btn.style.display = walletAddr ? 'none' : 'inline-flex';
+  }
+  function refreshWallet(){
+    var addr = readWalletNow();
+    // 仍無地址：呼叫全域 ensureGuestAddr（base.html 已先讀 tac_ex_wallet）產生/讀取訪客地址。
+    if (!addr && typeof ensureGuestAddr==='function'){
+      ensureGuestAddr().then(function(a){ if(isTx0(a)){ walletAddr=a; renderWallet(a); } }).catch(function(){});
+    }
+    renderWallet(addr);
+    return addr;
+  }
+  // 錢包中心於另一分頁更換 → 即時更新；自訂事件供同頁觸發。
+  window.addEventListener('storage', function(e){
+    if(!e.key || e.key==='tac_ex_wallet' || e.key==='tac_guest_addr' || e.key==='tac_defi_addr' || e.key==='tac_guest_wif') refreshWallet();
+  });
+  window.addEventListener('tac:wallet-changed', refreshWallet);
+
+  // ---- 建議 chips（單一對話：混合日常/寫作/鏈上，後端自動分流） ----
+  var CHIPS=[
     {zh:'我的餘額是多少？',en:'What is my balance?'},
     {zh:'TAC 現在多少價格？',en:'What is the TAC price?'},
-    {zh:'顯示我最近的交易。',en:'Show my recent transactions.'},
     {zh:'幫我寫一封週報',en:'Help me write a weekly report'},
     {zh:'解釋什麼是 PoS',en:'Explain what PoS is'},
-    {zh:'（示範）把空閒 TAC 換成穩定幣',en:'(demo) swap idle TAC to a stablecoin'}
+    {zh:'用 Python 讀一個 CSV',en:'Read a CSV in Python'},
+    {zh:'今天睡不好怎麼辦',en:'I cannot sleep well tonight'}
   ];
   function renderChips(){
     var box=document.getElementById('aiChips');
-    var list=(mode==='agent')?AGENT_CHIPS:ASSIST_CHIPS;
     box.innerHTML='';
-    list.forEach(function(c){
+    CHIPS.forEach(function(c){
       var b=document.createElement('button');
       b.className='ai-chip';
       b.textContent=(curLang()==='zh')?c.zh:c.en;
@@ -346,27 +351,12 @@
   function showModel(mm){
     var el=document.getElementById('aiModel');
     if(!el) return;
-    if(mm==='llama') el.innerHTML='<span class="tag"><span class="dot on"></span> '+escapeHtml(t('AI 引擎：','AI engine: '))+'<b>'+escapeHtml(t('本地大模型（Qwen · llama.cpp）','Local LLM (Qwen · llama.cpp)'))+'</b></span>';
+    if(mm==='openai') el.innerHTML='<span class="tag"><span class="dot on"></span> '+escapeHtml(t('AI 引擎：','AI engine: '))+'<b>'+escapeHtml(t('線上大模型（OpenAI 相容）','Cloud LLM (OpenAI-compatible)'))+'</b></span>';
+    else if(mm==='llama') el.innerHTML='<span class="tag"><span class="dot on"></span> '+escapeHtml(t('AI 引擎：','AI engine: '))+'<b>'+escapeHtml(t('本地大模型（Qwen · llama.cpp）','Local LLM (Qwen · llama.cpp)'))+'</b></span>';
     else if(mm==='rule') el.innerHTML='<span class="tag"><span class="dot"></span> '+escapeHtml(t('AI 引擎：','AI engine: '))+'<b>'+escapeHtml(t('規則式助手（免金鑰 fallback）','Rule-based (keyless fallback)'))+'</b></span>';
   }
 
-  // ---- 助手模式：GET /api/ai/ask ----
-  function askSend(text){
-    var typing=mkTyping();
-    var h=getHist();
-    var ctx=h.slice(-3).map(function(tp){ return 'Q:'+tp.q+' A:'+tp.a; }).join('\n');
-    var url=apiBase+'/api/ai/ask?q='+encodeURIComponent(text)+'&lang='+curLang()+'&ctx='+encodeURIComponent(ctx);
-    fetch(url).then(function(r){ return r.json(); }).then(function(j){
-      rmTyping(typing);
-      if(j && j.ok){ showModel(j.model||'rule'); addMsg(j.answer||'','bot'); saveTurn(text,j.answer||''); }
-      else addMsg((j&&j.error)?j.error:'error','err');
-    }).catch(function(e){
-      rmTyping(typing);
-      addMsg('Error: '+e,'err');
-    });
-  }
-
-  // v165：意圖標籤（chat 閒聊 / query 查詢 / action 操作）。
+  // ---- v165：意圖標籤（chat 閒聊 / query 查詢 / action 操作）。
   function showIntent(it){
     var el=document.getElementById('aiIntent');
     if(!el) return;
@@ -381,7 +371,7 @@
   // ---- Agent 模式：POST /api/ai/agent（含確認閘） ----
   function agentSend(text,confirm,pendingBox){
     var typing=mkTyping();
-    var body={message:text,address:walletAddr,lang:curLang(),session_id:SESSION,confirm:!!confirm};
+    var body={message:text,address:readWalletNow()||walletAddr,lang:curLang(),session_id:SESSION,confirm:!!confirm};
     fetch(apiBase+'/api/ai/agent',{
       method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
     }).then(function(r){ return r.json().then(function(j){ return {status:r.status,body:j}; }); })
@@ -422,43 +412,15 @@
   function routeSend(text){
     if(!text) return;
     addMsg(text,'user');
-    if(mode==='agent') agentSend(text,false,null);
-    else askSend(text);
+    // v166：單一入口一律 POST /api/ai/agent（後端自動分流純對話或鏈上工具）。
+    agentSend(text,false,null);
   }
 
   send.addEventListener('click',function(){ var v=q.value.trim(); q.value=''; routeSend(v); });
   q.addEventListener('keydown',function(e){ if(e.key==='Enter'){ var v=q.value.trim(); q.value=''; routeSend(v); } });
 
-  // ---- 模式切換 ----
-  function setMode(next){
-    if(next===mode) return;
-    mode=next;
-    var isAgent=(mode==='agent');
-    modeAssist.classList.toggle('on',!isAgent);
-    modeAgent.classList.toggle('on',isAgent);
-    modeAssist.setAttribute('aria-selected',(!isAgent)?'true':'false');
-    modeAgent.setAttribute('aria-selected',isAgent?'true':'false');
-    addrRow.style.display=isAgent?'flex':'none';
-    document.getElementById('aiQ').placeholder=isAgent
-      ? t('對 Agent 提問…（例如：我的餘額是多少？）','Ask the agent… e.g. what is my balance?')
-      : t('輸入問題…（例如：節點狀態）','Ask anything about TACm… (e.g. node status)');
-    renderChips(); renderHist();
-    addMsg(isAgent
-      ? t('你好，我是 Titan Ai。我能陪你對話、寫作、規劃與解釋，也能查詢你的鏈上餘額、行情、最近交易；任何 DEX 兌換／DeFi 動作都會先請你確認——節點不會代你簽名。',
-          "Hi, I'm Titan Ai. I can chat, write, plan and explain, and also read your on-chain balance, prices and recent transactions; any DEX swap / DeFi action waits for your confirmation — the node never signs for you.")
-      : t('你好，我是 Titan Ai（泰坦 Ai）。問我節點狀態、區塊、審計、獎勵、餘額等鏈上數據，或任何日常問題都可以。',
-          "Hi, I'm Titan Ai. Ask me about node status, blocks, audit, rewards, balances — or just ask me anything. "),'bot');
-  }
-  modeAssist.addEventListener('click',function(){ setMode('ask'); });
-  modeAgent.addEventListener('click',function(){ setMode('agent'); });
-
-  // ---- 初始化錢包（Agent 模式 function calling 用） ----
-  if(typeof ensureGuestAddr==='function'){
-    ensureGuestAddr().then(function(addr){
-      walletAddr=addr||'';
-      document.getElementById('aiAddrVal').textContent=walletAddr||'—';
-    }).catch(function(){});
-  }
+  // ---- 初始化錢包（查餘額/交易時帶入；順序同全站權威） ----
+  refreshWallet();
 
   // ---- 歡迎訊息 ----
   renderChips(); renderHist(); showModel('probe');

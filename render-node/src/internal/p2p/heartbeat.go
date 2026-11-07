@@ -38,7 +38,7 @@ func (n *Network) heartbeatOnce() {
 		return
 	}
 	var wg sync.WaitGroup
-	for _, p := range n.snapshotPeers() {
+	for _, p := range filterDialable(n.snapshotPeers()) {
 		wg.Add(1)
 		go func(p Peer) {
 			defer wg.Done()
@@ -82,7 +82,7 @@ func (n *Network) refreshPeerHeights() {
 		return
 	}
 	var wg sync.WaitGroup
-	for _, p := range n.onlinePeers() {
+	for _, p := range filterDialable(n.onlinePeers()) {
 		wg.Add(1)
 		go func(p Peer) {
 			defer wg.Done()

@@ -16,15 +16,20 @@ import (
 
 type hostStub struct{}
 
-func (hostStub) Height() int64          { return 1 }
-func (hostStub) FinalizedHeight() int64 { return 1 }
+func (hostStub) Height() int64                                               { return 1 }
+func (hostStub) FinalizedHeight() int64                                      { return 1 }
 func (hostStub) OnIncomingBlock(*chaindb.Block, []chaindb.Transaction) error { return nil }
-func (hostStub) OnIncomingTx(map[string]any) error { return nil }
-func (hostStub) OnIncomingVote(*bft.Vote) error    { return nil }
-func (hostStub) OnIncomingViewChange(int64, int32, string, string) error { return nil }
-func (hostStub) OnIncomingBridge(*BridgeGossip) error { return nil }
-func (hostStub) BlockDetail(int64) (*chaindb.Block, []chaindb.Transaction, error) { return nil, nil, nil }
+func (hostStub) OnIncomingTx(map[string]any) error                           { return nil }
+func (hostStub) OnIncomingVote(*bft.Vote) error                              { return nil }
+func (hostStub) OnIncomingViewChange(int64, int32, string, string) error     { return nil }
+func (hostStub) OnIncomingBridge(*BridgeGossip) error                        { return nil }
+func (hostStub) BlockDetail(int64) (*chaindb.Block, []chaindb.Transaction, error) {
+	return nil, nil, nil
+}
 func (hostStub) ReorgChain(int64, []chaindb.Block, [][]chaindb.Transaction) error { return nil }
+func (hostStub) ReorgChainFull(int64, []chaindb.Block, [][]chaindb.Transaction) error {
+	return nil
+}
 
 func TestSealBodyHTTPFlow(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())

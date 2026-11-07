@@ -167,7 +167,10 @@ func (n *Node) VerifyLedgerOnChain() (LedgerAuditResult, error) {
 	if cp == nil || cp.Height > tip {
 		// 無基線（首次/損壞）或鏈回滾：全量重放，成功後建立基線。
 		res := n.auditReplay(0, nil, tip)
-		if res.TxSigFail == 0 && res.TxNonceFail == 0 && res.TxBalanceFail == 0 &&
+		// 守恆（LedgerOK）是防雙花/增發的核心不變式。簽名/餘額/合約失敗屬嚴重完整性
+		// 問題，仍阻擋固化以持續暴露；nonce 回退計數不影響守恆與 nonce 狀態（回退分支不
+		// 遞增 nonce），故予以累計保留，不再因歷史 nonce 計數而永久重放整段鏈。
+		if res.TxSigFail == 0 && res.TxBalanceFail == 0 &&
 			res.ContractFail == 0 && res.LedgerOK {
 			_ = saveAuditCheckpoint(n.auditCheckpointPath(), checkpointFromResult(res))
 		}
@@ -184,7 +187,9 @@ func (n *Node) VerifyLedgerOnChain() (LedgerAuditResult, error) {
 	res := n.auditReplay(cp.Height+1, cp, tip)
 	res.Incremental = true
 	res.FromHeight = cp.Height
-	if res.TxSigFail == 0 && res.TxNonceFail == 0 && res.TxBalanceFail == 0 &&
+	// 同全量分支：嚴重完整性失敗（簽名/餘額/合約）或守恆不成立時不固化；
+	// 僅歷史 nonce 回退計數時照常推進基線（計數累計保留），避免每次從舊基線重放。
+	if res.TxSigFail == 0 && res.TxBalanceFail == 0 &&
 		res.ContractFail == 0 && res.LedgerOK {
 		_ = saveAuditCheckpoint(n.auditCheckpointPath(), checkpointFromResult(res))
 	}

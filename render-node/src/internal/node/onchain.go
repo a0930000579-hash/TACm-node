@@ -8,19 +8,21 @@ package node
 
 import (
 	"math"
-	"strconv"
 	"sync"
-	"time"
+
+	"tacm/internal/chaindb"
 )
 
-// aggCache* M146：鏈上 coinbase 聚合快取（5 秒 TTL、tip 為鍵）。
-// /api/miner/earnings 與 /api/chain/stats 每次呼叫都全掃 coinbase 表（鏈高 12 萬時
-// 數十萬行），手機端挖礦頁輪詢明顯卡頓；同 tip 下短 TTL 快取讓輪詢秒回應。
+// aggCache*：鏈上 coinbase 聚合快取。同 tip 直接回快取；鏈頂推進時只對新塊做增量
+// 聚合（GetCoinbaseTotalsSince，走 block_height 索引）累加，每 aggReanchorEvery 塊或
+// 重組/首次時做一次全量聚合重新對齊，避免每次審計對全鏈 coinbase 列重掃。
 var (
-	aggCacheMu  sync.Mutex
-	aggCache    CoinbaseAggregate
-	aggCacheTip int64
-	aggCacheAt  time.Time
+	aggCacheMu       sync.Mutex
+	aggCache         CoinbaseAggregate
+	aggCacheTip      int64
+	aggInitialized   bool
+	aggLastFullTip   int64
+	aggReanchorEvery int64 = 5000
 )
 
 // roundCoinbase 把累加值收斂到 1e-4（coinbase 金額精度），避免浮點累加
@@ -57,61 +59,55 @@ func cloneAggregate(a CoinbaseAggregate) CoinbaseAggregate {
 	return out
 }
 
-// OnChainCoinbaseAggregate 掃鏈上全部 coinbase 交易並聚合（M68）。
-// M146：同 tip 且 5 秒內重複查詢直接回快取副本；鏈推進後自動重掃。
+// OnChainCoinbaseAggregate 聚合鏈上 coinbase 交易（M68）。同 tip 回快取；鏈頂推進做
+// 增量累加；首次/重組/每 aggReanchorEvery 塊做全量重新對齊，兼顧效能與口徑正確。
 func (n *Node) OnChainCoinbaseAggregate() (CoinbaseAggregate, error) {
 	tip := n.db.GetTipHeight()
 	aggCacheMu.Lock()
 	defer aggCacheMu.Unlock()
-	if aggCacheTip == tip && time.Since(aggCacheAt) < 5*time.Second {
+	if aggInitialized && aggCacheTip == tip {
 		return cloneAggregate(aggCache), nil
 	}
-	out := CoinbaseAggregate{Miners: map[string]float64{}, MinerCount: map[string]int{}}
-	txs, err := n.db.GetCoinbaseTransactions()
-	if err != nil {
-		return out, err
-	}
-	for _, tx := range txs {
-		if tx == nil {
-			continue
-		}
-		amt, err := strconv.ParseFloat(tx.Amount, 64)
+	// 全量重新對齊條件：首次、鏈回滾（重組）、或距上次全量已達週期。
+	full := !aggInitialized || tip < aggCacheTip || tip-aggLastFullTip >= aggReanchorEvery
+	var tot chaindb.CoinbaseTotals
+	if full {
+		t, err := n.db.GetCoinbaseTotals()
 		if err != nil {
-			continue
+			return CoinbaseAggregate{Miners: map[string]float64{}, MinerCount: map[string]int{}}, err
 		}
-		out.Count++
-		out.Total += amt
-		switch {
-		case tx.Memo == "coinbase:pool":
-			out.Pool += amt
-		case tx.Memo == "coinbase:node":
-			out.Node += amt
-		case tx.Memo == "coinbase:miner":
-			out.Miners[tx.ToAddr] += amt
-			out.MinerCount[tx.ToAddr]++
-			// coinbase:reserve 與 coinbase（舊式）不計入礦工收益，仍屬總產出。
+		tot = t
+		aggLastFullTip = tip
+	} else {
+		inc, err := n.db.GetCoinbaseTotalsSince(aggCacheTip)
+		if err != nil {
+			return CoinbaseAggregate{Miners: map[string]float64{}, MinerCount: map[string]int{}}, err
+		}
+		tot = chaindb.CoinbaseTotals{
+			Count: aggCache.Count + inc.Count,
+			Total: aggCache.Total + inc.Total,
+			Pool:  aggCache.Pool + inc.Pool,
+			Node:  aggCache.Node + inc.Node,
 		}
 	}
-	out.TipHeight = n.db.GetTipHeight()
-	// 收斂浮點累加誤差，確保顯示精確（M68.1）。
-	out.Total = roundCoinbase(out.Total)
-	out.Pool = roundCoinbase(out.Pool)
-	out.Node = roundCoinbase(out.Node)
-	for a := range out.Miners {
-		out.Miners[a] = roundCoinbase(out.Miners[a])
-	}
+	out := CoinbaseAggregate{Miners: map[string]float64{}, MinerCount: map[string]int{}}
+	out.Count = tot.Count
+	out.Total = roundCoinbase(tot.Total)
+	out.Pool = roundCoinbase(tot.Pool)
+	out.Node = roundCoinbase(tot.Node)
+	out.TipHeight = tip
 	aggCache = out
 	aggCacheTip = tip
-	aggCacheAt = time.Now()
+	aggInitialized = true
 	return out, nil
 }
 
 // MinerEarnedOnChain 回傳指定地址的鏈上 coinbase:miner 累計收益（TACm 浮點）與筆數。
-// 鏈上事實：任何節點同步同一條鏈結果一致（M68）。
+// 鏈上事實：任何節點同步同一條鏈結果一致（M68）。礦工分組屬按需查詢，不進審計熱路徑。
 func (n *Node) MinerEarnedOnChain(addr string) (float64, int, error) {
-	agg, err := n.OnChainCoinbaseAggregate()
+	miners, counts, err := n.db.GetCoinbaseMinerAggregates()
 	if err != nil {
 		return 0, 0, err
 	}
-	return agg.Miners[addr], agg.MinerCount[addr], nil
+	return roundCoinbase(miners[addr]), counts[addr], nil
 }

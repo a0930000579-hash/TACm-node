@@ -62,6 +62,14 @@
     <div class="cg"><small data-i18n="net.ledger">賬本守恆</small><b id="audLedger">—</b></div>
   </div>
   <div id="audIssues" class="muted" style="margin-top:10px"></div>
+  <style>#audIssues .aud-issue-head{font-weight:600;margin-bottom:2px}#audIssues .aud-issue{font-size:12px;line-height:1.5;word-break:break-all}</style>
+</section>
+
+<!-- v107：供應警報（TiUSD 穩定幣膨脹防護） -->
+<section class="panel">
+  <div class="panel-head"><h2 data-i18n="net.alertsTitle">供應警報（TiUSD）</h2></div>
+  <div id="netAlerts" class="muted">載入中…</div>
+  <style>#netAlerts .a-item{font-size:12px;line-height:1.6;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.06);word-break:break-all}#netAlerts .a-tag{font-weight:700;margin-right:4px}</style>
 </section>
 
 <!-- M69：鏈上在線礦工（與挖礦頁同源：onChainMinerSplits(60)，任何節點同鏈結果一致） -->
@@ -149,7 +157,11 @@
     var audLine = document.getElementById('audLine');
     var audTxLine = document.getElementById('audTxLine');
     function renderAudit(a) {
-      if (!a || !a.ok) { if (audTip) audTip.textContent = TAC_T ? TAC_T('net.auditNA') : '審計暫不可用'; if (audLine) audLine.innerHTML = '<span class="dot-bad"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></svg> ' + (TAC_T ? TAC_T('net.auditNA2') : '無法驗證') + '</span>'; return; }
+      // v55：僅請求失敗（無回應）才顯示「審計暫不可用」；ok=false 仍渲染全部數據，
+      // 由下方 consistent/ledger/異常清單分支各自標示異常（不再整頁無數據）。
+      if (!a) { if (audTip) audTip.textContent = TAC_T ? TAC_T('net.auditNA') : '審計暫不可用'; if (audLine) audLine.innerHTML = '<span class="dot-bad"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v5M12 18h.01"/></svg> ' + (TAC_T ? TAC_T('net.auditNA2') : '無法驗證') + '</span>'; return; }
+      // v60：增量審計標記（基線高度起重放，結果與全量一致）。
+      if (audTip) audTip.textContent = a.incremental ? ((TAC_T ? TAC_T('net.auditInc') : '增量審計（自區塊') + ' ' + a.from_height + '）') : (TAC_T ? TAC_T('net.auditFull') : '全量審計');
       setT('audBlocks', a.checked_blocks);
       setT('audCoin', a.coinbase_pass + ' / ' + a.coinbase_fail + (a.coinbase_fail > 0 ? (TAC_T ? TAC_T('net.bad') : ' 異常') : (TAC_T ? TAC_T('net.good') : ' 正常')));
       setT('audPool', a.pool_pass + ' / ' + a.pool_fail + (a.pool_fail > 0 ? (TAC_T ? TAC_T('net.bad') : ' 異常') : (TAC_T ? TAC_T('net.good') : ' 正常')));
@@ -177,7 +189,11 @@
       }
       var iss = document.getElementById('audIssues');
       if (iss && a.issues && a.issues.length) {
-        iss.textContent = (TAC_T ? TAC_T('net.issueList') : '異常清單：') + a.issues.join('；');
+        // v57：異常清單逐條渲染（每條獨立行、紅標），取代單行 join——異常可讀、可追蹤。
+        var items = a.issues.map(function (it) {
+          return '<div class="aud-issue">· ' + esc(it) + '</div>';
+        }).join('');
+        iss.innerHTML = '<div class="aud-issue-head">' + (TAC_T ? TAC_T('net.issueList') : '異常清單：') + '</div>' + items;
         iss.style.color = '#f6465d';
       } else if (iss) {
         iss.textContent = '';
@@ -188,6 +204,22 @@
         .then(renderAudit).catch(function () { if (audTip) audTip.textContent = '無法取得審計結果'; });
     }
     freshAudit();
+    function freshAlerts(){
+      var box = document.getElementById('netAlerts'); if (!box) return;
+      fetch('/api/alerts', {cache:'no-store'}).then(function(r){ return r.json().catch(function(){ return null; }); }).then(function(d){
+        if (!d || !d.ok || !d.alerts || !d.alerts.length){
+          box.innerHTML = '<div class="a-item">' + TAC_TE('尚無供應警報事件') + '</div>';
+          return;
+        }
+        box.innerHTML = d.alerts.slice(0,6).map(function(a){
+          var lv = a.level === 'critical' ? '<span class="a-tag" style="color:#f6465d">CRIT</span>' : (a.level === 'warn' ? '<span class="a-tag" style="color:#f0b90b">WARN</span>' : '<span class="a-tag" style="color:#68BE8D">OK</span>');
+          var dt = new Date(a.ts*1000);
+          return '<div class="a-item">' + lv + '<span class="mono">' + (a.type||'') + '</span> — ' + (a.message||'') + (a.detail ? (' (' + a.detail + ')') : '') + ' <span class="mono" style="opacity:.6">' + dt.toISOString().slice(5,16) + 'Z</span></div>';
+        }).join('') + '<div class="a-item" style="opacity:.6">' + TAC_TE('更新於 ') + new Date().toISOString().slice(11,19) + ' UTC</div>';
+      }).catch(function(){ box.innerHTML = '<div class="a-item">' + TAC_TE('警報暫不可用') + '</div>'; });
+    }
+    freshAlerts();
+    setInterval(freshAlerts, 20000);
     function freshMiners(){
       fetch('/api/miners', {cache:'no-store'}).then(function(r){ return r.json(); }).then(function(j){
         var splits = (j && j.splits) || [];

@@ -128,10 +128,10 @@ func TestDistributedTakeoverAfterAnchorDown(t *testing.T) {
 		t.Fatalf("恢復後鏈未合併：v0=%d(hash=%s) v1=%d(hash=%s)",
 			h0, hashOrNil(b0), h1, hashOrNil(b1))
 	}
-}
 
 // TestDistributedTakeoverNoFalsePositive 正常 2 驗證人輪值期間不誤接管：
 // 兩節點均在線時，proposer 正常出塊，tip 連續推進且無接管標記。
+}
 func TestDistributedTakeoverNoFalsePositive(t *testing.T) {
 	dn := buildCluster(t, 2)
 	launchCluster(t, dn, []bool{true, true})
@@ -151,4 +151,5 @@ func TestDistributedTakeoverNoFalsePositive(t *testing.T) {
 	if b0 == nil || b1 == nil || b0.Hash != b1.Hash {
 		t.Errorf("正常輪值哈希不一致：v0=%v v1=%v", b0, b1)
 	}
+
 }

@@ -28,6 +28,15 @@ type Network struct {
 	// M162：P2P 訊息層加密（cfg.Encrypt=true 時啟用）。
 	Secure      *Secure
 	peerPubKeys sync.Map // baseURL -> peer pubkey hex（加密握手緩存）
+	// v65：peerCipher 記錄各 peer（baseURL -> 是否加密通道）。
+	// 對端不支援加密時 sealBody 自動降級明文並於此標記 false，供
+	// Peer.Encrypted 與節點 UI 展示（避免加密端誤判對端狀態）。
+	peerCipher sync.Map // baseURL -> bool
+
+	// reorgBackoff：對等難度分叉的重組抑制。兩條等難度鏈賽跑時，sync 每個 tick
+	// 都重拉整段分叉並在驗證時以「累積難度不更重」拒絕，形成 CPU/網路熱迴圈。
+	// 記住各 peer 最近一次被拒的重組，在冷卻期或領先幅度未顯著拉大時跳過重拉。
+	reorgBackoff map[string]reorgBackoffEntry
 
 	wg     sync.WaitGroup
 	ctx    context.Context
@@ -71,6 +80,7 @@ func New(cfg Config, host Host) (*Network, error) {
 		seenVotes:  make(map[string]struct{}),
 		seenViewCh: make(map[string]struct{}),
 		seenBridge: make(map[string]struct{}),
+		reorgBackoff: make(map[string]reorgBackoffEntry),
 	}
 	if cfg.Encrypt {
 		sec, err := NewSecure()

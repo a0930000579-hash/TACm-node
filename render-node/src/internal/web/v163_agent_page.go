@@ -2,19 +2,17 @@ package web
 
 import (
 	"net/http"
-
-	"github.com/flosch/pongo2/v6"
 )
 
-// v163 平行支線掛載點（AI Agent 聊天頁面）。
+// v164 子任務 B：AI Agent 已併入 TAC Ai（統一更名為 Titan Ai / 泰坦 Ai）。
 //
-// 本檔由「子代理 B（AI Agent）」完整實作，其它支線不得編輯。
-// 路由 GET /agent 已預埋於 server.go（指向 handleV163Agent），B 無需改動 server.go/handlers.go。
-// B 可一併擴充 templates/ai.html（加入 Agent 入口/分頁，ai.html 由 B 負責）。
-// 對應模板 templates/agent.html（B 覆寫占位版本）；頁面專屬 i18n 請走
-// window.TAC_LOAD_I18N({zh:{...},en:{...}}) 機制，勿直接改 static/js/i18n.js。
+// 去重說明：v163 的獨立 /agent 頁（function calling 聊天）與 /ai 助手頁已合併為
+// 單一入口 GET /ai（ai.html）——同一對話框上方可切換「助手（/api/ai/ask）」與
+// 「Agent（/api/ai/agent）」兩種模式，工具呼叫軌跡與寫操作二次確認閘皆保留。
+// 為避免出現兩個平行 AI 入口，GET /agent 一律 302 重導向到 /ai，不再 render agent.html。
+// 後端介面 POST /api/ai/agent 與 internal/ai 核心保持不變；僅前端入口合一。
 //
-// 占位：僅渲染模板，使基線可獨立建置。
+// （本檔由「子代理 B」完整實作，其它支線不得編輯；server.go 的 GET /agent 路由保留指向此處。）
 func (s *Server) handleV163Agent(w http.ResponseWriter, r *http.Request) {
-	s.render(w, "agent.html", pongo2.Context{})
+	http.Redirect(w, r, "/ai", http.StatusFound) // 302 → 單一 Titan Ai 入口
 }

@@ -102,6 +102,11 @@ type BlockDetail struct {
 }
 
 // GetBlockDetail 返回區塊頭及其交易；不存在返回 (nil, nil)。
+// GetBlockHeader 僅讀區塊表頭（不載入交易），供審計結構檢查等高頻場景使用。
+func (n *Node) GetBlockHeader(height int64) (*chaindb.Block, error) {
+	return n.db.GetBlock(height)
+}
+
 func (n *Node) GetBlockDetail(height int64) (*BlockDetail, error) {
 	b, err := n.db.GetBlock(height)
 	if err != nil {

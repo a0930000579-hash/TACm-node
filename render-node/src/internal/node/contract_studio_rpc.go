@@ -11,6 +11,7 @@ import (
 
 	"tacm/internal/crypto"
 	"tacm/internal/vm"
+	"tacm/internal/wallet"
 )
 
 // 本檔提供「代幣發行閉環」RPC 端點（M44）：
@@ -42,6 +43,7 @@ func (s *RPCServer) handleContractDeploy(w http.ResponseWriter, r *http.Request)
 		Symbol   string `json:"symbol"`
 		Supply   string `json:"supply"`
 		GasLimit uint64 `json:"gas_limit,omitempty"`
+		From     string `json:"from,omitempty"` // v79：發行者地址（發行費從此地址扣；空則由節點代付）
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeErr(w, http.StatusBadRequest, "bad JSON body")
@@ -91,6 +93,23 @@ func (s *RPCServer) handleContractDeploy(w http.ResponseWriter, r *http.Request)
 	memo := vmDeployPrefix + hex.EncodeToString(init)
 	if req.GasLimit > 0 {
 		memo = fmt.Sprintf("%s%d:%s", vmDeployPrefix, req.GasLimit, hex.EncodeToString(init))
+	}
+	// v78/v79：代幣發行消耗 TACm——每次發行 100 TACm 入 fee 池（防垃圾＋TACm 價值錨點）。
+	// v79：優先從發行者（req.From）錢包扣費；未填時由節點代付。
+	payer := strings.TrimSpace(req.From)
+	if payer == "" {
+		// v80：發行費不應由節點承擔——發行者地址必填，誰發行誰付費。
+		writeErr(w, http.StatusBadRequest, "發行者地址(from)必填：代幣發行費 100 TACm 由發行者支付")
+		return
+	}
+	if ws := s.node.walletSvc; ws != nil {
+		if _, err := ws.Transfer(payer, "fee", wallet.AssetTACm, wallet.Amount{Big: big.NewInt(100)}, "token:deploy_fee"); err != nil {
+			writeErr(w, http.StatusPaymentRequired, "代幣發行需消耗 100 TACm（餘額不足）")
+			return
+		}
+	} else {
+		writeErr(w, http.StatusServiceUnavailable, "wallet service unavailable")
+		return
 	}
 	tx := map[string]any{
 		"from": from, "to": to,

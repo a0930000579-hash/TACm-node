@@ -21,7 +21,9 @@
   <div class="chain-grid">
     <div class="cg"><small>節點 ID</small><b id="pNodeId">—</b></div>
     <div class="cg"><small>節點位址</small><b class="mono" id="pNodeAddr">—</b></div>
+    <div class="cg"><small>共識模式</small><b style="color:#3d8cff">PoT（Proof-of-Trust）</b></div>
     <div class="cg"><small>節點獎勵餘額（鏈上）</small><b id="pBalance">—</b></div>
+    <div class="cg" style="grid-column:1/-1"><small style="line-height:1.5">PoT 節點＝比特幣式全節點：全鏈同步驗證＋註冊後參與出塊（45% 獎勵）＋PoS 質押權重；非僅跟隨。</small></div>
     <div class="cg"><small>鏈高</small><b id="pHeight">—</b></div>
     <div class="cg"><small>綁定收款地址</small><b class="mono" id="pPayout">—</b></div>
     <div class="cg"><small>管理密碼</small><b id="pAdmin">—</b></div>
@@ -57,6 +59,7 @@
     <div class="cg"><small>累計入帳</small><b id="rvTotal">—</b></div>
     <div class="cg"><small>最近入帳區塊</small><b id="rvLast">—</b></div>
     <div class="cg"><small>心跳上鏈（近 200 塊）</small><b id="rvHb">—</b></div>
+    <div class="cg"><small>PoT 節點資格（鏈上）</small><b id="rvPot">—</b></div>
   </div>
   <p class="muted" style="margin-top:10px">節點身份密鑰（助記詞/私鑰）儲存在節點資料目錄 node_config.json——請立即備份，遺失即無法找回節點身份與獎勵。</p>
 </section>
@@ -115,6 +118,15 @@
         var w = box('#npWarn');
         w.style.display = '';
         w.innerHTML = warns.map(function (t) { return '<div style="margin:2px 0">' + t + '</div>'; }).join('');
+      }
+      // PoT 節點資格（M149m-9）：鏈上 node:reg 註冊狀態。
+      var pot = box('#rvPot');
+      if (d.pot_registered) {
+        pot.textContent = '已註冊';
+        pot.style.color = '#1a7f37';
+      } else {
+        pot.textContent = '未註冊（啟動/心跳週期自動重試）';
+        pot.style.color = '#c0392b';
       }
     }).catch(function () { show('#pNodeId', '載入失敗'); });
   }

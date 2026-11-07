@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -56,6 +57,18 @@ CREATE TABLE IF NOT EXISTS chain_stats (
 );
 CREATE INDEX IF NOT EXISTS idx_ledger_ts ON wallet_ledger(ts DESC);
 CREATE INDEX IF NOT EXISTS idx_ledger_account ON wallet_ledger(account);
+CREATE TABLE IF NOT EXISTS settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL DEFAULT ''
+);
+CREATE TABLE IF NOT EXISTS webhook_queue (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    payload      TEXT NOT NULL,
+    attempts     INTEGER NOT NULL DEFAULT 0,
+    next_retry_at INTEGER NOT NULL,
+    created_at   INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_webhook_due ON webhook_queue(next_retry_at);
 `
 
 // Open 打開（或創建）錢包帳本庫。
@@ -412,4 +425,72 @@ func (s *Store) SetMinedTacm(total *big.Int) error {
 		return fmt.Errorf("wallet: 設全鏈產出: %w", err)
 	}
 	return nil
+}
+
+// LedgerByKindAsset 返回指定資產指定分錄類型的全量帳本（時間升序，歷史採樣/匯出用）。
+func (s *Store) LedgerByKindAsset(kind, asset string) ([]LedgerEntry, error) {
+	rows, err := s.db.Query(
+		`SELECT id, ts, kind, asset, account, delta, memo FROM wallet_ledger
+		 WHERE kind=? AND asset=? ORDER BY id ASC`, kind, asset)
+	if err != nil {
+		return nil, fmt.Errorf("wallet: 讀分錄: %w", err)
+	}
+	defer rows.Close()
+	out := make([]LedgerEntry, 0, 64)
+	for rows.Next() {
+		var e LedgerEntry
+		var k, a, delta, memo string
+		if err := rows.Scan(&e.ID, &e.Ts, &k, &a, &e.Account, &delta, &memo); err != nil {
+			return nil, fmt.Errorf("wallet: 掃分錄: %w", err)
+		}
+		e.Kind, e.Asset, e.Delta, e.Memo = LedgerKind(k), Asset(a), delta, memo
+		out = append(out, e)
+	}
+	return out, rows.Err()
+}
+
+// ExportLedgerCSV 導出指定資產全量帳本為 CSV（id,ts,kind,account,delta,memo）。
+func (s *Store) ExportLedgerCSV(asset string) (string, error) {
+	rows, err := s.db.Query(
+		`SELECT id, ts, kind, account, delta, memo FROM wallet_ledger
+		 WHERE asset=? ORDER BY id ASC`, asset)
+	if err != nil {
+		return "", fmt.Errorf("wallet: 讀分錄: %w", err)
+	}
+	defer rows.Close()
+	var sb strings.Builder
+	sb.WriteString("id,ts,kind,account,delta,memo\n")
+	for rows.Next() {
+		var id, ts int64
+		var kind, account, delta, memo string
+		if err := rows.Scan(&id, &ts, &kind, &account, &delta, &memo); err != nil {
+			return "", fmt.Errorf("wallet: 掃分錄: %w", err)
+		}
+		fmt.Fprintf(&sb, "%d,%d,%s,%s,%s,%s\n", id, ts, kind, account, delta, csvEsc(memo))
+	}
+	return sb.String(), rows.Err()
+}
+
+func csvEsc(s string) string {
+	if s == "" || !strings.ContainsAny(s, ",\"\n") {
+		return s
+	}
+	return `"` + strings.ReplaceAll(s, `"`, `""`) + `"`
+}
+
+// GetSetting 讀取 KV 設定（alert 閾值/webhook 等，v108）。
+func (s *Store) GetSetting(key string) (string, error) {
+	var v string
+	err := s.db.QueryRow(`SELECT value FROM settings WHERE key=?`, key).Scan(&v)
+	if err == sql.ErrNoRows {
+		return "", nil
+	}
+	return v, err
+}
+
+// SetSetting 寫入 KV 設定（UPSERT，v108）。
+func (s *Store) SetSetting(key, value string) error {
+	_, err := s.db.Exec(`INSERT INTO settings(key, value) VALUES(?, ?)
+		ON CONFLICT(key) DO UPDATE SET value=excluded.value`, key, value)
+	return err
 }

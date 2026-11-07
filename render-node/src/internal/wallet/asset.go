@@ -284,3 +284,82 @@ func pow10(n int) int64 {
 	}
 	return v
 }
+
+// FmtThouI64 v102：千分逗號＋固定小數位顯示（v 為 dec 精度最小單位；show 為小數顯示位數）。
+// 小數點一律「.」，千分位「,」只做整數分組——顯示用，不改底層精度。
+func FmtThouI64(v int64, dec, show int) string {
+	neg := v < 0
+	if neg {
+		v = -v
+	}
+	div := pow10(dec)
+	whole := v / div
+	frac := v % div
+	ws := commaI64(whole)
+	fs := fmt.Sprintf("%0*d", dec, frac)
+	if show < 0 {
+		show = 0
+	}
+	if show >= dec {
+		return signPref(neg) + ws + "." + fs
+	}
+	return signPref(neg) + ws + "." + fs[:show]
+}
+
+// FmtThouBig v102：千分逗號＋固定小數位顯示（v 為 dec 精度最小單位；show 為小數顯示位數）。
+func FmtThouBig(v *big.Int, dec, show int) string {
+	if v == nil {
+		v = new(big.Int)
+	}
+	neg := v.Sign() < 0
+	if neg {
+		v = new(big.Int).Neg(v)
+	}
+	div := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(dec)), nil)
+	whole := new(big.Int).Div(v, div)
+	frac := new(big.Int).Mod(v, div)
+	ws := commaBig(whole)
+	fs := fmt.Sprintf("%0*s", dec, frac.String())
+	if show < 0 {
+		show = 0
+	}
+	if show >= dec {
+		return signPref(neg) + ws + "." + fs
+	}
+	return signPref(neg) + ws + "." + fs[:show]
+}
+
+func signPref(neg bool) string {
+	if neg {
+		return "-"
+	}
+	return ""
+}
+
+func commaI64(v int64) string {
+	return commaStr(fmt.Sprintf("%d", v))
+}
+
+func commaBig(v *big.Int) string {
+	return commaStr(v.String())
+}
+
+func commaStr(s string) string {
+	if len(s) <= 3 {
+		return s
+	}
+	var b strings.Builder
+	neg := strings.HasPrefix(s, "-")
+	if neg {
+		b.WriteByte('-')
+		s = s[1:]
+	}
+	n := len(s)
+	for i := 0; i < n; i++ {
+		if i > 0 && (n-i)%3 == 0 {
+			b.WriteByte(',')
+		}
+		b.WriteByte(s[i])
+	}
+	return b.String()
+}

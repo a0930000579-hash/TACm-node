@@ -179,4 +179,5 @@ func TestM116Smoke(t *testing.T) {
 		t.Fatalf("pool 支出異常: before %s after %s", before, after)
 	}
 	t.Logf("M116 冒煙通過：區塊 %d 筆交易，pool 支出 %v TACm", blk.TxCount, spent)
+
 }

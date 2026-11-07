@@ -30,6 +30,7 @@ type fakeDS struct {
 func (f *fakeDS) Status() StatusView                                          { return f.st }
 func (f *fakeDS) Blocks(int) ([]BlockView, error)                             { return f.blockList, nil }
 func (f *fakeDS) Block(int64) (*BlockView, error)                             { return f.blockResult, nil }
+func (f *fakeDS) BlockHeader(int64) (*BlockView, error)                       { return f.blockResult, nil }
 func (f *fakeDS) Transaction(string) (*TxView, error)                         { return f.txResult, nil }
 func (f *fakeDS) Address(string) (*AddressView, error)                        { return f.addrResult, nil }
 func (f *fakeDS) Wallet(string) (*WalletView, error)                          { return f.walletResult, nil }
@@ -58,6 +59,8 @@ func (f *fakeDS) ExchangeRecentTrades(market string, limit int) ([]exchange.Trad
 	return nil, errors.New("fake: exchange disabled")
 }
 
+func (f *fakeDS) TipHeight() int64 { return 0 }
+
 func (f *fakeDS) PendingTxHashes(limit int) ([]string, error) { return nil, nil }
 
 // Logs M128：事件日誌查詢（測試替身回空）。
@@ -70,6 +73,7 @@ func (f *fakeDS) NodeBalance() string                                   { return
 func (f *fakeDS) NodeRewardStats() chaindb.NodeRewardStats             { return chaindb.NodeRewardStats{} }
 func (f *fakeDS) NodeDataDir() string                                   { return os.TempDir() }
 func (f *fakeDS) NodeSendFromNode(to, amount string) (string, string, error) { return "hash", "txid", nil }
+func (f *fakeDS) NodeRegistry() ([]chaindb.NodeRegistry, error)         { return nil, nil }
 
 // VerifyLedgerOnChain M71：交易與合約層審計（測試替身恆回傳全過）。
 func (f *fakeDS) VerifyLedgerOnChain() (node.LedgerAuditResult, error) {

@@ -16,12 +16,15 @@ const ProtocolVersion = 1
 
 // Peer 為一個已連接的對等節點。
 type Peer struct {
-	NodeID    string    `json:"node_id"`
-	BaseURL   string    `json:"base_url"`
-	Owner     string    `json:"owner"`
-	Height    int64     `json:"height"`
-	Finalized int64     `json:"finalized_height"`
-	Online    bool      `json:"online"`
+	NodeID    string `json:"node_id"`
+	BaseURL   string `json:"base_url"`
+	Owner     string `json:"owner"`
+	Height    int64  `json:"height"`
+	Finalized int64  `json:"finalized_height"`
+	Online    bool   `json:"online"`
+	// Encrypted 表示與該節點的 P2P 訊息通道是否加密（ECDH+AES-GCM）；
+	// 對端不支援加密時自動降級明文並於此標記，供節點 UI 可視化。
+	Encrypted bool      `json:"encrypted"`
 	LastSeen  time.Time `json:"last_seen"`
 	failCount int
 }
@@ -38,10 +41,11 @@ type Config struct {
 	// RequestTimeout 單次 HTTP 請求整體上限（含大 JSON 下載）。
 	// 與 DialTimeout 分離：撥號快速失敗（2s），大範圍區塊拉取給足時間（預設 60s）。
 	RequestTimeout time.Duration
-	MaxPeers      int
+	MaxPeers       int
 	// Encrypt 啟用 P2P 訊息層加密（secp256k1 ECDH + AES-256-GCM）。
-	// 開啟後 /p2p/hello 與 /p2p/gossip 的 body 均加密傳輸；需全網節點
-	// 同時開啟（與 v44 舊版節點混跑時保持 false）。
+	// 預設開啟（v65 起節點預設加密）：/p2p/hello 與 /p2p/gossip 的 body
+	// 均加密傳輸；對端不支援加密（舊版節點）時該通道自動降級明文並於
+	// Peer.Encrypted 標記，全網不需同步開啟即可混跑。
 	Encrypt bool
 }
 
@@ -66,6 +70,8 @@ type Host interface {
 	// ReorgChain 在共同分叉點 forkPoint 之後切換到 blocks 給定的新鏈：
 	// 截斷本地 forkPoint 之後數據並順序重放；節點僅在新鏈累積難度更高時接受。
 	ReorgChain(forkPoint int64, blocks []chaindb.Block, txs [][]chaindb.Transaction) error
+	// ReorgChainFull 以整條新鏈做一次性總權重決策後切換（長鏈領先時取代分段重組）。
+	ReorgChainFull(forkPoint int64, blocks []chaindb.Block, txs [][]chaindb.Transaction) error
 }
 
 // BridgeGossip 為跨鏈橋網絡消息：提案（propose）/守衛簽名（sig）/執行結果（exec）。

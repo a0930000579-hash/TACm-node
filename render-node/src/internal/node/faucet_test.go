@@ -32,4 +32,5 @@ func TestSendFromNode(t *testing.T) {
 		rows, rerr := n.DB().GetTransactionsByAddress(to, 50)
 		return rerr == nil && len(rows) > 0
 	}, 8*time.Second, "faucet 轉帳未入塊")
+
 }
