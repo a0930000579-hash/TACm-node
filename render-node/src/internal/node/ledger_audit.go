@@ -43,7 +43,10 @@ type LedgerAuditResult struct {
 	TxSigFail     int      `json:"tx_sig_fail"`
 	TxNoncePass   int      `json:"tx_nonce_pass"` // nonce 順序通過
 	TxNonceFail   int      `json:"tx_nonce_fail"`
-	TxBalancePass int      `json:"tx_balance_pass"` // 餘額充足通過
+	// NonceFailFresh 僅計本次重放視窗內新發生的 nonce 回退；歷史累計（基線前）
+	// 不計入。Consistent 以此判斷當前是否真有重放，歷史 benign 計數不翻紅。
+	NonceFailFresh int      `json:"nonce_fail_fresh"`
+	TxBalancePass  int      `json:"tx_balance_pass"` // 餘額充足通過
 	TxBalanceFail int      `json:"tx_balance_fail"`
 	ContractPass  int      `json:"contract_pass"` // 合約交易格式通過
 	ContractFail  int      `json:"contract_fail"`
@@ -351,6 +354,7 @@ func (n *Node) auditReplay(start int64, cp *AuditCheckpoint, tip int64) LedgerAu
 				nonces[t.FromAddr] = exp + 1
 			} else {
 				out.TxNonceFail++
+				out.NonceFailFresh++
 				out.Issues = append(out.Issues, "h="+strconv.FormatInt(h, 10)+
 					" tx["+strconv.Itoa(t.TxIndex)+"] nonce 回退（重放）: 期望 "+strconv.FormatInt(exp, 10)+
 					" 實際 "+strconv.FormatInt(t.Nonce, 10))

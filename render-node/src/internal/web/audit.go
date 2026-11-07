@@ -61,6 +61,7 @@ type AuditView struct {
 	TxSigFail     int      `json:"tx_sig_fail"`
 	TxNoncePass   int      `json:"tx_nonce_pass"`
 	TxNonceFail   int      `json:"tx_nonce_fail"`
+	NonceFailFresh int     `json:"nonce_fail_fresh"` // 僅當前視窗新 nonce 回退；歷史計數不翻紅
 	TxBalancePass int      `json:"tx_balance_pass"`
 	TxBalanceFail int      `json:"tx_balance_fail"`
 	ContractPass  int      `json:"contract_pass"`
@@ -190,6 +191,7 @@ func auditRecentBlocks(ds DataSource, n int, blockTimeSec int64, cache *auditBlo
 		out.TxSigFail = la.TxSigFail
 		out.TxNoncePass = la.TxNoncePass
 		out.TxNonceFail = la.TxNonceFail
+		out.NonceFailFresh = la.NonceFailFresh
 		out.TxBalancePass = la.TxBalancePass
 		out.TxBalanceFail = la.TxBalanceFail
 		out.ContractPass = la.ContractPass
@@ -206,8 +208,10 @@ func auditRecentBlocks(ds DataSource, n int, blockTimeSec int64, cache *auditBlo
 		out.LedgerOK = false
 		out.Issues = append(out.Issues, "交易層審計不可用: "+err.Error())
 	}
+	// 歷史 nonce 回退計數（基線前、benign）不翻紅；僅當前視窗新發生的 nonce 回退
+	// （NonceFailFresh）才視為真實重放異常。其餘守恆/簽名/餘額/合約維持硬門檻。
 	out.Consistent = out.CoinbaseFail == 0 && out.PoolFail == 0 && out.SplitFail == 0 &&
-		out.StructureOK && out.TxSigFail == 0 && out.TxNonceFail == 0 &&
+		out.StructureOK && out.TxSigFail == 0 && out.NonceFailFresh == 0 &&
 		out.TxBalanceFail == 0 && out.ContractFail == 0 && out.LedgerOK
 	out.OK = out.Consistent
 	return out

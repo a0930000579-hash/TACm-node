@@ -6,12 +6,16 @@
 <title>TACm AI Agent</title>
 <style>
 :root{
-  --bg:#0b0d14; --side:#0e111b; --panel:#141826; --panel2:#1b2032; --line:#232a3f;
-  --text:#eef1fb; --muted:#98a0bd; --faint:#6b7392;
-  --brand:#6384ff; --brand2:#9a7bff; --ok:#35d39b; --warn:#ffb547; --danger:#ff6b7a;
-  --user:#2b3c78; --bot:#141826;
-  --shadow:0 10px 30px rgba(0,0,0,.35);
-  --side-w:272px;
+  --bg:#f4f3ee; --side:#f7f6f1; --main:#fcfcfa; --card:#ffffff;
+  --line:#e7e5dd; --line2:#dcd8cf;
+  --text:#262523; --muted:#7c7972; --faint:#aaa79f;
+  --ink:#1c1b18; --brand:#c0643f; --brand-soft:#f3e3da;
+  --ok:#3f9d6e; --danger:#cf4848; --warn:#b9852a;
+  --user:#efede7;
+  --shadow:0 12px 32px rgba(60,50,35,.10);
+  --shadow-sm:0 2px 10px rgba(60,50,35,.07);
+  --side-w:284px;
+  --serif:Georgia,"Times New Roman","Songti TC","Noto Serif TC",serif;
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
@@ -23,133 +27,159 @@ button{font-family:inherit}
 /* ---------- Sidebar ---------- */
 .side{width:var(--side-w);flex:0 0 var(--side-w);background:var(--side);border-right:1px solid var(--line);
   display:flex;flex-direction:column;transition:transform .25s ease;z-index:30}
-.side-head{padding:14px 14px 10px}
-.new-chat{width:100%;display:flex;align-items:center;gap:9px;justify-content:center;background:linear-gradient(135deg,var(--brand),var(--brand2));
-  border:none;color:#fff;border-radius:12px;padding:12px;font-size:15px;font-weight:600;cursor:pointer;box-shadow:var(--shadow)}
-.new-chat svg{width:18px;height:18px}
-.conv-list{flex:1;overflow-y:auto;padding:6px 10px;display:flex;flex-direction:column;gap:3px}
-.conv-item{display:flex;align-items:center;gap:8px;width:100%;background:none;border:1px solid transparent;color:var(--muted);
-  border-radius:10px;padding:10px 10px;font-size:13.5px;cursor:pointer;text-align:left}
-.conv-item:hover{background:var(--panel)}
-.conv-item.active{background:var(--panel2);color:var(--text);border-color:var(--line)}
+.side-brand{display:flex;align-items:baseline;gap:7px;padding:20px 18px 12px}
+.side-brand .wm{font-family:var(--serif);font-size:24px;font-weight:700;letter-spacing:-.5px}
+.side-brand .wm small{font-size:13px;color:var(--brand);font-family:inherit;margin-left:2px}
+.side-brand .search{margin-left:auto;background:none;border:none;color:var(--muted);padding:5px;cursor:pointer;display:grid;place-items:center}
+.side-brand .search svg{width:19px;height:19px}
+
+.nav-group{padding:4px 12px;display:flex;flex-direction:column;gap:2px}
+.nav-link{display:flex;align-items:center;gap:12px;width:100%;background:none;border:none;border-radius:11px;
+  padding:10px 12px;color:var(--text);font-size:15px;cursor:pointer;text-decoration:none;text-align:left}
+.nav-link svg{width:20px;height:20px;color:var(--muted);flex:0 0 auto}
+.nav-link:hover{background:rgba(0,0,0,.04)}
+
+.section-label{padding:14px 22px 6px;font-size:12.5px;color:var(--faint);letter-spacing:.4px}
+
+.conv-list{flex:1;overflow-y:auto;padding:2px 12px;display:flex;flex-direction:column;gap:2px;min-height:60px}
+.conv-item{display:flex;align-items:center;gap:10px;width:100%;background:none;border:1px solid transparent;color:var(--muted);
+  border-radius:11px;padding:10px 11px;font-size:14px;cursor:pointer;text-align:left}
+.conv-item svg.cq{width:18px;height:18px;flex:0 0 auto;color:var(--faint)}
+.conv-item:hover{background:rgba(0,0,0,.04)}
+.conv-item.active{background:#fff;border-color:var(--line2);color:var(--text);box-shadow:var(--shadow-sm)}
 .conv-item .ci-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .conv-item .ci-del{flex:0 0 auto;background:none;border:none;color:var(--faint);padding:2px;cursor:pointer;display:grid;place-items:center}
 .conv-item .ci-del svg{width:15px;height:15px}
 .conv-empty{color:var(--faint);font-size:12.5px;text-align:center;padding:18px 8px;line-height:1.6}
+
 .side-foot{border-top:1px solid var(--line);padding:12px;display:flex;flex-direction:column;gap:10px}
 .model-select{position:relative}
-.model-btn{width:100%;display:flex;align-items:center;gap:9px;background:var(--panel);border:1px solid var(--line);
-  border-radius:11px;padding:11px 12px;color:var(--text);cursor:pointer}
-.dot{width:9px;height:9px;border-radius:50%;background:var(--faint);flex:0 0 auto}
-.dot.on{background:var(--ok);box-shadow:0 0 0 3px rgba(53,211,155,.18)}
+.model-btn{width:100%;display:flex;align-items:center;gap:9px;background:#fff;border:1px solid var(--line);
+  border-radius:11px;padding:10px 12px;color:var(--text);cursor:pointer}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--faint);flex:0 0 auto}
+.dot.on{background:var(--ok);box-shadow:0 0 0 3px rgba(63,157,110,.16)}
 .dot.off{background:var(--faint)}
-.model-btn .mb-name{flex:1;text-align:left;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.model-btn svg{width:16px;height:16px;color:var(--muted)}
-.model-menu{position:absolute;bottom:calc(100% + 6px);left:0;right:0;background:var(--panel2);border:1px solid var(--line);
+.model-btn .mb-name{flex:1;text-align:left;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.model-btn svg{width:15px;height:15px;color:var(--muted)}
+.model-menu{position:absolute;bottom:calc(100% + 6px);left:0;right:0;background:#fff;border:1px solid var(--line);
   border-radius:12px;box-shadow:var(--shadow);padding:6px;display:none;max-height:260px;overflow-y:auto;z-index:40}
 .model-menu.open{display:block}
-.mm-item{display:flex;align-items:center;gap:9px;width:100%;background:none;border:none;border-radius:9px;padding:10px;cursor:pointer;color:var(--text)}
-.mm-item:hover{background:var(--panel)}
-.mm-item .mm-name{flex:1;text-align:left;font-size:13.5px}
+.mm-item{display:flex;align-items:center;gap:9px;width:100%;background:none;border:none;border-radius:9px;padding:9px 10px;cursor:pointer;color:var(--text)}
+.mm-item:hover{background:rgba(0,0,0,.04)}
+.mm-item .mm-name{flex:1;text-align:left;font-size:13px}
 .mm-item .mm-state{font-size:11px;color:var(--faint)}
 .side-meta{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.side-link{display:flex;align-items:center;gap:6px;color:var(--muted);text-decoration:none;font-size:12.5px}
-.side-link svg{width:15px;height:15px}
-.lang-btn{background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:9px;padding:7px 11px;font-size:12.5px;cursor:pointer}
+.lang-btn{background:#fff;border:1px solid var(--line);color:var(--muted);border-radius:9px;padding:7px 11px;font-size:12.5px;cursor:pointer}
+
+.foot-user{display:flex;align-items:center;gap:10px}
+.avatar-circle{width:38px;height:38px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;
+  font-size:15px;font-weight:600;flex:0 0 auto}
+.new-chat{flex:1;display:flex;align-items:center;gap:8px;justify-content:center;background:var(--ink);
+  border:none;color:#fff;border-radius:999px;padding:11px 14px;font-size:14px;font-weight:600;cursor:pointer}
+.new-chat svg{width:17px;height:17px}
 
 /* ---------- Main ---------- */
-.main{flex:1;display:flex;flex-direction:column;min-width:0;position:relative}
-.topbar{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line);
-  background:rgba(11,13,20,.85);backdrop-filter:blur(10px)}
-.hamburger{background:var(--panel2);border:1px solid var(--line);color:var(--text);width:38px;height:38px;border-radius:10px;display:grid;place-items:center;cursor:pointer}
+.main{flex:1;display:flex;flex-direction:column;min-width:0;position:relative;background:var(--main)}
+.topbar{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line);
+  background:rgba(252,252,250,.85);backdrop-filter:blur(10px)}
+.hamburger{background:#fff;border:1px solid var(--line);color:var(--text);width:38px;height:38px;border-radius:11px;display:grid;place-items:center;cursor:pointer}
 .hamburger svg{width:19px;height:19px}
 .tb-model{display:flex;align-items:center;gap:8px;font-size:14.5px;font-weight:600;flex:1;min-width:0}
 .tb-model .dot{width:8px;height:8px}
 .tb-model span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tb-balance{font-size:12px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 11px;white-space:nowrap}
+.tb-balance{font-size:12px;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px 12px;white-space:nowrap}
+
 .messages{flex:1;overflow-y:auto;scroll-behavior:smooth}
-.msg-wrap{max-width:780px;margin:0 auto;padding:18px 16px;display:flex;gap:12px}
+.msg-wrap{max-width:760px;margin:0 auto;padding:20px 18px;display:flex;gap:13px}
 .msg-wrap.user{flex-direction:row-reverse}
-.avatar{width:30px;height:30px;border-radius:9px;flex:0 0 auto;display:grid;place-items:center}
-.avatar.bot{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff}
-.avatar.user{background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
-.avatar svg{width:17px;height:17px}
+.avatar{width:32px;height:32px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center}
+.avatar.bot{background:var(--brand-soft);color:var(--brand)}
+.avatar.user{background:#fff;color:var(--muted);border:1px solid var(--line)}
+.avatar svg{width:18px;height:18px}
 .msg-body{min-width:0;flex:1}
 .msg-wrap.user .msg-body{display:flex;flex-direction:column;align-items:flex-end}
-.bubble{font-size:15px;line-height:1.65;word-break:break-word}
-.msg-wrap.user .bubble{background:var(--user);padding:10px 14px;border-radius:16px 16px 5px 16px;max-width:100%;white-space:pre-wrap}
-.msg-wrap.bot .bubble{color:var(--text)}
+.bubble{font-size:15.5px;line-height:1.7;word-break:break-word;color:var(--text)}
+.msg-wrap.user .bubble{background:var(--user);padding:10px 15px;border-radius:18px 18px 6px 18px;max-width:100%;white-space:pre-wrap}
 .msg-meta{font-size:11.5px;color:var(--faint);margin-top:7px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.code-block{background:#0a0c14;border:1px solid var(--line);border-radius:12px;margin:12px 0;overflow:hidden}
-.code-head{display:flex;align-items:center;justify-content:space-between;padding:8px 13px;border-bottom:1px solid var(--line);background:#0f1320}
+
+.code-block{background:#fbfaf7;border:1px solid var(--line2);border-radius:13px;margin:13px 0;overflow:hidden}
+.code-head{display:flex;align-items:center;justify-content:space-between;padding:8px 13px;border-bottom:1px solid var(--line);background:#f4f2ec}
 .code-lang{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
 .code-dl{display:flex;align-items:center;gap:5px;background:none;border:none;color:var(--brand);font-size:12px;cursor:pointer}
 .code-dl svg{width:14px;height:14px}
-.code-block pre{margin:0;padding:13px;overflow-x:auto;font-size:13px;line-height:1.55;font-family:"SF Mono",Menlo,Consolas,monospace}
-.file-card{display:flex;align-items:center;gap:12px;background:#0f1320;border:1px solid var(--brand);border-radius:12px;padding:11px 14px;margin-top:12px;max-width:420px}
+.code-block pre{margin:0;padding:14px;overflow-x:auto;font-size:13px;line-height:1.55;font-family:"SF Mono",Menlo,Consolas,monospace;color:#33312c}
+
+.file-card{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line2);border-radius:13px;padding:12px 14px;margin-top:12px;max-width:430px;box-shadow:var(--shadow-sm)}
 .file-card svg{width:26px;height:26px;color:var(--brand);flex:0 0 auto}
 .file-info{flex:1;min-width:0}
 .file-info strong{display:block;font-size:14px}
 .file-info span{font-size:12px;color:var(--muted)}
-.file-dl{background:var(--brand);color:#fff;border:none;border-radius:10px;padding:8px 13px;font-size:13px;text-decoration:none;white-space:nowrap}
-.trace{margin-top:10px;border:1px solid var(--line);border-radius:11px;background:#0f1320;overflow:hidden}
-.trace summary{font-size:12.5px;color:var(--muted);cursor:pointer;padding:10px 13px;display:flex;align-items:center;gap:7px;list-style:none}
+.file-dl{background:var(--ink);color:#fff;border:none;border-radius:10px;padding:8px 14px;font-size:13px;text-decoration:none;white-space:nowrap}
+
+.trace{margin-top:11px;border:1px solid var(--line);border-radius:12px;background:#fbfaf7;overflow:hidden}
+.trace summary{font-size:12.5px;color:var(--muted);cursor:pointer;padding:11px 13px;display:flex;align-items:center;gap:7px;list-style:none}
 .trace summary::-webkit-details-marker{display:none}
 .trace summary svg{width:15px;height:15px}
-.trace-inner{padding:0 13px 11px;display:flex;flex-direction:column;gap:7px}
-.trace-step{background:#0a0c14;border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:12px;line-height:1.5}
+.trace-inner{padding:0 13px 12px;display:flex;flex-direction:column;gap:7px}
+.trace-step{background:#fff;border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:12px;line-height:1.5}
 .trace-step .k{color:var(--brand);font-weight:600}
 .trace-step.err{border-color:var(--danger)}
 .cite{margin-top:9px;display:flex;flex-direction:column;gap:5px}
 .cite a{color:var(--brand);font-size:12.5px;word-break:break-all}
 
-/* empty state */
+/* empty / greeting */
 .empty{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;gap:6px}
-.empty-logo{width:60px;height:60px;color:var(--brand);margin-bottom:6px}
-.empty h1{font-size:25px;margin:4px 0}
-.empty p{color:var(--muted);font-size:14px;max-width:430px;line-height:1.6;margin:0 0 16px}
-.suggest{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;width:100%;max-width:560px}
-.suggest-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:left;color:var(--text);cursor:pointer;font-size:13.5px;line-height:1.5}
-.suggest-card:hover{border-color:var(--brand);background:var(--panel2)}
-.suggest-card svg{width:18px;height:18px;color:var(--brand);margin-bottom:8px;display:block}
+.empty-mark{width:54px;height:54px;border-radius:16px;background:var(--brand-soft);color:var(--brand);display:grid;place-items:center;margin-bottom:10px}
+.empty-mark svg{width:30px;height:30px}
+.empty h1{font-family:var(--serif);font-size:30px;font-weight:700;margin:6px 0;letter-spacing:-.5px}
+.empty p{color:var(--muted);font-size:14.5px;max-width:440px;line-height:1.65;margin:0 0 18px}
+.usage-card{width:100%;max-width:420px;background:#fff;border:1px solid var(--line);border-radius:16px;
+  padding:16px 18px;box-shadow:var(--shadow-sm);text-align:left;margin-bottom:18px}
+.usage-card .uc-top{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;margin-bottom:4px}
+.usage-card .uc-top svg{width:17px;height:17px;color:var(--brand)}
+.usage-card .uc-sub{font-size:12.5px;color:var(--muted);line-height:1.5}
+.suggest{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;width:100%;max-width:560px}
+.suggest-card{background:#fff;border:1px solid var(--line);border-radius:15px;padding:15px;text-align:left;color:var(--text);cursor:pointer;font-size:13.5px;line-height:1.5}
+.suggest-card:hover{border-color:var(--brand2);box-shadow:var(--shadow-sm)}
+.suggest-card svg{width:19px;height:19px;color:var(--brand);margin-bottom:9px;display:block}
 
 /* confirm */
-.confirm{border-top:1px solid var(--line);background:var(--panel);padding:12px 16px}
-.confirm-inner{max-width:780px;margin:0 auto}
-.confirm p{margin:0 0 10px;font-size:13px;color:var(--warn);display:flex;gap:7px;align-items:center}
-.confirm p svg{width:16px;height:16px;flex:0 0 auto}
+.confirm{border-top:1px solid var(--line);background:#fff;padding:13px 16px}
+.confirm-inner{max-width:760px;margin:0 auto}
+.confirm p{margin:0 0 11px;font-size:13.5px;color:var(--warn);display:flex;gap:8px;align-items:center}
+.confirm p svg{width:17px;height:17px;flex:0 0 auto}
 .confirm-actions{display:flex;gap:10px}
-.btn{flex:1;border:none;border-radius:11px;padding:12px;font-size:14px;cursor:pointer}
-.btn.ghost{background:var(--panel2);color:var(--text);border:1px solid var(--line)}
-.btn.primary{background:var(--brand);color:#fff}
+.btn{flex:1;border:none;border-radius:12px;padding:12px;font-size:14px;cursor:pointer}
+.btn.ghost{background:#fff;color:var(--text);border:1px solid var(--line2)}
+.btn.primary{background:var(--ink);color:#fff}
 
 /* composer */
-.composer{padding:10px 14px calc(12px + env(safe-area-inset-bottom))}
-.composer-inner{max-width:780px;margin:0 auto}
-.composer-box{display:flex;align-items:flex-end;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:8px 8px 8px 12px}
+.composer{padding:10px 16px calc(14px + env(safe-area-inset-bottom))}
+.composer-inner{max-width:760px;margin:0 auto}
+.composer-box{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line2);
+  border-radius:22px;padding:8px 8px 8px 10px;box-shadow:var(--shadow-sm)}
 .composer-box:focus-within{border-color:var(--brand)}
-.composer-box textarea{flex:1;background:none;border:none;color:var(--text);font-size:15px;resize:none;max-height:140px;outline:none;font-family:inherit;line-height:1.4;padding:6px 0}
-.icon-tool{background:var(--panel2);border:1px solid var(--line);color:var(--muted);width:38px;height:38px;border-radius:11px;display:grid;place-items:center;cursor:pointer;flex:0 0 auto}
-.icon-tool svg{width:18px;height:18px}
-.icon-tool.on{background:var(--brand);border-color:var(--brand);color:#fff}
-.send{background:var(--brand);border:none;width:38px;height:38px;border-radius:11px;color:#fff;display:grid;place-items:center;cursor:pointer;flex:0 0 auto}
+.composer-plus{background:var(--user);border:none;color:var(--muted);width:36px;height:36px;border-radius:50%;display:grid;place-items:center;cursor:pointer;flex:0 0 auto}
+.composer-plus svg{width:19px;height:19px}
+.composer-box textarea{flex:1;background:none;border:none;color:var(--text);font-size:15.5px;resize:none;max-height:140px;outline:none;font-family:inherit;line-height:1.4;padding:7px 2px}
+.send{background:var(--ink);border:none;width:38px;height:38px;border-radius:50%;color:#fff;display:grid;place-items:center;cursor:pointer;flex:0 0 auto}
 .send svg{width:18px;height:18px}
-.send:disabled{opacity:.45}
-.composer-hint{margin:7px 6px 0;font-size:11.5px;color:var(--warn);display:none}
+.send:disabled{opacity:.4}
+.composer-hint{margin:8px 8px 0;font-size:11.5px;color:var(--warn);display:none}
 .composer-hint.show{display:block}
 .typing{display:inline-flex;gap:5px;align-items:center;padding:4px 0}
 .typing i{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:blink 1.2s infinite}
 .typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
 @keyframes blink{0%,100%{opacity:.25}50%{opacity:1}}
 
-/* scrim for mobile drawer */
-.scrim{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:20;display:none}
+.scrim{position:fixed;inset:0;background:rgba(40,35,25,.4);z-index:20;display:none}
 .scrim.show{display:block}
 
 @media (max-width:860px){
   .side{position:fixed;top:0;bottom:0;left:0;transform:translateX(-100%)}
   .side.open{transform:translateX(0)}
   .suggest{grid-template-columns:1fr}
+  .msg-wrap{padding:16px 14px}
 }
 @media (min-width:861px){.hamburger{display:none}}
 </style>
@@ -157,13 +187,35 @@ button{font-family:inherit}
 <body>
 <div class="app">
   <aside class="side" id="side">
-    <div class="side-head">
-      <button class="new-chat" id="newChat" type="button">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
-        <span data-i18n="new_chat">新對話</span>
+    <div class="side-brand">
+      <div class="wm">TACm<small>AI</small></div>
+      <button class="search" id="searchBtn" type="button" aria-label="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
       </button>
     </div>
+
+    <div class="nav-group">
+      <a class="nav-link" href="/wallet">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+        <span data-i18n="nav_projects">專案</span>
+      </a>
+      <a class="nav-link" href="/ai-market">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 8-5 4 5 4M16 8l5 4-5 4M14 4l-4 16"/></svg>
+        <span data-i18n="nav_code">Code</span>
+      </a>
+      <a class="nav-link" href="/explorer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        <span data-i18n="nav_outputs">成品</span>
+      </a>
+      <a class="nav-link" href="/network">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        <span data-i18n="nav_schedule">排程任務</span>
+      </a>
+    </div>
+
+    <div class="section-label" data-i18n="recent">最近</div>
     <div class="conv-list" id="convList"></div>
+
     <div class="side-foot">
       <div class="model-select">
         <button class="model-btn" id="modelBtn" type="button">
@@ -174,11 +226,14 @@ button{font-family:inherit}
         <div class="model-menu" id="modelMenu"></div>
       </div>
       <div class="side-meta">
-        <a class="side-link" href="/wallet">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5m7-7-7 7 7 7"/></svg>
-          <span data-i18n="back_site">返回鏈上</span>
-        </a>
         <button class="lang-btn" id="langBtn" type="button">中 / EN</button>
+      </div>
+      <div class="foot-user">
+        <div class="avatar-circle">S</div>
+        <button class="new-chat" id="newChat" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          <span data-i18n="new_chat">新增工作階段</span>
+        </button>
       </div>
     </div>
   </aside>
@@ -196,9 +251,18 @@ button{font-family:inherit}
 
     <div class="messages" id="messages">
       <div class="empty" id="empty">
-        <svg class="empty-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 1 4 4v1h1a3 3 0 0 1 3 3v1a3 3 0 0 1 0 6v1a3 3 0 0 1-3 3h-1v1a4 4 0 0 1-8 0v-1H7a3 3 0 0 1-3-3v-1a3 3 0 0 1 0-6v-1a3 3 0 0 1 3-3h1V6a4 4 0 0 1 4-4z"/><circle cx="9.5" cy="11" r="1"/><circle cx="14.5" cy="11" r="1"/><path d="M9 15h6"/></svg>
+        <div class="empty-mark">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 4.6 5 .7-3.6 3.5.9 5L12 14.4 7.5 16.8l.9-5L4.8 8.3l5-.7z"/></svg>
+        </div>
         <h1 data-i18n="empty_title">我是 TACm AI</h1>
         <p data-i18n="empty_desc">問我鏈上數據、DeFi，或請我寫程式、生成可下載檔案。選一個開始：</p>
+        <div class="usage-card">
+          <div class="uc-top">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l2.5 2"/></svg>
+            <span data-i18n="uc_title">按次計費</span>
+          </div>
+          <div class="uc-sub" data-i18n="uc_sub">每輪 0.01 TACm，寫操作需確認；未連結地址時不計費。</div>
+        </div>
         <div class="suggest" id="suggest"></div>
       </div>
     </div>
@@ -216,10 +280,10 @@ button{font-family:inherit}
     <div class="composer">
       <div class="composer-inner">
         <div class="composer-box">
-          <button class="icon-tool" id="fileBtn" type="button" aria-label="file">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+          <button class="composer-plus" id="fileBtn" type="button" aria-label="file">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
           </button>
-          <textarea id="input" rows="1" data-i18n-ph="placeholder" placeholder="傳訊息給 TACm AI…"></textarea>
+          <textarea id="input" rows="1" data-i18n-ph="placeholder" placeholder="輸入或長按說話…"></textarea>
           <button class="send" id="send" type="button" aria-label="send">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>
           </button>
@@ -241,16 +305,20 @@ var messages=$("messages"), input=$("input"), send=$("send"), confirmBox=$("conf
     topBalance=$("topBalance"), empty=$("empty");
 
 var I18N={
-  en:{new_chat:"New chat",back_site:"Back to chain",empty_title:"I'm TACm AI",
+  en:{new_chat:"New session",empty_title:"I'm TACm AI",
     empty_desc:"Ask about on-chain data, DeFi, or request code and downloadable files. Pick one to start:",
     confirm_note:"This is a write action and needs explicit confirmation.",cancel:"Cancel",confirm:"Confirm",
-    placeholder:"Message TACm AI…",file_hint:"File mode: describe the file (name and language).",
-    reasoning:"Reasoning",online:"online",offline:"offline",del:"delete",no_conv:"No conversations yet"},
-  zh:{new_chat:"新對話",back_site:"返回鏈上",empty_title:"我是 TACm AI",
+    placeholder:"Type or hold to talk…",file_hint:"File mode: describe the file (name and language).",
+    reasoning:"Reasoning",online:"online",offline:"offline",del:"delete",no_conv:"No conversations yet",
+    recent:"Recent",nav_projects:"Projects",nav_code:"Code",nav_outputs:"Outputs",nav_schedule:"Scheduled",
+    uc_title:"Pay per turn",uc_sub:"0.01 TACm per turn; write actions need confirmation. No charge without a linked address."},
+  zh:{new_chat:"新增工作階段",empty_title:"我是 TACm AI",
     empty_desc:"問我鏈上數據、DeFi，或請我寫程式、生成可下載檔案。選一個開始：",
     confirm_note:"這是寫操作，需明確確認才會執行。",cancel:"取消",confirm:"確認執行",
-    placeholder:"傳訊息給 TACm AI…",file_hint:"檔案模式：請描述要生成的檔案（名稱與語言）。",
-    reasoning:"推理軌跡",online:"在線",offline:"離線",del:"刪除",no_conv:"尚無對話"}
+    placeholder:"輸入或長按說話…",file_hint:"檔案模式：請描述要生成的檔案（名稱與語言）。",
+    reasoning:"推理軌跡",online:"在線",offline:"離線",del:"刪除",no_conv:"尚無對話",
+    recent:"最近",nav_projects:"專案",nav_code:"Code",nav_outputs:"成品",nav_schedule:"排程任務",
+    uc_title:"按次計費",uc_sub:"每輪 0.01 TACm，寫操作需確認；未連結地址時不計費。"}
 };
 var SUGGEST=[
   {icon:'<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',prompt:"What is my TACm balance?"},
@@ -265,6 +333,7 @@ function applyLang(){
   document.querySelectorAll("[data-i18n-ph]").forEach(function(el){el.setAttribute("placeholder",t(el.getAttribute("data-i18n-ph")))});
 }
 $("langBtn").addEventListener("click",function(){lang=(lang==="zh"?"en":"zh");localStorage.setItem("tacm_lang",lang);applyLang();renderConvList()});
+var searchBtn=$("searchBtn");if(searchBtn)searchBtn.addEventListener("click",function(){input.focus()});
 
 /* ---------- conversations (localStorage) ---------- */
 var STORE_KEY="tacm_conversations";
@@ -287,6 +356,7 @@ function titleOf(conv){
   var first=conv.messages.find(function(m){return m.role==="user"});
   return first?first.content.slice(0,26):(lang==="zh"?"新對話":"New chat");
 }
+var qIcon='<svg class="cq" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
 function renderConvList(){
   convList.innerHTML="";
   var ids=Object.keys(store);
@@ -295,6 +365,7 @@ function renderConvList(){
     var conv=store[id];
     var b=document.createElement("button");b.type="button";
     b.className="conv-item"+(id===activeId?" active":"");
+    b.innerHTML=qIcon;
     var ti=document.createElement("span");ti.className="ci-title";ti.textContent=titleOf(conv);
     var del=document.createElement("span");del.className="ci-del";del.setAttribute("aria-label",t("del"));
     del.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
@@ -341,10 +412,24 @@ function updateModelUI(){
   topDot.className="dot "+(on?"on":"off");sideDot.className="dot "+(on?"on":"off");
 }
 
-/* ---------- address / balance ---------- */
-function addr(){return (window.ensureGuestAddr&&window.ensureGuestAddr())||""}
+/* ---------- address / balance ----------
+   ensureGuestAddr 回傳 Promise（非字串），同步呼叫會把 Promise 物件當 address 送出→bad_json。
+   改為快取字串：先同步讀 localStorage，再用 Promise 補齊（首次訪客需伺服器發址）。 */
+var myAddr="";
+function readAddrSync(){
+  try{var ex=localStorage.getItem('tac_ex_wallet');if(ex){var eo=JSON.parse(ex);
+    if(eo&&eo.addr&&eo.addr.indexOf('tx0')===0)return eo.addr}}catch(e){}
+  var a=localStorage.getItem('tac_guest_addr');
+  return (a&&a.indexOf('tx0')===0)?a:"";
+}
+function initAddr(){
+  myAddr=readAddrSync();
+  if(window.ensureGuestAddr){ensureGuestAddr().then(function(a){
+    myAddr=(a&&a.indexOf&&a.indexOf('tx0')===0)?a:readAddrSync();refreshBalance();
+  }).catch(function(){})}
+}
 function refreshBalance(){
-  var a=addr();if(!a){topBalance.textContent="TACm —";return}
+  var a=myAddr;if(!a){topBalance.textContent="TACm —";return}
   fetch("/api/wallet/info?address="+encodeURIComponent(a)).then(function(r){return r.json()}).then(function(j){
     topBalance.textContent="TACm "+(j&&j.tacm!=null?j.tacm:"—");
   }).catch(function(){topBalance.textContent="TACm —"});
@@ -370,7 +455,7 @@ function richHTML(text){
   }
   return html||esc(text);
 }
-function botAvatarSVG(){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 1 4 4v1h1a3 3 0 0 1 3 3v1a3 3 0 0 1 0 6v1a3 3 0 0 1-3 3h-1v1a4 4 0 0 1-8 0v-1H7a3 3 0 0 1-3-3v-1a3 3 0 0 1 0-6v-1a3 3 0 0 1 3-3h1V6a4 4 0 0 1 4-4z"/><path d="M9 15h6"/></svg>'}
+function botAvatarSVG(){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 4.6 5 .7-3.6 3.5.9 5L12 14.4 7.5 16.8l.9-5L4.8 8.3l5-.7z"/></svg>'}
 function userAvatarSVG(){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'}
 
 function addMessageNode(role,data){
@@ -433,7 +518,7 @@ function sendMessage(text,isConfirm){
   if(empty.parentNode)empty.parentNode.removeChild(empty);
   var typingNode=addMessageNode("bot",{typing:true});
   fetch("/api/ai/agent",{method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({message:text,address:addr(),lang:lang,session_id:activeId,confirm:!!isConfirm,model:selectedModel})})
+    body:JSON.stringify({message:text,address:myAddr,lang:lang,session_id:activeId,confirm:!!isConfirm,model:selectedModel})})
     .then(function(r){return r.json().then(function(j){return{status:r.status,body:j}})})
     .then(function(res){
       typingNode.remove();
@@ -462,7 +547,7 @@ function autoGrow(){input.style.height="auto";input.style.height=Math.min(input.
 input.addEventListener("input",autoGrow);
 confirmBtn.addEventListener("click",function(){confirmBox.hidden=true;sendMessage(pendingText,true)});
 cancelBtn.addEventListener("click",function(){confirmBox.hidden=true});
-fileBtn.addEventListener("click",function(){fileBtn.classList.toggle("on");fileHint.classList.toggle("show")});
+fileBtn.addEventListener("click",function(){fileHint.classList.toggle("show");input.focus()});
 $("newChat").addEventListener("click",newConversation);
 $("modelBtn").addEventListener("click",function(){modelMenu.classList.toggle("open")});
 $("hamburger").addEventListener("click",function(){side.classList.add("open");scrim.classList.add("show")});
@@ -478,7 +563,7 @@ SUGGEST.forEach(function(s){
   sug.appendChild(c);
 });
 
-applyLang();renderConvList();fetchModels();refreshBalance();renderMessages();
+applyLang();renderConvList();fetchModels();initAddr();renderMessages();
 })();
 </script>
 </body>

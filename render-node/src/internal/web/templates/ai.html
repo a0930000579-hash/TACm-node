@@ -194,7 +194,21 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
   var sessionId="ai-"+(localStorage.getItem("tac_guest")||"anon");
   var pendingMessage="", fileMode=false, sessionTotal=0, busy=false;
 
-  function addr(){return (window.ensureGuestAddr&&window.ensureGuestAddr())||""}
+  // ensureGuestAddr 回傳 Promise（非字串），同步呼叫會把 Promise 物件當 address 送出→bad_json。
+  // 改為快取字串：啟動時先同步讀 localStorage，再用 Promise 補齊（首次訪客需伺服器發址）。
+  var myAddr="";
+  function readAddrSync(){
+    try{var ex=localStorage.getItem('tac_ex_wallet');if(ex){var eo=JSON.parse(ex);
+      if(eo&&eo.addr&&eo.addr.indexOf('tx0')===0)return eo.addr}}catch(e){}
+    var a=localStorage.getItem('tac_guest_addr');
+    return (a&&a.indexOf('tx0')===0)?a:"";
+  }
+  function initAddr(){
+    myAddr=readAddrSync();
+    if(window.ensureGuestAddr){ensureGuestAddr().then(function(a){
+      myAddr=(a&&a.indexOf&&a.indexOf('tx0')===0)?a:readAddrSync();refreshBalance();
+    }).catch(function(){})}
+  }
   function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 
   var dlIcon='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>';
@@ -270,7 +284,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
   }
 
   function refreshBalance(){
-    var a=addr();if(!a){balanceVal.textContent="—";return}
+    var a=myAddr;if(!a){balanceVal.textContent="—";return}
     fetch("/api/wallet/info?address="+encodeURIComponent(a)).then(function(r){return r.json()}).then(function(j){
       if(j&&j.tacm!=null)balanceVal.textContent=j.tacm;
     }).catch(function(){balanceVal.textContent="—"});
@@ -281,7 +295,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
     if(!confirm){addMsg("user",message);pendingMessage=message}
     var tw=typing();
     fetch("/api/ai/agent",{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({message:message,address:addr(),lang:lang,session_id:sessionId,confirm:!!confirm})})
+      body:JSON.stringify({message:message,address:myAddr,lang:lang,session_id:sessionId,confirm:!!confirm})})
       .then(function(r){return r.json().then(function(j){return{status:r.status,body:j}})})
       .then(function(res){
         tw.remove();
@@ -322,7 +336,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
   function autoGrow(){input.style.height="auto";input.style.height=Math.min(input.scrollHeight,120)+"px"}
   input.addEventListener("input",autoGrow);
 
-  refreshBalance();
+  initAddr();
 })();
 </script>
 {% endblock %}
