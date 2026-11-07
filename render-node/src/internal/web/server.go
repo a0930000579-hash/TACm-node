@@ -337,6 +337,9 @@ func (s *Server) routes() {
 	// v163 平行支線頁面（實作於各自 v163_*_page.go，整合/交易所去重請保留這兩行）。
 	s.mux.HandleFunc("GET /dapp", s.handleV163DApp)
 	s.mux.HandleFunc("GET /agent", s.handleV163Agent)
+	s.mux.HandleFunc("GET /member", s.handleMemberPage)
+	s.mux.HandleFunc("GET /files", s.handleFileLibrary)
+	s.mux.HandleFunc("GET /media", s.handleMediaStudio)
 	s.mux.HandleFunc("GET /auth/login", s.handleAuthLoginPage)
 	s.mux.HandleFunc("GET /auth/register", s.handleAuthRegisterPage)
 	// M39：節點健康檢查與運行指標（商業營運/監控告警必備）。
@@ -359,6 +362,8 @@ func (s *Server) routes() {
 	s.mux.Handle("GET /static/", http.StripPrefix("/static/", fileServer))
 	// M94：社群本地上傳（圖片/影片）＋上傳檔靜態服務。
 	s.mux.HandleFunc("POST /api/upload", s.handleUpload)
+	s.mux.HandleFunc("GET /api/uploads/list", s.handleUploadList)
+	s.mux.HandleFunc("GET /api/member/usage", s.handleMemberUsage)
 	s.mux.Handle("GET /uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(uploadsDir))))
 }
 

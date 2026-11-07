@@ -62,6 +62,9 @@ type DataSource interface {
 	ExchangeRecentTrades(market string, limit int) ([]exchange.Trade, error)
 	// v104：鏈頂高度（dashboard_update 推送偵測新區塊）。
 	TipHeight() int64
+	// v189：會員 AI 用量——使用者本人 AI 分錄（transfer_out，memo 前綴 titan:ai:），
+	// 金額已轉為人類可讀 TACm（絕對值）。
+	MemberLedger(addr string, limit int) ([]MemberLedgerItem, error)
 }
 
 type nodeDS struct{ n *node.Node }
@@ -197,6 +200,32 @@ func (d *nodeDS) Wallet(addr string) (*WalletView, error) {
 		})
 	}
 	return w, nil
+}
+
+// MemberLedger 讀取使用者本人 AI 分錄（transfer_out，memo 前綴 titan:ai:），
+// 最小單位 delta 轉為絕對值人類可讀 TACm。
+func (d *nodeDS) MemberLedger(addr string, limit int) ([]MemberLedgerItem, error) {
+	if d.n.Wallet() == nil {
+		return nil, nil
+	}
+	entries, err := d.n.Wallet().LedgerByAccount(addr, string(wallet.KindTransferOut), "titan:ai:", limit)
+	if err != nil {
+		return nil, err
+	}
+	scale := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil))
+	out := make([]MemberLedgerItem, 0, len(entries))
+	for _, e := range entries {
+		v, ok := new(big.Int).SetString(e.Delta, 10)
+		if !ok {
+			continue
+		}
+		if v.Sign() < 0 {
+			v.Neg(v)
+		}
+		f, _ := new(big.Float).Quo(new(big.Float).SetInt(v), scale).Float64()
+		out = append(out, MemberLedgerItem{Ts: e.Ts, Amount: f, Memo: e.Memo})
+	}
+	return out, nil
 }
 
 // formatDelta 帳本變動縮放（依資產精度），保留符號。

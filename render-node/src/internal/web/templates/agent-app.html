@@ -73,7 +73,8 @@ button{font-family:inherit}
 
 .foot-user{display:flex;align-items:center;gap:10px}
 .avatar-circle{width:38px;height:38px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;
-  font-size:15px;font-weight:600;flex:0 0 auto}
+  font-size:15px;font-weight:600;flex:0 0 auto;text-decoration:none}
+.avatar-circle svg{width:20px;height:20px}
 .new-chat{flex:1;display:flex;align-items:center;gap:8px;justify-content:center;background:var(--ink);
   border:none;color:#fff;border-radius:999px;padding:11px 14px;font-size:14px;font-weight:600;cursor:pointer}
 .new-chat svg{width:17px;height:17px}
@@ -182,6 +183,10 @@ h4.md-h,h5.md-h,h6.md-h{font-size:15px}
 /* composer */
 .composer{padding:10px 16px calc(14px + env(safe-area-inset-bottom))}
 .composer-inner{max-width:760px;margin:0 auto}
+.composer-model{display:flex;margin:0 4px 8px}
+.composer-model .model-select{position:relative;flex:0 0 auto;min-width:170px;max-width:60%}
+.composer-model .model-btn{padding:8px 11px}
+.composer-model .model-menu{bottom:calc(100% + 6px);max-height:230px}
 .composer-box{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line2);
   border-radius:22px;padding:8px 8px 8px 10px;box-shadow:var(--shadow-sm)}
 .composer-box:focus-within{border-color:var(--brand)}
@@ -221,21 +226,21 @@ h4.md-h,h5.md-h,h6.md-h{font-size:15px}
     </div>
 
     <div class="nav-group">
-      <a class="nav-link" href="/wallet">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-        <span data-i18n="nav_projects">專案</span>
+      <a class="nav-link" href="/">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9.5 21v-6h5v6"/></svg>
+        <span data-i18n="nav_chain">TAC智能鏈</span>
       </a>
       <a class="nav-link" href="/ai-market">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 8-5 4 5 4M16 8l5 4-5 4M14 4l-4 16"/></svg>
-        <span data-i18n="nav_code">Code</span>
+        <span data-i18n="nav_projects">專案</span>
       </a>
-      <a class="nav-link" href="/explorer">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
-        <span data-i18n="nav_outputs">成品</span>
+      <a class="nav-link" href="/files">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+        <span data-i18n="nav_files">檔案庫</span>
       </a>
-      <a class="nav-link" href="/network">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-        <span data-i18n="nav_schedule">排程任務</span>
+      <a class="nav-link" href="/media">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="m10 9 5 3-5 3z"/></svg>
+        <span data-i18n="nav_media">影音圖像</span>
       </a>
     </div>
 
@@ -243,19 +248,13 @@ h4.md-h,h5.md-h,h6.md-h{font-size:15px}
     <div class="conv-list" id="convList"></div>
 
     <div class="side-foot">
-      <div class="model-select">
-        <button class="model-btn" id="modelBtn" type="button">
-          <span class="dot" id="sideDot"></span>
-          <span class="mb-name" id="sideModel">—</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-        </button>
-        <div class="model-menu" id="modelMenu"></div>
-      </div>
       <div class="side-meta">
         <button class="lang-btn" id="langBtn" type="button">中 / EN</button>
       </div>
       <div class="foot-user">
-        <div class="avatar-circle">S</div>
+        <a class="avatar-circle" id="memberEntry" href="/member" aria-label="member">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg>
+        </a>
         <button class="new-chat" id="newChat" type="button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
           <span data-i18n="new_chat">新增工作階段</span>
@@ -305,6 +304,16 @@ h4.md-h,h5.md-h,h6.md-h{font-size:15px}
 
     <div class="composer">
       <div class="composer-inner">
+        <div class="composer-model">
+          <div class="model-select">
+            <button class="model-btn" id="modelBtn" type="button">
+              <span class="dot" id="sideDot"></span>
+              <span class="mb-name" id="sideModel">—</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <div class="model-menu" id="modelMenu"></div>
+          </div>
+        </div>
         <div class="composer-box">
           <button class="composer-plus" id="fileBtn" type="button" aria-label="file">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
@@ -336,14 +345,14 @@ var I18N={
     confirm_note:"This is a write action and needs explicit confirmation.",cancel:"Cancel",confirm:"Confirm",
     placeholder:"Type or hold to talk…",file_hint:"File mode: describe the file (name and language).",
     reasoning:"Reasoning",online:"online",offline:"offline",del:"delete",no_conv:"No conversations yet",
-    recent:"Recent",nav_projects:"Projects",nav_code:"Code",nav_outputs:"Outputs",nav_schedule:"Scheduled",
+    recent:"Recent",nav_chain:"TAC Chain",nav_projects:"Projects",nav_files:"File Library",nav_media:"Media",
     uc_title:"Pay per turn",uc_sub:"Low on-chain fee per turn (governable); write actions need confirmation. No charge without a linked address."},
   zh:{new_chat:"新增工作階段",empty_title:"我是 TACm AI",
     empty_desc:"問我鏈上數據、DeFi，或請我寫程式、生成可下載檔案。選一個開始：",
     confirm_note:"這是寫操作，需明確確認才會執行。",cancel:"取消",confirm:"確認執行",
     placeholder:"輸入或長按說話…",file_hint:"檔案模式：請描述要生成的檔案（名稱與語言）。",
     reasoning:"推理軌跡",online:"在線",offline:"離線",del:"刪除",no_conv:"尚無對話",
-    recent:"最近",nav_projects:"專案",nav_code:"Code",nav_outputs:"成品",nav_schedule:"排程任務",
+    recent:"最近",nav_chain:"TAC智能鏈",nav_projects:"專案",nav_files:"檔案庫",nav_media:"影音圖像",
     uc_title:"按次計費",uc_sub:"每輪低額鏈上費用（可治理），寫操作需確認；未連結地址時不計費。"}
 };
 var SUGGEST=[
@@ -402,12 +411,18 @@ function renderConvList(){
   });
 }
 
-/* ---------- models ---------- */
+/* ---------- models ----------
+   顯示層品牌名（不改後端 provider id，僅使用者所見名稱）：
+   rules→TACm Rules、llama→TACm Edge、openai(gpt-oss-120b)→TACm Core 120B。 */
 function providerName(p){
-  if(p.id==="rules")return "Rules (offline)";
-  if(p.id==="llama")return "Local llama.cpp";
-  if(p.id==="openai")return p.name||"OpenAI-compatible";
-  return p.id;
+  if(p.id==="rules")return "TACm Rules";
+  if(p.id==="llama")return "TACm Edge";
+  if(p.id==="openai"){
+    var base=p.name||"";
+    if(/120b/i.test(base))return "TACm Core 120B";
+    return "TACm Core";
+  }
+  return "TACm "+p.id;
 }
 function fetchModels(){
   fetch("/api/ai/models").then(function(r){return r.json()}).then(function(j){
@@ -660,6 +675,8 @@ SUGGEST.forEach(function(s){
 });
 
 applyLang();renderConvList();fetchModels();initAddr();renderMessages();
+// 由影音圖像頁帶入的生成提示：預填輸入框（使用者確認後再送出）。
+(function(){var p=sessionStorage.getItem("tacm_media_prompt");if(p){sessionStorage.removeItem("tacm_media_prompt");input.value=p;autoGrow();input.focus()}})();
 })();
 </script>
 </body>

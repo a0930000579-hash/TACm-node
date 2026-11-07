@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>TACm 檔案庫</title>
+<style>
+:root{
+  --bg:#f4f3ee; --card:#ffffff; --line:#e7e5dd; --line2:#dcd8cf;
+  --text:#262523; --muted:#7c7972; --faint:#aaa79f;
+  --ink:#1c1b18; --brand:#c0643f; --brand-soft:#f3e3da;
+  --shadow-sm:0 2px 10px rgba(60,50,35,.07);
+  --serif:Georgia,"Times New Roman","Songti TC","Noto Serif TC",serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC",sans-serif;
+  -webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.wrap{max-width:900px;margin:0 auto;padding:0 16px calc(24px + env(safe-area-inset-bottom))}
+.top{display:flex;align-items:center;gap:12px;padding:14px 0 16px}
+.back{width:40px;height:40px;border-radius:12px;background:#fff;border:1px solid var(--line);display:grid;place-items:center;color:var(--text);text-decoration:none}
+.back svg{width:19px;height:19px}
+.top h1{font-family:var(--serif);font-size:23px;margin:0;letter-spacing:-.4px}
+.top .cnt{margin-left:auto;font-size:12px;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:999px;padding:7px 13px}
+.upload{display:flex;align-items:center;gap:11px;background:#fff;border:1px dashed var(--line2);border-radius:16px;padding:18px;margin-bottom:16px;cursor:pointer;color:var(--muted)}
+.upload svg{width:22px;height:22px;color:var(--brand)}
+.upload strong{color:var(--text);font-size:14.5px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.f{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow-sm);text-decoration:none;color:var(--text)}
+.f .thumb{aspect-ratio:16/10;background:#f1efe8;display:grid;place-items:center}
+.f .thumb img{width:100%;height:100%;object-fit:cover}
+.f .thumb video{width:100%;height:100%;object-fit:cover}
+.f .thumb svg{width:30px;height:30px;color:var(--brand)}
+.f .meta{padding:11px 13px}
+.f .meta .nm{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.f .meta .sub{font-size:11.5px;color:var(--faint);margin-top:3px}
+.empty-note{color:var(--faint);font-size:13.5px;text-align:center;padding:40px 16px;line-height:1.7}
+@media(min-width:720px){.grid{grid-template-columns:repeat(3,1fr)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="back" href="/agent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></a>
+    <h1>檔案庫</h1>
+    <div class="cnt" id="cntPill">0 檔</div>
+  </div>
+
+  <label class="upload" for="fileInput">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+    <div><strong>上傳檔案</strong><div style="font-size:12px;margin-top:2px">圖片 jpg/png/gif/webp、影片 mp4/webm/mov，單檔上限 64MB</div></div>
+    <input id="fileInput" type="file" accept="image/*,video/*" hidden>
+  </label>
+
+  <div class="grid" id="grid"></div>
+  <div class="empty-note" id="emptyNote" hidden>尚無檔案，上傳或由 AI 生成後會顯示於此。</div>
+</div>
+
+<script>
+(function(){
+"use strict";
+var $=function(id){return document.getElementById(id)};
+function humanSize(b){if(b<1024)return b+" B";if(b<1048576)return (b/1024).toFixed(1)+" KB";return (b/1048576).toFixed(1)+" MB"}
+function fileIcon(){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>'}
+function render(files){
+  $("cntPill").textContent=files.length+" 檔";
+  $("emptyNote").hidden=files.length!==0;
+  $("grid").innerHTML=files.map(function(f){
+    var thumb="";
+    if(f.type==="image")thumb='<div class="thumb"><img loading="lazy" src="'+f.url+'" alt=""></div>';
+    else if(f.type==="video")thumb='<div class="thumb"><video src="'+f.url+'" muted preload="metadata"></video></div>';
+    else thumb='<div class="thumb">'+fileIcon()+'</div>';
+    var d=new Date(f.mod_time*1000);
+    return '<a class="f" href="'+f.url+'" target="_blank" rel="noopener">'+thumb+
+      '<div class="meta"><div class="nm">'+f.name+'</div><div class="sub">'+humanSize(f.size)+' · '+d.toLocaleString().slice(5,16)+'</div></div></a>';
+  }).join("");
+}
+function load(){
+  fetch("/api/uploads/list").then(function(r){return r.json()}).then(function(j){render(j.files||[])}).catch(function(){});
+}
+$("fileInput").addEventListener("change",function(){
+  var f=this.files[0];if(!f)return;
+  var fd=new FormData();fd.append("file",f);
+  fetch("/api/upload",{method:"POST",body:fd}).then(function(r){return r.json()}).then(function(){load();this.value=""}).catch(function(){});
+});
+load();
+})();
+</script>
+</body>
+</html>

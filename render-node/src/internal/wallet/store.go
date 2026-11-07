@@ -364,6 +364,44 @@ func (s *Store) Ledger(limit int) ([]LedgerEntry, error) {
 	return out, rows.Err()
 }
 
+// LedgerByAccount 返回某帳戶符合指定 kind 與 memo 前綴的分錄（倒序，新→舊）。
+// kind 為空表示不限類型；memoPrefix 為空表示不依 memo 過濾。
+func (s *Store) LedgerByAccount(account, kind, memoPrefix string, limit int) ([]LedgerEntry, error) {
+	if limit <= 0 {
+		limit = 50
+	} else if limit > 5000 {
+		limit = 5000
+	}
+	q := `SELECT id, ts, kind, asset, account, delta, memo FROM wallet_ledger WHERE account = ?`
+	args := []any{account}
+	if kind != "" {
+		q += ` AND kind = ?`
+		args = append(args, kind)
+	}
+	if memoPrefix != "" {
+		q += ` AND memo LIKE ?`
+		args = append(args, memoPrefix+"%")
+	}
+	q += ` ORDER BY id DESC LIMIT ?`
+	args = append(args, limit)
+	rows, err := s.db.Query(q, args...)
+	if err != nil {
+		return nil, fmt.Errorf("wallet: 依帳戶讀分錄: %w", err)
+	}
+	defer rows.Close()
+	out := make([]LedgerEntry, 0, limit)
+	for rows.Next() {
+		var e LedgerEntry
+		var k, asset, delta, memo string
+		if err := rows.Scan(&e.ID, &e.Ts, &k, &asset, &e.Account, &delta, &memo); err != nil {
+			return nil, fmt.Errorf("wallet: 掃分錄: %w", err)
+		}
+		e.Kind, e.Asset, e.Delta, e.Memo = LedgerKind(k), Asset(asset), delta, memo
+		out = append(out, e)
+	}
+	return out, rows.Err()
+}
+
 func balanceColumn(a Asset) (string, error) {
 	switch a {
 	case AssetTACm:

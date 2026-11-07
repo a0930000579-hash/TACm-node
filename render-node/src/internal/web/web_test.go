@@ -61,6 +61,8 @@ func (f *fakeDS) ExchangeRecentTrades(market string, limit int) ([]exchange.Trad
 
 func (f *fakeDS) TipHeight() int64 { return 0 }
 
+func (f *fakeDS) MemberLedger(string, int) ([]MemberLedgerItem, error) { return nil, nil }
+
 func (f *fakeDS) PendingTxHashes(limit int) ([]string, error) { return nil, nil }
 
 // Logs M128：事件日誌查詢（測試替身回空）。

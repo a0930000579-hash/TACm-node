@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>TACm 影音圖像</title>
+<style>
+:root{
+  --bg:#f4f3ee; --card:#ffffff; --line:#e7e5dd; --line2:#dcd8cf;
+  --text:#262523; --muted:#7c7972; --faint:#aaa79f;
+  --ink:#1c1b18; --brand:#c0643f; --brand-soft:#f3e3da;
+  --shadow-sm:0 2px 10px rgba(60,50,35,.07);
+  --serif:Georgia,"Times New Roman","Songti TC","Noto Serif TC",serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC",sans-serif;
+  -webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.wrap{max-width:900px;margin:0 auto;padding:0 16px calc(24px + env(safe-area-inset-bottom))}
+.top{display:flex;align-items:center;gap:12px;padding:14px 0 16px}
+.back{width:40px;height:40px;border-radius:12px;background:#fff;border:1px solid var(--line);display:grid;place-items:center;color:var(--text);text-decoration:none}
+.back svg{width:19px;height:19px}
+.top h1{font-family:var(--serif);font-size:23px;margin:0;letter-spacing:-.4px}
+.top .go{margin-left:auto;font-size:12px;color:var(--brand);background:#fff;border:1px solid var(--line);border-radius:999px;padding:7px 13px;text-decoration:none}
+.chip-row{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:16px}
+.chip{background:#fff;border:1px solid var(--line);border-radius:999px;padding:9px 15px;font-size:13px;cursor:pointer;color:var(--text)}
+.chip svg{width:15px;height:15px;color:var(--brand);vertical-align:-2px;margin-right:5px}
+.sec-label{font-size:13px;color:var(--muted);margin:6px 2px 10px;font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.f{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow-sm);text-decoration:none;color:var(--text)}
+.f .thumb{aspect-ratio:16/10;background:#f1efe8;display:grid;place-items:center}
+.f .thumb img{width:100%;height:100%;object-fit:cover}
+.f .thumb video{width:100%;height:100%;object-fit:cover}
+.f .thumb svg{width:28px;height:28px;color:var(--brand)}
+.f .meta{padding:10px 13px}
+.f .meta .nm{font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.empty-note{color:var(--faint);font-size:13.5px;text-align:center;padding:30px 16px;line-height:1.7}
+@media(min-width:720px){.grid{grid-template-columns:repeat(3,1fr)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="back" href="/agent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></a>
+    <h1>影音圖像</h1>
+    <a class="go" href="/agent">開啟 AI 對話</a>
+  </div>
+
+  <div class="chip-row">
+    <button class="chip" data-p="請用 AI 生成一張圖片：暗黑奇幻風格的中世紀城堡，並提供可下載檔案">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2.5"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>生成圖像
+    </button>
+    <button class="chip" data-p="請用 AI 設計一段短影音分鏡：30 秒產品形象片，含場景與字幕建議">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="m10 9 5 3-5 3z"/></svg>影音分鏡
+    </button>
+    <button class="chip" data-p="請用 AI 產生一段環境音樂與音效描述，適合中世紀奇幻場景">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>音樂音效
+    </button>
+  </div>
+
+  <div class="sec-label">作品庫（上傳與完成的影音圖像）</div>
+  <div class="grid" id="grid"></div>
+  <div class="empty-note" id="emptyNote" hidden>尚無影音圖像，點上方項目由 AI 生成，或至檔案庫上傳。</div>
+</div>
+
+<script>
+(function(){
+"use strict";
+var $=function(id){return document.getElementById(id)};
+function fileIcon(){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>'}
+function render(files){
+  var media=files.filter(function(f){return f.type==="image"||f.type==="video"});
+  $("emptyNote").hidden=media.length!==0;
+  $("grid").innerHTML=media.map(function(f){
+    var thumb="";
+    if(f.type==="image")thumb='<div class="thumb"><img loading="lazy" src="'+f.url+'" alt=""></div>';
+    else if(f.type==="video")thumb='<div class="thumb"><video src="'+f.url+'" muted preload="metadata"></video></div>';
+    else thumb='<div class="thumb">'+fileIcon()+'</div>';
+    return '<a class="f" href="'+f.url+'" target="_blank" rel="noopener">'+thumb+
+      '<div class="meta"><div class="nm">'+f.name+'</div></div></a>';
+  }).join("");
+}
+function load(){fetch("/api/uploads/list").then(function(r){return r.json()}).then(function(j){render(j.files||[])}).catch(function(){})}
+document.querySelectorAll(".chip").forEach(function(c){
+  c.addEventListener("click",function(){sessionStorage.setItem("tacm_media_prompt",c.getAttribute("data-p"));location.href="/agent"})
+});
+load();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>TACm 會員中心</title>
+<style>
+:root{
+  --bg:#f4f3ee; --card:#ffffff; --line:#e7e5dd; --line2:#dcd8cf;
+  --text:#262523; --muted:#7c7972; --faint:#aaa79f;
+  --ink:#1c1b18; --brand:#c0643f; --brand-soft:#f3e3da;
+  --ok:#3f9d6e; --danger:#cf4848; --warn:#b9852a;
+  --shadow:0 12px 32px rgba(60,50,35,.10); --shadow-sm:0 2px 10px rgba(60,50,35,.07);
+  --serif:Georgia,"Times New Roman","Songti TC","Noto Serif TC",serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC",sans-serif;
+  -webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px calc(24px + env(safe-area-inset-bottom))}
+.top{display:flex;align-items:center;gap:12px;padding:14px 0 16px}
+.back{width:40px;height:40px;border-radius:12px;background:#fff;border:1px solid var(--line);display:grid;place-items:center;color:var(--text);text-decoration:none}
+.back svg{width:19px;height:19px}
+.top h1{font-family:var(--serif);font-size:23px;margin:0;letter-spacing:-.4px}
+.top .addr{margin-left:auto;font-size:12px;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:999px;padding:7px 13px;max-width:46%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow-sm);margin-bottom:14px}
+.card-title{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:600;margin-bottom:12px}
+.card-title svg{width:18px;height:18px;color:var(--brand)}
+.big-bal{font-family:var(--serif);font-size:34px;font-weight:700;letter-spacing:-.5px;word-break:break-all}
+.big-bal small{font-size:15px;color:var(--muted);font-family:inherit;margin-left:6px}
+.asset-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 0;border-top:1px solid var(--line);font-size:14px}
+.asset-row .sym{color:var(--muted)}
+.asset-row .val{font-weight:600;word-break:break-all;text-align:right}
+.win-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.win{background:#fbfaf7;border:1px solid var(--line);border-radius:14px;padding:13px 12px;text-align:center}
+.win .wl{font-size:12px;color:var(--muted);margin-bottom:7px}
+.win .wv{font-size:18px;font-weight:700;font-family:var(--serif);word-break:break-all}
+.win .wc{font-size:11px;color:var(--faint);margin-top:4px}
+.alert{display:flex;gap:10px;align-items:flex-start;border-radius:14px;padding:13px 14px;font-size:13.5px;line-height:1.5}
+.alert svg{width:18px;height:18px;flex:0 0 auto;margin-top:1px}
+.alert.warn{background:#faf3e2;border:1px solid #e9d6ab;color:#7a5a1c}
+.alert.ok{background:#e9f5ee;border:1px solid #bfe0d0;color:#2c6b4c}
+.tx-row{display:flex;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line);font-size:13px}
+.tx-row .txamt{font-weight:700;color:var(--brand);flex:0 0 auto}
+.tx-row .txmemo{color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tx-row .txtime{color:var(--faint);font-size:11.5px;flex:0 0 auto}
+.empty-note{color:var(--faint);font-size:13px;text-align:center;padding:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="back" href="/agent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></a>
+    <h1>會員中心</h1>
+    <div class="addr" id="addrPill">—</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M16 11h.01"/></svg>鏈上資產</div>
+    <div class="big-bal" id="tacmBal">—<small>TACm</small></div>
+    <div id="assetList"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l2.5 2"/></svg>AI 模型消耗</div>
+    <div class="big-bal" id="totalSpent" style="font-size:28px">—<small>TACm</small></div>
+    <div class="win-grid" id="winGrid" style="margin-top:14px"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>用量提醒</div>
+    <div id="alertBox"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h12"/></svg>近期 AI 流水</div>
+    <div id="recentList"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+var $=function(id){return document.getElementById(id)};
+var myAddr="";
+function readAddrSync(){
+  try{var ex=localStorage.getItem('tac_ex_wallet');if(ex){var eo=JSON.parse(ex);
+    if(eo&&eo.addr&&eo.addr.indexOf('tx0')===0)return eo.addr}}catch(e){}
+  var a=localStorage.getItem('tac_guest_addr');
+  return (a&&a.indexOf('tx0')===0)?a:"";
+}
+function shortAddr(a){return a.length>14?a.slice(0,8)+'…'+a.slice(-5):a}
+function fmt(n){return (Math.round(parseFloat(n)*1e8)/1e8).toLocaleString(undefined,{maximumFractionDigits:8})}
+function winLabel(k){return {today:'今日',last_7d:'近 7 日',last_30:'近 30 日'}[k]||k}
+
+function loadWallet(a){
+  fetch("/api/wallet/info?address="+encodeURIComponent(a)).then(function(r){return r.json()}).then(function(j){
+    $("tacmBal").innerHTML=fmt(j.tacm||0)+'<small>TACm</small>';
+    var rows=(j.assets||[]).map(function(as){
+      return '<div class="asset-row"><span class="sym">'+as.symbol+' · '+as.name+'</span><span class="val">'+fmt(as.balance)+'</span></div>';
+    }).join("");
+    $("assetList").innerHTML=rows;
+  }).catch(function(){});
+}
+function loadUsage(a){
+  fetch("/api/member/usage?address="+encodeURIComponent(a)).then(function(r){return r.json()}).then(function(u){
+    $("totalSpent").innerHTML=fmt(u.total_spent||0)+'<small>TACm · '+u.total_count+' 輪</small>';
+    var wins=(u.windows||[]).map(function(w){
+      return '<div class="win"><div class="wl">'+winLabel(w.label)+'</div><div class="wv">'+fmt(w.spent)+'</div><div class="wc">'+w.count+' 輪</div></div>';
+    }).join("");
+    $("winGrid").innerHTML=wins;
+    var warnIcon='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>';
+    var okIcon='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+    if(u.high_usage){
+      $("alertBox").innerHTML='<div class="alert warn">'+warnIcon+'<div>今日 AI 消耗已達高用量門檻（'+fmt(u.high_daily_threshold)+' TACm），請留意額度；費率可經鏈上治理調整。</div></div>';
+    }else{
+      $("alertBox").innerHTML='<div class="alert ok">'+okIcon+'<div>用量正常，今日未達高用量門檻（'+fmt(u.high_daily_threshold)+' TACm）。</div></div>';
+    }
+    var recent=u.recent||[];
+    if(!recent.length){$("recentList").innerHTML='<div class="empty-note">尚無 AI 計費流水</div>';return}
+    $("recentList").innerHTML=recent.map(function(t){
+      var d=new Date(t.ts*1000);
+      return '<div class="tx-row"><span class="txamt">'+fmt(t.amount)+'</span><span class="txmemo">'+(t.memo||'')+'</span><span class="txtime">'+d.toLocaleString().slice(5,16)+'</span></div>';
+    }).join("");
+  }).catch(function(){});
+}
+
+myAddr=readAddrSync();
+if(myAddr){
+  $("addrPill").textContent=shortAddr(myAddr);
+  loadWallet(myAddr);loadUsage(myAddr);
+}else if(window.ensureGuestAddr){
+  ensureGuestAddr().then(function(a){
+    myAddr=(a&&a.indexOf&&a.indexOf('tx0')===0)?a:readAddrSync();
+    if(myAddr){$("addrPill").textContent=shortAddr(myAddr);loadWallet(myAddr);loadUsage(myAddr)}
+  }).catch(function(){});
+}
+})();
+</script>
+</body>
+</html>

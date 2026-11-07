@@ -107,3 +107,10 @@ type WalletLedgerView struct {
 	Delta   string `json:"delta"`
 	Memo    string `json:"memo"`
 }
+
+// MemberLedgerItem 為會員中心 AI 用量的一條分錄（人類可讀 TACm，絕對值）。
+type MemberLedgerItem struct {
+	Ts     int64   `json:"ts"`
+	Amount float64 `json:"amount"`
+	Memo   string  `json:"memo"`
+}

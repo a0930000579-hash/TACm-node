@@ -206,6 +206,11 @@ func (s *Service) Ledger(limit int) ([]LedgerEntry, error) {
 	return s.st.Ledger(limit)
 }
 
+// LedgerByAccount 返回某帳戶符合 kind 與 memo 前綴的分錄（會員用量口徑）。
+func (s *Service) LedgerByAccount(account, kind, memoPrefix string, limit int) ([]LedgerEntry, error) {
+	return s.st.LedgerByAccount(account, kind, memoPrefix, limit)
+}
+
 // LedgerByKindAsset 透出指定資產指定 kind 的全量帳本（歷史採樣）。
 func (s *Service) LedgerByKindAsset(kind, asset string) ([]LedgerEntry, error) {
 	return s.st.LedgerByKindAsset(kind, asset)
