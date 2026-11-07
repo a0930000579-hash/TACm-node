@@ -72,6 +72,9 @@ type Host interface {
 	ReorgChain(forkPoint int64, blocks []chaindb.Block, txs [][]chaindb.Transaction) error
 	// ReorgChainFull 以整條新鏈做一次性總權重決策後切換（長鏈領先時取代分段重組）。
 	ReorgChainFull(forkPoint int64, blocks []chaindb.Block, txs [][]chaindb.Transaction) error
+	// ReorgChainTieBreak 用於同高度（等長）分叉的確定性收斂：僅當新鏈 tip 哈希
+	// 字典序更小時才切換，全網各節點獨立計算皆得到同一 winner（無節點特權）。
+	ReorgChainTieBreak(forkPoint int64, blocks []chaindb.Block, txs [][]chaindb.Transaction) error
 }
 
 // BridgeGossip 為跨鏈橋網絡消息：提案（propose）/守衛簽名（sig）/執行結果（exec）。

@@ -102,6 +102,32 @@ button{font-family:inherit}
 .msg-wrap.user .bubble{background:var(--user);padding:10px 15px;border-radius:18px 18px 6px 18px;max-width:100%;white-space:pre-wrap}
 .msg-meta{font-size:11.5px;color:var(--faint);margin-top:7px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 
+/* ---------- Markdown 元素（淺色鏈上配色） ---------- */
+.md-p{margin:9px 0}.md-p:first-child{margin-top:0}
+.md-h{font-family:var(--serif);line-height:1.35;margin:16px 0 8px;color:var(--ink)}
+h1.md-h{font-size:22px}h2.md-h{font-size:19px}h3.md-h{font-size:17px}
+h4.md-h,h5.md-h,h6.md-h{font-size:15px}
+.md-ul,.md-ol{margin:8px 0;padding-left:22px}.md-ul li,.md-ol li{margin:4px 0}
+.md-quote{margin:10px 0;padding:8px 14px;border-left:3px solid var(--brand);background:var(--brand-soft);
+  border-radius:0 10px 10px 0;color:#5d4a40}
+.md-hr{border:none;border-top:1px solid var(--line);margin:16px 0}
+.md-code{background:#f1efe8;border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:13px;
+  font-family:"SF Mono",Menlo,Consolas,monospace;color:#9a4a2c}
+.md-link{color:var(--brand);text-decoration:none;border-bottom:1px solid rgba(192,100,63,.4)}
+.md-link:hover{border-bottom-color:var(--brand)}
+.md-img{max-width:100%;border-radius:12px;border:1px solid var(--line);margin:10px 0;display:block}
+.md-file{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line2);
+  border-radius:12px;padding:10px 14px;margin:10px 0;max-width:380px;text-decoration:none;color:var(--text);
+  box-shadow:var(--shadow-sm)}
+.md-file .mf-ico{display:grid;place-items:center;color:var(--brand);flex:0 0 auto}
+.md-file .mf-ico svg{width:22px;height:22px}
+.md-file .mf-txt{font-size:14px;font-weight:600}
+.md-table-wrap{overflow-x:auto;margin:12px 0;border:1px solid var(--line);border-radius:12px}
+.md-table{border-collapse:collapse;width:100%;font-size:13.5px;background:#fff}
+.md-table th,.md-table td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--line)}
+.md-table th{background:#f4f2ec;font-family:var(--serif);color:var(--ink)}
+.md-table tr:last-child td{border-bottom:none}
+
 .code-block{background:#fbfaf7;border:1px solid var(--line2);border-radius:13px;margin:13px 0;overflow:hidden}
 .code-head{display:flex;align-items:center;justify-content:space-between;padding:8px 13px;border-bottom:1px solid var(--line);background:#f4f2ec}
 .code-lang{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
@@ -311,14 +337,14 @@ var I18N={
     placeholder:"Type or hold to talk…",file_hint:"File mode: describe the file (name and language).",
     reasoning:"Reasoning",online:"online",offline:"offline",del:"delete",no_conv:"No conversations yet",
     recent:"Recent",nav_projects:"Projects",nav_code:"Code",nav_outputs:"Outputs",nav_schedule:"Scheduled",
-    uc_title:"Pay per turn",uc_sub:"0.01 TACm per turn; write actions need confirmation. No charge without a linked address."},
+    uc_title:"Pay per turn",uc_sub:"Low on-chain fee per turn (governable); write actions need confirmation. No charge without a linked address."},
   zh:{new_chat:"新增工作階段",empty_title:"我是 TACm AI",
     empty_desc:"問我鏈上數據、DeFi，或請我寫程式、生成可下載檔案。選一個開始：",
     confirm_note:"這是寫操作，需明確確認才會執行。",cancel:"取消",confirm:"確認執行",
     placeholder:"輸入或長按說話…",file_hint:"檔案模式：請描述要生成的檔案（名稱與語言）。",
     reasoning:"推理軌跡",online:"在線",offline:"離線",del:"刪除",no_conv:"尚無對話",
     recent:"最近",nav_projects:"專案",nav_code:"Code",nav_outputs:"成品",nav_schedule:"排程任務",
-    uc_title:"按次計費",uc_sub:"每輪 0.01 TACm，寫操作需確認；未連結地址時不計費。"}
+    uc_title:"按次計費",uc_sub:"每輪低額鏈上費用（可治理），寫操作需確認；未連結地址時不計費。"}
 };
 var SUGGEST=[
   {icon:'<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',prompt:"What is my TACm balance?"},
@@ -443,17 +469,87 @@ function download(name,content,mime){
   var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();
   setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},1000);
 }
-function richHTML(text){
-  var parts=text.split(/```/);var html="";
-  for(var i=0;i<parts.length;i++){var p=parts[i];
-    if(i%2===1){
-      var nl=p.indexOf("\n");var cl=nl>0?p.slice(0,nl).trim():"";var code=nl>0?p.slice(nl+1):p;
-      var fname="snippet."+(cl||"txt");
-      html+='<div class="code-block"><div class="code-head"><span class="code-lang">'+esc(cl||"text")+'</span>'+
-        '<button class="code-dl" type="button" data-name="'+esc(fname)+'">'+dlIcon+' Download</button></div><pre>'+esc(code)+'</pre></div>';
-    }else if(p.trim()){html+='<span>'+esc(p).replace(/\n/g,"<br>")+'</span>';}
+// safeURL 只允許 http/https/相對路徑/錨點，阻擋 javascript: 等協議（防 XSS）。
+function safeURL(u){
+  u=String(u).trim();
+  if(/^https?:\/\//i.test(u)||/^\/(?!\/)/.test(u)||/^#/.test(u)||/^\.?\//.test(u))return u;
+  return "";
+}
+function isFileURL(u){return /^\/api\/ai\/file\//.test(u)||/\.[a-z0-9]{1,5}$/i.test(u)}
+// inline 渲染：先處理行內程式碼（佔位避免內容被二次解析），再圖片/連結/粗體/斜體。
+function inline(text){
+  var codes=[];
+  text=text.replace(/`([^`]+)`/g,function(m,c){codes.push(c);return "\u0000C"+(codes.length-1)+"\u0000"});
+  text=esc(text);
+  // 圖片 ![alt](url)
+  text=text.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g,function(m,alt,u){
+    var su=safeURL(u);if(!su)return esc(alt);
+    return '<img class="md-img" loading="lazy" alt="'+alt+'" src="'+su+'">';
+  });
+  // 連結 [text](url)：下載連結轉卡片式按鈕
+  text=text.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g,function(m,tx,u){
+    var su=safeURL(u);
+    if(!su)return tx;
+    if(isFileURL(su)){
+      return '<a class="md-file" href="'+su+'" download><span class="mf-ico">'+dlIcon+'</span><span class="mf-txt">'+tx+'</span></a>';
+    }
+    return '<a class="md-link" href="'+su+'" target="_blank" rel="noopener">'+tx+'</a>';
+  });
+  text=text.replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>")
+           .replace(/__([^_]+)__/g,"<strong>$1</strong>")
+           .replace(/(^|[^*])\*([^*]+)\*/g,"$1<em>$2</em>")
+           // 底線斜體遵守 CommonMark 字內規則：_ 緊鄰文數字（URL/檔名如 af_xx、hello_world）不觸發
+           .replace(/(^|[^\w])_([^_]+?)_(?=[^\w]|$)/g,"$1<em>$2</em>");
+  text=text.replace(/\u0000C(\d+)\u0000/g,function(m,i){return '<code class="md-code">'+esc(codes[+i])+'</code>'});
+  return text;
+}
+// richHTML 完整 Markdown 渲染（標題/清單/引用/表格/分隔線/程式碼區塊/段落）。
+function richHTML(src){
+  var lines=String(src||"").replace(/\r\n/g,"\n").split("\n"),html="",i=0;
+  var blocks=[];
+  while(i<lines.length){
+    var line=lines[i];
+    if(/^\s*```/.test(line)){
+      var lang1=line.replace(/^\s*```/,"").trim(),buf=[];i++;
+      while(i<lines.length&&!/^\s*```/.test(lines[i])){buf.push(lines[i]);i++}
+      i++;var code=buf.join("\n");var fname="snippet."+(lang1||"txt");
+      blocks.push('<div class="code-block"><div class="code-head"><span class="code-lang">'+esc(lang1||"text")+'</span>'+
+        '<button class="code-dl" type="button" data-name="'+esc(fname)+'">'+dlIcon+'</button></div><pre>'+esc(code)+'</pre></div>');
+      continue;
+    }
+    var hm=line.match(/^\s*(#{1,6})\s+(.*)$/);
+    if(hm){blocks.push('<h'+hm[1].length+' class="md-h">'+inline(hm[2])+'</h'+hm[1].length+'>');i++;continue}
+    if(/^\s*>\s?/.test(line)){var q=[];while(i<lines.length&&/^\s*>\s?/.test(lines[i])){q.push(lines[i].replace(/^\s*>\s?/,""));i++}
+      blocks.push('<blockquote class="md-quote">'+inline(q.join(" "))+'</blockquote>');continue}
+    if(/^\s*(-{3,}|\*{3,})\s*$/.test(line)){blocks.push('<hr class="md-hr">');i++;continue}
+    if(/^\s*[-*+]\s+/.test(line)){var ul=[];while(i<lines.length&&/^\s*[-*+]\s+/.test(lines[i])){ul.push('<li>'+inline(lines[i].replace(/^\s*[-*+]\s+/,""))+'</li>');i++}
+      blocks.push('<ul class="md-ul">' + ul.join("") + '</ul>');continue}
+    if(/^\s*\d+\.\s+/.test(line)){var ol=[];while(i<lines.length&&/^\s*\d+\.\s+/.test(lines[i])){ol.push('<li>'+inline(lines[i].replace(/^\s*\d+\.\s+/,""))+'</li>');i++}
+      blocks.push('<ol class="md-ol">' + ol.join("") + '</ol>');continue}
+    if(/^\s*\|.*\|\s*$/.test(line)&&i+1<lines.length&&/^\s*\|?[\s:|-]+\|?\s*$/.test(lines[i+1])){
+      var head=line.split("|").slice(1,-1);i+=2;var rows=[];
+      while(i<lines.length&&/^\s*\|.*\|\s*$/.test(lines[i])){rows.push(lines[i].split("|").slice(1,-1));i++}
+      var t='<div class="md-table-wrap"><table class="md-table"><thead><tr>'+head.map(function(c){return '<th>'+inline(c.trim())+'</th>'}).join("")+'</tr></thead><tbody>';
+      rows.forEach(function(r){t+='<tr>'+r.map(function(c){return '<td>'+inline(c.trim())+'</td>'}).join("")+'</tr>'});
+      blocks.push(t+'</tbody></table></div>');continue;
+    }
+    if(/^\s*$/.test(line)){i++;continue}
+    var para=[];while(i<lines.length&&!/^\s*$/.test(lines[i])&&!/^\s*(```|#{1,6}\s|>|\||[-*+]\s|\d+\.\s)/.test(lines[i])){para.push(lines[i]);i++}
+    blocks.push('<p class="md-p">'+inline(para.join("\n"))+'</p>');
   }
-  return html||esc(text);
+  html=blocks.join("");
+  if(!html)return esc(src);
+  // 綁定程式碼區塊下載按鈕
+  setTimeout(function(){
+    html&&messages.querySelectorAll(".code-dl").forEach(function(btn){
+      if(btn._bound)return;btn._bound=true;
+      btn.addEventListener("click",function(){
+        var pre=btn.closest(".code-block").querySelector("pre");
+        download(btn.getAttribute("data-name"),pre.innerText,"text/plain");
+      });
+    });
+  },0);
+  return html;
 }
 function botAvatarSVG(){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 4.6 5 .7-3.6 3.5.9 5L12 14.4 7.5 16.8l.9-5L4.8 8.3l5-.7z"/></svg>'}
 function userAvatarSVG(){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'}

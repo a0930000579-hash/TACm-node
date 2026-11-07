@@ -32,6 +32,9 @@ func (m *mockHost) ReorgChain(int64, []chaindb.Block, [][]chaindb.Transaction) e
 func (m *mockHost) ReorgChainFull(int64, []chaindb.Block, [][]chaindb.Transaction) error {
 	return nil
 }
+func (m *mockHost) ReorgChainTieBreak(int64, []chaindb.Block, [][]chaindb.Transaction) error {
+	return nil
+}
 
 // TestHelloKeyRefreshRetry 驗證加密握手收到 400 後，會清除公鑰快取並重試成功。
 func TestHelloKeyRefreshRetry(t *testing.T) {

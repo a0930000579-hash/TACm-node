@@ -62,6 +62,8 @@ func (n *Network) syncLoop(ctx context.Context) {
 					interval = 60 * time.Second
 				}
 			}
+			// 同高度（等長）分叉的確定性收斂，每個 tick 檢查一次（長度不同已由上方處理）。
+			n.reconcileSameHeight()
 			ticker.Reset(interval)
 		}
 	}
@@ -431,6 +433,53 @@ func (n *Network) reorgFullChain(best Peer) error {
 	}
 	log.Printf("[p2p] 整鏈替換完成：鏈頂 %d", best.Height)
 	return nil
+}
+
+// reconcileSameHeight 處理同高度（等長）分叉：週期性比對在線同高度 peer 的鏈頂，
+// 哈希不同時以確定性規則（tip 哈希字典序更小者為 canonical）收斂，無節點特權。
+// 長度不同的分叉由 syncOnce/doReorg 的最長鏈規則處理，不在此函式範圍。
+func (n *Network) reconcileSameHeight() {
+	if !n.syncMu.TryLock() {
+		return // 同步進行中，避免並發改寫
+	}
+	defer n.syncMu.Unlock()
+	self := n.host.Height()
+	if self <= 0 {
+		return
+	}
+	for _, p := range n.onlinePeers() {
+		if p.Height != self {
+			continue
+		}
+		pb, _, perr := n.fetchPeerBlock(p, self)
+		if perr != nil || pb == nil {
+			continue
+		}
+		lb, _, lerr := n.host.BlockDetail(self)
+		if lerr != nil || lb == nil || lb.Hash == pb.Hash {
+			continue // 無分叉或本機缺塊（後者交 doReorg）
+		}
+		fork, ferr := n.findForkPoint(p, self)
+		if ferr != nil || fork < 0 {
+			continue // 創世不同或探測失敗：交整鏈替換路徑
+		}
+		blocks, ok := n.fetchBlocksParallel(p, fork+1, self)
+		if !ok {
+			continue
+		}
+		all := make([]chaindb.Block, 0, len(blocks))
+		txs := make([][]chaindb.Transaction, 0, len(blocks))
+		for _, bd := range blocks {
+			all = append(all, *bd.Block)
+			txs = append(txs, bd.Txs)
+		}
+		if err := n.host.ReorgChainTieBreak(fork, all, txs); err != nil {
+			log.Printf("[p2p] 同高度收斂保留本地（fork=%d）: %v", fork, err)
+			continue
+		}
+		log.Printf("[p2p] 同高度分叉已確定性收斂（fork=%d，鏈頂 %d）", fork, self)
+		return
+	}
 }
 
 // attemptReorg 在重組抑制檢查後執行重組；被冷卻抑制時直接跳過，失敗則記錄以便退避。

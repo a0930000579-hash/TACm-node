@@ -27,7 +27,6 @@ func (h *p2pHost) ReorgChain(forkPoint int64, blocks []chaindb.Block, txs [][]ch
 	}
 
 	// 逐塊結構驗證（連續性、prev_hash、coinbase、簽名、merkle、PoT）。
-	var newCD int64
 	for i := range blocks {
 		b := &blocks[i]
 		if b.Height != forkPoint+int64(i)+1 {
@@ -68,16 +67,12 @@ func (h *p2pHost) ReorgChain(forkPoint int64, blocks []chaindb.Block, txs [][]ch
 		if err := verifyBlockStructure(b, txs[i], int64(h.n.cfg.BlockTime), cp, minedWei); err != nil {
 			return err
 		}
-		newCD += int64(b.Difficulty)
 	}
 
-	// 累積難度比較：僅當新鏈更重才切換。
-	oldCD, err := n.db.CumulativeDifficulty(forkPoint, n.db.GetTipHeight())
-	if err != nil {
-		return err
-	}
-	if newCD <= oldCD {
-		return errors.New("重組鏈累積難度不更重，拒絕切換")
+	// PoT（時間權證）：由分叉後區塊數（鏈長）決定，更長才切換。
+	oldLen := n.db.GetTipHeight() - forkPoint
+	if int64(len(blocks)) <= oldLen {
+		return errors.New("重組鏈未更長（PoT 時間槽數不佔優），拒絕切換")
 	}
 
 	// 截斷舊鏈 forkPoint 之後。
@@ -118,8 +113,7 @@ func (h *p2pHost) ReorgChainFull(forkPoint int64, blocks []chaindb.Block, txs []
 		return errors.New("重組起始高度與分叉點不符")
 	}
 
-	// 全鏈驗證與總累積難度。
-	var newCD int64
+	// 全鏈結構驗證（PoT 權重＝區塊數，於下方比較）。
 	for i := range blocks {
 		b := &blocks[i]
 		if forkPoint >= 0 && b.Height != forkPoint+int64(i)+1 {
@@ -157,16 +151,16 @@ func (h *p2pHost) ReorgChainFull(forkPoint int64, blocks []chaindb.Block, txs []
 		if err := verifyBlockStructure(b, txs[i], int64(n.cfg.BlockTime), cp, minedWei); err != nil {
 			return err
 		}
-		newCD += int64(b.Difficulty)
 	}
 
 	if forkPoint >= 0 {
-		oldCD, err := n.db.CumulativeDifficulty(forkPoint, n.db.GetTipHeight())
-		if err != nil {
-			return err
-		}
-		if newCD <= oldCD {
-			return errors.New("重組鏈累積難度不更重，拒絕切換")
+		// PoT（時間權證，非 PoW）：每個合法區塊代表一個時間槽、權重相等，
+		// 故由「分叉後的區塊數（鏈長）」決定 canonical chain——比特幣最長鏈
+		// 規則的 PoT 版本，不使用會隨節點分歧的累積難度。
+		oldLen := n.db.GetTipHeight() - forkPoint
+		newLen := int64(len(blocks))
+		if newLen <= oldLen {
+			return errors.New("重組鏈未更長（PoT 時間槽數不佔優），拒絕切換")
 		}
 	}
 
@@ -176,6 +170,94 @@ func (h *p2pHost) ReorgChainFull(forkPoint int64, blocks []chaindb.Block, txs []
 		trunc = 0
 	}
 	if err := n.db.TruncateFromHeight(trunc); err != nil {
+		return err
+	}
+	for i := range blocks {
+		b := blocks[i]
+		b.TxCount = len(txs[i])
+		if err := n.db.InsertBlock(&b, txs[i]); err != nil {
+			_, _ = n.db.RebuildAccounts()
+			return err
+		}
+		n.onNewBlock(b.Height, b.Hash)
+	}
+	if _, err := n.db.RebuildAccounts(); err != nil {
+		return err
+	}
+	if err := n.RebuildContracts(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// ReorgChainTieBreak 用於同高度（等長）分叉的確定性收斂：僅當新鏈 tip 哈希
+// 字典序更小時才切換。全網各節點獨立計算皆得到同一 winner，無節點特權。
+func (h *p2pHost) ReorgChainTieBreak(forkPoint int64, blocks []chaindb.Block, txs [][]chaindb.Transaction) error {
+	n := h.n
+	if forkPoint < 0 {
+		return errors.New("tie-break 不適用於整鏈替換")
+	}
+	if len(blocks) == 0 || len(blocks) != len(txs) {
+		return errors.New("重組區塊/交易為空或數量不符")
+	}
+	if blocks[0].Height != forkPoint+1 {
+		return errors.New("重組起始高度與分叉點不符")
+	}
+	// 必須等長，且新鏈 tip 哈希字典序更小（確定性）。
+	if n.db.GetTipHeight()-forkPoint != int64(len(blocks)) {
+		return errors.New("tie-break 僅適用等長分叉，長度不同應走 ReorgChainFull")
+	}
+	oldTip, err := n.db.GetBlock(n.db.GetTipHeight())
+	if err != nil || oldTip == nil {
+		return errors.New("無法讀取本地鏈頂")
+	}
+	newHash := blocks[len(blocks)-1].Hash
+	if newHash >= oldTip.Hash {
+		return errors.New("本地鏈 tip 哈希不更大，保留本地（tie-break）")
+	}
+
+	// 逐塊結構驗證（連續性、prev_hash、coinbase、簽名、merkle、PoT 封印）。
+	for i := range blocks {
+		b := &blocks[i]
+		if b.Height != forkPoint+int64(i)+1 {
+			return errors.New("重組塊高度不連續")
+		}
+		wantPrev := ""
+		if i == 0 {
+			fb, ferr := n.db.GetBlock(forkPoint)
+			if ferr != nil {
+				return ferr
+			}
+			if fb != nil {
+				wantPrev = fb.Hash
+			}
+		} else {
+			wantPrev = blocks[i-1].Hash
+		}
+		prev := ""
+		if b.PrevHash != nil {
+			prev = *b.PrevHash
+		}
+		if prev != wantPrev {
+			return fmt.Errorf("重組塊 %d prev_hash 不匹配", b.Height)
+		}
+		cp := ""
+		if addr, cerr := n.CommunityPoolAddress(); cerr == nil {
+			cp = addr
+		}
+		var minedWei *big.Int
+		if n.walletSvc != nil {
+			if mw, merr := n.walletSvc.ChainMinedTacm(); merr == nil {
+				minedWei = mw
+			}
+		}
+		if err := verifyBlockStructure(b, txs[i], int64(n.cfg.BlockTime), cp, minedWei); err != nil {
+			return err
+		}
+	}
+
+	// 截斷、重放、重建賬戶與合約。
+	if err := n.db.TruncateFromHeight(forkPoint + 1); err != nil {
 		return err
 	}
 	for i := range blocks {

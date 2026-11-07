@@ -51,6 +51,11 @@ import (
 const (
 	maxTxPerBlock = 500
 	fastBlockTime = 1 * time.Second
+
+	// PoT（時間權證）封印參數：固定最低難度，僅作防偽造/抗垃圾之區塊封印，
+	// 非 PoW 算力競賽；鏈權重＝區塊數（時間槽），不使用累積難度。
+	PoTSealDifficulty = 1
+	PoTSealMaxNonce    = 200000
 )
 
 // errNotProposer 表示當前高度不由本節點提議（分佈式模式下靜默等待網絡塊）。
@@ -88,6 +93,10 @@ type Node struct {
 	mu       sync.Mutex // 保護以下共識狀態
 	baseDiff int
 	adjDiff  int
+
+	// AI 用量費率（整幣 TACm），由鏈上治理參數 ai_fee_turn/ai_fee_file 熱更新。
+	aiFeeTurn float64
+	aiFeeFile float64
 
 	running     bool
 	distributed bool // 分佈式 BFT：僅輪值 proposer 出塊，其餘投票
@@ -216,6 +225,8 @@ func New(cfg *config.Config, nodeID string, baseDifficulty int) (*Node, error) {
 		blockTime:         bt,
 		baseDiff:          baseDifficulty,
 		adjDiff:           baseDifficulty,
+		aiFeeTurn:         DefaultAIFeeTurn,
+		aiFeeFile:         DefaultAIFeeFile,
 		stopCh:            make(chan struct{}),
 		onlineSince:       time.Now(),
 		heartbeatInterval: hbRefresh,
@@ -667,6 +678,19 @@ func (n *Node) applyGovernanceParam(key, value string) error {
 		return nil
 	case "tx_fee_bps", "tiusd_floor_bps":
 		// 已通過參數：儲存於治理庫，API 可查詢；重啟後由節點讀取套用。
+		return nil
+	case "ai_fee_turn", "ai_fee_file":
+		// AI 用量費率熱更新（整幣 TACm，可設 0 免費）；範圍由治理層校驗。
+		if v < 0 {
+			return errors.New("node: AI 費用不能為負")
+		}
+		n.mu.Lock()
+		if key == "ai_fee_turn" {
+			n.aiFeeTurn = v
+		} else {
+			n.aiFeeFile = v
+		}
+		n.mu.Unlock()
 		return nil
 	case "gov_quorum_pct", "gov_timelock_blocks", "gov_proposer_min", "gov_total_supply", "treasury_fee_bps":
 		// M151a：治理參數熱更新（透過鏈上提案修改，去中心化治理）。
@@ -1621,25 +1645,15 @@ func (n *Node) produceBlock() error {
 		"tx_count":    len(txs),
 	}
 
-	// PoT：當前有效難度，cap 8；失敗逐級降級重試（最多3次）。
-	n.mu.Lock()
-	diff := n.adjDiff
-	n.mu.Unlock()
-	if diff > difficulty.MaxDifficulty {
-		diff = difficulty.MaxDifficulty
-	}
-	maxNonce := 200000
-	if diff > 2 {
-		maxNonce = 500000
-	}
+	// PoT（時間權證，非 PoW）：區塊不做算力競賽，僅以固定最低難度封印
+	// （防偽造/抗垃圾），難度不隨出塊速度 retarget、不做高 nonce 研磨。
+	// 鏈的權重由「時間槽數（區塊數）」決定，重組規則見 reorg.go。
+	diff := PoTSealDifficulty
+	maxNonce := PoTSealMaxNonce
 
 	pow, err := crypto.MineBlock(header, diff, maxNonce)
-	for retries := 0; pow == nil && retries < 3 && diff > 1; retries++ {
-		diff--
-		pow, err = crypto.MineBlock(header, diff, maxNonce)
-	}
 	if err != nil {
-		return fmt.Errorf("挖礦失敗: %w", err)
+		return fmt.Errorf("PoT 封印失敗: %w", err)
 	}
 	if pow == nil {
 		return nil // 本輪未找到 nonce，跳過
@@ -1700,15 +1714,7 @@ func (n *Node) produceBlock() error {
 		n.p2pNet.BroadcastBlock(block, txs)
 	}
 
-	// 調整點：按剛完成窗口重算基礎難度。
-	if difficulty.ShouldRetarget(height, difficulty.RetargetInterval) {
-		win := difficulty.WindowTimestampsForHeight(
-			n.blockLookup, height, difficulty.RetargetInterval)
-		n.mu.Lock()
-		newBase := difficulty.ComputeRetarget(n.adjDiff, win, n.blockTime.Seconds())
-		n.adjDiff = newBase
-		n.mu.Unlock()
-	}
+	// PoT 不做難度 retarget（非 PoW，無算力競賽）；有效封印難度固定為 PoTSealDifficulty。
 
 	// M40 鏈上治理：每個新區塊驅動到期提案統計與參數執行。
 	// M151：時間鎖提案由 ExecuteDue 於延遲屆滿後執行。

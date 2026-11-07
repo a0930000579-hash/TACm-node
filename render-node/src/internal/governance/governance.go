@@ -142,6 +142,9 @@ func New(path string) (*Governance, error) {
 			{Key: "gov_proposer_min", Value: "0", Desc: "提案人最低權重（總供應 %，0=關閉）"},
 			{Key: "gov_total_supply", Value: "0", Desc: "權重分母總供應量（TACM，0=未設定）"},
 			{Key: "treasury_fee_bps", Value: "0", Desc: "手續費入治理金庫比例（萬分比，0=關閉，10000=全額）"},
+			// AI（TACm AI）用量費率：整幣 TACm，低額預設，可經鏈上提案調整。
+			{Key: "ai_fee_turn", Value: "0.001", Desc: "AI 一般對話每輪費用（TACm，整幣）"},
+			{Key: "ai_fee_file", Value: "0.005", Desc: "AI 檔案生成費用（TACm，整幣）"},
 		},
 	}
 	if err := g.init(); err != nil {
@@ -438,6 +441,10 @@ func (g *Governance) validateParam(key, value string) error {
 	case "treasury_fee_bps":
 		if v < 0 || v > 10000 {
 			return errors.New("governance: treasury_fee_bps 需在 0~10000（0%~100%）之間")
+		}
+	case "ai_fee_turn", "ai_fee_file":
+		if v < 0 || v > 100 {
+			return errors.New("governance: AI 費用需在 0~100 TACm 之間")
 		}
 	default:
 		return fmt.Errorf("governance: 未知治理參數 %q", key)

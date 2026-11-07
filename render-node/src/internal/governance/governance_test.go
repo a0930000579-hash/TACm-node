@@ -137,8 +137,15 @@ func TestListAndParams(t *testing.T) {
 		t.Fatalf("列表應新→舊排序，實際首筆 %q", list[0].Title)
 	}
 	ps := g.Params()
-	if len(ps) != 9 {
-		t.Fatalf("應有 9 個治理參數（含 5 個 gov_*/treasury），實際 %d", len(ps))
+	if len(ps) != 11 {
+		t.Fatalf("應有 11 個治理參數（含 ai_fee_turn/ai_fee_file），實際 %d", len(ps))
+	}
+	keys := map[string]bool{}
+	for _, p := range ps {
+		keys[p.Key] = true
+	}
+	if !keys["ai_fee_turn"] || !keys["ai_fee_file"] {
+		t.Fatalf("應含 AI 費用治理參數 ai_fee_turn/ai_fee_file，實際 keys=%v", keys)
 	}
 }
 

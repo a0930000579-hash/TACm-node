@@ -104,7 +104,7 @@ func (s *RPCServer) handleAIAgent(w http.ResponseWriter, r *http.Request) {
 	// 確認閘未過（needs_confirm）不計費：尚未真正提供服務，避免對未執行動作收費。
 	billing := titanBilling{Asset: string(wallet.AssetTACm), FeeAccount: titanFeeAccount}
 	if !result.NeedsConfirm {
-		b, err := meterAgentTurn(s.node.walletSvc, req.Address, fileGenerated)
+		b, err := s.node.meterAgentTurn(req.Address, fileGenerated)
 		if err != nil {
 			writeErr(w, http.StatusPaymentRequired, "billing_failed: "+err.Error())
 			return

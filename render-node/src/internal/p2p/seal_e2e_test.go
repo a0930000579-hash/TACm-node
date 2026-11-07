@@ -30,6 +30,9 @@ func (hostStub) ReorgChain(int64, []chaindb.Block, [][]chaindb.Transaction) erro
 func (hostStub) ReorgChainFull(int64, []chaindb.Block, [][]chaindb.Transaction) error {
 	return nil
 }
+func (hostStub) ReorgChainTieBreak(int64, []chaindb.Block, [][]chaindb.Transaction) error {
+	return nil
+}
 
 func TestSealBodyHTTPFlow(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())

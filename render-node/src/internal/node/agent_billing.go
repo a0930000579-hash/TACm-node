@@ -18,10 +18,10 @@ const (
 	// titanFeeAccount TACm AI 計費收入帳戶。
 	titanFeeAccount = "titan_ai_fee"
 
-	// 費率（整幣 TACm，六位小數精度內）。
-	// 一般對話/查詢每輪固定費用；檔案生成為高級動作，費用較高。
-	titanFeeTurn = 0.01
-	titanFeeFile = 0.05
+	// 預設費率（整幣 TACm）。低額預設，考量未來 TACm 價格可能上升；
+	// 實際運行費率由鏈上治理參數 ai_fee_turn/ai_fee_file 熱更新（見 node.go）。
+	DefaultAIFeeTurn = 0.001
+	DefaultAIFeeFile = 0.005
 )
 
 // titanBilling 是回傳給前端的計費明細。
@@ -33,14 +33,22 @@ type titanBilling struct {
 	Reason     string  `json:"reason,omitempty"`
 }
 
+// currentAgentFees 讀取當前（鏈上治理後的）費率。
+func (n *Node) currentAgentFees() (turn, file float64) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	return n.aiFeeTurn, n.aiFeeFile
+}
+
 // meterAgentTurn 依本輪是否生成檔案決定費率，並向連結地址扣費。
 // 回傳明細；不向上拋錯——addr 為空或餘額不足時 graceful skip（Charged=false），
-// 已連結且餘額足夠時真實扣費（Charged=true）。
-func meterAgentTurn(svc *wallet.Service, addr string, fileGenerated bool) (titanBilling, error) {
-	rate := titanFeeTurn
+// 已連結且餘額足夠時真實扣費（Charged=true）。費率取鏈上治理值。
+func (n *Node) meterAgentTurn(addr string, fileGenerated bool) (titanBilling, error) {
+	turnFee, fileFee := n.currentAgentFees()
+	rate := turnFee
 	reason := "assistant_turn"
 	if fileGenerated {
-		rate = titanFeeFile
+		rate = fileFee
 		reason = "file_generation"
 	}
 	b := titanBilling{Asset: string(wallet.AssetTACm), Amount: rate, FeeAccount: titanFeeAccount}
@@ -50,10 +58,11 @@ func meterAgentTurn(svc *wallet.Service, addr string, fileGenerated bool) (titan
 	}
 	amt := wallet.NewAmountF(rate, wallet.AssetTACm)
 	if amt.IsZero() {
-		b.Reason = "invalid_rate"
+		// 治理可將費率設為 0（免費）：不扣費，正常提供服務。
+		b.Reason = "zero_fee"
 		return b, nil
 	}
-	if _, err := svc.Transfer(addr, titanFeeAccount, wallet.AssetTACm, amt, "titan:ai:"+reason); err != nil {
+	if _, err := n.walletSvc.Transfer(addr, titanFeeAccount, wallet.AssetTACm, amt, "titan:ai:"+reason); err != nil {
 		// 餘額不足等：不阻斷服務，標記未扣費，由前端提示充值。
 		b.Charged = false
 		b.Reason = "insufficient_balance"
