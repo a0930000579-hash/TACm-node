@@ -20,8 +20,9 @@ const (
 
 	// 預設費率（整幣 TACm）。低額預設，考量未來 TACm 價格可能上升；
 	// 實際運行費率由鏈上治理參數 ai_fee_turn/ai_fee_file 熱更新（見 node.go）。
-	DefaultAIFeeTurn = 0.001
-	DefaultAIFeeFile = 0.005
+	// 豆包式低額預設：基礎費率調低 10 倍，再乘模型分級倍數（1×/3×/10×）。
+	DefaultAIFeeTurn = 0.0001
+	DefaultAIFeeFile = 0.0005
 )
 
 // titanBilling 是回傳給前端的計費明細。

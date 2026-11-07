@@ -143,8 +143,8 @@ func New(path string) (*Governance, error) {
 			{Key: "gov_total_supply", Value: "0", Desc: "權重分母總供應量（TACM，0=未設定）"},
 			{Key: "treasury_fee_bps", Value: "0", Desc: "手續費入治理金庫比例（萬分比，0=關閉，10000=全額）"},
 			// AI（TACm AI）用量費率：整幣 TACm，低額預設，可經鏈上提案調整。
-			{Key: "ai_fee_turn", Value: "0.001", Desc: "AI 一般對話每輪費用（TACm，整幣）"},
-			{Key: "ai_fee_file", Value: "0.005", Desc: "AI 檔案生成費用（TACm，整幣）"},
+			{Key: "ai_fee_turn", Value: "0.0001", Desc: "AI 一般對話每輪費用（TACm，整幣）"},
+			{Key: "ai_fee_file", Value: "0.0005", Desc: "AI 檔案生成費用（TACm，整幣）"},
 		},
 	}
 	if err := g.init(); err != nil {
