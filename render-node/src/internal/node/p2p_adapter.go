@@ -98,9 +98,19 @@ func (h *p2pHost) OnIncomingBlock(b *chaindb.Block, txs []chaindb.Transaction) e
 	}
 
 	b.TxCount = len(txs)
+	// 寫入臨界區：與本地 produceBlock 共用 chainWriteMu，鎖內重讀 tip。
+	// 驗證期間若本地出塊已先佔該高度，則良性忽略（不 INSERT OR REPLACE），
+	// 避免同高度兩套 coinbase 雙倍增發與孤兒交易。
+	n.chainWriteMu.Lock()
+	if curTip := n.db.GetTipHeight(); curTip >= b.Height {
+		n.chainWriteMu.Unlock()
+		return nil
+	}
 	if err := n.db.InsertBlock(b, txs); err != nil {
+		n.chainWriteMu.Unlock()
 		return err
 	}
+	n.chainWriteMu.Unlock()
 	// 與本地出塊（produceBlock）一致：新塊入庫後清空 pending nonce，
 	// db.GetNonce 已含全部已入塊交易——否則跟隨節點後續代簽交易的 nonce
 	// 會疊加未清除的 pending 計數，與出塊節點（已重置）的期望不一致而被拒絕。

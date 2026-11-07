@@ -61,6 +61,10 @@ const (
 // errNotProposer 表示當前高度不由本節點提議（分佈式模式下靜默等待網絡塊）。
 var errNotProposer = errors.New("not my turn to propose")
 
+// errBlockExists 表示寫入前鏈頂已推進到該高度（本地出塊與網路塊競賽落敗），
+// 屬良性跳過：不重複 InsertBlock，避免同高度兩套 coinbase 雙倍增發。
+var errBlockExists = errors.New("block at height already exists")
+
 // Node 為 TACm 智能鏈節點。
 type Node struct {
 	cfg    *config.Config
@@ -183,6 +187,11 @@ type Node struct {
 	// 入塊後 db.GetNonce 已含全部，resetPendingTx 清空）。
 	txNonceMu      sync.Mutex
 	txNoncePending map[string]int64
+
+	// chainWriteMu 串行化所有「區塊寫入」臨界區（本地 produceBlock 與外來 OnIncomingBlock）：
+	// 防止同高度本地出塊與網路塊競賽，各自 InsertBlock 而 INSERT OR REPLACE 留下
+	// 兩套 coinbase 交易（雙倍增發＋孤兒交易）。鎖內必須重讀 tip 再決定是否寫入。
+	chainWriteMu sync.Mutex
 
 	// DEX 池簽名對映（poolID → token0:token1；建池時記錄，供簽名派生）。
 	dexPoolMu   sync.Mutex
@@ -1088,6 +1097,9 @@ func (n *Node) consensusLoop() {
 		}
 
 		if err := n.produceBlock(); err != nil {
+			if errors.Is(err, errBlockExists) {
+				continue // 網路塊已先佔該高度，良性跳過（避免雙發），下輪以新 tip 出塊
+			}
 			if errors.Is(err, errNotProposer) {
 				// v54：失聯驗證人接管——輪值 proposer 提議超時（主鏈/創世節點
 				// 掛機）且 view-change 無法聚合多數時，在線驗證人接管出塊，
@@ -1685,9 +1697,19 @@ func (n *Node) produceBlock() error {
 		GasLimit:        chaindb.BlockGasLimit,
 		Burned:          chaindb.FormatFloat(burnedTotal),
 	}
+	// 寫入臨界區：與外來塊 OnIncomingBlock 共用同一把鎖，鎖內重讀 tip——
+	// 若構塊期間網路塊已先佔據該高度，則良性放棄（不 INSERT OR REPLACE），
+	// 避免同高度兩套 coinbase 雙倍增發與孤兒交易。
+	n.chainWriteMu.Lock()
+	if curTip := n.db.GetTipHeight(); curTip >= height {
+		n.chainWriteMu.Unlock()
+		return errBlockExists
+	}
 	if err := n.db.InsertBlock(block, txs); err != nil {
+		n.chainWriteMu.Unlock()
 		return err
 	}
+	n.chainWriteMu.Unlock()
 	n.resetPendingTx()
 	n.dexStakeTick(height)
 
