@@ -1,5 +1,6 @@
 # TAC Ai Smart Chain — 預編譯 nodeweb 節點（follower 跟隨模式）
-# 空庫啟動時自動從 anchor 快照秒級引導，之後只經 P2P 同步、不主動出塊。
+# 空庫啟動時自動從 anchor 快照秒級引導（快照含全鏈累計已發 TACm），
+# 之後只經 P2P 同步、不主動出塊。
 FROM alpine:3.20
 RUN apk add --no-cache ca-certificates tzdata
 WORKDIR /app

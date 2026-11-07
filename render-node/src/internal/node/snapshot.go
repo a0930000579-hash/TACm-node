@@ -29,6 +29,10 @@ type SnapshotData struct {
 	TipBlock     *chaindb.Block        `json:"tip_block,omitempty"`
 	TipTxs       []chaindb.Transaction `json:"tip_txs,omitempty"`
 	Accounts     []SnapshotAccount     `json:"accounts"`
+	// MinedTacmWei 全鏈累計已發 TACm（wei，十進位字串）。快照只含創世＋tip，
+	// 導入端無法靠本地 coinbase 重放還原累計量，必須由錨點給出權威值，
+	// 否則 ComputeCappedReward 因 mined 偏小而不截斷，追塊 coinbase 校驗誤判。
+	MinedTacmWei string `json:"mined_tacm_wei,omitempty"`
 }
 
 // shortHash 縮短 hash 用於錯誤訊息（前 12 字元＋省略號，避免刷屏長 hex）。
@@ -85,6 +89,11 @@ func (n *Node) ExportSnapshot() (*SnapshotData, error) {
 		}
 		sa.Nonce = n.db.GetNonce(a.Address)
 		out.Accounts = append(out.Accounts, sa)
+	}
+	if n.walletSvc != nil {
+		if mined, merr := n.walletSvc.ChainMinedTacm(); merr == nil && mined != nil {
+			out.MinedTacmWei = mined.String()
+		}
 	}
 	return out, nil
 }
@@ -153,6 +162,15 @@ func (n *Node) ImportSnapshot(sd *SnapshotData) error {
 	// 檢查（last+1）跳號拒絕、錢包帳本永久停滯（快照導入隱藏缺陷）。
 	if err := n.Wallet().MarkSynced(sd.Height); err != nil {
 		return fmt.Errorf("snapshot: 對齊錢包同步高度失敗: %w", err)
+	}
+	// 還原全鏈累計已發 TACm（快照唯一權威來源）；缺欄（舊版快照）時不強制，
+	// 交由 healWalletSync 依歷史完整性決定是否重放。
+	if sd.MinedTacmWei != "" {
+		if mined, ok := new(big.Int).SetString(sd.MinedTacmWei, 10); ok && n.walletSvc != nil {
+			if err := n.walletSvc.SetMinedTacm(mined); err != nil {
+				return fmt.Errorf("snapshot: 還原全鏈產出失敗: %w", err)
+			}
+		}
 	}
 	return nil
 }

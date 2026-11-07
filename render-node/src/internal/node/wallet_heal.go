@@ -67,6 +67,14 @@ func (n *Node) healWalletSync() {
 	}
 	// 2) 重放 coinbase 總額並修正 chain_stats（與審計同源：memo 前綴 coinbase）。
 	// 單條查詢串流所有 coinbase 原始金額，走 big.Int 精確口徑，不逐塊 GetBlockDetail。
+	// 快照導入節點只持有創世＋tip（歷史被裁剪，缺第 1 塊），本地 coinbase 重放會
+	// 嚴重低估累計量；此時信任快照寫入的權威值，跳過重放避免覆蓋。
+	if tip >= 2 {
+		if b1, b1err := n.db.GetBlock(1); b1err == nil && b1 == nil {
+			log.Printf("healWalletSync: 本地歷史不完整（快照裁剪），保留快照全鏈產出，跳過 coinbase 重放")
+			return
+		}
+	}
 	total := big.NewInt(0)
 	herr := n.db.ForEachCoinbaseAmount(func(amount string) error {
 		amt, aerr := wallet.NewAmount(strings.TrimSpace(amount), wallet.AssetTACm)
