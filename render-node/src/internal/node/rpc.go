@@ -208,6 +208,7 @@ func NewRPCServer(n *Node) *RPCServer {
 	// 整合/交易所去重（子代理 C）請保留以下兩行。
 	s.registerV163DAppRoutes()
 	s.registerV163AgentRoutes()
+	s.registerAgentModelRoutes()
 
 	// M13 錢包/資產/TiUSD 業務端點。
 	s.addRoute("GET /api/wallet/info", s.handleWalletInfo)

@@ -2,17 +2,18 @@ package web
 
 import (
 	"net/http"
+
+	"github.com/flosch/pongo2/v6"
 )
 
-// v164 子任務 B：AI Agent 已併入 TACm（統一更名為 TACm AI / TACm AI）。
+// v186：獨立 Agent 視窗。
 //
-// 去重說明：v163 的獨立 /agent 頁（function calling 聊天）與 /ai 助手頁已合併為
-// 單一入口 GET /ai（ai.html）——同一對話框上方可切換「助手（/api/ai/ask）」與
-// 「Agent（/api/ai/agent）」兩種模式，工具呼叫軌跡與寫操作二次確認閘皆保留。
-// 為避免出現兩個平行 AI 入口，GET /agent 一律 302 重導向到 /ai，不再 render agent.html。
-// 後端介面 POST /api/ai/agent 與 internal/ai 核心保持不變；僅前端入口合一。
+// GET /agent 不再 302 重導向，而是 render 全螢幕 standalone 的 agent-app.html
+// （不繼承 base.html、自有完整 HTML 文件）：可收合側邊欄（新對話／對話歷史／模型選擇／
+// 計費）、主流 AI App 風格、行動優先、中英切換。後端對話仍走 POST /api/ai/agent，
+// 工具軌跡、寫操作二次確認閘與 TACm 計費全部保留。
 //
-// （本檔由「子代理 B」完整實作，其它支線不得編輯；server.go 的 GET /agent 路由保留指向此處。）
+// 舊 /ai（ai.html，站內殼層）保留不動，作為站內入口；/agent 為獨立視窗。
 func (s *Server) handleV163Agent(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "/ai", http.StatusFound) // 302 → 單一 TACm AI 入口
+	s.render(w, "agent-app.html", pongo2.Context{})
 }

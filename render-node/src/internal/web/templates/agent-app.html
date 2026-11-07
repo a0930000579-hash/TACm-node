@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>TACm AI Agent</title>
+<style>
+:root{
+  --bg:#0b0d14; --side:#0e111b; --panel:#141826; --panel2:#1b2032; --line:#232a3f;
+  --text:#eef1fb; --muted:#98a0bd; --faint:#6b7392;
+  --brand:#6384ff; --brand2:#9a7bff; --ok:#35d39b; --warn:#ffb547; --danger:#ff6b7a;
+  --user:#2b3c78; --bot:#141826;
+  --shadow:0 10px 30px rgba(0,0,0,.35);
+  --side-w:272px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC",sans-serif;
+  -webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+button{font-family:inherit}
+.app{display:flex;height:100dvh;overflow:hidden}
+
+/* ---------- Sidebar ---------- */
+.side{width:var(--side-w);flex:0 0 var(--side-w);background:var(--side);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;transition:transform .25s ease;z-index:30}
+.side-head{padding:14px 14px 10px}
+.new-chat{width:100%;display:flex;align-items:center;gap:9px;justify-content:center;background:linear-gradient(135deg,var(--brand),var(--brand2));
+  border:none;color:#fff;border-radius:12px;padding:12px;font-size:15px;font-weight:600;cursor:pointer;box-shadow:var(--shadow)}
+.new-chat svg{width:18px;height:18px}
+.conv-list{flex:1;overflow-y:auto;padding:6px 10px;display:flex;flex-direction:column;gap:3px}
+.conv-item{display:flex;align-items:center;gap:8px;width:100%;background:none;border:1px solid transparent;color:var(--muted);
+  border-radius:10px;padding:10px 10px;font-size:13.5px;cursor:pointer;text-align:left}
+.conv-item:hover{background:var(--panel)}
+.conv-item.active{background:var(--panel2);color:var(--text);border-color:var(--line)}
+.conv-item .ci-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.conv-item .ci-del{flex:0 0 auto;background:none;border:none;color:var(--faint);padding:2px;cursor:pointer;display:grid;place-items:center}
+.conv-item .ci-del svg{width:15px;height:15px}
+.conv-empty{color:var(--faint);font-size:12.5px;text-align:center;padding:18px 8px;line-height:1.6}
+.side-foot{border-top:1px solid var(--line);padding:12px;display:flex;flex-direction:column;gap:10px}
+.model-select{position:relative}
+.model-btn{width:100%;display:flex;align-items:center;gap:9px;background:var(--panel);border:1px solid var(--line);
+  border-radius:11px;padding:11px 12px;color:var(--text);cursor:pointer}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--faint);flex:0 0 auto}
+.dot.on{background:var(--ok);box-shadow:0 0 0 3px rgba(53,211,155,.18)}
+.dot.off{background:var(--faint)}
+.model-btn .mb-name{flex:1;text-align:left;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.model-btn svg{width:16px;height:16px;color:var(--muted)}
+.model-menu{position:absolute;bottom:calc(100% + 6px);left:0;right:0;background:var(--panel2);border:1px solid var(--line);
+  border-radius:12px;box-shadow:var(--shadow);padding:6px;display:none;max-height:260px;overflow-y:auto;z-index:40}
+.model-menu.open{display:block}
+.mm-item{display:flex;align-items:center;gap:9px;width:100%;background:none;border:none;border-radius:9px;padding:10px;cursor:pointer;color:var(--text)}
+.mm-item:hover{background:var(--panel)}
+.mm-item .mm-name{flex:1;text-align:left;font-size:13.5px}
+.mm-item .mm-state{font-size:11px;color:var(--faint)}
+.side-meta{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.side-link{display:flex;align-items:center;gap:6px;color:var(--muted);text-decoration:none;font-size:12.5px}
+.side-link svg{width:15px;height:15px}
+.lang-btn{background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:9px;padding:7px 11px;font-size:12.5px;cursor:pointer}
+
+/* ---------- Main ---------- */
+.main{flex:1;display:flex;flex-direction:column;min-width:0;position:relative}
+.topbar{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line);
+  background:rgba(11,13,20,.85);backdrop-filter:blur(10px)}
+.hamburger{background:var(--panel2);border:1px solid var(--line);color:var(--text);width:38px;height:38px;border-radius:10px;display:grid;place-items:center;cursor:pointer}
+.hamburger svg{width:19px;height:19px}
+.tb-model{display:flex;align-items:center;gap:8px;font-size:14.5px;font-weight:600;flex:1;min-width:0}
+.tb-model .dot{width:8px;height:8px}
+.tb-model span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tb-balance{font-size:12px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 11px;white-space:nowrap}
+.messages{flex:1;overflow-y:auto;scroll-behavior:smooth}
+.msg-wrap{max-width:780px;margin:0 auto;padding:18px 16px;display:flex;gap:12px}
+.msg-wrap.user{flex-direction:row-reverse}
+.avatar{width:30px;height:30px;border-radius:9px;flex:0 0 auto;display:grid;place-items:center}
+.avatar.bot{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff}
+.avatar.user{background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
+.avatar svg{width:17px;height:17px}
+.msg-body{min-width:0;flex:1}
+.msg-wrap.user .msg-body{display:flex;flex-direction:column;align-items:flex-end}
+.bubble{font-size:15px;line-height:1.65;word-break:break-word}
+.msg-wrap.user .bubble{background:var(--user);padding:10px 14px;border-radius:16px 16px 5px 16px;max-width:100%;white-space:pre-wrap}
+.msg-wrap.bot .bubble{color:var(--text)}
+.msg-meta{font-size:11.5px;color:var(--faint);margin-top:7px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.code-block{background:#0a0c14;border:1px solid var(--line);border-radius:12px;margin:12px 0;overflow:hidden}
+.code-head{display:flex;align-items:center;justify-content:space-between;padding:8px 13px;border-bottom:1px solid var(--line);background:#0f1320}
+.code-lang{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.code-dl{display:flex;align-items:center;gap:5px;background:none;border:none;color:var(--brand);font-size:12px;cursor:pointer}
+.code-dl svg{width:14px;height:14px}
+.code-block pre{margin:0;padding:13px;overflow-x:auto;font-size:13px;line-height:1.55;font-family:"SF Mono",Menlo,Consolas,monospace}
+.file-card{display:flex;align-items:center;gap:12px;background:#0f1320;border:1px solid var(--brand);border-radius:12px;padding:11px 14px;margin-top:12px;max-width:420px}
+.file-card svg{width:26px;height:26px;color:var(--brand);flex:0 0 auto}
+.file-info{flex:1;min-width:0}
+.file-info strong{display:block;font-size:14px}
+.file-info span{font-size:12px;color:var(--muted)}
+.file-dl{background:var(--brand);color:#fff;border:none;border-radius:10px;padding:8px 13px;font-size:13px;text-decoration:none;white-space:nowrap}
+.trace{margin-top:10px;border:1px solid var(--line);border-radius:11px;background:#0f1320;overflow:hidden}
+.trace summary{font-size:12.5px;color:var(--muted);cursor:pointer;padding:10px 13px;display:flex;align-items:center;gap:7px;list-style:none}
+.trace summary::-webkit-details-marker{display:none}
+.trace summary svg{width:15px;height:15px}
+.trace-inner{padding:0 13px 11px;display:flex;flex-direction:column;gap:7px}
+.trace-step{background:#0a0c14;border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:12px;line-height:1.5}
+.trace-step .k{color:var(--brand);font-weight:600}
+.trace-step.err{border-color:var(--danger)}
+.cite{margin-top:9px;display:flex;flex-direction:column;gap:5px}
+.cite a{color:var(--brand);font-size:12.5px;word-break:break-all}
+
+/* empty state */
+.empty{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;gap:6px}
+.empty-logo{width:60px;height:60px;color:var(--brand);margin-bottom:6px}
+.empty h1{font-size:25px;margin:4px 0}
+.empty p{color:var(--muted);font-size:14px;max-width:430px;line-height:1.6;margin:0 0 16px}
+.suggest{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;width:100%;max-width:560px}
+.suggest-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:left;color:var(--text);cursor:pointer;font-size:13.5px;line-height:1.5}
+.suggest-card:hover{border-color:var(--brand);background:var(--panel2)}
+.suggest-card svg{width:18px;height:18px;color:var(--brand);margin-bottom:8px;display:block}
+
+/* confirm */
+.confirm{border-top:1px solid var(--line);background:var(--panel);padding:12px 16px}
+.confirm-inner{max-width:780px;margin:0 auto}
+.confirm p{margin:0 0 10px;font-size:13px;color:var(--warn);display:flex;gap:7px;align-items:center}
+.confirm p svg{width:16px;height:16px;flex:0 0 auto}
+.confirm-actions{display:flex;gap:10px}
+.btn{flex:1;border:none;border-radius:11px;padding:12px;font-size:14px;cursor:pointer}
+.btn.ghost{background:var(--panel2);color:var(--text);border:1px solid var(--line)}
+.btn.primary{background:var(--brand);color:#fff}
+
+/* composer */
+.composer{padding:10px 14px calc(12px + env(safe-area-inset-bottom))}
+.composer-inner{max-width:780px;margin:0 auto}
+.composer-box{display:flex;align-items:flex-end;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:8px 8px 8px 12px}
+.composer-box:focus-within{border-color:var(--brand)}
+.composer-box textarea{flex:1;background:none;border:none;color:var(--text);font-size:15px;resize:none;max-height:140px;outline:none;font-family:inherit;line-height:1.4;padding:6px 0}
+.icon-tool{background:var(--panel2);border:1px solid var(--line);color:var(--muted);width:38px;height:38px;border-radius:11px;display:grid;place-items:center;cursor:pointer;flex:0 0 auto}
+.icon-tool svg{width:18px;height:18px}
+.icon-tool.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.send{background:var(--brand);border:none;width:38px;height:38px;border-radius:11px;color:#fff;display:grid;place-items:center;cursor:pointer;flex:0 0 auto}
+.send svg{width:18px;height:18px}
+.send:disabled{opacity:.45}
+.composer-hint{margin:7px 6px 0;font-size:11.5px;color:var(--warn);display:none}
+.composer-hint.show{display:block}
+.typing{display:inline-flex;gap:5px;align-items:center;padding:4px 0}
+.typing i{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:blink 1.2s infinite}
+.typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,100%{opacity:.25}50%{opacity:1}}
+
+/* scrim for mobile drawer */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:20;display:none}
+.scrim.show{display:block}
+
+@media (max-width:860px){
+  .side{position:fixed;top:0;bottom:0;left:0;transform:translateX(-100%)}
+  .side.open{transform:translateX(0)}
+  .suggest{grid-template-columns:1fr}
+}
+@media (min-width:861px){.hamburger{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side" id="side">
+    <div class="side-head">
+      <button class="new-chat" id="newChat" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        <span data-i18n="new_chat">新對話</span>
+      </button>
+    </div>
+    <div class="conv-list" id="convList"></div>
+    <div class="side-foot">
+      <div class="model-select">
+        <button class="model-btn" id="modelBtn" type="button">
+          <span class="dot" id="sideDot"></span>
+          <span class="mb-name" id="sideModel">—</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="model-menu" id="modelMenu"></div>
+      </div>
+      <div class="side-meta">
+        <a class="side-link" href="/wallet">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5m7-7-7 7 7 7"/></svg>
+          <span data-i18n="back_site">返回鏈上</span>
+        </a>
+        <button class="lang-btn" id="langBtn" type="button">中 / EN</button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="scrim" id="scrim"></div>
+
+  <section class="main">
+    <header class="topbar">
+      <button class="hamburger" id="hamburger" type="button" aria-label="menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+      </button>
+      <div class="tb-model"><span class="dot" id="topDot"></span><span id="topModel">TACm AI</span></div>
+      <div class="tb-balance" id="topBalance">TACm —</div>
+    </header>
+
+    <div class="messages" id="messages">
+      <div class="empty" id="empty">
+        <svg class="empty-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 1 4 4v1h1a3 3 0 0 1 3 3v1a3 3 0 0 1 0 6v1a3 3 0 0 1-3 3h-1v1a4 4 0 0 1-8 0v-1H7a3 3 0 0 1-3-3v-1a3 3 0 0 1 0-6v-1a3 3 0 0 1 3-3h1V6a4 4 0 0 1 4-4z"/><circle cx="9.5" cy="11" r="1"/><circle cx="14.5" cy="11" r="1"/><path d="M9 15h6"/></svg>
+        <h1 data-i18n="empty_title">我是 TACm AI</h1>
+        <p data-i18n="empty_desc">問我鏈上數據、DeFi，或請我寫程式、生成可下載檔案。選一個開始：</p>
+        <div class="suggest" id="suggest"></div>
+      </div>
+    </div>
+
+    <div class="confirm" id="confirm" hidden>
+      <div class="confirm-inner">
+        <p><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg><span data-i18n="confirm_note">這是寫操作，需明確確認才會執行。</span></p>
+        <div class="confirm-actions">
+          <button class="btn ghost" id="cancelBtn" type="button" data-i18n="cancel">取消</button>
+          <button class="btn primary" id="confirmBtn" type="button" data-i18n="confirm">確認執行</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="composer">
+      <div class="composer-inner">
+        <div class="composer-box">
+          <button class="icon-tool" id="fileBtn" type="button" aria-label="file">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+          </button>
+          <textarea id="input" rows="1" data-i18n-ph="placeholder" placeholder="傳訊息給 TACm AI…"></textarea>
+          <button class="send" id="send" type="button" aria-label="send">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>
+          </button>
+        </div>
+        <div class="composer-hint" id="fileHint" data-i18n="file_hint">檔案模式：請描述要生成的檔案（名稱與語言）。</div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+"use strict";
+var $=function(id){return document.getElementById(id)};
+var messages=$("messages"), input=$("input"), send=$("send"), confirmBox=$("confirm"),
+    confirmBtn=$("confirmBtn"), cancelBtn=$("cancelBtn"), fileBtn=$("fileBtn"), fileHint=$("fileHint"),
+    side=$("side"), scrim=$("scrim"), modelMenu=$("modelMenu"), convList=$("convList"),
+    topModel=$("topModel"), sideModel=$("sideModel"), topDot=$("topDot"), sideDot=$("sideDot"),
+    topBalance=$("topBalance"), empty=$("empty");
+
+var I18N={
+  en:{new_chat:"New chat",back_site:"Back to chain",empty_title:"I'm TACm AI",
+    empty_desc:"Ask about on-chain data, DeFi, or request code and downloadable files. Pick one to start:",
+    confirm_note:"This is a write action and needs explicit confirmation.",cancel:"Cancel",confirm:"Confirm",
+    placeholder:"Message TACm AI…",file_hint:"File mode: describe the file (name and language).",
+    reasoning:"Reasoning",online:"online",offline:"offline",del:"delete",no_conv:"No conversations yet"},
+  zh:{new_chat:"新對話",back_site:"返回鏈上",empty_title:"我是 TACm AI",
+    empty_desc:"問我鏈上數據、DeFi，或請我寫程式、生成可下載檔案。選一個開始：",
+    confirm_note:"這是寫操作，需明確確認才會執行。",cancel:"取消",confirm:"確認執行",
+    placeholder:"傳訊息給 TACm AI…",file_hint:"檔案模式：請描述要生成的檔案（名稱與語言）。",
+    reasoning:"推理軌跡",online:"在線",offline:"離線",del:"刪除",no_conv:"尚無對話"}
+};
+var SUGGEST=[
+  {icon:'<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',prompt:"What is my TACm balance?"},
+  {icon:'<path d="M16 18 22 12 16 6M8 6 2 12l6 6"/>',prompt:"Write a Go hello world and give me a downloadable file"},
+  {icon:'<path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>',prompt:"What is the TAC price?"},
+  {icon:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',prompt:"Explain how staking validators work"}
+];
+var lang=(localStorage.getItem("tacm_lang")||"zh");
+function t(k){return (I18N[lang][k])||k}
+function applyLang(){
+  document.querySelectorAll("[data-i18n]").forEach(function(el){el.textContent=t(el.getAttribute("data-i18n"))});
+  document.querySelectorAll("[data-i18n-ph]").forEach(function(el){el.setAttribute("placeholder",t(el.getAttribute("data-i18n-ph")))});
+}
+$("langBtn").addEventListener("click",function(){lang=(lang==="zh"?"en":"zh");localStorage.setItem("tacm_lang",lang);applyLang();renderConvList()});
+
+/* ---------- conversations (localStorage) ---------- */
+var STORE_KEY="tacm_conversations";
+function loadStore(){try{return JSON.parse(localStorage.getItem(STORE_KEY))||{}}catch(e){return {}}}
+function saveStore(o){localStorage.setItem(STORE_KEY,JSON.stringify(o))}
+var store=loadStore();
+var activeId=localStorage.getItem("tacm_active_conv")||"";
+var selectedModel=localStorage.getItem("tacm_model")||"";
+var providers=[];
+
+function uid(){return "c"+Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+function newConversation(){
+  var id=uid();
+  store[id]={id:id,title:"",messages:[]};
+  activeId=id;localStorage.setItem("tacm_active_conv",id);saveStore(store);
+  renderConvList();renderMessages();
+}
+function titleOf(conv){
+  if(conv.title)return conv.title;
+  var first=conv.messages.find(function(m){return m.role==="user"});
+  return first?first.content.slice(0,26):(lang==="zh"?"新對話":"New chat");
+}
+function renderConvList(){
+  convList.innerHTML="";
+  var ids=Object.keys(store);
+  if(!ids.length){var d=document.createElement("div");d.className="conv-empty";d.textContent=t("no_conv");convList.appendChild(d)}
+  ids.forEach(function(id){
+    var conv=store[id];
+    var b=document.createElement("button");b.type="button";
+    b.className="conv-item"+(id===activeId?" active":"");
+    var ti=document.createElement("span");ti.className="ci-title";ti.textContent=titleOf(conv);
+    var del=document.createElement("span");del.className="ci-del";del.setAttribute("aria-label",t("del"));
+    del.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+    del.addEventListener("click",function(e){e.stopPropagation();delete store[id];saveStore(store);if(activeId===id){activeId="";localStorage.setItem("tacm_active_conv","")}renderConvList();renderMessages()});
+    b.appendChild(ti);b.appendChild(del);
+    b.addEventListener("click",function(){activeId=id;localStorage.setItem("tacm_active_conv",id);renderConvList();renderMessages();closeDrawer()});
+    convList.appendChild(b);
+  });
+}
+
+/* ---------- models ---------- */
+function providerName(p){
+  if(p.id==="rules")return "Rules (offline)";
+  if(p.id==="llama")return "Local llama.cpp";
+  if(p.id==="openai")return p.name||"OpenAI-compatible";
+  return p.id;
+}
+function fetchModels(){
+  fetch("/api/ai/models").then(function(r){return r.json()}).then(function(j){
+    providers=j.providers||[];
+    if(!selectedModel||!providers.find(function(p){return p.id===selectedModel})){selectedModel=j.active||"rules"}
+    localStorage.setItem("tacm_model",selectedModel);
+    renderModelMenu();updateModelUI();
+  }).catch(function(){providers=[]});
+}
+function renderModelMenu(){
+  modelMenu.innerHTML="";
+  providers.forEach(function(p){
+    var b=document.createElement("button");b.type="button";b.className="mm-item";
+    var dot=document.createElement("span");dot.className="dot "+(p.online?"on":"off");
+    var nm=document.createElement("span");nm.className="mm-name";nm.textContent=providerName(p);
+    var st=document.createElement("span");st.className="mm-state";st.textContent=t(p.online?"online":"offline");
+    b.appendChild(dot);b.appendChild(nm);b.appendChild(st);
+    b.addEventListener("click",function(){selectedModel=p.id;localStorage.setItem("tacm_model",p.id);modelMenu.classList.remove("open");renderModelMenu();updateModelUI()});
+    modelMenu.appendChild(b);
+  });
+}
+function currentProvider(){return providers.find(function(p){return p.id===selectedModel})||null}
+function updateModelUI(){
+  var p=currentProvider();
+  var nm=p?providerName(p):"TACm AI";
+  topModel.textContent=nm;sideModel.textContent=nm;
+  var on=p?p.online:false;
+  topDot.className="dot "+(on?"on":"off");sideDot.className="dot "+(on?"on":"off");
+}
+
+/* ---------- address / balance ---------- */
+function addr(){return (window.ensureGuestAddr&&window.ensureGuestAddr())||""}
+function refreshBalance(){
+  var a=addr();if(!a){topBalance.textContent="TACm —";return}
+  fetch("/api/wallet/info?address="+encodeURIComponent(a)).then(function(r){return r.json()}).then(function(j){
+    topBalance.textContent="TACm "+(j&&j.tacm!=null?j.tacm:"—");
+  }).catch(function(){topBalance.textContent="TACm —"});
+}
+
+/* ---------- rendering ---------- */
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+var dlIcon='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>';
+function download(name,content,mime){
+  var blob=new Blob([content],{type:mime||"text/plain"});
+  var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},1000);
+}
+function richHTML(text){
+  var parts=text.split(/```/);var html="";
+  for(var i=0;i<parts.length;i++){var p=parts[i];
+    if(i%2===1){
+      var nl=p.indexOf("\n");var cl=nl>0?p.slice(0,nl).trim():"";var code=nl>0?p.slice(nl+1):p;
+      var fname="snippet."+(cl||"txt");
+      html+='<div class="code-block"><div class="code-head"><span class="code-lang">'+esc(cl||"text")+'</span>'+
+        '<button class="code-dl" type="button" data-name="'+esc(fname)+'">'+dlIcon+' Download</button></div><pre>'+esc(code)+'</pre></div>';
+    }else if(p.trim()){html+='<span>'+esc(p).replace(/\n/g,"<br>")+'</span>';}
+  }
+  return html||esc(text);
+}
+function botAvatarSVG(){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 1 4 4v1h1a3 3 0 0 1 3 3v1a3 3 0 0 1 0 6v1a3 3 0 0 1-3 3h-1v1a4 4 0 0 1-8 0v-1H7a3 3 0 0 1-3-3v-1a3 3 0 0 1 0-6v-1a3 3 0 0 1 3-3h1V6a4 4 0 0 1 4-4z"/><path d="M9 15h6"/></svg>'}
+function userAvatarSVG(){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'}
+
+function addMessageNode(role,data){
+  var wrap=document.createElement("div");wrap.className="msg-wrap "+role;
+  var av=document.createElement("div");av.className="avatar "+role;av.innerHTML=role==="bot"?botAvatarSVG():userAvatarSVG();
+  var body=document.createElement("div");body.className="msg-body";
+  var bubble=document.createElement("div");bubble.className="bubble";
+  if(role==="user"){bubble.textContent=data.content||""}
+  else if(data.typing){bubble.innerHTML='<span class="typing"><i></i><i></i><i></i></span>'}
+  else{bubble.innerHTML=richHTML(data.content||"");attachExtras(bubble,body,data)}
+  body.appendChild(bubble);wrap.appendChild(av);wrap.appendChild(body);
+  messages.appendChild(wrap);
+  messages.scrollTop=messages.scrollHeight;
+  return wrap;
+}
+function attachExtras(bubble,body,data){
+  if(data.model){var meta=document.createElement("div");meta.className="msg-meta";meta.textContent=data.model;body.appendChild(meta)}
+  if(data.file){
+    var fc=document.createElement("div");fc.className="file-card";
+    fc.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>'+
+      '<div class="file-info"><strong>'+esc(data.file.filename)+'</strong><span>'+esc(data.file.language||"")+' · '+data.file.size+' B</span></div>';
+    var a=document.createElement("a");a.className="file-dl";a.href=data.file.download_url;a.download=data.file.filename;a.textContent=(lang==="zh"?"下載":"Download");
+    fc.appendChild(a);body.appendChild(fc);
+  }
+  if(data.citations&&data.citations.length){
+    var box=document.createElement("div");box.className="cite";
+    data.citations.forEach(function(c){var l=document.createElement("a");l.href=c.url;l.target="_blank";l.rel="noopener";l.textContent=c.title||c.url;box.appendChild(l)});
+    body.appendChild(box);
+  }
+  if(data.trace&&data.trace.length){
+    var det=document.createElement("details");det.className="trace";
+    det.innerHTML='<summary><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>'+t("reasoning")+" ("+data.trace.length+")</summary>";
+    var inner=document.createElement("div");inner.className="trace-inner";
+    data.trace.forEach(function(st){
+      var d=document.createElement("div");d.className="trace-step"+(st.error?" err":"");
+      d.innerHTML='<span class="k">'+esc(st.kind)+(st.tool?" / "+esc(st.tool):"")+'</span> '+(st.error?esc(st.error):esc(st.thought||st.result||""));
+      inner.appendChild(d);
+    });
+    det.appendChild(inner);body.appendChild(det);
+  }
+}
+function renderMessages(){
+  messages.innerHTML="";
+  var conv=store[activeId];
+  if(!conv||!conv.messages.length){messages.appendChild(empty);empty.style.display="flex";return}
+  conv.messages.forEach(function(m){addMessageNode(m.role,m)});
+}
+
+/* ---------- send ---------- */
+var busy=false, pendingText="";
+function sendMessage(text,isConfirm){
+  if(busy)return;busy=true;send.disabled=true;
+  if(!activeId){newConversation()}
+  var conv=store[activeId];
+  if(!isConfirm){
+    conv.messages.push({role:"user",content:text});
+    if(!conv.title)conv.title=text.slice(0,26);
+    saveStore(store);renderConvList();
+  }
+  if(empty.parentNode)empty.parentNode.removeChild(empty);
+  var typingNode=addMessageNode("bot",{typing:true});
+  fetch("/api/ai/agent",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({message:text,address:addr(),lang:lang,session_id:activeId,confirm:!!isConfirm,model:selectedModel})})
+    .then(function(r){return r.json().then(function(j){return{status:r.status,body:j}})})
+    .then(function(res){
+      typingNode.remove();
+      var j=res.body||{};
+      if(res.status>=400){conv.messages.push({role:"bot",content:j.error||("Error "+res.status)});saveStore(store);renderMessages();finish();return}
+      var data={role:"bot",content:j.answer||"",model:j.model,trace:j.trace,citations:j.citations};
+      (j.trace||[]).forEach(function(st){
+        if(st.kind==="tool"&&st.tool==="create_file"&&!st.error&&st.args){
+          var um=(st.result||"").match(/\/api\/ai\/file\/[A-Za-z0-9_]+/);
+          var sm=(st.result||"").match(/(\d+) bytes/);
+          data.file={filename:st.args.filename,language:st.args.language,size:sm?sm[1]:0,download_url:um?um[0]:"#"};
+        }
+      });
+      conv.messages.push(data);saveStore(store);renderMessages();
+      if(j.needs_confirm){pendingText=text;confirmBox.hidden=false}else{confirmBox.hidden=true;refreshBalance()}
+      finish();
+    }).catch(function(e){typingNode.remove();conv.messages.push({role:"bot",content:"Network error: "+e.message});saveStore(store);renderMessages();finish()});
+}
+function finish(){busy=false;send.disabled=false;messages.scrollTop=messages.scrollHeight}
+
+/* ---------- events ---------- */
+function go(){var v=input.value.trim();if(!v||busy)return;input.value="";autoGrow();sendMessage(v,false)}
+send.addEventListener("click",go);
+input.addEventListener("keydown",function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();go()}});
+function autoGrow(){input.style.height="auto";input.style.height=Math.min(input.scrollHeight,140)+"px"}
+input.addEventListener("input",autoGrow);
+confirmBtn.addEventListener("click",function(){confirmBox.hidden=true;sendMessage(pendingText,true)});
+cancelBtn.addEventListener("click",function(){confirmBox.hidden=true});
+fileBtn.addEventListener("click",function(){fileBtn.classList.toggle("on");fileHint.classList.toggle("show")});
+$("newChat").addEventListener("click",newConversation);
+$("modelBtn").addEventListener("click",function(){modelMenu.classList.toggle("open")});
+$("hamburger").addEventListener("click",function(){side.classList.add("open");scrim.classList.add("show")});
+function closeDrawer(){side.classList.remove("open");scrim.classList.remove("show")}
+scrim.addEventListener("click",closeDrawer);
+
+/* suggestions */
+var sug=$("suggest");
+SUGGEST.forEach(function(s){
+  var c=document.createElement("button");c.type="button";c.className="suggest-card";
+  c.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+s.icon+'</svg>'+esc(s.prompt);
+  c.addEventListener("click",function(){if(!activeId)newConversation();sendMessage(s.prompt,false)});
+  sug.appendChild(c);
+});
+
+applyLang();renderConvList();fetchModels();refreshBalance();renderMessages();
+})();
+</script>
+</body>
+</html>
