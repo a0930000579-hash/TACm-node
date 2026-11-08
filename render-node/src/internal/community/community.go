@@ -9,8 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"sort"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -172,6 +172,33 @@ func migrateColumns(db *sql.DB) error {
 			return fmt.Errorf("community: 遷移 buyer 欄位: %w", err)
 		}
 	}
+	// profiles 補 cover_url／bio（舊庫相容）。
+	pcols := map[string]bool{}
+	prows, err := db.Query(`PRAGMA table_info(profiles)`)
+	if err != nil {
+		return fmt.Errorf("community: 檢查 profiles 欄位: %w", err)
+	}
+	for prows.Next() {
+		var cid, notnull, pk int
+		var name, ctype string
+		var dflt sql.NullString
+		if err := prows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk); err != nil {
+			_ = prows.Close()
+			return fmt.Errorf("community: 讀 profiles 欄位: %w", err)
+		}
+		pcols[name] = true
+	}
+	_ = prows.Close()
+	if !pcols["cover_url"] {
+		if _, err := db.Exec(`ALTER TABLE profiles ADD COLUMN cover_url TEXT`); err != nil {
+			return fmt.Errorf("community: 新增 cover_url 欄位: %w", err)
+		}
+	}
+	if !pcols["bio"] {
+		if _, err := db.Exec(`ALTER TABLE profiles ADD COLUMN bio TEXT`); err != nil {
+			return fmt.Errorf("community: 新增 bio 欄位: %w", err)
+		}
+	}
 	return nil
 }
 
@@ -247,22 +274,22 @@ func (s *Store) PostRating(postID int64) (float64, int, error) {
 
 // Post 貼文視圖（含讚/留言數與市集成交狀態）。
 type Post struct {
-	ID        int64    `json:"id"`
-	Address   string   `json:"address"`
-	Kind      string   `json:"kind"`
-	Content   string   `json:"content"`
-	ImageURL  *string  `json:"image_url,omitempty"`
-	VideoURL  *string  `json:"video_url,omitempty"`
-	CreatedAt int64    `json:"created_at"`
-	MineID    *string  `json:"mine_id,omitempty"`
-	PriceTACM *float64 `json:"price_tacm,omitempty"`
-	Sold      bool     `json:"sold"`
-	Buyer     string   `json:"buyer,omitempty"`
-	Likes      int64  `json:"likes"`
-	Comments   int64  `json:"comments"`
-	Author     string `json:"author"` // 地址（前端虛化顯示）
-	AuthorName string `json:"author_name,omitempty"` // M100：作者對外顯示名稱
-	AvatarURL  string `json:"avatar_url,omitempty"`  // M100：作者頭像
+	ID         int64    `json:"id"`
+	Address    string   `json:"address"`
+	Kind       string   `json:"kind"`
+	Content    string   `json:"content"`
+	ImageURL   *string  `json:"image_url,omitempty"`
+	VideoURL   *string  `json:"video_url,omitempty"`
+	CreatedAt  int64    `json:"created_at"`
+	MineID     *string  `json:"mine_id,omitempty"`
+	PriceTACM  *float64 `json:"price_tacm,omitempty"`
+	Sold       bool     `json:"sold"`
+	Buyer      string   `json:"buyer,omitempty"`
+	Likes      int64    `json:"likes"`
+	Comments   int64    `json:"comments"`
+	Author     string   `json:"author"`                // 地址（前端虛化顯示）
+	AuthorName string   `json:"author_name,omitempty"` // M100：作者對外顯示名稱
+	AvatarURL  string   `json:"avatar_url,omitempty"`  // M100：作者頭像
 }
 
 // Comment 留言視圖。
@@ -903,20 +930,23 @@ func (s *Store) Notifications(addr string, limit int) ([]Notification, error) {
 	return out, nil
 }
 
-// Profile 社群個人資料（對外顯示名稱＋頭像）。
+// Profile 社群個人資料（對外顯示名稱＋頭像＋封面＋簡介）。
 type Profile struct {
 	Address     string `json:"address"`
 	DisplayName string `json:"display_name"`
 	AvatarURL   string `json:"avatar_url"`
+	CoverURL    string `json:"cover_url"`
+	Bio         string `json:"bio"`
 }
 
 // SetProfile 設定/更新個人資料（upsert）。
-func (s *Store) SetProfile(address, displayName, avatarURL string) error {
+func (s *Store) SetProfile(address, displayName, avatarURL, coverURL, bio string) error {
 	now := time.Now().Unix()
-	_, err := s.db.Exec(`INSERT INTO profiles (address, display_name, avatar_url, created_at, updated_at)
-		VALUES (?,?,?,?,?)
-		ON CONFLICT(address) DO UPDATE SET display_name=?, avatar_url=?, updated_at=?`,
-		address, displayName, avatarURL, now, now, displayName, avatarURL, now)
+	_, err := s.db.Exec(`INSERT INTO profiles (address, display_name, avatar_url, cover_url, bio, created_at, updated_at)
+		VALUES (?,?,?,?,?,?,?)
+		ON CONFLICT(address) DO UPDATE SET display_name=?, avatar_url=?, cover_url=?, bio=?, updated_at=?`,
+		address, displayName, avatarURL, coverURL, bio, now, now,
+		displayName, avatarURL, coverURL, bio, now)
 	if err != nil {
 		return fmt.Errorf("community: 更新個人資料: %w", err)
 	}
@@ -926,9 +956,9 @@ func (s *Store) SetProfile(address, displayName, avatarURL string) error {
 // Profile 讀取個人資料（不存在回空 Profile）。
 func (s *Store) Profile(address string) (*Profile, error) {
 	var pr Profile
-	var dn, av sql.NullString
-	err := s.db.QueryRow(`SELECT address, display_name, avatar_url FROM profiles WHERE address=?`, address).
-		Scan(&pr.Address, &dn, &av)
+	var dn, av, cv, bio sql.NullString
+	err := s.db.QueryRow(`SELECT address, display_name, avatar_url, cover_url, bio FROM profiles WHERE address=?`, address).
+		Scan(&pr.Address, &dn, &av, &cv, &bio)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return &Profile{Address: address}, nil
@@ -940,6 +970,12 @@ func (s *Store) Profile(address string) (*Profile, error) {
 	}
 	if av.Valid {
 		pr.AvatarURL = av.String
+	}
+	if cv.Valid {
+		pr.CoverURL = cv.String
+	}
+	if bio.Valid {
+		pr.Bio = bio.String
 	}
 	return &pr, nil
 }

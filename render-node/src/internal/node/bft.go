@@ -165,10 +165,12 @@ const finalityReconcileInterval = 30 * time.Second
 // 保守推進最終化高度，重組/批量同步漏接事件時最遲 30 秒自動收斂，不需重啟。
 // 循環隨 stopCh 結束，計入 n.wg。
 func (n *Node) StartFinalityReconciler() {
+	n.mu.Lock()
+	stop := n.stopCh
+	n.mu.Unlock()
 	n.wg.Add(1)
-	go func() {
+	go func(stop chan struct{}) {
 		defer n.wg.Done()
-		stop := n.stopChannel()
 		t := time.NewTicker(finalityReconcileInterval)
 		defer t.Stop()
 		for {
@@ -179,7 +181,7 @@ func (n *Node) StartFinalityReconciler() {
 				n.reconcileFinalizedFromTip()
 			}
 		}
-	}()
+	}(stop)
 }
 
 // handleIncomingViewChange 接收網絡 view-change 票（M12 硬化）：驗證身份與簽名後

@@ -107,10 +107,12 @@ const walletReconcileInterval = 30 * time.Second
 // 落後鏈頂，落後即觸發一次 reconcileWallet。重組後即使漏接事件，最遲 30 秒內自動
 // 對齊，不需重啟。循環隨 stopCh 結束，計入 n.wg。
 func (n *Node) StartWalletReconciler() {
+	n.mu.Lock()
+	stop := n.stopCh
+	n.mu.Unlock()
 	n.wg.Add(1)
-	go func() {
+	go func(stop chan struct{}) {
 		defer n.wg.Done()
-		stop := n.stopChannel()
 		t := time.NewTicker(walletReconcileInterval)
 		defer t.Stop()
 		for {
@@ -121,7 +123,7 @@ func (n *Node) StartWalletReconciler() {
 				n.reconcileWallet()
 			}
 		}
-	}()
+	}(stop)
 }
 
 // reconcileWallet 把錢包帳本從當前已同步游標補齊到鏈頂。採單一飛行（singleflight）

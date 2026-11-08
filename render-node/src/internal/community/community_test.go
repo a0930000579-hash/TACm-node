@@ -286,3 +286,37 @@ func TestLiveCRUD(t *testing.T) {
 		t.Fatalf("status after end: %v / %s", err, r.Status)
 	}
 }
+
+// TestProfileRoundTrip 個人資料含封面/簡介 upsert 與重開庫遷移。
+func TestProfileRoundTrip(t *testing.T) {
+	dir := t.TempDir()
+	s, err := Open(dir)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	addr := "tx01test"
+	if err := s.SetProfile(addr, "Alice", "/uploads/a.png", "/uploads/c.jpg", "hello"); err != nil {
+		t.Fatalf("SetProfile: %v", err)
+	}
+	pr, err := s.Profile(addr)
+	if err != nil {
+		t.Fatalf("Profile: %v", err)
+	}
+	if pr.DisplayName != "Alice" || pr.CoverURL != "/uploads/c.jpg" || pr.Bio != "hello" {
+		t.Fatalf("unexpected profile: %+v", pr)
+	}
+	_ = s.Close()
+	// 重開庫確認舊庫欄位遷移與資料保留。
+	s2, err := Open(dir)
+	if err != nil {
+		t.Fatalf("reopen: %v", err)
+	}
+	t.Cleanup(func() { _ = s2.Close() })
+	pr2, err := s2.Profile(addr)
+	if err != nil {
+		t.Fatalf("Profile reopen: %v", err)
+	}
+	if pr2.CoverURL != "/uploads/c.jpg" || pr2.Bio != "hello" {
+		t.Fatalf("after reopen: %+v", pr2)
+	}
+}

@@ -987,6 +987,8 @@ func (s *RPCServer) handleCommunityProfileMeta(w http.ResponseWriter, r *http.Re
 		Address     string `json:"address"`
 		DisplayName string `json:"display_name"`
 		AvatarURL   string `json:"avatar_url"`
+		CoverURL    string `json:"cover_url"`
+		Bio         string `json:"bio"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeErr(w, http.StatusBadRequest, "參數解析失敗")
@@ -1000,11 +1002,15 @@ func (s *RPCServer) handleCommunityProfileMeta(w http.ResponseWriter, r *http.Re
 		writeErr(w, http.StatusBadRequest, "顯示名稱過長（最多 40 字）")
 		return
 	}
-	if len(req.AvatarURL) > 500 {
-		writeErr(w, http.StatusBadRequest, "頭像網址過長")
+	if len(req.Bio) > 200 {
+		writeErr(w, http.StatusBadRequest, "簡介過長（最多 200 字）")
 		return
 	}
-	if err := cm.SetProfile(req.Address, req.DisplayName, req.AvatarURL); err != nil {
+	if len(req.AvatarURL) > 500 || len(req.CoverURL) > 500 {
+		writeErr(w, http.StatusBadRequest, "圖片網址過長")
+		return
+	}
+	if err := cm.SetProfile(req.Address, req.DisplayName, req.AvatarURL, req.CoverURL, req.Bio); err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}

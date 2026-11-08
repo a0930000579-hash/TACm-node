@@ -166,10 +166,12 @@ func (n *Node) StartDynamicValidators() {
 	if n.posStore == nil {
 		return
 	}
+	n.mu.Lock()
+	stop := n.stopCh
+	n.mu.Unlock()
 	n.wg.Add(1)
-	go func() {
+	go func(stop chan struct{}) {
 		defer n.wg.Done()
-		stop := n.stopChannel()
 		tk := time.NewTicker(60 * time.Second)
 		defer tk.Stop()
 		for {
@@ -182,7 +184,7 @@ func (n *Node) StartDynamicValidators() {
 				}
 			}
 		}
-	}()
+	}(stop)
 }
 
 // restoreDynamicValidatorsOnResume v165：節點從 SuspendConsensus 恢復（ResumeConsensus）時，
