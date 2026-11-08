@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"tacm/internal/chaindb"
 	"tacm/internal/crypto"
 	"tacm/internal/vm"
 	"tacm/internal/wallet"
@@ -359,10 +360,17 @@ func TestEthLogsAndReceipt(t *testing.T) {
 		t.Fatalf("transfer 交易被拒: %v", callOut)
 	}
 	txHash := callOut["tx_hash"].(string)
+	// 同時等待「狀態已更新」與「事件日誌已持久化」：區塊合約在插入後執行，
+	// VM 狀態先更新、logs 緊接寫入，高負載下兩者存在短暫時間窗，僅看 StorageAt
+	// 會在 logs 寫入前即通過而讀到空收據。收據就緒應以 logs 可讀為準。
 	waitFor(t, func() bool {
 		bal := n.contracts.StorageAt(contract0x, vmAddrInt(alice0x))
-		return bal.Cmp(big.NewInt(250)) == 0
-	}, 20*time.Second, "transfer 未入塊")
+		if bal.Cmp(big.NewInt(250)) != 0 {
+			return false
+		}
+		lg, lerr := n.db.GetLogs(chaindb.LogFilter{TxHash: txHash})
+		return lerr == nil && len(lg) > 0
+	}, 20*time.Second, "transfer 未入塊或事件日誌未就緒")
 
 	// 3. eth_getTransactionReceipt：status 0x1 + logs 含 Transfer。
 	rec := ethResult(t, srv, "eth_getTransactionReceipt", txHash).(map[string]any)
