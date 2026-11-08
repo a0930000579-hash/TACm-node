@@ -13,7 +13,8 @@ import (
 // 要求後端模型（Qwen2.5 / DeepSeek 等原生 function calling）接受 tools 欄位並回 tool_calls。
 // 後端不支援工具呼叫時，模型會在 content 給出自然語言回答，本 provider 據此回 Turn.Answer。
 type LlamaProvider struct {
-	cli *LLMClient
+	cli    *LLMClient
+	effort Effort
 }
 
 // NewLlamaProvider 建立 provider；cli 為 nil 時回錯（呼叫端先偵測 Available）。
@@ -21,8 +22,11 @@ func NewLlamaProvider(cli *LLMClient) (*LlamaProvider, error) {
 	if cli == nil {
 		return nil, fmt.Errorf("ai: nil llama client")
 	}
-	return &LlamaProvider{cli: cli}, nil
+	return &LlamaProvider{cli: cli, effort: ParseEffort("low")}, nil
 }
+
+// WithEffort 設定推理難度。
+func (p *LlamaProvider) WithEffort(e Effort) *LlamaProvider { p.effort = e; return p }
 
 // Name 回傳提供者名稱。
 func (p *LlamaProvider) Name() string { return "llama" }
@@ -35,9 +39,11 @@ type llamaTool struct {
 
 // llamaReq function-calling 請求體。
 type llamaReq struct {
-	Model    string        `json:"model"`
-	Messages []ChatMessage `json:"messages"`
-	Tools    []llamaTool   `json:"tools,omitempty"`
+	Model       string        `json:"model"`
+	Messages    []ChatMessage `json:"messages"`
+	Tools       []llamaTool   `json:"tools,omitempty"`
+	Temperature float64       `json:"temperature,omitempty"`
+	MaxTokens   int           `json:"max_tokens,omitempty"`
 }
 
 // llamaToolCallMsg 訊息上的工具呼叫。
@@ -73,7 +79,13 @@ func (p *LlamaProvider) Complete(ctx context.Context, msgs []ChatMessage, tools 
 		}
 		lt = append(lt, llamaTool{Type: "function", Function: fn})
 	}
-	body, err := json.Marshal(llamaReq{Model: "local", Messages: msgs, Tools: lt})
+	body, err := json.Marshal(llamaReq{
+		Model:       "local",
+		Messages:    msgs,
+		Tools:       lt,
+		Temperature: p.effort.Temperature,
+		MaxTokens:   p.effort.MaxTokens,
+	})
 	if err != nil {
 		return Turn{}, fmt.Errorf("ai: marshal llama req: %w", err)
 	}

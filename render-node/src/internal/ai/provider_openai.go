@@ -25,7 +25,11 @@ type OpenAIProvider struct {
 	apiKey  string
 	model   string
 	client  *http.Client
+	effort  Effort
 }
+
+// WithEffort 設定推理難度（鏈路在每次請求時依選擇套用）。
+func (p *OpenAIProvider) WithEffort(e Effort) *OpenAIProvider { p.effort = e; return p }
 
 // NewOpenAIProviderFromEnv 從 env 建立；三者齊備才成功，否則回錯（上層據此降級到下一層）。
 // v167：錯誤訊息明確指出缺哪個 env（絕不含 key），方便主網診斷。
@@ -66,6 +70,7 @@ type oaiReq struct {
 	Messages    []oaiMessage `json:"messages"`
 	Tools       []llamaTool  `json:"tools,omitempty"`
 	Temperature float64      `json:"temperature,omitempty"`
+	MaxTokens   int          `json:"max_tokens,omitempty"`
 	Stream      bool         `json:"stream"`
 }
 
@@ -121,11 +126,16 @@ func (p *OpenAIProvider) Complete(ctx context.Context, msgs []ChatMessage, tools
 		lt = append(lt, llamaTool{Type: "function", Function: fn})
 	}
 
+	eff := p.effort
+	if eff.MaxTokens == 0 {
+		eff = ParseEffort("low")
+	}
 	body, err := json.Marshal(oaiReq{
 		Model:       p.model,
 		Messages:    toOAIMessages(msgs),
 		Tools:       lt,
-		Temperature: 0.3,
+		Temperature: eff.Temperature,
+		MaxTokens:   eff.MaxTokens,
 		Stream:      false,
 	})
 	if err != nil {
