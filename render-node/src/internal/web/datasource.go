@@ -65,6 +65,8 @@ type DataSource interface {
 	// v189：會員 AI 用量——使用者本人 AI 分錄（transfer_out，memo 前綴 titan:ai:），
 	// 金額已轉為人類可讀 TACm（絕對值）。
 	MemberLedger(addr string, limit int) ([]MemberLedgerItem, error)
+	// TACmBalanceFloat 回傳地址 TACm 總資產（人類可讀浮點），供高用量比例計算。
+	TACmBalanceFloat(addr string) (float64, error)
 }
 
 type nodeDS struct{ n *node.Node }
@@ -226,6 +228,24 @@ func (d *nodeDS) MemberLedger(addr string, limit int) ([]MemberLedgerItem, error
 		out = append(out, MemberLedgerItem{Ts: e.Ts, Amount: f, Memo: e.Memo})
 	}
 	return out, nil
+}
+
+// TACmBalanceFloat 實作：錢包 TACm 總資產（big.Int，1e18）轉浮點。
+func (d *nodeDS) TACmBalanceFloat(addr string) (float64, error) {
+	if d.n.Wallet() == nil {
+		return 0, nil
+	}
+	acc, err := d.n.Wallet().Balance(addr)
+	if err != nil {
+		return 0, err
+	}
+	bal := acc.TACmBalance
+	if bal == nil {
+		bal = new(big.Int)
+	}
+	scale := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil))
+	f, _ := new(big.Float).Quo(new(big.Float).SetInt(bal), scale).Float64()
+	return f, nil
 }
 
 // formatDelta 帳本變動縮放（依資產精度），保留符號。

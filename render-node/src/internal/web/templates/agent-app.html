@@ -183,10 +183,23 @@ h4.md-h,h5.md-h,h6.md-h{font-size:15px}
 /* composer */
 .composer{padding:10px 16px calc(14px + env(safe-area-inset-bottom))}
 .composer-inner{max-width:760px;margin:0 auto}
-.composer-model{display:flex;margin:0 4px 8px}
-.composer-model .model-select{position:relative;flex:0 0 auto;min-width:170px;max-width:60%}
+.composer-model{display:flex;align-items:center;gap:8px;margin:0 4px 8px;flex-wrap:wrap}
+.composer-model .model-select{position:relative;flex:0 0 auto;min-width:150px;max-width:56%}
 .composer-model .model-btn{padding:8px 11px}
 .composer-model .model-menu{bottom:calc(100% + 6px);max-height:230px}
+.diff-select{position:relative;flex:0 0 auto}
+.diff-btn{display:flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--line);border-radius:11px;padding:8px 11px;cursor:pointer;color:var(--text);font-size:13px}
+.diff-btn svg{width:14px;height:14px;color:var(--muted)}
+.diff-menu{position:absolute;bottom:calc(100% + 6px);left:0;min-width:150px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:6px;display:none;z-index:40}
+.diff-menu.open{display:block}
+.diff-item{display:flex;align-items:center;gap:8px;width:100%;background:none;border:none;border-radius:9px;padding:9px 10px;cursor:pointer;color:var(--text);font-size:13px}
+.diff-item:hover{background:rgba(0,0,0,.04)}
+.diff-item .d-name{flex:1;text-align:left}
+.diff-item .d-x{font-size:11px;color:var(--faint)}
+.usage-alert{flex:1 1 auto;min-width:0;display:none;align-items:center;gap:6px;background:#fff6e8;border:1px solid #f0d9b0;color:#9a6a1f;border-radius:11px;padding:7px 10px;font-size:12px;line-height:1.35}
+.usage-alert.show{display:flex}
+.usage-alert svg{width:15px;height:15px;flex:0 0 auto;color:#d99a36}
+.usage-alert .ua-text{flex:1;min-width:0}
 .composer-box{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line2);
   border-radius:22px;padding:8px 8px 8px 10px;box-shadow:var(--shadow-sm)}
 .composer-box:focus-within{border-color:var(--brand)}
@@ -198,6 +211,17 @@ h4.md-h,h5.md-h,h6.md-h{font-size:15px}
 .send:disabled{opacity:.4}
 .composer-hint{margin:8px 8px 0;font-size:11.5px;color:var(--warn);display:none}
 .composer-hint.show{display:block}
+.attach-bar{display:none;gap:8px;flex-wrap:wrap;margin:0 4px 8px}
+.attach-bar.show{display:flex}
+.attach-chip{display:flex;align-items:center;gap:7px;background:#fff;border:1px solid var(--line2);border-radius:12px;padding:5px 8px;max-width:230px}
+.attach-chip img{width:38px;height:38px;object-fit:cover;border-radius:8px;flex:0 0 auto}
+.attach-chip .ac-ic{width:38px;height:38px;display:grid;place-items:center;border-radius:8px;background:var(--user);color:var(--brand);flex:0 0 auto}
+.attach-chip .ac-ic svg{width:20px;height:20px}
+.attach-chip .ac-meta{min-width:0}
+.attach-chip .ac-name{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px}
+.attach-chip .ac-state{font-size:11px;color:var(--muted)}
+.attach-chip .ac-x{border:none;background:none;color:var(--muted);cursor:pointer;padding:2px;flex:0 0 auto}
+.attach-chip .ac-x svg{width:15px;height:15px}
 .typing{display:inline-flex;gap:5px;align-items:center;padding:4px 0}
 .typing i{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:blink 1.2s infinite}
 .typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
@@ -281,13 +305,6 @@ h4.md-h,h5.md-h,h6.md-h{font-size:15px}
         </div>
         <h1 data-i18n="empty_title">我是 TACm AI</h1>
         <p data-i18n="empty_desc">問我鏈上數據、DeFi，或請我寫程式、生成可下載檔案。選一個開始：</p>
-        <div class="usage-card">
-          <div class="uc-top">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l2.5 2"/></svg>
-            <span data-i18n="uc_title">按次計費</span>
-          </div>
-          <div class="uc-sub" data-i18n="uc_sub">每輪 0.01 TACm，寫操作需確認；未連結地址時不計費。</div>
-        </div>
         <div class="suggest" id="suggest"></div>
       </div>
     </div>
@@ -313,7 +330,19 @@ h4.md-h,h5.md-h,h6.md-h{font-size:15px}
             </button>
             <div class="model-menu" id="modelMenu"></div>
           </div>
+          <div class="diff-select">
+            <button class="diff-btn" id="diffBtn" type="button">
+              <span id="sideDiff">低</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <div class="diff-menu" id="diffMenu"></div>
+          </div>
+          <div class="usage-alert" id="usageAlert">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span class="ua-text" id="usageAlertText"></span>
+          </div>
         </div>
+        <div class="attach-bar" id="attachBar"></div>
         <div class="composer-box">
           <button class="composer-plus" id="fileBtn" type="button" aria-label="file">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
@@ -337,7 +366,9 @@ var messages=$("messages"), input=$("input"), send=$("send"), confirmBox=$("conf
     confirmBtn=$("confirmBtn"), cancelBtn=$("cancelBtn"), fileBtn=$("fileBtn"), fileHint=$("fileHint"),
     side=$("side"), scrim=$("scrim"), modelMenu=$("modelMenu"), convList=$("convList"),
     topModel=$("topModel"), sideModel=$("sideModel"), topDot=$("topDot"), sideDot=$("sideDot"),
-    topBalance=$("topBalance"), empty=$("empty");
+    topBalance=$("topBalance"), empty=$("empty"),
+    diffBtn=$("diffBtn"), diffMenu=$("diffMenu"), sideDiff=$("sideDiff"),
+    usageAlert=$("usageAlert"), usageAlertText=$("usageAlertText");
 
 var I18N={
   en:{new_chat:"New session",empty_title:"I'm TACm AI",
@@ -377,7 +408,13 @@ function saveStore(o){localStorage.setItem(STORE_KEY,JSON.stringify(o))}
 var store=loadStore();
 var activeId=localStorage.getItem("tacm_active_conv")||"";
 var selectedModel=localStorage.getItem("tacm_model")||"";
+var selectedDiff=localStorage.getItem("tacm_diff")||"low";
 var providers=[];
+var DIFFS=[
+  {id:"low",name:"低",x:1},
+  {id:"medium",name:"中",x:1.5},
+  {id:"high",name:"高",x:3}
+];
 
 function uid(){return "c"+Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
 function newConversation(){
@@ -412,18 +449,18 @@ function renderConvList(){
 }
 
 /* ---------- models ----------
-   顯示層品牌名（不改後端 provider id，僅使用者所見名稱）：
-   rules→TACm Rules、llama→TACm Edge、openai(gpt-oss-120b)→TACm Core 120B。 */
-function providerName(p){
-  if(p.id==="rules")return "TACm Rules";
-  if(p.id==="llama")return "TACm Edge";
-  if(p.id==="openai"){
-    var base=p.name||"";
-    if(/120b/i.test(base))return "TACm Core 120B";
-    return "TACm Core";
-  }
-  return "TACm "+p.id;
+   顯示層按模型強度由弱到強命名（後端 provider id 不變）：
+   rules（最弱）→TACm Zero、llama（中）→TACm Giant、openai（最強）→TACm Titan。 */
+// 將後端 provider id（rules/llama/openai）轉成對外顯示的模型名稱。
+function modelDisplayName(id){
+  if(id==="rules")return "TACm Zero";
+  if(id==="llama")return "TACm Giant";
+  if(id==="openai")return "TACm Titan";
+  return "TACm "+id;
 }
+function providerName(p){return modelDisplayName(p.id)}
+// 強度排序（弱→強）：rules < llama < openai。
+function modelRank(id){return id==="rules"?0:(id==="llama"?1:2)}
 function fetchModels(){
   fetch("/api/ai/models").then(function(r){return r.json()}).then(function(j){
     providers=j.providers||[];
@@ -432,13 +469,16 @@ function fetchModels(){
     renderModelMenu();updateModelUI();
   }).catch(function(){providers=[]});
 }
+// 計費倍數（與後端 modelFeeMultiplier 同源：rules 1×、llama 3×、openai 10×）。
+function modelFeeX(id){return id==="openai"?10:(id==="llama"?3:1)}
 function renderModelMenu(){
   modelMenu.innerHTML="";
-  providers.forEach(function(p){
+  providers.slice().sort(function(a,b){return modelRank(a.id)-modelRank(b.id)}).forEach(function(p){
     var b=document.createElement("button");b.type="button";b.className="mm-item";
     var dot=document.createElement("span");dot.className="dot "+(p.online?"on":"off");
     var nm=document.createElement("span");nm.className="mm-name";nm.textContent=providerName(p);
-    var st=document.createElement("span");st.className="mm-state";st.textContent=t(p.online?"online":"offline");
+    var st=document.createElement("span");st.className="mm-state";
+    st.textContent=(t(p.online?"online":"offline"))+" · ×"+modelFeeX(p.id);
     b.appendChild(dot);b.appendChild(nm);b.appendChild(st);
     b.addEventListener("click",function(){selectedModel=p.id;localStorage.setItem("tacm_model",p.id);modelMenu.classList.remove("open");renderModelMenu();updateModelUI()});
     modelMenu.appendChild(b);
@@ -451,6 +491,45 @@ function updateModelUI(){
   topModel.textContent=nm;sideModel.textContent=nm;
   var on=p?p.online:false;
   topDot.className="dot "+(on?"on":"off");sideDot.className="dot "+(on?"on":"off");
+}
+/* ---------- reasoning difficulty ---------- */
+function diffName(id){var d=DIFFS.find(function(x){return x.id===id});return d?d.name:"低"}
+function renderDiffMenu(){
+  diffMenu.innerHTML="";
+  DIFFS.forEach(function(d){
+    var b=document.createElement("button");b.type="button";b.className="diff-item";
+    var nm=document.createElement("span");nm.className="d-name";nm.textContent=d.name;
+    var x=document.createElement("span");x.className="d-x";x.textContent="×"+d.x;
+    b.appendChild(nm);b.appendChild(x);
+    b.addEventListener("click",function(){
+      selectedDiff=d.id;localStorage.setItem("tacm_diff",d.id);
+      diffMenu.classList.remove("open");renderDiffMenu();updateDiffUI();
+    });
+    diffMenu.appendChild(b);
+  });
+}
+function updateDiffUI(){sideDiff.textContent=diffName(selectedDiff)}
+diffBtn.addEventListener("click",function(e){
+  e.stopPropagation();
+  renderDiffMenu();
+  diffMenu.classList.toggle("open");
+  modelMenu.classList.remove("open");
+});
+document.addEventListener("click",function(e){
+  if(!diffMenu.contains(e.target)&&!diffBtn.contains(e.target)){diffMenu.classList.remove("open")}
+});
+/* ---------- high-usage alerts (percentage of total assets) ---------- */
+function refreshUsageAlert(){
+  if(!myAddr){return}
+  fetch("/api/member/usage?address="+encodeURIComponent(myAddr)).then(function(r){return r.json()}).then(function(j){
+    if(!j||!j.ok){return}
+    var alerts=j.alerts||[];
+    if(!alerts.length){usageAlert.classList.remove("show");usageAlertText.textContent="";return}
+    // 最嚴重（30 日）優先顯示。
+    var a=alerts[alerts.length-1];
+    usageAlertText.textContent=a.message;
+    usageAlert.classList.add("show");
+  }).catch(function(){});
 }
 
 /* ---------- address / balance ----------
@@ -466,7 +545,7 @@ function readAddrSync(){
 function initAddr(){
   myAddr=readAddrSync();
   if(window.ensureGuestAddr){ensureGuestAddr().then(function(a){
-    myAddr=(a&&a.indexOf&&a.indexOf('tx0')===0)?a:readAddrSync();refreshBalance();
+    myAddr=(a&&a.indexOf&&a.indexOf('tx0')===0)?a:readAddrSync();refreshBalance();refreshUsageAlert();
   }).catch(function(){})}
 }
 function refreshBalance(){
@@ -583,7 +662,7 @@ function addMessageNode(role,data){
   return wrap;
 }
 function attachExtras(bubble,body,data){
-  if(data.model){var meta=document.createElement("div");meta.className="msg-meta";meta.textContent=data.model;body.appendChild(meta)}
+  if(data.model){var meta=document.createElement("div");meta.className="msg-meta";meta.textContent=modelDisplayName(data.model);body.appendChild(meta)}
   if(data.file){
     var fc=document.createElement("div");fc.className="file-card";
     fc.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>'+
@@ -629,7 +708,7 @@ function sendMessage(text,isConfirm){
   if(empty.parentNode)empty.parentNode.removeChild(empty);
   var typingNode=addMessageNode("bot",{typing:true});
   fetch("/api/ai/agent",{method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({message:text,address:myAddr,lang:lang,session_id:activeId,confirm:!!isConfirm,model:selectedModel})})
+    body:JSON.stringify({message:text,address:myAddr,lang:lang,session_id:activeId,confirm:!!isConfirm,model:selectedModel,difficulty:selectedDiff})})
     .then(function(r){return r.json().then(function(j){return{status:r.status,body:j}})})
     .then(function(res){
       typingNode.remove();
@@ -645,20 +724,68 @@ function sendMessage(text,isConfirm){
       });
       conv.messages.push(data);saveStore(store);renderMessages();
       if(j.needs_confirm){pendingText=text;confirmBox.hidden=false}else{confirmBox.hidden=true;refreshBalance()}
+      refreshUsageAlert();
       finish();
     }).catch(function(e){typingNode.remove();conv.messages.push({role:"bot",content:"Network error: "+e.message});saveStore(store);renderMessages();finish()});
 }
 function finish(){busy=false;send.disabled=false;messages.scrollTop=messages.scrollHeight}
 
 /* ---------- events ---------- */
-function go(){var v=input.value.trim();if(!v||busy)return;input.value="";autoGrow();sendMessage(v,false)}
+function go(){
+  var v=input.value.trim();
+  if(attachment&&attachment.url&&!attachment.uploading){v=(v?v+"\n":"")+"[attachment: "+attachment.name+" "+attachment.url+"]"}
+  if(!v||busy)return;
+  input.value="";autoGrow();
+  if(attachment){attachment=null;fileInput.value="";renderAttach()}
+  sendMessage(v,false);
+}
 send.addEventListener("click",go);
 input.addEventListener("keydown",function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();go()}});
 function autoGrow(){input.style.height="auto";input.style.height=Math.min(input.scrollHeight,140)+"px"}
 input.addEventListener("input",autoGrow);
 confirmBtn.addEventListener("click",function(){confirmBox.hidden=true;sendMessage(pendingText,true)});
 cancelBtn.addEventListener("click",function(){confirmBox.hidden=true});
-fileBtn.addEventListener("click",function(){fileHint.classList.toggle("show");input.focus()});
+/* ---------- 「+」附件上傳（圖片／影片／檔案） ---------- */
+var attachBar=$("attachBar"), attachment=null;
+var fileInput=document.createElement("input");
+fileInput.type="file";
+fileInput.accept="image/*,video/*,.pdf,.txt,.md,.json,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.go,.js,.ts,.py,.java,.rs,.sh,.yaml,.yml";
+fileInput.style.display="none";
+fileBtn.parentNode.appendChild(fileInput);
+var fileIc='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>';
+function renderAttach(){
+  attachBar.innerHTML="";
+  if(!attachment){attachBar.classList.remove("show");return}
+  attachBar.classList.add("show");
+  var chip=document.createElement("div");chip.className="attach-chip";
+  var preview=document.createElement("span");preview.className="ac-ic";
+  if(attachment.type.indexOf("image/")===0){
+    var im=document.createElement("img");im.src=attachment.url;im.alt="";preview=im;
+  }else{preview.innerHTML=fileIc}
+  var meta=document.createElement("span");meta.className="ac-meta";
+  var nm=document.createElement("span");nm.className="ac-name";nm.textContent=attachment.name;
+  var st=document.createElement("span");st.className="ac-state";
+  st.textContent=attachment.uploading?(t("uploading")||"Uploading…"):(t("uploaded")||"Ready");
+  meta.appendChild(nm);meta.appendChild(st);
+  var xb=document.createElement("button");xb.type="button";xb.className="ac-x";xb.setAttribute("aria-label","remove");
+  xb.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+  xb.addEventListener("click",function(){attachment=null;fileInput.value="";renderAttach()});
+  chip.appendChild(preview);chip.appendChild(meta);chip.appendChild(xb);
+  attachBar.appendChild(chip);
+}
+fileBtn.addEventListener("click",function(){fileInput.click()});
+fileInput.addEventListener("change",function(){
+  var f=fileInput.files&&fileInput.files[0];
+  if(!f)return;
+  attachment={name:f.name,type:f.type||"file",url:"",uploading:true};renderAttach();
+  var fd=new FormData();fd.append("file",f);
+  fetch("/api/upload",{method:"POST",body:fd})
+    .then(function(r){return r.json().then(function(j){return{status:r.status,body:j}})})
+    .then(function(res){
+      if(res.status>=400||!res.body.url){attachment=null;renderAttach();fileHint.textContent=res.body.error||("Upload failed "+res.status);fileHint.classList.add("show");return}
+      attachment.url=res.body.url;attachment.type=res.body.type||attachment.type;attachment.uploading=false;renderAttach();
+    }).catch(function(e){attachment=null;renderAttach()});
+});
 $("newChat").addEventListener("click",newConversation);
 $("modelBtn").addEventListener("click",function(){modelMenu.classList.toggle("open")});
 $("hamburger").addEventListener("click",function(){side.classList.add("open");scrim.classList.add("show")});
@@ -674,7 +801,7 @@ SUGGEST.forEach(function(s){
   sug.appendChild(c);
 });
 
-applyLang();renderConvList();fetchModels();initAddr();renderMessages();
+applyLang();renderConvList();fetchModels();renderDiffMenu();updateDiffUI();initAddr();renderMessages();
 // 由影音圖像頁帶入的生成提示：預填輸入框（使用者確認後再送出）。
 (function(){var p=sessionStorage.getItem("tacm_media_prompt");if(p){sessionStorage.removeItem("tacm_media_prompt");input.value=p;autoGrow();input.focus()}})();
 })();

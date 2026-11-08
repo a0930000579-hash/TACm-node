@@ -3,7 +3,9 @@ package node
 import (
 	"context"
 	"fmt"
+	"log"
 	"math/big"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -16,12 +18,32 @@ import (
 
 // agentMemory 跨請求的 Agent 對話記憶（package-level，避免改 RPCServer 結構；mutex 保護）。
 var (
-	agentMemoryOnce sync.Once
-	agentMemory     *ai.MemoryStore
+	agentMemoryMu  sync.Mutex
+	agentMemory    *ai.MemoryStore
+	agentMemoryDir string
 )
 
-func sharedAgentMemory() *ai.MemoryStore {
-	agentMemoryOnce.Do(func() { agentMemory = ai.NewMemoryStore() })
+// sharedAgentMemory 回傳全程序共享的記憶存放；首次以 dataDir 建立持久化版本，
+// 重啟後可從磁碟延續各 session 歷史。dataDir 為空時退回純記憶體。
+func sharedAgentMemory(dataDir string) *ai.MemoryStore {
+	agentMemoryMu.Lock()
+	defer agentMemoryMu.Unlock()
+	if agentMemory != nil && agentMemoryDir == dataDir {
+		return agentMemory
+	}
+	if agentMemory == nil {
+		dir := ""
+		if dataDir != "" {
+			dir = filepath.Join(dataDir, "agent-memory")
+		}
+		mem, err := ai.NewPersistentMemoryStore(dir)
+		if err != nil {
+			log.Printf("agent memory: persistent store init failed (%v), falling back to in-memory", err)
+			mem = ai.NewMemoryStore()
+		}
+		agentMemory = mem
+		agentMemoryDir = dataDir
+	}
 	return agentMemory
 }
 

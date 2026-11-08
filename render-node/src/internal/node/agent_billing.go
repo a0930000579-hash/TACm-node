@@ -54,10 +54,22 @@ func modelFeeMultiplier(model string) float64 {
 	}
 }
 
-// meterAgentTurn 依本輪是否生成檔案與所用模型強度決定費率，並向連結地址扣費。
+// difficultyFeeMultiplier 推理難度計費：low ×1（基礎不變）、medium ×1.5、high ×3。
+func difficultyFeeMultiplier(difficulty string) float64 {
+	switch difficulty {
+	case "high":
+		return 3.0
+	case "medium":
+		return 1.5
+	default:
+		return 1.0
+	}
+}
+
+// meterAgentTurn 依本輪是否生成檔案、模型強度與推理難度決定費率，並向連結地址扣費。
 // 回傳明細；不向上拋錯——addr 為空或餘額不足時 graceful skip（Charged=false），
-// 已連結且餘額足夠時真實扣費（Charged=true）。基礎費率取鏈上治理值，再乘模型分級倍數。
-func (n *Node) meterAgentTurn(addr string, fileGenerated bool, model string) (titanBilling, error) {
+// 已連結且餘額足夠時真實扣費（Charged=true）。rate = 基礎費率 × 模型倍數 × 難度倍數。
+func (n *Node) meterAgentTurn(addr string, fileGenerated bool, model, difficulty string) (titanBilling, error) {
 	turnFee, fileFee := n.currentAgentFees()
 	base := turnFee
 	reason := "assistant_turn"
@@ -65,7 +77,7 @@ func (n *Node) meterAgentTurn(addr string, fileGenerated bool, model string) (ti
 		base = fileFee
 		reason = "file_generation"
 	}
-	rate := base * modelFeeMultiplier(model)
+	rate := base * modelFeeMultiplier(model) * difficultyFeeMultiplier(difficulty)
 	b := titanBilling{Asset: string(wallet.AssetTACm), Amount: rate, FeeAccount: titanFeeAccount}
 	if addr == "" {
 		b.Reason = "no_linked_address"
@@ -77,7 +89,7 @@ func (n *Node) meterAgentTurn(addr string, fileGenerated bool, model string) (ti
 		b.Reason = "zero_fee"
 		return b, nil
 	}
-	if _, err := n.walletSvc.Transfer(addr, titanFeeAccount, wallet.AssetTACm, amt, "titan:ai:"+reason+":"+model); err != nil {
+	if _, err := n.walletSvc.Transfer(addr, titanFeeAccount, wallet.AssetTACm, amt, "titan:ai:"+reason+":"+model+":"+difficulty); err != nil {
 		// 餘額不足等：不阻斷服務，標記未扣費，由前端提示充值。
 		b.Charged = false
 		b.Reason = "insufficient_balance"

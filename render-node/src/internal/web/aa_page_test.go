@@ -68,6 +68,7 @@ func (aaPageDS) ExchangeRecentTrades(string, int) ([]exchange.Trade, error) {
 }
 func (aaPageDS) TipHeight() int64 { return 1 }
 func (aaPageDS) MemberLedger(string, int) ([]MemberLedgerItem, error) { return nil, nil }
+func (aaPageDS) TACmBalanceFloat(string) (float64, error)             { return 0, nil }
 
 func TestAAPageRenders(t *testing.T) {
 	srv, err := NewWithNetworkMode(aaPageDS{}, "mainnet", true, 1)

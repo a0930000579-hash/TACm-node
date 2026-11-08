@@ -2,7 +2,12 @@ package ai
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"log"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 )
@@ -43,24 +48,41 @@ const (
 )
 
 // MemoryStore 以 sessionID 維護多輪對話歷史，執行緒安全。
+// dir 非空時啟用磁碟持久化：每個 session 寫成 JSON，重啟後可延續（Load 時惰性載入）。
 type MemoryStore struct {
 	mu       sync.Mutex
 	sessions map[string][]ChatMessage
 	order    []string // session 註冊順序，供 LRU 淘汰
+	loaded   map[string]bool
+	dir      string
 }
 
-// NewMemoryStore 建立記憶存放。
+// NewMemoryStore 建立記憶存放（僅記憶體，重啟即失）。
 func NewMemoryStore() *MemoryStore {
-	return &MemoryStore{sessions: make(map[string][]ChatMessage)}
+	return &MemoryStore{sessions: make(map[string][]ChatMessage), loaded: make(map[string]bool)}
 }
 
-// Load 回傳某 session 的歷史訊息副本。
+// NewPersistentMemoryStore 建立磁碟持久化的記憶存放，歷史寫在 dir 下（每 session 一 JSON）。
+func NewPersistentMemoryStore(dir string) (*MemoryStore, error) {
+	if dir == "" {
+		return NewMemoryStore(), nil
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return nil, err
+	}
+	return &MemoryStore{sessions: make(map[string][]ChatMessage), loaded: make(map[string]bool), dir: dir}, nil
+}
+
+// Load 回傳某 session 的歷史訊息副本（持久化模式下首次存取會從磁碟載入）。
 func (m *MemoryStore) Load(sessionID string) []ChatMessage {
 	if m == nil || sessionID == "" {
 		return nil
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.dir != "" && !m.loaded[sessionID] {
+		m.loadLocked(sessionID)
+	}
 	h := m.sessions[sessionID]
 	out := make([]ChatMessage, len(h))
 	copy(out, h)
@@ -74,6 +96,9 @@ func (m *MemoryStore) Append(sessionID string, msgs ...ChatMessage) {
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.dir != "" && !m.loaded[sessionID] {
+		m.loadLocked(sessionID)
+	}
 	if _, ok := m.sessions[sessionID]; !ok {
 		m.order = append(m.order, sessionID)
 		// 超過 session 上限時淘汰最舊 session（FIFO，簡單且夠用）。
@@ -81,12 +106,77 @@ func (m *MemoryStore) Append(sessionID string, msgs ...ChatMessage) {
 			oldest := m.order[0]
 			m.order = m.order[1:]
 			delete(m.sessions, oldest)
+			m.evictLocked(oldest)
 		}
 	}
 	m.sessions[sessionID] = append(m.sessions[sessionID], msgs...)
 	// 單 session 訊息上限：保留尾部 memMaxMessages。
 	if n := len(m.sessions[sessionID]); n > memMaxMessages {
 		m.sessions[sessionID] = append([]ChatMessage(nil), m.sessions[sessionID][n-memMaxMessages:]...)
+	}
+	m.loaded[sessionID] = true
+	if m.dir != "" {
+		m.persistLocked(sessionID)
+	}
+}
+
+// memoryFile 把 sessionID 轉成安全檔名：合法字元直接用，其餘以 sha256 取代。
+func (m *MemoryStore) memoryFile(sessionID string) string {
+	safe := true
+	for _, r := range sessionID {
+		if !(r >= 'a' && r <= 'z') && !(r >= 'A' && r <= 'Z') &&
+			!(r >= '0' && r <= '9') && r != '_' && r != '-' {
+			safe = false
+			break
+		}
+	}
+	if safe {
+		return filepath.Join(m.dir, sessionID+".json")
+	}
+	sum := sha256.Sum256([]byte(sessionID))
+	return filepath.Join(m.dir, hex.EncodeToString(sum[:])+".json")
+}
+
+// loadLocked 從磁碟載入某 session（呼叫者持鎖）；檔案不存在視為空對話。
+func (m *MemoryStore) loadLocked(sessionID string) {
+	m.loaded[sessionID] = true
+	data, err := os.ReadFile(m.memoryFile(sessionID))
+	if err != nil {
+		return
+	}
+	var h []ChatMessage
+	if err := json.Unmarshal(data, &h); err != nil {
+		log.Printf("agent memory: corrupt file for session %q ignored: %v", sessionID, err)
+		return
+	}
+	m.sessions[sessionID] = h
+}
+
+// persistLocked 把某 session 寫入磁碟（先暫存檔再原子更名，呼叫者持鎖）。
+func (m *MemoryStore) persistLocked(sessionID string) {
+	path := m.memoryFile(sessionID)
+	data, err := json.Marshal(m.sessions[sessionID])
+	if err != nil {
+		log.Printf("agent memory: marshal failed for session %q: %v", sessionID, err)
+		return
+	}
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, data, 0o644); err != nil {
+		log.Printf("agent memory: write failed for session %q: %v", sessionID, err)
+		return
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		log.Printf("agent memory: rename failed for session %q: %v", sessionID, err)
+	}
+}
+
+// evictLocked 刪除被淘汰 session 的磁碟檔（檔案不存在屬正常）。
+func (m *MemoryStore) evictLocked(sessionID string) {
+	if m.dir == "" {
+		return
+	}
+	if err := os.Remove(m.memoryFile(sessionID)); err != nil && !os.IsNotExist(err) {
+		log.Printf("agent memory: evict failed for session %q: %v", sessionID, err)
 	}
 }
 

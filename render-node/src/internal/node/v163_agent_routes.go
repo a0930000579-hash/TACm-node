@@ -33,6 +33,8 @@ type agentRequest struct {
 	SessionID string `json:"session_id"`
 	Confirm   bool   `json:"confirm"`
 	Model     string `json:"model"`
+	// 推理難度：low（預設 ×1）、medium（×1.5）、high（×3）。
+	Difficulty string `json:"difficulty"`
 }
 
 type agentStepDTO struct {
@@ -67,11 +69,14 @@ func (s *RPCServer) handleAIAgent(w http.ResponseWriter, r *http.Request) {
 		req.Lang = "en"
 	}
 
-	mem := sharedAgentMemory()
+	// 上傳附件：文字類讀取內容內嵌，圖片／影片加註需視覺能力。
+	req.Message = ingestAttachments(req.Message)
+
+	mem := sharedAgentMemory(s.node.DataDir())
 	reg := s.buildAgentRegistry(func() string { return mem.Summary(req.SessionID) }, req.Address)
 
 	// Provider 依使用者選擇的模型組裝；所選模型離線時自動降級到最強可用者（rules 永遠在線）。
-	provider, effectiveModel := s.buildAIProviderFor(req.Model, req.Address)
+	provider, effectiveModel := s.buildAIProviderFor(req.Model, req.Difficulty, req.Address)
 
 	agent, err := ai.NewAgent(provider, reg,
 		ai.WithMemory(mem), ai.WithMaxIterations(8), ai.WithTimeout(60*time.Second),
@@ -104,7 +109,7 @@ func (s *RPCServer) handleAIAgent(w http.ResponseWriter, r *http.Request) {
 	// 確認閘未過（needs_confirm）不計費：尚未真正提供服務，避免對未執行動作收費。
 	billing := titanBilling{Asset: string(wallet.AssetTACm), FeeAccount: titanFeeAccount}
 	if !result.NeedsConfirm {
-		b, err := s.node.meterAgentTurn(req.Address, fileGenerated, effectiveModel)
+		b, err := s.node.meterAgentTurn(req.Address, fileGenerated, effectiveModel, req.Difficulty)
 		if err != nil {
 			writeErr(w, http.StatusPaymentRequired, "billing_failed: "+err.Error())
 			return
@@ -129,15 +134,16 @@ var aiProviderLogOnce sync.Once
 // buildAIProviderFor 依使用者選擇的模型組裝 provider，並回傳實際生效的模型 id。
 // 可用性：openai（TAC_LLM_* env）、llama（本地 llama-server 探測）、rules（永遠在線）。
 // 所選模型缺失或離線時，降級到最強可用者，並以其為 fallback 保證運行期錯誤仍可收斂。
-func (s *RPCServer) buildAIProviderFor(reqModel, addr string) (ai.Provider, string) {
+func (s *RPCServer) buildAIProviderFor(reqModel, reqDifficulty, addr string) (ai.Provider, string) {
 	base := ai.NewRulesProvider(addr)
+	effort := ai.ParseEffort(reqDifficulty)
 
 	// 各 provider 可用性（不回傳 key）。
 	var op ai.Provider
 	openaiOn := false
 	openaiErr := ""
 	if o, err := ai.NewOpenAIProviderFromEnv(); err == nil {
-		op = o
+		op = o.WithEffort(effort)
 		openaiOn = true
 	} else {
 		openaiErr = err.Error()
@@ -146,7 +152,7 @@ func (s *RPCServer) buildAIProviderFor(reqModel, addr string) (ai.Provider, stri
 	llamaOn := false
 	if probeLLM() {
 		if l, err := ai.NewLlamaProvider(llm()); err == nil {
-			lp = l
+			lp = l.WithEffort(effort)
 			llamaOn = true
 		}
 	}

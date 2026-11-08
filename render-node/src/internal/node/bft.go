@@ -306,9 +306,8 @@ func (n *Node) proposeViewChange(height int64) {
 }
 
 // runBFT 持續推進 BFT：產生投票、檢查最終化。
-func (n *Node) runBFT() {
+func (n *Node) runBFT(stop chan struct{}) {
 	defer n.wg.Done()
-	stop := n.stopChannel()
 	ticker := time.NewTicker(bftTick)
 	defer ticker.Stop()
 	for {

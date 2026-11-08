@@ -19,7 +19,7 @@ func TestMeterAgentTurnChargesWhenFunded(t *testing.T) {
 		t.Fatalf("topup: %v", err)
 	}
 	before := mustTACmBalance(t, s, testAlice)
-	b, err := s.node.meterAgentTurn(testAlice, false, "rules")
+	b, err := s.node.meterAgentTurn(testAlice, false, "rules", "low")
 	if err != nil {
 		t.Fatalf("meter: %v", err)
 	}
@@ -38,7 +38,7 @@ func TestMeterAgentTurnChargesWhenFunded(t *testing.T) {
 
 func TestMeterAgentTurnInsufficientGraceful(t *testing.T) {
 	s := newAIHost(t)
-	b, err := s.node.meterAgentTurn(testAlice, true, "rules")
+	b, err := s.node.meterAgentTurn(testAlice, true, "rules", "low")
 	if err != nil {
 		t.Fatalf("graceful billing must not error: %v", err)
 	}
@@ -49,7 +49,7 @@ func TestMeterAgentTurnInsufficientGraceful(t *testing.T) {
 
 func TestMeterAgentTurnNoAddress(t *testing.T) {
 	s := newAIHost(t)
-	b, err := s.node.meterAgentTurn("", false, "rules")
+	b, err := s.node.meterAgentTurn("", false, "rules", "low")
 	if err != nil {
 		t.Fatalf("no-addr billing must not error: %v", err)
 	}
@@ -108,5 +108,37 @@ func TestCreateFileAndDownload(t *testing.T) {
 	defer miss.Body.Close()
 	if miss.StatusCode != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d", miss.StatusCode)
+	}
+}
+
+// TestDifficultyMultiplier 驗證推理難度倍數：low ×1、medium ×1.5、high ×3。
+func TestDifficultyMultiplier(t *testing.T) {
+	if got := difficultyFeeMultiplier("low"); got != 1.0 {
+		t.Fatalf("low 應為 1，實際 %v", got)
+	}
+	if got := difficultyFeeMultiplier("medium"); got != 1.5 {
+		t.Fatalf("medium 應為 1.5，實際 %v", got)
+	}
+	if got := difficultyFeeMultiplier("high"); got != 3.0 {
+		t.Fatalf("high 應為 3，實際 %v", got)
+	}
+	s := newAIHost(t)
+	if err := s.node.walletSvc.Deposit(testAlice, wallet.AssetTACm, wallet.NewAmountF(1000, wallet.AssetTACm), "test:topup"); err != nil {
+		t.Fatalf("topup: %v", err)
+	}
+	// rules 模型 ×1 基礎；高難度再 ×3 → 基礎費 0.0001 × 3 = 0.0003。
+	hi, err := s.node.meterAgentTurn(testAlice, false, "rules", "high")
+	if err != nil {
+		t.Fatalf("meter high: %v", err)
+	}
+	if d := hi.Amount - 0.0003; d > 1e-12 || d < -1e-12 {
+		t.Fatalf("高難度 rules 應為 0.0003，實際 %v", hi.Amount)
+	}
+	med, err := s.node.meterAgentTurn(testAlice, false, "rules", "medium")
+	if err != nil {
+		t.Fatalf("meter medium: %v", err)
+	}
+	if d := med.Amount - 0.00015; d > 1e-12 || d < -1e-12 {
+		t.Fatalf("中難度 rules 應為 0.00015，實際 %v", med.Amount)
 	}
 }

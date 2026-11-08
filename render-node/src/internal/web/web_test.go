@@ -62,6 +62,7 @@ func (f *fakeDS) ExchangeRecentTrades(market string, limit int) ([]exchange.Trad
 func (f *fakeDS) TipHeight() int64 { return 0 }
 
 func (f *fakeDS) MemberLedger(string, int) ([]MemberLedgerItem, error) { return nil, nil }
+func (f *fakeDS) TACmBalanceFloat(string) (float64, error)             { return 0, nil }
 
 func (f *fakeDS) PendingTxHashes(limit int) ([]string, error) { return nil, nil }
 

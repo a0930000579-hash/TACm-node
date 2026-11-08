@@ -11,10 +11,22 @@ import (
 )
 
 // 與 internal/node/agent_billing.go 一致的 AI 計費識別。
+const aiUsageScanLimit = 5000
+
+// 高用量比例門檻（佔 TACm 總資產）：日 10%、7 日 35%、30 日 80%。
 const (
-	aiHighDailyTacm  = 1.0 // 當日 AI 消耗達 1 TACm 即高用量提醒
-	aiUsageScanLimit = 5000
+	alertPctDay   = 0.10
+	alertPctWeek  = 0.35
+	alertPctMonth = 0.80
 )
+
+// usageAlert 高用量提醒（僅達門檻才產生）。
+type usageAlert struct {
+	Window  string  `json:"window"`
+	Pct     float64 `json:"pct"`
+	Ratio   float64 `json:"ratio"`
+	Message string  `json:"message"`
+}
 
 // uploadFileInfo 為 uploads 目錄單一檔案。
 type uploadFileInfo struct {
@@ -81,14 +93,15 @@ type usageWindow struct {
 
 // memberUsage 為會員中心用量視圖。
 type memberUsage struct {
-	OK            bool          `json:"ok"`
-	Address       string        `json:"address"`
-	TotalSpent    float64       `json:"total_spent"`
-	TotalCount    int           `json:"total_count"`
-	HighUsage     bool          `json:"high_usage"`
-	HighDailyTacm float64       `json:"high_daily_threshold"`
-	Windows       []usageWindow `json:"windows"`
-	Recent        []usageTx     `json:"recent"`
+	OK          bool          `json:"ok"`
+	Address     string        `json:"address"`
+	TotalAssets float64       `json:"total_assets"`
+	TotalSpent  float64       `json:"total_spent"`
+	TotalCount  int           `json:"total_count"`
+	HighUsage   bool          `json:"high_usage"`
+	Alerts      []usageAlert  `json:"alerts"`
+	Windows     []usageWindow `json:"windows"`
+	Recent      []usageTx     `json:"recent"`
 }
 
 // usageTx 為單一 AI 計費流水。
@@ -146,15 +159,37 @@ func (s *Server) handleMemberUsage(w http.ResponseWriter, r *http.Request) {
 			winDay.Count++
 		}
 	}
+	totalAssets, err := s.ds.TACmBalanceFloat(addr)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	alerts := make([]usageAlert, 0, 3)
+	// 僅當有總資產時才計比例；達門檻才產生提醒。
+	if totalAssets > 0 {
+		if r := winDay.Spent / totalAssets; r >= alertPctDay {
+			alerts = append(alerts, usageAlert{Window: "today", Pct: alertPctDay, Ratio: r,
+				Message: "高用量提醒：單日消費用量已達TACm總資產10%"})
+		}
+		if r := winWeek.Spent / totalAssets; r >= alertPctWeek {
+			alerts = append(alerts, usageAlert{Window: "last_7d", Pct: alertPctWeek, Ratio: r,
+				Message: "高用量提醒：近7日消費用量已達TACm總資產35%"})
+		}
+		if r := winMonth.Spent / totalAssets; r >= alertPctMonth {
+			alerts = append(alerts, usageAlert{Window: "last_30d", Pct: alertPctMonth, Ratio: r,
+				Message: "高用量提醒：近30日消費已達總資產80% TACm將用盡請確保足夠資產！"})
+		}
+	}
 	writeJSON(w, memberUsage{
-		OK:            true,
-		Address:       addr,
-		TotalSpent:    total,
-		TotalCount:    totalCount,
-		HighUsage:     winDay.Spent >= aiHighDailyTacm,
-		HighDailyTacm: aiHighDailyTacm,
-		Windows:       []usageWindow{winDay, winWeek, winMonth},
-		Recent:        recent,
+		OK:          true,
+		Address:     addr,
+		TotalAssets: totalAssets,
+		TotalSpent:  total,
+		TotalCount:  totalCount,
+		HighUsage:   len(alerts) > 0,
+		Alerts:      alerts,
+		Windows:     []usageWindow{winDay, winWeek, winMonth},
+		Recent:      recent,
 	})
 }
 

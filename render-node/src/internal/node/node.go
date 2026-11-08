@@ -765,11 +765,12 @@ func (n *Node) Start() {
 		return
 	}
 	n.running = true
+	stop := n.stopCh
 	n.mu.Unlock()
 	n.wg.Add(3)
-	go n.consensusLoop()
-	go n.runBFT()
-	go n.minerHeartbeatLoop()
+	go n.consensusLoop(stop)
+	go n.runBFT(stop)
+	go n.minerHeartbeatLoop(stop)
 	n.StartDynamicValidators()  // M87：動態驗證人集週期重建（內部自行 wg.Add(1)）
 	go n.healWalletSync()       // M103：錢包帳本/chain_stats 自癒（落後補同步＋產出計數修正）
 	n.StartWalletReconciler()   // 重組後錢包週期對齊安全網（30s）
@@ -788,9 +789,8 @@ func (n *Node) Start() {
 // 鏈上 hb:on 心跳交易（取代 M33 的純本地 TickMiner）：離開頁面仍持續挖礦，
 // 且「在線狀態」寫上鏈，全網任何節點看到同一組在線礦工。
 // 「開機/關機」由 /api/miner/start|stop 控制（開機即發 hb:on、關機即發 hb:off）。
-func (n *Node) minerHeartbeatLoop() {
+func (n *Node) minerHeartbeatLoop(stop chan struct{}) {
 	defer n.wg.Done()
-	stop := n.stopChannel()
 	interval := n.heartbeatInterval
 	if interval <= 0 {
 		interval = hbRefresh
@@ -835,10 +835,11 @@ func (n *Node) StartAsFollower() {
 		return
 	}
 	n.running = true
+	stop := n.stopCh
 	n.mu.Unlock()
 	n.wg.Add(2)
-	go n.runBFT()
-	go n.minerHeartbeatLoop()
+	go n.runBFT(stop)
+	go n.minerHeartbeatLoop(stop)
 	go n.healWalletSync()
 	n.StartWalletReconciler()
 	n.StartFinalityReconciler()
@@ -862,11 +863,12 @@ func (n *Node) StartDistributed() {
 	n.running = true
 	n.distributed = true
 	n.consensusWake = make(chan struct{}, 8)
+	stop := n.stopCh
 	n.mu.Unlock()
 	n.wg.Add(3)
-	go n.consensusLoop()
-	go n.runBFT()
-	go n.minerHeartbeatLoop()
+	go n.consensusLoop(stop)
+	go n.runBFT(stop)
+	go n.minerHeartbeatLoop(stop)
 	// v56：分布式驗證人與單節點同等服務——動態驗證人集週期重建
 	// （鏈上新增質押的驗證人最遲 60s 納入輪值，對應主流鏈 epoch 式驗證人輪換）、
 	// 帳本自癒、鏈上預言機、帳戶抽象 Bundler。
@@ -932,15 +934,16 @@ func (n *Node) ResumeConsensus() {
 	n.restoreDynamicValidatorsOnResume()
 
 	n.mu.Lock()
+	stop := n.stopCh
 	if distributed {
 		n.wg.Add(3)
-		go n.consensusLoop()
-		go n.runBFT()
-		go n.minerHeartbeatLoop()
+		go n.consensusLoop(stop)
+		go n.runBFT(stop)
+		go n.minerHeartbeatLoop(stop)
 	} else {
 		n.wg.Add(2)
-		go n.runBFT()
-		go n.minerHeartbeatLoop()
+		go n.runBFT(stop)
+		go n.minerHeartbeatLoop(stop)
 	}
 	n.mu.Unlock()
 }
@@ -1060,9 +1063,8 @@ func (n *Node) waitFor(d time.Duration) bool {
 }
 
 // consensusLoop 是出塊主循環：動態間隔 → 取池 → PoT → 驗證 → 寫塊 → 調難度。
-func (n *Node) consensusLoop() {
+func (n *Node) consensusLoop(stop chan struct{}) {
 	defer n.wg.Done()
-	stop := n.stopChannel()
 	cs := &consensusState{lastRound: -1}
 	for {
 		select {

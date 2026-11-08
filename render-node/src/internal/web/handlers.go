@@ -745,6 +745,17 @@ var (
 		".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png",
 		".gif": "image/gif", ".webp": "image/webp",
 		".mp4": "video/mp4", ".webm": "video/webm", ".mov": "video/quicktime",
+		// 通用文件／文檔／源碼（不開放 .html/.htm/.svg，避免同源儲存型腳本）。
+		".pdf": "application/pdf", ".txt": "text/plain", ".md": "text/markdown",
+		".json": "application/json", ".csv": "text/csv", ".log": "text/plain",
+		".doc": "application/msword", ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+		".xls": "application/vnd.ms-excel", ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+		".ppt": "application/vnd.ms-powerpoint", ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+		".zip": "application/zip", ".go": "text/x-go", ".js": "text/javascript",
+		".ts": "text/typescript", ".tsx": "text/typescript", ".jsx": "text/javascript",
+		".py": "text/x-python", ".java": "text/x-java", ".rs": "text/x-rust",
+		".c": "text/x-c", ".h": "text/x-c", ".cpp": "text/x-c++", ".sh": "text/x-shellscript",
+		".yaml": "text/yaml", ".yml": "text/yaml",
 	}
 	uploadMax = int64(64 << 20) // 64MB
 )
