@@ -1,18 +1,26 @@
 {% extends "base.html" %}
 {% block title %}TAC Live · 直播{% endblock %}
 {% block content %}
-<section class="pg-banner">
-  <div class="pg-txt"><h1 data-i18n="bn.live">直播</h1><p data-i18n="bn.liveSub">社群直播 · 開播即時互動</p></div>
-  <svg viewBox="0 0 40 40" class="pg-art"><rect x="6" y="10" width="20" height="20" rx="4" fill="none" stroke="#E41E3F" stroke-width="2.2"/><path d="M26 16 L34 12 V28 L26 24" fill="none" stroke="#E41E3F" stroke-width="2.2" stroke-linejoin="round"/><circle cx="13" cy="18" r="1.6" fill="#E41E3F"/></svg>
-</section>
+<div class="cm-top">
+  <div class="cm-brand" onclick="location='/community'">TACm</div>
+  <div class="cm-spacer"></div>
+  <button class="cm-ic" onclick="location='/community'"><svg viewBox="0 0 24 24"><path d="M12 5 V19 M5 12 H19"/></svg></button>
+  <button class="cm-ic" onclick="location='/community'"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20 L16.5 16.5"/></svg></button>
+  <button class="cm-ic" onclick="TAC_I18N.toggle()"><svg viewBox="0 0 24 24"><path d="M4 5 H17 M17 5 V18 M11 9 H20 V18 M7 18 C7 19.5 5.5 20 5 20 C4.5 20 4 19.5 4 18 C4 16.5 5.5 16 7 16 C8.5 16 10 16.5 10 18"/></svg></button>
+</div>
 <style>
   body { background:#f0f2f5; color:#1c1e21; }
   .container { background:transparent; }
-  .footer { background:#fff; border-top-color:#dddfe2; color:#65676b; }
-  .bottom-nav { background:rgba(255,255,255,.97); border-top-color:#dddfe2; display:none !important; }
-  .navlinks { display:none !important; }
-  body { padding-bottom:24px; }
-  .lv-wrap{max-width:860px;margin:0 auto}
+  .topbar,.footer,.bottom-nav,.navlinks { display:none !important; }
+  .cm-top{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.96);border-bottom:1px solid #e4e6eb;display:flex;align-items:center;gap:10px;padding:calc(9px + env(safe-area-inset-top)) 14px 9px}
+  .cm-brand{font-weight:900;font-size:23px;color:#2e7d52;flex:none;cursor:pointer}
+  .cm-spacer{flex:1}
+  .cm-ic{width:38px;height:38px;border-radius:50%;background:#e4e6eb;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none}
+  .cm-ic svg{width:20px;height:20px;stroke:#1c1e21;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .cm-bottom{position:fixed;left:0;right:0;bottom:0;z-index:60;background:rgba(255,255,255,.97);border-top:1px solid #dddfe2;display:flex;padding:5px 0 calc(5px + env(safe-area-inset-bottom));max-width:480px;margin:0 auto}
+  .cm-bottom a{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:10px;line-height:1.1;color:#65676b;text-decoration:none;white-space:nowrap;overflow:hidden}
+  .cm-bottom a svg{width:21px;height:21px;stroke:#65676b;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .lv-wrap{max-width:480px;margin:0 auto;padding-bottom:72px}
   .lv-card{background:#fff;border:1px solid #dddfe2;border-radius:14px;padding:14px;box-shadow:0 1px 2px rgba(0,0,0,.04);margin-bottom:12px}
   .lv-card h2{margin:0 0 12px;font-size:16px;font-weight:800;display:flex;align-items:center;gap:8px}
   .lv-room{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid #e4e6eb;border-radius:12px;margin-bottom:10px;cursor:pointer;background:#fff;transition:box-shadow .15s}
@@ -40,11 +48,11 @@
   .lv-stage .stat{position:absolute;right:12px;top:10px;background:rgba(0,0,0,.35);border-radius:999px;padding:3px 10px;font-size:11px;font-weight:700}
   .lv-chat{background:#fff;border:1px solid #e4e6eb;border-radius:12px;padding:10px;height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
   .lv-msg{font-size:13px;line-height:1.5}
-  .lv-msg b{color:#1877f2}
+  .lv-msg b{color:#2e7d52}
   .lv-msg .tm{color:#a7a8aa;font-size:10px;margin-left:6px}
   .lv-send{display:flex;gap:8px;margin-top:8px}
   .lv-send input{flex:1;min-width:0;border:1px solid #dddfe2;border-radius:999px;padding:10px 14px;font-size:13px;background:#f0f2f5}
-  .lv-send button{background:#1877f2;color:#fff;border:none;border-radius:999px;padding:10px 18px;font-weight:700;cursor:pointer;font-size:13px}
+  .lv-send button{background:#2e7d52;color:#fff;border:none;border-radius:999px;padding:10px 18px;font-weight:700;cursor:pointer;font-size:13px}
   .lv-empty{color:#65676b;text-align:center;padding:30px 10px;font-size:13px}
 </style>
 
@@ -82,6 +90,15 @@
     </div>
   </div>
 </div>
+
+<nav class="cm-bottom">
+  <a href="/community"><svg viewBox="0 0 24 24"><path d="M3 10 L12 3 L21 10 V21 H15 V14 H9 V21 H3 Z"/></svg><span>首頁</span></a>
+  <a href="/community/videos"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 11 L21 7.5 V16.5 L16 13"/></svg><span>影片</span></a>
+  <a href="/community/friends"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20 C2.5 15.5 5 13 9 13 C13 13 15.5 15.5 15.5 20"/><circle cx="17" cy="9" r="2.8"/><path d="M16 13.5 C19 13.5 21.5 15.5 21.5 19"/></svg><span>好友</span></a>
+  <a href="/community/market"><svg viewBox="0 0 24 24"><path d="M4 7 H20 L18.5 16 H5.5 Z"/><circle cx="9" cy="20" r="1.6"/><circle cx="15.5" cy="20" r="1.6"/><path d="M7 10 V6 C7 3.8 8.8 2.5 10.5 2.5 C12 2.5 13 3.6 13 5"/></svg><span>市集</span></a>
+  <a href="/community/notifications"><svg viewBox="0 0 24 24"><path d="M12 3 C8 3 6 6 6 9.5 V15 L4 17 H20 L18 15 V9.5 C18 6 16 3 12 3 Z"/><path d="M9.5 20 C10 21.5 11 22 12 22 C13 22 14 21.5 14.5 20"/></svg><span>通知</span></a>
+  <a href="/community/profile"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21 C4 16 7.5 13.5 12 13.5 C16.5 13.5 20 16 20 21"/></svg><span>個人</span></a>
+</nav>
 
 <!-- 社群統一權威地址（比照交易所 v160 錢包中心） -->
 <script src="/static/js/community-wallet.js"></script>

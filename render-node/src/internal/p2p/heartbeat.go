@@ -54,7 +54,7 @@ func (n *Network) heartbeatOnce() {
 			}
 			n.registerPeer(resp.NodeID, resp.BaseURL, resp.Owner, resp.Height, resp.Finalized)
 			for _, u := range resp.Peers {
-				n.addPeerByURL(u)
+				n.addDiscoveredPeerURL(u)
 			}
 		}(p)
 	}

@@ -155,7 +155,7 @@ func (s *Server) handleNodePanelAPI(w http.ResponseWriter, r *http.Request) {
 	}
 	peers := []map[string]any{}
 	if pn := s.n.P2PNet(); pn != nil {
-		for _, p := range pn.PeerSnapshot() {
+		for _, p := range pn.DisplayPeers() {
 			peers = append(peers, map[string]any{
 				"id": p.NodeID, "base_url": p.BaseURL, "owner": p.Owner,
 				"height": p.Height, "finalized_height": p.Finalized,

@@ -6,13 +6,14 @@
   body{background:#f0f2f5;color:#1c1e21;margin:0}
   .topbar,.footer,.bottom-nav{display:none!important}
   .ad-wrap{max-width:480px;margin:0 auto;padding:0 0 72px}
-  .ad-top{position:sticky;top:0;z-index:40;background:rgba(255,255,255,.97);border-bottom:1px solid #dddfe2;display:flex;align-items:center;gap:10px;padding:10px 14px}
-  .ad-top button{background:none;border:none;padding:6px;border-radius:50%;cursor:pointer}
-  .ad-top button svg{width:22px;height:22px;stroke:#1c1e21;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-  .ad-top .t{font-weight:800;font-size:16px}
+  .cm-top{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.96);border-bottom:1px solid #e4e6eb;display:flex;align-items:center;gap:10px;padding:calc(9px + env(safe-area-inset-top)) 14px 9px}
+  .cm-brand{font-weight:900;font-size:23px;color:#2e7d52;flex:none;cursor:pointer}
+  .cm-spacer{flex:1}
+  .cm-ic{width:38px;height:38px;border-radius:50%;background:#e4e6eb;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none}
+  .cm-ic svg{width:20px;height:20px;stroke:#1c1e21;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
   .ad-id{display:flex;gap:8px;margin:12px 16px}
   .ad-id input{flex:1;border:1px solid #dddfe2;border-radius:999px;padding:10px 14px;font-size:14px;outline:none;min-width:0}
-  .ad-id button{background:#1877f2;color:#fff;border:none;border-radius:999px;padding:10px 16px;font-weight:700;font-size:13px;flex:none}
+  .ad-id button{background:#2e7d52;color:#fff;border:none;border-radius:999px;padding:10px 16px;font-weight:700;font-size:13px;flex:none}
   .ad-card{background:#fff;border:1px solid #dddfe2;border-radius:14px;margin:0 16px 12px;padding:14px}
   .ad-card h3{display:flex;align-items:center;gap:8px;font-size:14px;margin:0 0 10px}
   .ad-card h3 svg{width:18px;height:18px;stroke:#9c27b0;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
@@ -38,21 +39,20 @@
   .ad-tag.wait{background:#fff4e5;color:#b26a00}
   .ad-item .go{background:#1b8a3a;color:#fff;border:none;border-radius:999px;padding:8px 16px;font-size:13px;font-weight:700;margin-top:8px;cursor:pointer}
   .ad-empty{text-align:center;color:#65676b;padding:30px 20px;font-size:14px}
-  .ad-bottom{position:fixed;left:0;right:0;bottom:0;z-index:60;background:rgba(255,255,255,.97);border-top:1px solid #dddfe2;display:flex;justify-content:space-around;padding:6px 2px calc(6px + env(safe-area-inset-bottom))}
-  .ad-bottom a{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;color:#65676b;text-decoration:none}
-  .ad-bottom a svg{width:22px;height:22px;stroke:#65676b;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-  .ad-bottom a.on{color:#1877f2}
-  .ad-bottom a.on svg{stroke:#1877f2}
+  .cm-bottom{position:fixed;left:0;right:0;bottom:0;z-index:60;background:rgba(255,255,255,.97);border-top:1px solid #dddfe2;display:flex;padding:5px 0 calc(5px + env(safe-area-inset-bottom));max-width:480px;margin:0 auto}
+  .cm-bottom a{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:10px;line-height:1.1;color:#65676b;text-decoration:none;white-space:nowrap;overflow:hidden}
+  .cm-bottom a svg{width:21px;height:21px;stroke:#65676b;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .cm-bottom a.on{color:#2e7d52}
+  .cm-bottom a.on svg{stroke:#2e7d52}
 </style>
 
 <div class="ad-wrap">
-  <div class="ad-top">
-    <button onclick="location='/community'"><svg viewBox="0 0 24 24"><path d="M19 12 H6 M11 6 L5 12 L11 18"/></svg></button>
-    <div class="t"><svg viewBox="0 0 28 28" style="width:20px;height:20px;vertical-align:-4px;stroke:#1877f2;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;margin-right:6px"><path d="M14 4 C8 4 5 9 5 14 c0 4 2 7 4 9 v2 h10 v-2 c2-2 4-5 4-9 C23 9 20 4 14 4 Z"/><circle cx="14" cy="13" r="3.4"/><path d="M10.5 21.5 h7"/></svg><span data-i18n="cm.brand">TAC 社群</span></div>
-    <div style="margin-left:auto;display:flex;gap:6px">
-      <button onclick="location='/community/profile'"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21 C4 16 7.5 13.5 12 13.5 C16.5 13.5 20 16 20 21"/></svg></button>
-      <button onclick="TAC_I18N.toggle()">EN</button>
-    </div>
+  <div class="cm-top">
+    <div class="cm-brand" onclick="location='/community'">TACm</div>
+    <div class="cm-spacer"></div>
+    <button class="cm-ic" onclick="location='/community'"><svg viewBox="0 0 24 24"><path d="M12 5 V19 M5 12 H19"/></svg></button>
+    <button class="cm-ic" onclick="location='/community'"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20 L16.5 16.5"/></svg></button>
+    <button class="cm-ic" onclick="TAC_I18N.toggle()"><svg viewBox="0 0 24 24"><path d="M4 5 H17 M17 5 V18 M11 9 H20 V18 M7 18 C7 19.5 5.5 20 5 20 C4.5 20 4 19.5 4 18 C4 16.5 5.5 16 7 16 C8.5 16 10 16.5 10 18"/></svg></button>
   </div>
 
   <div class="ad-id">
@@ -93,13 +93,13 @@
   <div id="adList"><div class="ad-empty">載入中…</div></div>
 </div>
 
-<nav class="ad-bottom">
-  <a href="/community"><svg viewBox="0 0 24 24"><path d="M3 10 L12 3 L21 10 V21 H15 V14 H9 V21 H3 Z"/></svg><span data-i18n="cm.home">首頁</span></a>
-  <a href="/community/videos"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 11 L21 7.5 V16.5 L16 13"/></svg><span data-i18n="cm.video">影片</span></a>
-  <a href="/community/friends"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20 C2.5 15.5 5 13 9 13 C13 13 15.5 15.5 15.5 20"/><circle cx="17" cy="9" r="2.8"/><path d="M16 13.5 C19 13.5 21.5 15.5 21.5 19"/></svg><span data-i18n="cm.friends">好友</span></a>
-  <a href="/community/market"><svg viewBox="0 0 24 24"><path d="M4 7 H20 L18.5 16 H5.5 Z"/><circle cx="9" cy="20" r="1.6"/><circle cx="15.5" cy="20" r="1.6"/><path d="M7 10 V6 C7 3.8 8.8 2.5 10.5 2.5 C12 2.5 13 3.6 13 5"/></svg><span data-i18n="cm.market">市集</span></a>
-  <a href="/community/notifications"><svg viewBox="0 0 24 24"><path d="M12 3 C8 3 6 6 6 9.5 V15 L4 17 H20 L18 15 V9.5 C18 6 16 3 12 3 Z"/><path d="M9.5 20 C10 21.5 11 22 12 22 C13 22 14 21.5 14.5 20"/></svg><span data-i18n="cm.notify">通知</span></a>
-  <a href="/community/profile"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21 C4 16 7.5 13.5 12 13.5 C16.5 13.5 20 16 20 21"/></svg><span data-i18n="cm.me">個人</span></a>
+<nav class="cm-bottom">
+  <a href="/community"><svg viewBox="0 0 24 24"><path d="M3 10 L12 3 L21 10 V21 H15 V14 H9 V21 H3 Z"/></svg><span>首頁</span></a>
+  <a href="/community/videos"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 11 L21 7.5 V16.5 L16 13"/></svg><span>影片</span></a>
+  <a href="/community/friends"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20 C2.5 15.5 5 13 9 13 C13 13 15.5 15.5 15.5 20"/><circle cx="17" cy="9" r="2.8"/><path d="M16 13.5 C19 13.5 21.5 15.5 21.5 19"/></svg><span>好友</span></a>
+  <a href="/community/market"><svg viewBox="0 0 24 24"><path d="M4 7 H20 L18.5 16 H5.5 Z"/><circle cx="9" cy="20" r="1.6"/><circle cx="15.5" cy="20" r="1.6"/><path d="M7 10 V6 C7 3.8 8.8 2.5 10.5 2.5 C12 2.5 13 3.6 13 5"/></svg><span>市集</span></a>
+  <a href="/community/notifications"><svg viewBox="0 0 24 24"><path d="M12 3 C8 3 6 6 6 9.5 V15 L4 17 H20 L18 15 V9.5 C18 6 16 3 12 3 Z"/><path d="M9.5 20 C10 21.5 11 22 12 22 C13 22 14 21.5 14.5 20"/></svg><span>通知</span></a>
+  <a href="/community/profile"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21 C4 16 7.5 13.5 12 13.5 C16.5 13.5 20 16 20 21"/></svg><span>個人</span></a>
 </nav>
 
 <script>

@@ -53,6 +53,8 @@ type Config struct {
 type Host interface {
 	// Height 返回本節點當前鏈頂高度。
 	Height() int64
+	// EmptyChain 回報本機是否無任何區塊（空庫 follower）；僅空庫節點允許整鏈替換。
+	EmptyChain() bool
 	// FinalizedHeight 返回已最終化高度。
 	FinalizedHeight() int64
 	// OnIncomingBlock 驗證並嘗試接入一個網絡傳來的區塊（含其交易）。

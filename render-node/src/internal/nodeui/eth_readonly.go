@@ -196,7 +196,7 @@ func (s *Server) ethReadMethod(method string, params []any) (any, error) {
 	case "admin_peers":
 		out := []map[string]any{}
 		if pn := s.n.P2PNet(); pn != nil {
-			for _, p := range pn.PeerSnapshot() {
+			for _, p := range pn.DisplayPeers() {
 				out = append(out, map[string]any{
 					"id": p.NodeID, "base_url": p.BaseURL, "owner": p.Owner,
 					"height": p.Height, "finalized_height": p.Finalized,

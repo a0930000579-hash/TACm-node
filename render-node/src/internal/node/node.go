@@ -1281,11 +1281,44 @@ func (n *Node) takeOverIfProposerOffline(cs *consensusState) bool {
 			}
 		}
 	}
+	// v204：多驗證人在線時的確定性接管協調——僅由在線合格驗證人中 NodeID
+	// 字典序最小者接管，避免兩個 follower 同時判定主 proposer 離線而各自出塊
+	// 形成多鏈分叉；無任何合格 peer 在線（本節點被隔離）時仍接管以維持可用性。
+	if !n.designatedTakeover() {
+		return false
+	}
 	n.takeoverMu.Lock()
 	n.takeoverActive = true
 	n.takeover[target] = true
 	n.takeoverMu.Unlock()
 	return true
+}
+
+// designatedTakeover 判斷本節點是否為本次接管的指定節點：
+//   - 收集在線且屬共識驗證人集（vset）的 peer；
+//   - 無合格 peer（隔離或單機）→ 回 true 維持出塊；
+//   - 否則在「本節點＋合格在線 peer」中取 NodeID 字典序最小者，
+//     各節點獨立計算皆得到同一個接管者，無節點特權、不需額外協議。
+func (n *Node) designatedTakeover() bool {
+	if n.vset == nil || n.p2pNet == nil {
+		return true
+	}
+	eligible := []string{n.nodeID}
+	for _, p := range n.p2pNet.PeerSnapshot() {
+		if p.Online && n.vset.Get(p.Owner) != nil {
+			eligible = append(eligible, p.NodeID)
+		}
+	}
+	if len(eligible) == 1 {
+		return true // 無其他合格驗證人在線，本節點可獨自接管。
+	}
+	winner := eligible[0]
+	for _, id := range eligible[1:] {
+		if id < winner {
+			winner = id
+		}
+	}
+	return winner == n.nodeID
 }
 
 // consensusState 為 consensusLoop 跨輪保留的輪次計時狀態。
@@ -1334,7 +1367,9 @@ func (n *Node) isDistributed() bool {
 
 // consensusTimeout 返回某輪次的提議超時：base×2^round，上限 60s。
 func (n *Node) consensusTimeout(round int32) time.Duration {
-	base := 3 * n.blockTime
+	// v204：基線由 3 個區塊時間拉長為 4 個，給原 proposer 更充裕的恢復窗，
+	// 降低單次網路抖動/重啟即被誤判接管而分叉的機率。
+	base := 4 * n.blockTime
 	if base < 2*time.Second {
 		base = 2 * time.Second
 	}

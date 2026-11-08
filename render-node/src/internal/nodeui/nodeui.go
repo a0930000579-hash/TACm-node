@@ -219,7 +219,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handlePeers(w http.ResponseWriter, r *http.Request) {
 	var peers []p2p.Peer
 	if pn := s.n.P2PNet(); pn != nil {
-		peers = pn.PeerSnapshot()
+		peers = pn.DisplayPeers()
 	}
 	writeJSON(w, map[string]any{"peers": peers})
 }

@@ -62,7 +62,7 @@ func (n *Network) handleHello(w http.ResponseWriter, r *http.Request) {
 
 	n.registerPeer(req.NodeID, url, req.Owner, req.Height, req.Finalized)
 	for _, p := range req.Peers {
-		n.addPeerByURL(p)
+		n.addDiscoveredPeerURL(p)
 	}
 	writeP2PJSON(w, http.StatusOK, helloResp{
 		OK: true, Version: ProtocolVersion, NodeID: n.cfg.SelfID,
@@ -212,8 +212,9 @@ func (n *Network) handleBlocksFetch(w http.ResponseWriter, r *http.Request) {
 }
 
 func (n *Network) handlePeers(w http.ResponseWriter, r *http.Request) {
+	peers := n.DisplayPeers()
 	writeP2PJSON(w, http.StatusOK, map[string]any{
-		"peers": n.snapshotPeers(), "count": len(n.snapshotPeers()),
+		"peers": peers, "count": len(peers),
 	})
 }
 

@@ -17,6 +17,7 @@ import (
 type hostStub struct{}
 
 func (hostStub) Height() int64                                               { return 1 }
+func (hostStub) EmptyChain() bool                                           { return false }
 func (hostStub) FinalizedHeight() int64                                      { return 1 }
 func (hostStub) OnIncomingBlock(*chaindb.Block, []chaindb.Transaction) error { return nil }
 func (hostStub) OnIncomingTx(map[string]any) error                           { return nil }

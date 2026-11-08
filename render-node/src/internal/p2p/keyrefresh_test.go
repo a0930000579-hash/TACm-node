@@ -15,6 +15,7 @@ import (
 type mockHost struct{ h int64 }
 
 func (m *mockHost) Height() int64                                               { return m.h }
+func (m *mockHost) EmptyChain() bool                                            { return m.h <= 0 }
 func (m *mockHost) FinalizedHeight() int64                                      { return 0 }
 func (m *mockHost) OnIncomingBlock(*chaindb.Block, []chaindb.Transaction) error { return nil }
 func (m *mockHost) OnIncomingTx(map[string]any) error                           { return nil }

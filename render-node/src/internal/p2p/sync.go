@@ -3,11 +3,13 @@ package p2p
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"tacm/internal/chaindb"
@@ -414,6 +416,12 @@ func (n *Network) doReorg(best Peer, from int64) error {
 
 // reorgFullChain 信任 best peer 的創世並整鏈重放（本機自產創世與主網不同源時）。
 func (n *Network) reorgFullChain(best Peer) error {
+	// 僅空庫 follower（無實質鏈歷史）或顯式 Bootstrap 信任錨點允許整鏈替換；
+	// 已建立鏈歷史的節點遇到隨機發現的不同源 peer 時拒絕整鏈覆蓋，避免自產歷史
+	// 被無故抹除；配置的 Bootstrap 錨點（多錨點 fallback 場景）仍可受控切換。
+	if !n.host.EmptyChain() && !n.isBootstrapPeer(best) {
+		return errors.New("整鏈替換僅限空庫節點或 Bootstrap 錨點，本節點已存在鏈歷史，拒絕整鏈覆蓋")
+	}
 	log.Printf("[p2p] 整鏈替換開始：拉取 0..%d 全部區塊", best.Height)
 	blocks, ok := n.fetchBlocksParallel(best, 0, best.Height)
 	if !ok {
@@ -433,6 +441,22 @@ func (n *Network) reorgFullChain(best Peer) error {
 	}
 	log.Printf("[p2p] 整鏈替換完成：鏈頂 %d", best.Height)
 	return nil
+}
+
+// isBootstrapPeer 判斷該 peer 是否為顯式配置的 Bootstrap 信任錨點（基址比對，
+// 忽略末尾斜線與大小寫）。僅 Bootstrap/admin 明確加入的錨點可對已建立鏈的節點
+// 執行整鏈替換，隨機發現的 peer 不具此權限。
+func (n *Network) isBootstrapPeer(p Peer) bool {
+	want := strings.TrimRight(strings.ToLower(p.BaseURL), "/")
+	if want == "" {
+		return false
+	}
+	for _, b := range n.cfg.Bootstrap {
+		if strings.TrimRight(strings.ToLower(strings.TrimSpace(b)), "/") == want {
+			return true
+		}
+	}
+	return false
 }
 
 // reconcileSameHeight 處理同高度（等長）分叉：週期性比對在線同高度 peer 的鏈頂，

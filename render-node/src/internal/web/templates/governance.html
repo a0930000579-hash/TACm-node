@@ -56,6 +56,21 @@
   .gov-param-row .k{color:#14161a;font-weight:600;font-family:ui-monospace,monospace}
   .gov-param-row .v{color:#68BE8D;font-weight:800}
   .gov-param-row .d{display:block;font-size:11px;color:#5d6778;font-weight:400}
+  /* 合約 DAO 行動優先排版 */
+  .dao-status{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+  .dao-status .st{background:#f2f4f9;border:1px solid #e2e6ee;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:5px;min-width:0}
+  .dao-status .st .lb{font-size:11px;color:#5d6678;font-weight:700}
+  .dao-status .st .vl{font-size:12px;font-weight:800;color:#14161a;font-family:ui-monospace,monospace;word-break:break-all;line-height:1.35}
+  .dao-section{background:#f2f4f9;border:1px solid #e2e6ee;border-radius:14px;padding:14px;margin-bottom:12px}
+  .dao-section .sec-t{display:block;font-size:13px;font-weight:800;color:#14161a;margin-bottom:10px}
+  .dao-in{width:100%;box-sizing:border-box;background:#fff;border:1px solid #e2e6ee;border-radius:11px;color:#14161a;padding:12px 13px;font-size:14px;font-family:ui-monospace,monospace;margin-bottom:10px}
+  .dao-in:focus{outline:none;border-color:#68BE8D;box-shadow:0 0 0 3px rgba(104,190,141,.18)}
+  .dao-row{display:flex;gap:10px;align-items:stretch}
+  .dao-row .dao-in{margin-bottom:0;flex:1;min-width:0}
+  .dao-vote{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px}
+  .dao-vote .gov-btn{width:100%;padding:11px 6px;font-size:13px}
+  .dao-btn{width:100%;background:#68BE8D;color:#fff;border:none;border-radius:11px;padding:13px;font-size:14px;font-weight:800;cursor:pointer}
+  @media (max-width:560px){.dao-status{grid-template-columns:1fr}.dao-status .st{flex-direction:row;align-items:center;justify-content:space-between}.dao-status .st .vl{text-align:right}}
 </style>
 
 <div class="gov-wrap">
@@ -374,54 +389,54 @@
 </script>
 
 <div id="viewDao" style="display:none">
-<!-- M151：鏈上治理 DAO（TACGovernor：propose / vote / execute，自 Explorer 面板遷移） -->
+<!-- M151：鏈上治理 DAO（TACGovernor：propose / vote / execute）；v204 行動優先重排 -->
 <div class="gov-card">
   <h3><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;" aria-hidden="true"><path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8L12 3z"/><path d="M18 14l1 2.4 2.4 1-2.4 1L18 21l-1-2.4-2.4-1 2.4-1 1-2.4z"/></svg> <span data-i18n="gov.daoTitle">鏈上治理（DAO）</span></h3>
-  <p style="font-size:12px;color:#5d6778;margin:0 0 12px;" data-i18n="gov.intro">去中心化 DAO——任何帳戶可提案、一人一票投票、多數決後執行資金轉帳。</p>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-    <span class="gov-stats" style="margin:0;"><span data-i18n="gov.status">合約狀態</span><b class="mono" id="gvStatus">-</b></span>
-    <span class="gov-stats" style="margin:0;"><span data-i18n="gov.contract">合約地址</span><b class="mono" id="gvAddr">-</b></span>
-    <span class="gov-stats" style="margin:0;"><span data-i18n="gov.nextPid">下一個提案 ID</span><b class="mono" id="gvNext">-</b></span>
+  <p style="font-size:12px;color:#5d6677;margin:0 0 14px;line-height:1.6;" data-i18n="gov.intro">去中心化 DAO——任何帳戶可提案、一人一票投票、多數決後執行資金轉帳。</p>
+
+  <div class="dao-status">
+    <div class="st"><span class="lb" data-i18n="gov.status">合約狀態</span><span class="vl" id="gvStatus">-</span></div>
+    <div class="st"><span class="lb" data-i18n="gov.contract">合約地址</span><span class="vl" id="gvAddr">-</span></div>
+    <div class="st"><span class="lb" data-i18n="gov.nextPid">下一個提案 ID</span><span class="vl mono" id="gvNext">-</span></div>
   </div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
-    <button class="gov-btn sm" id="gvDeploy" data-i18n="gov.deploy">部署治理合約</button>
-    <span class="gov-msg" id="gvDeployResult" style="display:inline;"></span>
+
+  <button class="dao-btn" id="gvDeploy" data-i18n="gov.deploy">部署治理合約</button>
+  <div class="gov-msg" id="gvDeployResult"></div>
+
+  <div class="dao-section" style="margin-top:14px;">
+    <span class="sec-t" data-i18n="gov.proposeTitle">發起提案</span>
+    <input class="dao-in" id="gvTarget" data-i18n-placeholder="gov.targetPh" placeholder="目標地址（0x…）">
+    <input class="dao-in" id="gvValue" data-i18n-placeholder="gov.valuePh" placeholder="金額（TACm）">
+    <button class="dao-btn" id="gvPropose" data-i18n="gov.propose">發起提案</button>
+    <div class="gov-msg" id="gvProposeResult"></div>
   </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-    <div>
-      <label style="font-size:12px;color:#5d6778;" data-i18n="gov.proposeTitle">發起提案</label>
-      <input id="gvTarget" data-i18n-placeholder="gov.targetPh" placeholder="目標地址（0x…）" style="width:100%;box-sizing:border-box;background:#f2f4f9;border:1px solid #e2e6ee;border-radius:10px;color:#14161a;padding:8px 10px;font-size:13px;font-family:ui-monospace,monospace;margin:6px 0;">
-      <input id="gvValue" data-i18n-placeholder="gov.valuePh" placeholder="金額（TACm）" style="width:100%;box-sizing:border-box;background:#f2f4f9;border:1px solid #e2e6ee;border-radius:10px;color:#14161a;padding:8px 10px;font-size:13px;font-family:ui-monospace,monospace;margin-bottom:6px;">
-      <button class="gov-btn sm" id="gvPropose" data-i18n="gov.propose">發起提案</button>
-      <div class="gov-msg" id="gvProposeResult"></div>
+
+  <div class="dao-section">
+    <span class="sec-t" data-i18n="gov.voteTitle">投票（節點代簽，一人一票）</span>
+    <input class="dao-in" id="gvVotePid" data-i18n-placeholder="gov.pidPh" placeholder="提案 ID" type="number" min="1" style="margin-bottom:0;">
+    <div class="dao-vote" style="grid-template-columns:1fr 1fr;">
+      <button class="gov-btn v-yes" id="gvVoteFor" data-i18n="gov.support">贊成</button>
+      <button class="gov-btn v-no" id="gvVoteAgainst" data-i18n="gov.against">反對</button>
     </div>
-    <div>
-      <label style="font-size:12px;color:#5d6778;" data-i18n="gov.voteTitle">投票（節點代簽，一人一票）</label>
-      <div style="display:flex;gap:8px;align-items:center;margin:6px 0;">
-        <input id="gvVotePid" data-i18n-placeholder="gov.pidPh" placeholder="提案 ID" type="number" min="1" style="flex:1;min-width:0;background:#f2f4f9;border:1px solid #e2e6ee;border-radius:10px;color:#14161a;padding:8px 10px;font-size:13px;">
-        <button class="gov-btn sm v-yes" id="gvVoteFor" data-i18n="gov.support">贊成</button>
-        <button class="gov-btn sm v-no" id="gvVoteAgainst" data-i18n="gov.against">反對</button>
-      </div>
-      <div class="gov-msg" id="gvVoteResult"></div>
-    </div>
+    <div class="gov-msg" id="gvVoteResult"></div>
   </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:10px;">
-    <div>
-      <label style="font-size:12px;color:#5d6778;" data-i18n="gov.executeTitle">執行提案（多數決後）</label>
-      <div style="display:flex;gap:8px;align-items:center;margin:6px 0;">
-        <input id="gvExecPid" data-i18n-placeholder="gov.pidPh" placeholder="提案 ID" type="number" min="1" style="flex:1;min-width:0;background:#f2f4f9;border:1px solid #e2e6ee;border-radius:10px;color:#14161a;padding:8px 10px;font-size:13px;">
-        <button class="gov-btn sm" id="gvExecute" data-i18n="gov.execute">執行</button>
-      </div>
-      <div class="gov-msg" id="gvExecuteResult"></div>
+
+  <div class="dao-section">
+    <span class="sec-t" data-i18n="gov.executeTitle">執行提案（多數決後）</span>
+    <div class="dao-row">
+      <input class="dao-in" id="gvExecPid" data-i18n-placeholder="gov.pidPh" placeholder="提案 ID" type="number" min="1">
+      <button class="gov-btn sm" id="gvExecute" data-i18n="gov.execute" style="padding:0 20px;">執行</button>
     </div>
-    <div>
-      <label style="font-size:12px;color:#5d6778;" data-i18n="gov.queryTitle">查詢提案</label>
-      <div style="display:flex;gap:8px;align-items:center;margin:6px 0;">
-        <input id="gvQueryPid" data-i18n-placeholder="gov.pidPh" placeholder="提案 ID" type="number" min="1" style="flex:1;min-width:0;background:#f2f4f9;border:1px solid #e2e6ee;border-radius:10px;color:#14161a;padding:8px 10px;font-size:13px;">
-        <button class="gov-btn sm" id="gvQuery" data-i18n="gov.query">查詢</button>
-      </div>
-      <div class="gov-msg mono" id="gvQueryResult" style="white-space:pre-wrap;"></div>
+    <div class="gov-msg" id="gvExecuteResult"></div>
+  </div>
+
+  <div class="dao-section" style="margin-bottom:0;">
+    <span class="sec-t" data-i18n="gov.queryTitle">查詢提案</span>
+    <div class="dao-row">
+      <input class="dao-in" id="gvQueryPid" data-i18n-placeholder="gov.pidPh" placeholder="提案 ID" type="number" min="1">
+      <button class="gov-btn sm" id="gvQuery" data-i18n="gov.query" style="padding:0 20px;">查詢</button>
     </div>
+    <div class="gov-msg mono" id="gvQueryResult" style="white-space:pre-wrap;"></div>
   </div>
 </div>
 </div>
@@ -476,7 +491,7 @@
         var res = document.getElementById('gvVoteResult');
         if (!pid) { res.className = 'gov-msg err'; res.textContent = 'Enter proposal ID'; return; }
         res.className = 'gov-msg'; res.textContent = '...';
-        gpost('/tacgov/vote', { proposal_id: pid, choice: choice }).then(function (d) {
+        gpost('/tacgov/vote', { proposal_id: pid, support: choice }).then(function (d) {
           res.className = 'gov-msg' + (d.ok ? ' ok' : ' err');
           res.textContent = d.ok ? 'Vote recorded' : (d.error || 'failed');
         }).catch(function () { res.className = 'gov-msg err'; res.textContent = 'failed'; });

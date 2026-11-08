@@ -23,6 +23,13 @@ func (n *Node) P2PHost() p2p.Host { return &p2pHost{n: n} }
 func (h *p2pHost) Height() int64          { return h.n.db.GetTipHeight() }
 func (h *p2pHost) FinalizedHeight() int64 { return h.n.FinalizedHeight() }
 
+// EmptyChain 回報本機是否無實質鏈歷史（空庫，或僅有一個與網路不同源的創世塊、
+// 鏈頂高度為 0）；僅此類節點允許整鏈替換。已產出創世之後區塊（高度≥1）的節點
+// 視為已建立鏈歷史，不得整鏈覆蓋。
+func (h *p2pHost) EmptyChain() bool {
+	return h.n.db.GetTipHeight() <= 0
+}
+
 func (h *p2pHost) BlockDetail(height int64) (*chaindb.Block, []chaindb.Transaction, error) {
 	d, err := h.n.GetBlockDetail(height)
 	if err != nil {
