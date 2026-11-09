@@ -34,7 +34,10 @@ type Config struct {
 	SelfID            string
 	SelfURL           string // 本節點對外可達的基址（如 http://127.0.0.1:8333）
 	Owner             string
-	Bootstrap         []string // 初始引導節點基址
+	Bootstrap         []string // 初始引導節點基址（全部用於連線）
+	// TrustedAnchor 為唯一受信任、可對已建立鏈歷史做整鏈覆蓋的主錨點基址。
+	// 其餘引導/發現節點僅供同步與八卦，不同源時無權整鏈替換，避免分叉鏈互相覆蓋。
+	TrustedAnchor     string
 	HeartbeatInterval time.Duration
 	SyncInterval      time.Duration
 	DialTimeout       time.Duration

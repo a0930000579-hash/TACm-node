@@ -100,9 +100,10 @@ func (n *Node) ExportSnapshot() (*SnapshotData, error) {
 
 // ImportSnapshot 導入狀態快照：重建創世＋tip 區塊、錢包帳戶與鏈上帳戶狀態。
 // v57：快照信任驗證（主流鏈 fast-sync 同級）——導入前必須通過：
-//   ① 創世 hash 與本節點創世一致（防導入別鏈快照造成分叉）；
-//   ② tip hash 欄位與 tip 區塊實際 hash 一致（防篡改）；
-//   ③ 快照高度不高於本地（防倒退覆蓋既有鏈）。
+//
+//	① 創世 hash 與本節點創世一致（防導入別鏈快照造成分叉）；
+//	② tip hash 欄位與 tip 區塊實際 hash 一致（防篡改）；
+//	③ 快照高度不高於本地（防倒退覆蓋既有鏈）。
 func (n *Node) ImportSnapshot(sd *SnapshotData) error {
 	if sd == nil || sd.GenesisBlock == nil || sd.TipBlock == nil {
 		return fmt.Errorf("snapshot: 快照不完整（缺創世/tip）")
@@ -172,5 +173,7 @@ func (n *Node) ImportSnapshot(sd *SnapshotData) error {
 			}
 		}
 	}
+	// v204：進入啟動防自產窗口——共識在收到網絡塊或安全等待前不自產，避免分叉。
+	n.markBootstrapHold()
 	return nil
 }

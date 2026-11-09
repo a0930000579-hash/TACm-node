@@ -15,6 +15,10 @@ import (
 	"tacm/internal/chaindb"
 )
 
+// errReorgAnchorGuard：主錨點在線時，非錨點 peer 對已建立鏈的重組被權威閘拒絕。
+// 這是策略性拒絕而非重組失敗，不寫入 reorgBackoff，錨點離線後可立即 fallback。
+var errReorgAnchorGuard = errors.New("主錨點在線，非錨點 peer 無權重組已建立鏈")
+
 func (n *Network) syncLoop(ctx context.Context) {
 	defer n.wg.Done()
 	// M149：失敗退避——連不上（閘道/對端防護）時拉長重試間隔，
@@ -167,6 +171,11 @@ func (n *Network) syncFrom(p Peer) bool {
 		}
 		// 本機無此高度區塊（空鏈或缺塊）：走重組；doReorg 在無共同祖先時整鏈替換。
 		if lerr != nil || lb == nil {
+			// 已建立鏈歷史且主錨點在線時，非錨點 peer 無權重組——跳過它（false）
+			// 讓 fallback 繼續嘗試主錨點；空庫或錨點離線時則接受該 peer 建立鏈。
+			if !n.host.EmptyChain() && !n.isBootstrapPeer(p) && n.trustedAnchorOnline() {
+				return false
+			}
 			n.attemptReorg(p, self)
 			return true
 		}
@@ -174,6 +183,11 @@ func (n *Network) syncFrom(p Peer) bool {
 		// self==0 時額外比較創世交易（社群基金地址），不同仍走整鏈替換。
 		genesisDiff := pb.Hash != lb.Hash || (self == 0 && !sameGenesisTx(pbTxs, lbTxs))
 		if genesisDiff {
+			// 已建立鏈歷史且主錨點在線時，分叉的非錨點 peer 直接跳過（false），交
+			// fallback 找主錨點做線性追塊；錨點離線時放行，避免鏈卡住不追塊。
+			if !n.host.EmptyChain() && !n.isBootstrapPeer(p) && n.trustedAnchorOnline() {
+				return false
+			}
 			log.Printf("[p2p] 創世不同（哈希/內容）→ 整鏈替換（本機 %s vs 錨點 %s）", lb.Hash[:12], pb.Hash[:12])
 			n.attemptReorg(p, self)
 			return true
@@ -383,6 +397,15 @@ func (n *Network) findForkPoint(best Peer, from int64) (int64, error) {
 }
 
 func (n *Network) doReorg(best Peer, from int64) error {
+	// v204：已建立鏈歷史的節點只接受「主錨點」發起的重組（含整鏈覆蓋與部分重組）；
+	// 一般對等節點（含分叉鏈）無權把本機正鏈拉走。空庫節點無歷史可護，仍可從任一
+	// 對等節點建立鏈。主錨點離線時放行其他 peer 重組（liveness fallback，鏈不停擺）。
+	// 線性追塊（同 tip 哈希）不受此限，任何 peer 都可提供缺口塊。
+	if !n.host.EmptyChain() && !n.isBootstrapPeer(best) && n.trustedAnchorOnline() {
+		// 哨兵錯誤：此拒絕是「主錨點權威閘」，並非真正的重組失敗，不應寫入
+		// reorgBackoff（否則錨點一離線，該 peer 還在 60s 冷卻，無法即時 fallback）。
+		return errReorgAnchorGuard
+	}
 	fork, err := n.findForkPoint(best, from)
 	if err != nil {
 		return err
@@ -419,8 +442,10 @@ func (n *Network) reorgFullChain(best Peer) error {
 	// 僅空庫 follower（無實質鏈歷史）或顯式 Bootstrap 信任錨點允許整鏈替換；
 	// 已建立鏈歷史的節點遇到隨機發現的不同源 peer 時拒絕整鏈覆蓋，避免自產歷史
 	// 被無故抹除；配置的 Bootstrap 錨點（多錨點 fallback 場景）仍可受控切換。
-	if !n.host.EmptyChain() && !n.isBootstrapPeer(best) {
-		return errors.New("整鏈替換僅限空庫節點或 Bootstrap 錨點，本節點已存在鏈歷史，拒絕整鏈覆蓋")
+	// 已建立鏈歷史且主錨點在線時，非錨點 peer 無權整鏈覆蓋；主錨點離線時放行
+	// （liveness fallback，由其他 peer 接管），空庫節點則可從任一 peer 建立鏈。
+	if !n.host.EmptyChain() && !n.isBootstrapPeer(best) && n.trustedAnchorOnline() {
+		return errReorgAnchorGuard
 	}
 	log.Printf("[p2p] 整鏈替換開始：拉取 0..%d 全部區塊", best.Height)
 	blocks, ok := n.fetchBlocksParallel(best, 0, best.Height)
@@ -451,8 +476,46 @@ func (n *Network) isBootstrapPeer(p Peer) bool {
 	if want == "" {
 		return false
 	}
-	for _, b := range n.cfg.Bootstrap {
-		if strings.TrimRight(strings.ToLower(strings.TrimSpace(b)), "/") == want {
+	// 僅主錨點（TrustedAnchor）受信任；其他引導/發現節點即使在 Bootstrap 連線
+	// 清單中，也不具整鏈覆蓋權限，避免分叉鏈把本機正鏈換掉。
+	anchor := strings.TrimRight(strings.ToLower(strings.TrimSpace(n.cfg.TrustedAnchor)), "/")
+	return anchor != "" && anchor == want
+}
+
+// trustedAnchorOnline 回報主錨點目前是否在線。錨點離線（或未設定）時，節點
+// 須允許其他 peer 接管/重組以維持鏈的可用性（liveness fallback）；錨點在線
+// 時則拒絕非錨點重組，防止分叉鏈把節點拉走。
+//
+// 不依賴心跳快取的 Online 旗標（需連續 3 次失敗、最長約 45s 才翻轉），改用
+// 短逾時的即時探測，使錨點斷線後可立即 fallback，避免測試/現場的時序卡點。
+func (n *Network) trustedAnchorOnline() bool {
+	anchor := strings.TrimRight(strings.ToLower(strings.TrimSpace(n.cfg.TrustedAnchor)), "/")
+	if anchor == "" {
+		return false
+	}
+	// 探測兩次（短暫間隔），避免單次抖動誤判錨點離線而放行分叉重組。
+	for attempt := 0; attempt < 2; attempt++ {
+		if attempt > 0 {
+			select {
+			case <-n.ctx.Done():
+				return false
+			case <-time.After(300 * time.Millisecond):
+			}
+		}
+		ctx, cancel := context.WithTimeout(n.ctx, 5*time.Second)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, anchor+"/health", nil)
+		if err != nil {
+			cancel()
+			continue
+		}
+		resp, err := n.client.Do(req)
+		cancel()
+		if err != nil {
+			continue
+		}
+		ok := resp.StatusCode < 500
+		resp.Body.Close()
+		if ok {
 			return true
 		}
 	}
@@ -509,10 +572,18 @@ func (n *Network) reconcileSameHeight() {
 // attemptReorg 在重組抑制檢查後執行重組；被冷卻抑制時直接跳過，失敗則記錄以便退避。
 func (n *Network) attemptReorg(p Peer, self int64) {
 	if n.reorgSuppressed(p, self) {
-		log.Printf("[p2p] 重組抑制：peer=%s 仍在冷卻期（等難度分叉），跳過重拉", p.NodeID)
-		return
+		// 錨點在線時，冷卻期內跳過重拉（防難度賽跑活鎖）；但錨點一旦離線，
+		// 舊的冷卻紀錄不應阻斷其他 peer 接管——直接放行，維持鏈的可用性。
+		if n.trustedAnchorOnline() {
+			log.Printf("[p2p] 重組抑制：peer=%s 仍在冷卻期（等難度分叉），跳過重拉", p.NodeID)
+			return
+		}
 	}
 	if err := n.doReorg(p, self); err != nil {
+		// 主錨點權威閘的拒絕不計入 backoff：錨點離線後該 peer 應可立即接管。
+		if errors.Is(err, errReorgAnchorGuard) {
+			return
+		}
 		n.noteReorgRejected(p)
 	}
 }

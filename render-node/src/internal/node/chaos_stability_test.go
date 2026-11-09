@@ -260,7 +260,10 @@ func TestChaosFDPerBlockStable(t *testing.T) {
 	time.Sleep(400 * time.Millisecond)
 	runtime.GC()
 
-	if d := countFDByKind(t, "db") - baseDB; d > 0 {
+	// SQLite 連線池在穩態後偶發再開 1-2 條常駐連線（有界、非線性），與真實
+	// 洩漏（隨 30 塊線性增長）不同；給予與 file/network 一致的小容差，仍能抓出
+	// 真正逐塊累積的 sql.Rows/連線洩漏。
+	if d := countFDByKind(t, "db") - baseDB; d > 2 {
 		t.Fatalf("穩態後出塊 %d 個，資料庫控制代碼仍增長 %d（疑似 sql.Rows/連線未關閉）", 30, d)
 	}
 	if d := countFDByKind(t, "file") - baseFile; d > 2 {

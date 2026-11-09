@@ -55,7 +55,7 @@ const (
 	// PoT（時間權證）封印參數：固定最低難度，僅作防偽造/抗垃圾之區塊封印，
 	// 非 PoW 算力競賽；鏈權重＝區塊數（時間槽），不使用累積難度。
 	PoTSealDifficulty = 1
-	PoTSealMaxNonce    = 200000
+	PoTSealMaxNonce   = 200000
 )
 
 // errNotProposer 表示當前高度不由本節點提議（分佈式模式下靜默等待網絡塊）。
@@ -128,6 +128,13 @@ type Node struct {
 	takeoverMu     sync.Mutex
 	takeover       map[int64]bool
 	takeoverActive bool // 接管狀態持續生效（後續高度免等待），收到網絡塊後清除
+
+	// v204 啟動防自產：快照導入後記憶體驗證人集尚未含全網（僅自己），在這期間
+	// 若有在線 peer 則先等待網絡塊、不立即自產，避免在正鏈頂上自產分叉塊。
+	// 收到第一個網絡塊或超過安全等待後解除（完全隔離時仍可自產，鏈不停擺）。
+	holdMu          sync.Mutex
+	bootstrapHold   bool
+	bootstrapHoldAt time.Time
 
 	// M13 錢包帳本（多資產：TACm/TiUSD/USDT；隨鏈上區塊同步）。
 	walletSvc    *wallet.Service
@@ -872,9 +879,9 @@ func (n *Node) StartDistributed() {
 	// v56：分布式驗證人與單節點同等服務——動態驗證人集週期重建
 	// （鏈上新增質押的驗證人最遲 60s 納入輪值，對應主流鏈 epoch 式驗證人輪換）、
 	// 帳本自癒、鏈上預言機、帳戶抽象 Bundler。
-	n.StartDynamicValidators() // 內部自行 wg.Add(1)
-	go n.healWalletSync()      // 帳本/chain_stats 自癒（落後補同步＋產出計數修正）
-	n.StartWalletReconciler()  // 重組後錢包週期對齊安全網（30s）
+	n.StartDynamicValidators()  // 內部自行 wg.Add(1)
+	go n.healWalletSync()       // 帳本/chain_stats 自癒（落後補同步＋產出計數修正）
+	n.StartWalletReconciler()   // 重組後錢包週期對齊安全網（30s）
 	n.StartFinalityReconciler() // 最終化週期對齊安全網（30s）
 	n.StartProfiler()
 	n.oracleSvc = oracle.New()
@@ -1098,6 +1105,12 @@ func (n *Node) consensusLoop(stop chan struct{}) {
 			continue // 等 sync tick 追平（p2p sync 較長鏈優先）
 		}
 
+		// v204：快照導入後的防自產窗口——有在線 peer 時先等網絡塊，不在正鏈頂
+		// 立刻自產分叉塊；安全等待過後仍無網絡塊才放行（隔離時鏈不停擺）。
+		if n.shouldHoldProduction() {
+			continue
+		}
+
 		if err := n.produceBlock(); err != nil {
 			if errors.Is(err, errBlockExists) {
 				continue // 網路塊已先佔該高度，良性跳過（避免雙發），下輪以新 tip 出塊
@@ -1134,6 +1147,65 @@ func (n *Node) isBehindNetwork() bool {
 		}
 	}
 	return false
+}
+
+// hasOnlinePeer 回報是否有任一在線對等節點。
+func (n *Node) hasOnlinePeer() bool {
+	if n.p2pNet == nil {
+		return false
+	}
+	for _, p := range n.p2pNet.PeerSnapshot() {
+		if p.Online {
+			return true
+		}
+	}
+	return false
+}
+
+// markBootstrapHold 啟動快照導入後進入防自產窗口。
+func (n *Node) markBootstrapHold() {
+	n.holdMu.Lock()
+	n.bootstrapHold = true
+	n.bootstrapHoldAt = time.Now()
+	n.holdMu.Unlock()
+}
+
+// clearBootstrapHold 收到網絡塊、確認已跟隨網絡後解除防自產。
+func (n *Node) clearBootstrapHold() {
+	n.holdMu.Lock()
+	if n.bootstrapHold {
+		n.bootstrapHold = false
+	}
+	n.holdMu.Unlock()
+}
+
+// shouldHoldProduction 回報目前是否應暫停本機自產、優先等待網絡塊：
+//   - 防自產窗口生效中且存在在線 peer；
+//   - 安全等待（一個提議超時）尚未過期——過期後即使無網絡塊也放行，
+//     完全隔離時節點仍可自產，鏈不停擺。
+func (n *Node) shouldHoldProduction() bool {
+	n.holdMu.Lock()
+	hold := n.bootstrapHold
+	started := n.bootstrapHoldAt
+	n.holdMu.Unlock()
+	if !hold || n.p2pNet == nil {
+		return false
+	}
+	hasOnlinePeer := false
+	for _, p := range n.p2pNet.PeerSnapshot() {
+		if p.Online {
+			hasOnlinePeer = true
+			break
+		}
+	}
+	if !hasOnlinePeer {
+		return false
+	}
+	// 安全等待取一個提議超時，給網絡足夠時間把正鏈塊送達。
+	if time.Since(started) >= n.consensusTimeout(0) {
+		return false
+	}
+	return true
 }
 
 // setTakeover 標記本節點接管指定高度出塊（失聯 proposer 補位）。
@@ -1459,6 +1531,12 @@ func (n *Node) produceBlock() error {
 		_, round, _ := n.bftNode.RoundInfo()
 		proposer := n.vset.Proposer(height, round)
 		if proposer == nil || (proposer.Address != n.nodeAddress && !n.isTakeover(height)) {
+			return errNotProposer
+		}
+		// v204：驗證人集若只有自己、但網絡上有在線 peer，代表本機尚未取得完整
+		// 驗證人集（快照/同步初期）。此時不立即自產，交接管路徑等待完整超時，
+		// 避免在正鏈頂上自產分叉塊；完全隔離（無 peer）時仍正常自產，鏈不停擺。
+		if n.vset.Len() <= 1 && !n.isTakeover(height) && n.hasOnlinePeer() {
 			return errNotProposer
 		}
 	}

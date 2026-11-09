@@ -118,6 +118,8 @@ func (h *p2pHost) OnIncomingBlock(b *chaindb.Block, txs []chaindb.Transaction) e
 		return err
 	}
 	n.chainWriteMu.Unlock()
+	// v204：成功接入網絡塊代表已跟隨網絡，解除啟動防自產，後續回歸正常輪值。
+	n.clearBootstrapHold()
 	// 與本地出塊（produceBlock）一致：新塊入庫後清空 pending nonce，
 	// db.GetNonce 已含全部已入塊交易——否則跟隨節點後續代簽交易的 nonce
 	// 會疊加未清除的 pending 計數，與出塊節點（已重置）的期望不一致而被拒絕。

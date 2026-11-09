@@ -7,11 +7,18 @@ import "tacm/internal/p2p"
 // encrypt=true 啟用 P2P 訊息層加密（ECDH+AES-GCM，需全網同時開啟）。
 // 返回網絡實例，調用方負責 Start(ctx) 並把其 Handler 掛載到 HTTP 服務。
 func (n *Node) AttachP2P(selfURL string, bootstrap []string, encrypt bool) (*p2p.Network, error) {
+	// v204：全部 seed 仍用於連線，但僅第一個（主錨點）受信任、可對已建立鏈做整鏈
+	// 覆蓋；其餘 seed 為一般對等節點，不同源時無權替換，避免分叉鏈互相覆蓋。
+	var trustedAnchor string
+	if len(bootstrap) > 0 {
+		trustedAnchor = bootstrap[0]
+	}
 	net, err := p2p.New(p2p.Config{
-		SelfID:    n.nodeID,
-		SelfURL:   selfURL,
-		Bootstrap: bootstrap,
-		Encrypt:   encrypt,
+		SelfID:        n.nodeID,
+		SelfURL:       selfURL,
+		Bootstrap:     bootstrap,
+		TrustedAnchor: trustedAnchor,
+		Encrypt:       encrypt,
 		// v54：Owner 帶上本節點鏈上地址——peer 心跳/握手以此廣播 Owner，
 		// 失聯驗證人接管判定才能區分「在線 peer 是否為共識驗證人」
 		// （僅本節點為唯一在線驗證人時才接管，避免多驗證人網路中
