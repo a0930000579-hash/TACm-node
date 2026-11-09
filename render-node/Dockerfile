@@ -15,4 +15,4 @@ EXPOSE 8080
 # v167：出塊間隔 12 秒（與主網 anchor 一致）；-p2p-follower=false——Render 節點改為驗證人：
 # 鏈上質押 ≥1,000 TACm 後自動以分布式 BFT 輪值 proposer 出塊（與 anchor 輪流提議）；
 # 尚未質押期間 StartDistributed 自動降為同步＋投票（不亂出塊）。
-CMD ["nodeweb", "-web-port", "8080", "-data-dir", "/var/tac/data", "-network", "mainnet", "-block-time", "12", "-p2p", "-p2p-seed", "http://2.28.201.174:8080,https://tacm-ai-cyprto.onrender.com,https://oyster-app-aynnb.ondigitalocean.app", "-snapshot-url", "http://2.28.201.174:8080,https://tacm-ai-cyprto.onrender.com,https://oyster-app-aynnb.ondigitalocean.app", "-p2p-follower=false"]
+CMD ["nodeweb", "-web-port", "8080", "-data-dir", "/var/tac/data", "-network", "mainnet", "-block-time", "12", "-p2p", "-p2p-seed", "http://2.28.201.174:8080,https://tacm-ai-cyprto.onrender.com,https://oyster-app-aynnb.ondigitalocean.app", "-snapshot-url", "http://2.28.201.174:8080", "-p2p-follower=false"]
